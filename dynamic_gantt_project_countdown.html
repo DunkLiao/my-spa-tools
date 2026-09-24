@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動態甘特圖 & 專案倒數看板</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                            950: '#042f2e'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 自訂滾動條 - 現代極簡灰階 */
+        ::-webkit-scrollbar {
+            height: 7px;
+            width: 7px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f4f4f5;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d4d4d8;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1aa;
+        }
+        .gantt-grid {
+            background-size: 40px 100%;
+            background-image: linear-gradient(to right, #f4f4f5 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="bg-zinc-50 text-zinc-800 antialiased min-h-screen flex flex-col font-sans selection:bg-zinc-800 selection:text-white">
+
+    <!-- 頂部導航列 (優化 RWD 多裝置自適應) -->
+    <header class="bg-white border-b border-zinc-200 sticky top-0 z-30 shadow-xs">
+        <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 md:h-16 flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4">
+            <!-- 品牌標題區 + 手機版快速新增按鈕 -->
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2.5">
+                    <div class="bg-zinc-900 text-zinc-100 p-1.5 sm:p-2 rounded-xl shadow-xs ring-1 ring-zinc-800/10 shrink-0">
+                        <i data-lucide="calendar-range" class="w-4 h-4 sm:w-5 sm:h-5 text-teal-400"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-base sm:text-lg font-bold text-zinc-900 tracking-tight leading-tight">動態甘特圖 & 專案倒數</h1>
+                        <p class="text-[11px] sm:text-xs text-zinc-500 font-medium">多專案架構 · IndexedDB 本地離線 SPA</p>
+                    </div>
+                </div>
+
+                <!-- 手機版快速操作：新增任務 -->
+                <button id="openNewTaskModalMobile" class="md:hidden flex items-center space-x-1 px-2.5 py-1.5 text-xs font-semibold text-white bg-zinc-900 active:scale-95 rounded-lg shadow-xs transition-all">
+                    <i data-lucide="plus" class="w-3.5 h-3.5 text-teal-300"></i>
+                    <span>任務</span>
+                </button>
+            </div>
+
+            <!-- 控制群組：專案切換 + 資料管理操作 -->
+            <div class="flex flex-wrap items-center justify-between md:justify-end gap-2">
+                <!-- 專案切換與管理控制區 -->
+                <div class="flex items-center space-x-1.5 bg-zinc-100/90 p-1 rounded-xl border border-zinc-200 flex-1 sm:flex-none">
+                    <div class="flex items-center space-x-1 pl-1.5 text-zinc-600">
+                        <i data-lucide="folder-kanban" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal-700"></i>
+                        <span class="text-[11px] sm:text-xs font-semibold hidden sm:inline text-zinc-700">專案：</span>
+                    </div>
+                    <select id="projectSelect" class="text-xs font-semibold bg-white border border-zinc-200 text-zinc-800 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-zinc-800 flex-1 sm:flex-none sm:max-w-[170px] truncate shadow-2xs">
+                        <!-- 動態載入專案選單 -->
+                    </select>
+                    <button id="openNewProjectBtn" title="新增專案" class="p-1.5 bg-white hover:bg-zinc-200 text-zinc-700 rounded-lg transition-colors border border-zinc-200 shadow-2xs shrink-0">
+                        <i data-lucide="folder-plus" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button id="openProjectSettingsBtn" title="專案設定" class="p-1.5 bg-white hover:bg-zinc-200 text-zinc-700 rounded-lg transition-colors border border-zinc-200 shadow-2xs shrink-0">
+                        <i data-lucide="settings" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <!-- 備份、匯入與桌面版新增按鈕 -->
+                <div class="flex items-center space-x-1.5 sm:space-x-2">
+                    <button id="exportBtn" title="匯出備份" class="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors border border-zinc-200/60">
+                        <i data-lucide="download" class="w-3.5 h-3.5 text-zinc-500"></i>
+                        <span class="hidden lg:inline">匯出備份</span>
+                    </button>
+                    <label for="importFile" title="匯入資料" class="cursor-pointer flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors border border-zinc-200/60">
+                        <i data-lucide="upload" class="w-3.5 h-3.5 text-zinc-500"></i>
+                        <span class="hidden lg:inline">匯入資料</span>
+                        <input type="file" id="importFile" class="hidden" accept=".json">
+                    </label>
+                    <button id="resetAllBtn" title="清除所有專案與甘特圖排程" class="flex items-center space-x-1 px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-medium text-rose-700 bg-rose-50/70 hover:bg-rose-100/90 border border-rose-200 rounded-lg transition-colors">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5 text-rose-500"></i>
+                        <span class="hidden lg:inline">全部重設</span>
+                    </button>
+                    <!-- 桌面版新增任務按鈕 -->
+                    <button id="openNewTaskModal" class="hidden md:flex items-center space-x-1.5 px-3.5 py-2 text-xs sm:text-sm font-medium text-white bg-zinc-900 hover:bg-zinc-800 active:scale-95 rounded-lg shadow-xs transition-all shrink-0">
+                        <i data-lucide="plus" class="w-4 h-4 text-teal-300"></i>
+                        <span>新增任務</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex-1 flex flex-col space-y-4 sm:space-y-6 w-full">
+        <!-- 核心里程碑即時倒數專區 -->
+        <section>
+            <div class="flex items-center justify-between mb-2.5 sm:mb-3">
+                <div class="flex items-center space-x-2">
+                    <div class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                    <h2 class="text-sm sm:text-base font-bold text-zinc-900 tracking-tight">重要里程碑倒數 (D-Day)</h2>
+                </div>
+                <span class="text-[11px] sm:text-xs text-zinc-500">即時計算剩餘天數與時長</span>
+            </div>
+            
+            <div id="countdownGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <!-- 動態注入倒數卡片 -->
+            </div>
+        </section>
+
+        <!-- 甘特圖檢視與操作列 -->
+        <section class="bg-white rounded-xl sm:rounded-2xl border border-zinc-200 shadow-xs overflow-hidden flex-1 flex flex-col">
+            <!-- 視圖工具列 -->
+            <div class="px-3 sm:px-5 py-3 sm:py-4 border-b border-zinc-200 flex flex-wrap items-center justify-between gap-2.5 bg-zinc-50/70">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs sm:text-sm font-bold text-zinc-900">甘特圖排程</span>
+                    <span id="taskCountBadge" class="text-[11px] sm:text-xs bg-zinc-200/80 text-zinc-700 px-2 py-0.5 rounded-full font-medium">0 個任務</span>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                    <!-- 狀態篩選 -->
+                    <select id="statusFilter" class="text-xs border border-zinc-300 rounded-lg px-2 sm:px-2.5 py-1.5 bg-white text-zinc-700 focus:outline-none focus:ring-2 focus:ring-zinc-800">
+                        <option value="ALL">全部狀態</option>
+                        <option value="IN_PROGRESS">進行中</option>
+                        <option value="PENDING">未開始</option>
+                        <option value="COMPLETED">已完成</option>
+                        <option value="DELAYED">已延遲</option>
+                    </select>
+
+                    <!-- 時間刻度切換 -->
+                    <div class="inline-flex rounded-lg border border-zinc-200 bg-zinc-100 p-0.5 text-xs font-medium">
+                        <button id="viewDayBtn" class="px-2.5 sm:px-3 py-1 rounded-md bg-white text-zinc-900 shadow-2xs font-semibold transition">日檢視</button>
+                        <button id="viewWeekBtn" class="px-2.5 sm:px-3 py-1 rounded-md text-zinc-600 hover:text-zinc-900 transition">週檢視</button>
+                    </div>
+
+                    <button id="scrollToTodayBtn" class="px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 rounded-lg hover:bg-zinc-50 transition shadow-2xs">
+                        回到今天
+                    </button>
+                </div>
+            </div>
+
+            <!-- 甘特圖主畫布容器 -->
+            <div class="overflow-x-auto flex-1 relative" id="ganttScrollContainer">
+                <div id="ganttWrapper" class="min-w-max pb-6">
+                    <!-- 甘特圖頂部時間刻度頭部 -->
+                    <div id="ganttTimelineHeader" class="sticky top-0 bg-white z-10 border-b border-zinc-200 flex select-none">
+                        <!-- 動態刻度由 JS 填入 -->
+                    </div>
+
+                    <!-- 甘特圖內容列 -->
+                    <div id="ganttBody" class="relative divide-y divide-zinc-100 min-h-[300px]">
+                        <!-- 動態任務條與網格背景由 JS 生成 -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 新增 / 編輯任務彈窗 (加入 max-h 確保手機鍵盤彈出不遮擋) -->
+    <div id="taskModal" class="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden border border-zinc-200 transform transition-all">
+            <div class="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/80 shrink-0">
+                <h3 id="modalTitle" class="text-sm sm:text-base font-bold text-zinc-900">新增專案任務</h3>
+                <button id="closeModalBtn" class="text-zinc-400 hover:text-zinc-600 p-1 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="taskForm" class="p-5 sm:p-6 space-y-3.5 sm:space-y-4 text-xs sm:text-sm overflow-y-auto flex-1">
+                <input type="hidden" id="taskId">
+
+                <div>
+                    <label class="block font-semibold text-zinc-700 mb-1" for="taskName">任務名稱 *</label>
+                    <input type="text" id="taskName" required placeholder="例如：前端架構搭設" class="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-zinc-700 mb-1" for="taskStartDate">開始日期 *</label>
+                        <input type="date" id="taskStartDate" required class="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-zinc-700 mb-1" for="taskEndDate">截止日期 *</label>
+                        <input type="date" id="taskEndDate" required class="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-zinc-700 mb-1" for="taskOwner">負責人</label>
+                        <input type="text" id="taskOwner" placeholder="例如：Alex" class="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-zinc-700 mb-1" for="taskStatus">當前狀態</label>
+                        <select id="taskStatus" class="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800 bg-white">
+                            <option value="PENDING">未開始</option>
+                            <option value="IN_PROGRESS">進行中</option>
+                            <option value="COMPLETED">已完成</option>
+                            <option value="DELAYED">已延遲</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <label class="font-semibold text-zinc-700" for="taskProgress">完成進度 (%)</label>
+                        <span id="progressValueDisplay" class="font-bold text-zinc-900 font-mono">0%</span>
+                    </div>
+                    <input type="range" id="taskProgress" min="0" max="100" value="0" class="w-full h-2.5 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-800">
+                </div>
+
+                <div class="flex items-center space-x-2 pt-1">
+                    <input type="checkbox" id="taskIsMilestone" class="w-4 h-4 text-zinc-800 border-zinc-300 rounded focus:ring-zinc-800">
+                    <label for="taskIsMilestone" class="text-xs text-zinc-700 font-medium cursor-pointer">
+                        設為重大里程碑 (顯示於頂端倒數看板)
+                    </label>
+                </div>
+
+                <div class="pt-4 flex items-center justify-between border-t border-zinc-100">
+                    <button type="button" id="deleteTaskBtn" class="text-rose-600 hover:text-rose-700 text-xs font-semibold py-1">
+                        刪除任務
+                    </button>
+                    <div class="flex space-x-2 ml-auto">
+                        <button type="button" id="cancelModalBtn" class="px-3.5 sm:px-4 py-2 border border-zinc-300 text-zinc-600 hover:bg-zinc-100 rounded-lg transition text-xs sm:text-sm">取消</button>
+                        <button type="submit" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg font-medium transition shadow-xs text-xs sm:text-sm">儲存</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 專案新增 / 編輯彈窗 -->
+    <div id="projectModal" class="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[92vh] flex flex-col overflow-hidden border border-zinc-200 transform transition-all">
+            <div class="px-5 sm:px-6 py-3.5 sm:py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/80 shrink-0">
+                <h3 id="projectModalTitle" class="text-sm sm:text-base font-bold text-zinc-900">建立新專案</h3>
+                <button id="closeProjectModalBtn" class="text-zinc-400 hover:text-zinc-600 p-1 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="projectForm" class="p-5 sm:p-6 space-y-4 text-xs sm:text-sm overflow-y-auto flex-1">
+                <input type="hidden" id="projectEditId">
+                <div>
+                    <label class="block font-semibold text-zinc-700 mb-1" for="projectNameInput">專案名稱 *</label>
+                    <input type="text" id="projectNameInput" required placeholder="例如：行動端 App 2.0 研發" class="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800">
+                </div>
+                <div>
+                    <label class="block font-semibold text-zinc-700 mb-1" for="projectDescInput">專案簡述</label>
+                    <textarea id="projectDescInput" rows="3" placeholder="簡述專案目標或範疇..." class="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800 resize-none"></textarea>
+                </div>
+                <div class="pt-3 flex items-center justify-between border-t border-zinc-100">
+                    <button type="button" id="triggerDeleteProjectBtn" class="text-rose-600 hover:text-rose-700 text-xs font-semibold py-1 hidden">
+                        刪除此專案
+                    </button>
+                    <div class="flex space-x-2 ml-auto">
+                        <button type="button" id="cancelProjectModalBtn" class="px-3.5 sm:px-4 py-2 border border-zinc-300 text-zinc-600 hover:bg-zinc-100 rounded-lg transition text-xs sm:text-sm">取消</button>
+                        <button type="submit" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg font-medium transition shadow-xs text-xs sm:text-sm">確認儲存</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 專案新增 / 編輯彈窗 -->
+    <div id="projectModal" class="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-zinc-200 transform transition-all">
+            <div class="px-6 py-4 border-b border-zinc-200 flex items-center justify-between bg-zinc-50/80">
+                <h3 id="projectModalTitle" class="text-base font-bold text-zinc-900">建立新專案</h3>
+                <button id="closeProjectModalBtn" class="text-zinc-400 hover:text-zinc-600 transition">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <form id="projectForm" class="p-6 space-y-4 text-xs sm:text-sm">
+                <input type="hidden" id="projectEditId">
+                <div>
+                    <label class="block font-semibold text-zinc-700 mb-1" for="projectNameInput">專案名稱 *</label>
+                    <input type="text" id="projectNameInput" required placeholder="例如：行動端 App 2.0 研發" class="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800">
+                </div>
+                <div>
+                    <label class="block font-semibold text-zinc-700 mb-1" for="projectDescInput">專案簡述</label>
+                    <textarea id="projectDescInput" rows="3" placeholder="簡述專案目標或範疇..." class="w-full px-3 py-2 border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-800 resize-none"></textarea>
+                </div>
+                <div class="pt-3 flex items-center justify-between border-t border-zinc-100">
+                    <button type="button" id="triggerDeleteProjectBtn" class="text-rose-600 hover:text-rose-700 text-xs font-semibold hidden">
+                        刪除此專案
+                    </button>
+                    <div class="flex space-x-2 ml-auto">
+                        <button type="button" id="cancelProjectModalBtn" class="px-4 py-2 border border-zinc-300 text-zinc-600 hover:bg-zinc-100 rounded-lg transition">取消</button>
+                        <button type="submit" class="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg font-medium transition shadow-xs">確認儲存</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 自訂刪除確認對話框 -->
+    <div id="confirmModal" class="fixed inset-0 bg-zinc-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-zinc-200 space-y-4">
+            <div class="flex items-center space-x-3 text-rose-600">
+                <div class="p-2.5 bg-rose-50 rounded-xl border border-rose-100">
+                    <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                </div>
+                <h4 class="text-base font-bold text-zinc-900">確認執行操作</h4>
+            </div>
+            <p id="confirmModalMessage" class="text-xs text-zinc-600 leading-relaxed">
+                此動作無法復原，請確認是否繼續。
+            </p>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button id="cancelConfirmBtn" class="px-3.5 py-1.5 text-xs border border-zinc-300 text-zinc-700 rounded-lg hover:bg-zinc-100 transition">取消</button>
+                <button id="proceedConfirmBtn" class="px-3.5 py-1.5 text-xs bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-medium transition shadow-xs">確定執行</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 通知容器 -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+    <script>
+        const DB_NAME = 'GanttProjectDB';
+        const DB_VERSION = 2; // 升級為支援多專案與任務關聯
+        const STORE_PROJECTS = 'projects';
+        const STORE_TASKS = 'tasks';
+
+        // 初始化與升級 IndexedDB
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    // 建立專案 Store
+                    if (!db.objectStoreNames.contains(STORE_PROJECTS)) {
+                        db.createObjectStore(STORE_PROJECTS, { keyPath: 'id' });
+                    }
+                    // 建立任務 Store，並建立 projectId 索引以利快速檢索
+                    let taskStore;
+                    if (!db.objectStoreNames.contains(STORE_TASKS)) {
+                        taskStore = db.createObjectStore(STORE_TASKS, { keyPath: 'id' });
+                    } else {
+                        taskStore = req.transaction.objectStore(STORE_TASKS);
+                    }
+                    if (!taskStore.indexNames.contains('projectId')) {
+                        taskStore.createIndex('projectId', 'projectId', { unique: false });
+                    }
+                };
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // 專案庫操作
+        async function dbGetAllProjects() {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_PROJECTS, 'readonly');
+                const store = tx.objectStore(STORE_PROJECTS);
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function dbPutProject(project) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_PROJECTS, 'readwrite');
+                const store = tx.objectStore(STORE_PROJECTS);
+                store.put(project);
+                tx.oncomplete = () => resolve(project);
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function dbDeleteProjectAndTasks(projectId) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction([STORE_PROJECTS, STORE_TASKS], 'readwrite');
+                const projStore = tx.objectStore(STORE_PROJECTS);
+                const taskStore = tx.objectStore(STORE_TASKS);
+
+                projStore.delete(projectId);
+
+                // 批次刪除該專案名下的所有任務
+                const req = taskStore.openCursor();
+                req.onsuccess = (e) => {
+                    const cursor = e.target.result;
+                    if (cursor) {
+                        if (cursor.value.projectId === projectId) {
+                            cursor.delete();
+                        }
+                        cursor.continue();
+                    }
+                };
+
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        // 讀取所有任務
+        async function dbGetAllTasks() {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_TASKS, 'readonly');
+                const store = tx.objectStore(STORE_TASKS);
+                const req = store.getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // 清空整個資料庫 (所有專案與任務)
+        async function dbClearAll() {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction([STORE_PROJECTS, STORE_TASKS], 'readwrite');
+                tx.objectStore(STORE_PROJECTS).clear();
+                tx.objectStore(STORE_TASKS).clear();
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function dbPutTask(task) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_TASKS, 'readwrite');
+                const store = tx.objectStore(STORE_TASKS);
+                store.put(task);
+                tx.oncomplete = () => resolve(task);
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function dbDeleteTask(id) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_TASKS, 'readwrite');
+                const store = tx.objectStore(STORE_TASKS);
+                store.delete(id);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        const todayObj = new Date();
+        const formatDateISO = (d) => d.toISOString().split('T')[0];
+        function addDays(date, days) {
+            const res = new Date(date);
+            res.setDate(res.getDate() + days);
+            return res;
+        }
+
+        // 預設多專案與各自任務
+        const defaultProjects = [
+            {
+                id: 'proj-alpha',
+                name: '核心系統 2.0 旗艦改版',
+                desc: '全新現代化前端與高可用性架構升級',
+                createdAt: new Date().toISOString()
+            },
+            {
+                id: 'proj-beta',
+                name: '行動端 App 跨平台開發',
+                desc: 'iOS & Android 雙平台 MVP 交付計畫',
+                createdAt: new Date().toISOString()
+            }
+        ];
+
+        const defaultTasks = [
+            // 專案 Alpha 的任務
+            {
+                id: 'task-1',
+                projectId: 'proj-alpha',
+                name: '系統需求分析與規格定案',
+                startDate: formatDateISO(addDays(todayObj, -6)),
+                endDate: formatDateISO(addDays(todayObj, -1)),
+                owner: 'Product Team',
+                status: 'COMPLETED',
+                progress: 100,
+                isMilestone: false
+            },
+            {
+                id: 'task-2',
+                projectId: 'proj-alpha',
+                name: '核心架構與原型設計 (Alpha版)',
+                startDate: formatDateISO(addDays(todayObj, -2)),
+                endDate: formatDateISO(addDays(todayObj, 4)),
+                owner: 'Alex / UIUX',
+                status: 'IN_PROGRESS',
+                progress: 65,
+                isMilestone: true
+            },
+            {
+                id: 'task-3',
+                projectId: 'proj-alpha',
+                name: '前後端 API 介接與功能聯調',
+                startDate: formatDateISO(addDays(todayObj, 3)),
+                endDate: formatDateISO(addDays(todayObj, 10)),
+                owner: 'Dev Team',
+                status: 'PENDING',
+                progress: 10,
+                isMilestone: false
+            },
+            {
+                id: 'task-4',
+                projectId: 'proj-alpha',
+                name: '壓力測試與安全稽核驗證',
+                startDate: formatDateISO(addDays(todayObj, 9)),
+                endDate: formatDateISO(addDays(todayObj, 15)),
+                owner: 'QA / DevOps',
+                status: 'PENDING',
+                progress: 0,
+                isMilestone: false
+            },
+            {
+                id: 'task-5',
+                projectId: 'proj-alpha',
+                name: '正式產品發布與上線發表會 (Launch Day)',
+                startDate: formatDateISO(addDays(todayObj, 16)),
+                endDate: formatDateISO(addDays(todayObj, 18)),
+                owner: 'All Teams',
+                status: 'PENDING',
+                progress: 0,
+                isMilestone: true
+            },
+            // 專案 Beta 的任務
+            {
+                id: 'task-b1',
+                projectId: 'proj-beta',
+                name: '使用者體驗旅程圖與 Figma 介面設計',
+                startDate: formatDateISO(addDays(todayObj, -1)),
+                endDate: formatDateISO(addDays(todayObj, 5)),
+                owner: 'Design Studio',
+                status: 'IN_PROGRESS',
+                progress: 50,
+                isMilestone: true
+            },
+            {
+                id: 'task-b2',
+                projectId: 'proj-beta',
+                name: '原生模組封裝與推播通知介接',
+                startDate: formatDateISO(addDays(todayObj, 6)),
+                endDate: formatDateISO(addDays(todayObj, 14)),
+                owner: 'Mobile Team',
+                status: 'PENDING',
+                progress: 0,
+                isMilestone: false
+            }
+        ];
+
+        let projects = [];
+        let allTasks = [];
+        let currentProjectId = null;
+        let currentScale = 'DAY';
+        let currentFilter = 'ALL';
+        const CELL_WIDTH_DAY = 44;
+        const CELL_WIDTH_WEEK = 90;
+
+        // 取得當前選定專案之任務陣列
+        function getCurrentProjectTasks() {
+            return allTasks.filter(t => t.projectId === currentProjectId);
+        }
+
+        // Toast 通知小元件 (沉穩石墨暗灰風)
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgColors = {
+                info: 'bg-zinc-900 text-zinc-100 border border-zinc-700',
+                success: 'bg-emerald-800 text-emerald-50 border border-emerald-700',
+                warning: 'bg-amber-800 text-amber-50 border border-amber-700',
+                error: 'bg-rose-900 text-rose-50 border border-rose-800'
+            };
+
+            toast.className = `${bgColors[type] || bgColors.info} px-4 py-2.5 rounded-xl shadow-xl text-xs sm:text-sm font-medium transition-all transform duration-300 opacity-0 translate-y-2 pointer-events-auto flex items-center space-x-2`;
+            toast.innerHTML = `<span>${message}</span>`;
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        const statusMap = {
+            PENDING: { label: '未開始', bg: 'bg-zinc-100 text-zinc-600 border-zinc-200' },
+            IN_PROGRESS: { label: '進行中', bg: 'bg-teal-50 text-teal-800 border-teal-200' },
+            COMPLETED: { label: '已完成', bg: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+            DELAYED: { label: '已延遲', bg: 'bg-rose-50 text-rose-800 border-rose-200' }
+        };
+
+        function renderProjectSelect() {
+            const select = document.getElementById('projectSelect');
+            select.innerHTML = '';
+            projects.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                if (p.id === currentProjectId) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderCountdownCards() {
+            const container = document.getElementById('countdownGrid');
+            container.innerHTML = '';
+
+            const currentTasks = getCurrentProjectTasks();
+            const milestones = currentTasks.filter(t => t.isMilestone);
+
+            if (milestones.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full py-8 px-4 bg-white border border-dashed border-zinc-300 rounded-xl text-center text-zinc-400 text-xs">
+                        目前專案尚無重大里程碑。在任務中勾選「設為重大里程碑」，即可在此即時倒數。
+                    </div>
+                `;
+                return;
+            }
+
+            const now = new Date();
+            const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+            milestones.forEach(item => {
+                const targetDate = new Date(item.endDate);
+                const diffTime = targetDate.getTime() - todayMid;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                let badgeClass = "bg-zinc-800 text-zinc-100";
+                let dayText = `D-${diffDays}`;
+                let statusDesc = `距離交付日剩 ${diffDays} 天`;
+
+                if (item.status === 'COMPLETED' || item.progress === 100) {
+                    badgeClass = "bg-emerald-700 text-white";
+                    dayText = "DONE";
+                    statusDesc = "里程碑已達成";
+                } else if (diffDays === 0) {
+                    badgeClass = "bg-amber-600 text-white animate-pulse";
+                    dayText = "D-DAY";
+                    statusDesc = "今天是預定交付日！";
+                } else if (diffDays < 0) {
+                    badgeClass = "bg-rose-600 text-white";
+                    dayText = `逾期 ${Math.abs(diffDays)} 天`;
+                    statusDesc = "排程已超過截止日期";
+                }
+
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-xl border border-zinc-200/90 shadow-2xs flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden group";
+                card.innerHTML = `
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex-1 pr-2">
+                            <span class="inline-block text-[10px] font-bold font-mono px-2 py-0.5 rounded ${badgeClass} mb-1">${dayText}</span>
+                            <h3 class="font-bold text-zinc-900 text-sm truncate" title="${item.name}">${item.name}</h3>
+                        </div>
+                        <span class="text-xs font-bold font-mono text-zinc-600">${item.progress}%</span>
+                    </div>
+
+                    <div class="w-full bg-zinc-100 rounded-full h-1.5 mb-3 overflow-hidden">
+                        <div class="bg-zinc-800 h-1.5 rounded-full transition-all duration-500" style="width: ${item.progress}%"></div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-[11px] text-zinc-500">
+                        <span class="font-mono">截止: ${item.endDate}</span>
+                        <span class="font-medium text-zinc-600">${statusDesc}</span>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function getGanttTimelineRange() {
+            const currentTasks = getCurrentProjectTasks();
+            if (currentTasks.length === 0) {
+                const start = addDays(todayObj, -7);
+                const end = addDays(todayObj, 21);
+                return { start, end, totalDays: 29 };
+            }
+
+            let minDate = new Date(currentTasks[0].startDate);
+            let maxDate = new Date(currentTasks[0].endDate);
+
+            currentTasks.forEach(t => {
+                const s = new Date(t.startDate);
+                const e = new Date(t.endDate);
+                if (s < minDate) minDate = s;
+                if (e > maxDate) maxDate = e;
+            });
+
+            const start = addDays(minDate, -4);
+            const end = addDays(maxDate, 7);
+            const totalDays = Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24))) + 1;
+
+            return { start, end, totalDays };
+        }
+
+        function renderGantt() {
+            const currentTasks = getCurrentProjectTasks();
+            const { start, end, totalDays } = getGanttTimelineRange();
+            const headerContainer = document.getElementById('ganttTimelineHeader');
+            const bodyContainer = document.getElementById('ganttBody');
+            const cellWidth = currentScale === 'DAY' ? CELL_WIDTH_DAY : CELL_WIDTH_WEEK;
+
+            // RWD: 依螢幕寬度動態自適應左側任務資訊欄 (手機寬度小於 640px 時縮窄為 144px，桌面為 224px)
+            const isMobile = window.innerWidth < 640;
+            const leftColClass = isMobile ? "w-36 shrink-0" : "w-56 shrink-0";
+            const leftColWidthPx = isMobile ? 144 : 224;
+
+            const filteredTasks = currentTasks.filter(t => {
+                if (currentFilter === 'ALL') return true;
+                return t.status === currentFilter;
+            });
+
+            document.getElementById('taskCountBadge').textContent = `${filteredTasks.length} 個任務`;
+
+            headerContainer.innerHTML = `
+                <div class="${leftColClass} p-2.5 sm:p-3 font-semibold text-[11px] sm:text-xs text-zinc-500 bg-zinc-50 border-r border-zinc-200 truncate">
+                    任務與負責人
+                </div>
+                <div class="flex-1 flex overflow-hidden" id="timelineDatesRow"></div>
+            `;
+
+            const datesRow = document.getElementById('timelineDatesRow');
+            const todayStr = formatDateISO(todayObj);
+            let todayColumnOffset = -1;
+
+            for (let i = 0; i < totalDays; i++) {
+                const currentDate = addDays(start, i);
+                const dateISO = formatDateISO(currentDate);
+                const isToday = dateISO === todayStr;
+
+                if (isToday) {
+                    todayColumnOffset = i * cellWidth;
+                }
+
+                const dayCell = document.createElement('div');
+                dayCell.style.width = `${cellWidth}px`;
+                dayCell.className = `shrink-0 p-2 text-center text-[11px] border-r border-zinc-100 flex flex-col justify-center items-center ${isToday ? 'bg-amber-50/70 font-bold text-amber-900 ring-1 ring-amber-300 inset-0' : 'text-zinc-600'}`;
+
+                const monthName = currentDate.getMonth() + 1;
+                const dayNum = currentDate.getDate();
+                const weekDay = ['日', '一', '二', '三', '四', '五', '六'][currentDate.getDay()];
+
+                dayCell.innerHTML = `
+                    <span class="text-[9px] text-zinc-400 font-mono">${monthName}/${dayNum}</span>
+                    <span class="font-medium text-[11px]">${weekDay}</span>
+                `;
+                datesRow.appendChild(dayCell);
+            }
+
+            bodyContainer.innerHTML = '';
+
+            if (filteredTasks.length === 0) {
+                bodyContainer.innerHTML = `
+                    <div class="py-12 text-center text-zinc-400 text-xs">
+                        目前專案中查無符合條件的任務排程。點擊上方「新增任務」建立排程！
+                    </div>
+                `;
+                return;
+            }
+
+            filteredTasks.forEach(task => {
+                const row = document.createElement('div');
+                row.className = "flex items-center hover:bg-zinc-50 transition-colors group relative";
+
+                const statusInfo = statusMap[task.status] || statusMap.PENDING;
+                const infoCol = document.createElement('div');
+                infoCol.className = `${leftColClass} p-2.5 sm:p-3 border-r border-zinc-200 flex flex-col justify-center z-10 bg-white group-hover:bg-zinc-50 transition-colors`;
+                infoCol.innerHTML = `
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-semibold text-zinc-900 truncate" title="${task.name}">${task.name}</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5 sm:space-x-2 text-[10px]">
+                        <span class="px-1 sm:px-1.5 py-0.5 rounded border text-[10px] ${statusInfo.bg}">${statusInfo.label}</span>
+                        <span class="text-zinc-400 font-medium truncate">${task.owner || '未指派'}</span>
+                    </div>
+                `;
+
+                infoCol.onclick = () => openEditModal(task.id);
+                infoCol.classList.add('cursor-pointer');
+
+                const chartCol = document.createElement('div');
+                chartCol.className = "flex-1 relative h-14 flex items-center";
+                chartCol.style.width = `${totalDays * cellWidth}px`;
+
+                const taskStart = new Date(task.startDate);
+                const taskEnd = new Date(task.endDate);
+
+                const startDiffDays = Math.round((taskStart - start) / (1000 * 60 * 60 * 24));
+                const durationDays = Math.max(1, Math.round((taskEnd - taskStart) / (1000 * 60 * 60 * 24)) + 1);
+
+                const leftPx = startDiffDays * cellWidth;
+                const widthPx = durationDays * cellWidth - 6;
+
+                const bar = document.createElement('div');
+                // 沉穩現代色系搭配：進行中為曜石黑/深墨灰，完成為鼠尾草墨綠，延遲為沉香磚紅
+                let barColor = "bg-zinc-800 hover:bg-zinc-700";
+                if (task.status === 'COMPLETED') barColor = "bg-emerald-700 hover:bg-emerald-600";
+                if (task.status === 'DELAYED') barColor = "bg-rose-700 hover:bg-rose-600";
+                if (task.status === 'PENDING') barColor = "bg-zinc-400 hover:bg-zinc-500";
+
+                bar.className = `absolute h-8 rounded-lg shadow-xs ${barColor} text-white px-2 flex items-center justify-between cursor-pointer transition-all duration-200 select-none overflow-hidden group/bar`;
+                bar.style.left = `${leftPx}px`;
+                bar.style.width = `${Math.max(widthPx, 24)}px`;
+                bar.title = `${task.name}\n${task.startDate} ~ ${task.endDate} (${task.progress}%)`;
+
+                bar.innerHTML = `
+                    <div class="flex items-center space-x-1.5 overflow-hidden pointer-events-none">
+                        ${task.isMilestone ? '<i data-lucide="flag" class="w-3 h-3 text-amber-400 shrink-0"></i>' : ''}
+                        <span class="text-[11px] font-medium truncate">${task.name}</span>
+                    </div>
+                    <span class="text-[10px] font-bold font-mono opacity-80 pl-1 shrink-0 pointer-events-none">${task.progress}%</span>
+                    <div class="absolute bottom-0 left-0 top-0 bg-white/15 pointer-events-none" style="width: ${task.progress}%;"></div>
+                `;
+
+                bar.onclick = () => openEditModal(task.id);
+
+                chartCol.appendChild(bar);
+                row.appendChild(infoCol);
+                row.appendChild(chartCol);
+                bodyContainer.appendChild(row);
+            });
+
+            if (todayColumnOffset >= 0) {
+                const todayLine = document.createElement('div');
+                todayLine.className = "absolute top-0 bottom-0 w-0.5 bg-amber-500/80 z-20 pointer-events-none shadow-xs";
+                todayLine.style.left = `${leftColWidthPx + todayColumnOffset + cellWidth / 2}px`;
+                bodyContainer.appendChild(todayLine);
+            }
+
+            lucide.createIcons();
+        }
+
+        const projectModal = document.getElementById('projectModal');
+        const projectForm = document.getElementById('projectForm');
+        const projectModalTitle = document.getElementById('projectModalTitle');
+        const triggerDeleteProjectBtn = document.getElementById('triggerDeleteProjectBtn');
+
+        const confirmModal = document.getElementById('confirmModal');
+        let onConfirmAction = null;
+
+        function openConfirmDialog(message, onConfirm) {
+            document.getElementById('confirmModalMessage').textContent = message;
+            onConfirmAction = onConfirm;
+            confirmModal.classList.remove('hidden');
+        }
+
+        document.getElementById('cancelConfirmBtn').onclick = () => {
+            confirmModal.classList.add('hidden');
+            onConfirmAction = null;
+        };
+
+        document.getElementById('proceedConfirmBtn').onclick = () => {
+            if (onConfirmAction) onConfirmAction();
+            confirmModal.classList.add('hidden');
+            onConfirmAction = null;
+        };
+
+        // 開啟新增專案彈窗
+        document.getElementById('openNewProjectBtn').onclick = () => {
+            projectForm.reset();
+            document.getElementById('projectEditId').value = '';
+            projectModalTitle.textContent = '建立新專案';
+            triggerDeleteProjectBtn.classList.add('hidden');
+            projectModal.classList.remove('hidden');
+        };
+
+        // 開啟當前專案設定/編輯彈窗
+        document.getElementById('openProjectSettingsBtn').onclick = () => {
+            const currentProj = projects.find(p => p.id === currentProjectId);
+            if (!currentProj) return;
+
+            document.getElementById('projectEditId').value = currentProj.id;
+            document.getElementById('projectNameInput').value = currentProj.name;
+            document.getElementById('projectDescInput').value = currentProj.desc || '';
+            projectModalTitle.textContent = '專案設定與名稱修改';
+
+            // 若只有一個專案則不允許刪除
+            if (projects.length > 1) {
+                triggerDeleteProjectBtn.classList.remove('hidden');
+            } else {
+                triggerDeleteProjectBtn.classList.add('hidden');
+            }
+            projectModal.classList.remove('hidden');
+        };
+
+        document.getElementById('closeProjectModalBtn').onclick = () => projectModal.classList.add('hidden');
+        document.getElementById('cancelProjectModalBtn').onclick = () => projectModal.classList.add('hidden');
+
+        // 儲存專案 (新增或更名)
+        projectForm.onsubmit = async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('projectEditId').value;
+            const name = document.getElementById('projectNameInput').value.trim();
+            const desc = document.getElementById('projectDescInput').value.trim();
+
+            if (!name) return;
+
+            try {
+                if (id) {
+                    const target = projects.find(p => p.id === id);
+                    if (target) {
+                        target.name = name;
+                        target.desc = desc;
+                        await dbPutProject(target);
+                        showToast(`專案「${name}」已更新`, 'success');
+                    }
+                } else {
+                    const newProj = {
+                        id: 'proj-' + Date.now(),
+                        name,
+                        desc,
+                        createdAt: new Date().toISOString()
+                    };
+                    await dbPutProject(newProj);
+                    projects.push(newProj);
+                    currentProjectId = newProj.id;
+                    showToast(`新專案「${name}」建立成功！`, 'success');
+                }
+                projectModal.classList.add('hidden');
+                renderProjectSelect();
+                refreshAll();
+            } catch (err) {
+                console.error(err);
+                showToast('專案存入 IndexedDB 失敗', 'error');
+            }
+        };
+
+        // 觸發刪除專案
+        triggerDeleteProjectBtn.onclick = () => {
+            const id = document.getElementById('projectEditId').value;
+            const target = projects.find(p => p.id === id);
+            if (!target) return;
+
+            openConfirmDialog(`確定要永久刪除專案「${target.name}」及其關聯的所有甘特圖排程嗎？`, async () => {
+                try {
+                    await dbDeleteProjectAndTasks(id);
+                    projects = projects.filter(p => p.id !== id);
+                    allTasks = allTasks.filter(t => t.projectId !== id);
+                    currentProjectId = projects[0] ? projects[0].id : null;
+
+                    projectModal.classList.add('hidden');
+                    renderProjectSelect();
+                    refreshAll();
+                    showToast('專案及排程已全數刪除', 'info');
+                } catch (err) {
+                    console.error(err);
+                    showToast('刪除專案失敗', 'error');
+                }
+            });
+        };
+
+        // 切換專案下拉選單
+        document.getElementById('projectSelect').onchange = (e) => {
+            currentProjectId = e.target.value;
+            refreshAll();
+            showToast('已切換專案', 'info');
+        };
+
+        const taskModal = document.getElementById('taskModal');
+        const taskForm = document.getElementById('taskForm');
+        const modalTitle = document.getElementById('modalTitle');
+        const deleteTaskBtn = document.getElementById('deleteTaskBtn');
+        const progressInput = document.getElementById('taskProgress');
+        const progressDisplay = document.getElementById('progressValueDisplay');
+        const taskStatusSelect = document.getElementById('taskStatus');
+
+        // 進度條滑動事件：拉到 100% 時自動將狀態設為「已完成」
+        progressInput.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value, 10);
+            progressDisplay.textContent = `${val}%`;
+            if (val === 100) {
+                taskStatusSelect.value = 'COMPLETED';
+            } else if (taskStatusSelect.value === 'COMPLETED' && val < 100) {
+                taskStatusSelect.value = val === 0 ? 'PENDING' : 'IN_PROGRESS';
+            }
+        });
+
+        // 狀態變更事件：切換為已完成時自動將進度設為 100%
+        taskStatusSelect.addEventListener('change', (e) => {
+            const status = e.target.value;
+            if (status === 'COMPLETED') {
+                progressInput.value = 100;
+                progressDisplay.textContent = '100%';
+            } else if (status === 'PENDING') {
+                progressInput.value = 0;
+                progressDisplay.textContent = '0%';
+            } else if (status === 'IN_PROGRESS' && parseInt(progressInput.value, 10) === 100) {
+                // 若原本為 100% 卻切回進行中，預設調整回 50%
+                progressInput.value = 50;
+                progressDisplay.textContent = '50%';
+            }
+        });
+
+        function openCreateModal() {
+            if (!currentProjectId) {
+                showToast('請先建立或選擇專案！', 'warning');
+                return;
+            }
+            taskForm.reset();
+            document.getElementById('taskId').value = '';
+            document.getElementById('taskStartDate').value = formatDateISO(todayObj);
+            document.getElementById('taskEndDate').value = formatDateISO(addDays(todayObj, 5));
+            document.getElementById('taskProgress').value = 0;
+            progressDisplay.textContent = '0%';
+            modalTitle.textContent = '新增專案任務';
+            deleteTaskBtn.classList.add('hidden');
+            taskModal.classList.remove('hidden');
+        }
+
+        function openEditModal(taskId) {
+            const task = allTasks.find(t => t.id === taskId);
+            if (!task) return;
+
+            document.getElementById('taskId').value = task.id;
+            document.getElementById('taskName').value = task.name;
+            document.getElementById('taskStartDate').value = task.startDate;
+            document.getElementById('taskEndDate').value = task.endDate;
+            document.getElementById('taskOwner').value = task.owner || '';
+            document.getElementById('taskStatus').value = task.status;
+            
+            // 若為已完成狀態，確保進度為 100%
+            let initialProgress = task.progress;
+            if (task.status === 'COMPLETED') {
+                initialProgress = 100;
+            }
+            document.getElementById('taskProgress').value = initialProgress;
+            document.getElementById('taskIsMilestone').checked = !!task.isMilestone;
+            progressDisplay.textContent = `${initialProgress}%`;
+
+            modalTitle.textContent = '編輯任務排程';
+            deleteTaskBtn.classList.remove('hidden');
+            taskModal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            taskModal.classList.add('hidden');
+        }
+
+        // 儲存任務 (寫入當前 projectId)
+        taskForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('taskId').value;
+            const name = document.getElementById('taskName').value.trim();
+            const startDate = document.getElementById('taskStartDate').value;
+            const endDate = document.getElementById('taskEndDate').value;
+            const owner = document.getElementById('taskOwner').value.trim();
+            const status = document.getElementById('taskStatus').value;
+            let progress = parseInt(document.getElementById('taskProgress').value, 10);
+            const isMilestone = document.getElementById('taskIsMilestone').checked;
+
+            // 確保已完成狀態時儲存的進度必為 100%
+            if (status === 'COMPLETED') {
+                progress = 100;
+            }
+
+            if (new Date(startDate) > new Date(endDate)) {
+                showToast('開始日期不得晚於截止日期！', 'warning');
+                return;
+            }
+
+            try {
+                if (id) {
+                    const taskIndex = allTasks.findIndex(t => t.id === id);
+                    const originalProjectId = taskIndex !== -1 ? allTasks[taskIndex].projectId : currentProjectId;
+                    const updatedTask = { id, projectId: originalProjectId, name, startDate, endDate, owner, status, progress, isMilestone };
+                    await dbPutTask(updatedTask);
+                    if (taskIndex !== -1) {
+                        allTasks[taskIndex] = updatedTask;
+                    }
+                    showToast('任務已更新至 IndexedDB', 'success');
+                } else {
+                    const newTask = {
+                        id: 'task-' + Date.now(),
+                        projectId: currentProjectId,
+                        name,
+                        startDate,
+                        endDate,
+                        owner,
+                        status,
+                        progress,
+                        isMilestone
+                    };
+                    await dbPutTask(newTask);
+                    allTasks.push(newTask);
+                    showToast('已新增任務並儲存', 'success');
+                }
+
+                closeModal();
+                refreshAll();
+            } catch (err) {
+                console.error(err);
+                showToast('資料寫入失敗', 'error');
+            }
+        });
+
+        // 刪除任務
+        deleteTaskBtn.addEventListener('click', async () => {
+            const id = document.getElementById('taskId').value;
+            if (id) {
+                try {
+                    await dbDeleteTask(id);
+                    allTasks = allTasks.filter(t => t.id !== id);
+                    showToast('任務已移除', 'info');
+                    closeModal();
+                    refreshAll();
+                } catch (err) {
+                    console.error(err);
+                    showToast('刪除失敗', 'error');
+                }
+            }
+        });
+
+        // 匯出完整工作區 (所有專案及對應任務)
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            const exportPayload = {
+                version: 2,
+                exportedAt: new Date().toISOString(),
+                projects,
+                tasks: allTasks
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportPayload, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `projects_workspace_${formatDateISO(new Date())}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast('所有專案工作區 JSON 已匯出', 'success');
+        });
+
+        // 全部重設 (清除所有專案與甘特圖排程)
+        document.getElementById('resetAllBtn').addEventListener('click', () => {
+            openConfirmDialog(
+                '確定要重設整個工作區？這將永久清空所有專案、里程碑倒數與甘特圖排程，且無法復原。建議重設前先「匯出備份」。',
+                async () => {
+                    try {
+                        await dbClearAll();
+
+                        // 建立一個乾淨的新專案供立即使用
+                        const initialProj = {
+                            id: 'proj-' + Date.now(),
+                            name: '預設新專案',
+                            desc: '工作區已全面重設，開始規劃您的新排程',
+                            createdAt: new Date().toISOString()
+                        };
+                        await dbPutProject(initialProj);
+
+                        projects = [initialProj];
+                        allTasks = [];
+                        currentProjectId = initialProj.id;
+
+                        renderProjectSelect();
+                        refreshAll();
+                        showToast('已清空所有專案與排程資料！', 'info');
+                    } catch (err) {
+                        console.error(err);
+                        showToast('重設失敗，請重試', 'error');
+                    }
+                }
+            );
+        });
+
+        // 匯入 JSON (相容 v1 舊版陣列與 v2 多專案工作區格式)
+        document.getElementById('importFile').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                try {
+                    const imported = JSON.parse(evt.target.result);
+                    const db = await openDB();
+
+                    if (imported.projects && Array.isArray(imported.projects) && Array.isArray(imported.tasks)) {
+                        // v2 多專案完整工作區格式
+                        const tx = db.transaction([STORE_PROJECTS, STORE_TASKS], 'readwrite');
+                        const projStore = tx.objectStore(STORE_PROJECTS);
+                        const taskStore = tx.objectStore(STORE_TASKS);
+                        projStore.clear();
+                        taskStore.clear();
+                        imported.projects.forEach(p => projStore.put(p));
+                        imported.tasks.forEach(t => taskStore.put(t));
+
+                        await new Promise((res, rej) => {
+                            tx.oncomplete = res;
+                            tx.onerror = rej;
+                        });
+
+                        projects = imported.projects;
+                        allTasks = imported.tasks;
+                        currentProjectId = projects[0]?.id || null;
+                        renderProjectSelect();
+                        refreshAll();
+                        showToast('已成功復原多專案工作區備份！', 'success');
+                    } else if (Array.isArray(imported)) {
+                        // 相容舊版單專案任務陣列
+                        const defaultProj = {
+                            id: 'proj-imported-' + Date.now(),
+                            name: '匯入的專案',
+                            desc: '從舊版格式匯入',
+                            createdAt: new Date().toISOString()
+                        };
+                        const mappedTasks = imported.map(t => ({
+                            ...t,
+                            projectId: t.projectId || defaultProj.id
+                        }));
+
+                        await dbPutProject(defaultProj);
+                        for (const t of mappedTasks) {
+                            await dbPutTask(t);
+                        }
+
+                        projects.push(defaultProj);
+                        allTasks.push(...mappedTasks);
+                        currentProjectId = defaultProj.id;
+                        renderProjectSelect();
+                        refreshAll();
+                        showToast('已成功匯入舊版資料並轉為新專案！', 'success');
+                    } else {
+                        showToast('匯入格式不相符', 'error');
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast('匯入失敗，請確認檔案格式', 'error');
+                }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        });
+
+        document.getElementById('openNewTaskModal').addEventListener('click', openCreateModal);
+        document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+        document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
+
+        document.getElementById('statusFilter').addEventListener('change', (e) => {
+            currentFilter = e.target.value;
+            renderGantt();
+        });
+
+        const viewDayBtn = document.getElementById('viewDayBtn');
+        const viewWeekBtn = document.getElementById('viewWeekBtn');
+
+        viewDayBtn.addEventListener('click', () => {
+            currentScale = 'DAY';
+            viewDayBtn.className = "px-3 py-1 rounded-md bg-white text-zinc-900 shadow-2xs font-semibold transition";
+            viewWeekBtn.className = "px-3 py-1 rounded-md text-zinc-600 hover:text-zinc-900 transition";
+            renderGantt();
+        });
+
+        viewWeekBtn.addEventListener('click', () => {
+            currentScale = 'WEEK';
+            viewWeekBtn.className = "px-3 py-1 rounded-md bg-white text-zinc-900 shadow-2xs font-semibold transition";
+            viewDayBtn.className = "px-3 py-1 rounded-md text-zinc-600 hover:text-zinc-900 transition";
+            renderGantt();
+        });
+
+        viewWeekBtn.addEventListener('click', () => {
+            currentScale = 'WEEK';
+            viewWeekBtn.className = "px-2.5 sm:px-3 py-1 rounded-md bg-white text-zinc-900 shadow-2xs font-semibold transition";
+            viewDayBtn.className = "px-2.5 sm:px-3 py-1 rounded-md text-zinc-600 hover:text-zinc-900 transition";
+            renderGantt();
+        });
+
+        document.getElementById('scrollToTodayBtn').addEventListener('click', () => {
+            const { start } = getGanttTimelineRange();
+            const daysFromStart = Math.round((todayObj - start) / (1000 * 60 * 60 * 24));
+            const cellWidth = currentScale === 'DAY' ? CELL_WIDTH_DAY : CELL_WIDTH_WEEK;
+            const container = document.getElementById('ganttScrollContainer');
+            const isMobile = window.innerWidth < 640;
+            const leftColWidthPx = isMobile ? 144 : 224;
+            const targetX = Math.max(0, (daysFromStart * cellWidth) - (container.clientWidth / 2) + leftColWidthPx / 2);
+            container.scrollTo({ left: targetX, behavior: 'smooth' });
+        });
+
+        function refreshAll() {
+            renderCountdownCards();
+            renderGantt();
+        }
+
+        // 綁定手機版快速新增任務按鈕
+        const mobileAddBtn = document.getElementById('openNewTaskModalMobile');
+        if (mobileAddBtn) {
+            mobileAddBtn.addEventListener('click', openCreateModal);
+        }
+
+        // 監聽螢幕旋轉與縮放，即時重新計算甘特圖比例
+        let resizeTimer = null;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                renderGantt();
+            }, 150);
+        });
+
+        // 初始化 IndexedDB 與資料載入
+        async function initData() {
+            try {
+                let storedProjects = await dbGetAllProjects();
+                let storedTasks = await dbGetAllTasks();
+
+                if (!storedProjects || storedProjects.length === 0) {
+                    // 若無專案資料，寫入示範多專案與任務
+                    for (const p of defaultProjects) await dbPutProject(p);
+                    for (const t of defaultTasks) await dbPutTask(t);
+                    projects = [...defaultProjects];
+                    allTasks = [...defaultTasks];
+                } else {
+                    projects = storedProjects;
+                    allTasks = storedTasks;
+                    
+                    // 升級相容檢查：若有任務未帶有 projectId，自動掛載至第一個專案
+                    for (const t of allTasks) {
+                        if (!t.projectId) {
+                            t.projectId = projects[0].id;
+                            await dbPutTask(t);
+                        }
+                    }
+                }
+                currentProjectId = projects[0]?.id || null;
+                renderProjectSelect();
+            } catch (err) {
+                console.error('IndexedDB 初始化失敗', err);
+                projects = [...defaultProjects];
+                allTasks = [...defaultTasks];
+                currentProjectId = projects[0]?.id || null;
+                renderProjectSelect();
+                showToast('IndexedDB 初始化異常，啟用臨時記憶體模式', 'warning');
+            }
+            refreshAll();
+        }
+
+        window.onload = function() {
+            lucide.createIcons();
+            initData();
+        };
+    </script>
+</body>
+</html>
