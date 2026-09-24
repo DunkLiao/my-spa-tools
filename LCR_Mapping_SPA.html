@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>臺灣 LCR Mapping 與試算（離線版）</title>
+<style>
+:root{
+  --navy:#17365D; --navy2:#1f4e79; --line:#d7dee6; --bg:#f3f6f9;
+  --ink:#1b2733; --muted:#5b6b7c; --blue:#0b5ed7; --green:#127a4b;
+  --amber:#b26a00; --red:#b3261e; --card:#fff;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft JhengHei","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+header{background:var(--navy);color:#fff;padding:14px 20px}
+header h1{margin:0;font-size:20px}
+header p{margin:4px 0 0;font-size:12.5px;opacity:.85}
+nav{display:flex;gap:4px;background:var(--navy2);padding:0 12px;flex-wrap:wrap}
+nav button{background:transparent;border:0;color:#cfe0f0;padding:11px 16px;cursor:pointer;font-size:14px;border-bottom:3px solid transparent}
+nav button.active{color:#fff;border-bottom-color:#ffc000;font-weight:700}
+main{padding:18px;max-width:1400px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:17px;color:var(--navy)}
+.card h3{margin:16px 0 8px;font-size:15px;color:var(--navy2)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{background:var(--navy);color:#fff;padding:8px;text-align:left;font-weight:600;position:sticky;top:0}
+td{padding:7px 8px;border-bottom:1px solid #edf1f5;vertical-align:top}
+tbody tr:nth-child(even){background:#fafcfe}
+tbody tr:hover{background:#eef6ff}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.coef{font-weight:700;color:var(--navy2)}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:700}
+.tag.out{background:#fde8e6;color:var(--red)}
+.tag.in{background:#e3f3ea;color:var(--green)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+input,select{padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:14px;font-family:inherit}
+input[type=number]{text-align:right}
+button.btn{background:var(--navy2);color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:14px}
+button.btn.ghost{background:#fff;color:var(--navy2);border:1px solid var(--navy2)}
+button.btn.danger{background:#fff;color:var(--red);border:1px solid #e0b4b1}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:6px}
+.kpi div{background:#f7fafd;border:1px solid var(--line);border-left:4px solid var(--navy2);border-radius:6px;padding:11px 13px}
+.kpi span{display:block;font-size:12.5px;color:var(--muted)}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.ok{color:var(--green)}.bad{color:var(--red)}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.7}
+.formula{background:#f5f8fb;border-left:3px solid var(--navy2);padding:10px 12px;font-family:Consolas,monospace;font-size:13px;white-space:pre-wrap;border-radius:0 6px 6px 0;margin:8px 0}
+.scroll{overflow:auto;max-height:520px;border:1px solid var(--line);border-radius:6px}
+.right{text-align:right}
+a{color:var(--blue)}
+.del{background:none;border:0;color:var(--red);cursor:pointer;font-size:16px}
+.small{font-size:12.5px}
+@media print{nav,.toolbar,.del,button{display:none}.page{display:block!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>臺灣 LCR Mapping 與試算工具</h1>
+  <p>流動性覆蓋比率　業務對應係數與情境試算　離線單機版</p>
+</header>
+
+<nav>
+  <button class="active" data-p="calc">試算</button>
+  <button data-p="map">Mapping 表</button>
+  <button data-p="param">參數</button>
+  <button data-p="help">使用說明</button>
+</nav>
+
+<main>
+
+<!-- ============ 試算 ============ -->
+<section id="calc" class="page active">
+  <div class="card">
+    <h2>計算結果</h2>
+    <div class="kpi">
+      <div><span>總預期現金流出</span><b id="kOut">-</b></div>
+      <div><span>總預期現金流入</span><b id="kIn">-</b></div>
+      <div><span>可認列流入（受上限）</span><b id="kInCap">-</b></div>
+      <div><span>淨現金流出</span><b id="kNet">-</b></div>
+      <div><span>HQLA</span><b id="kHqla">-</b></div>
+      <div><span>LCR</span><b id="kLcr">-</b></div>
+    </div>
+    <div class="formula" id="fx"></div>
+  </div>
+
+  <div class="card">
+    <h2>HQLA 輸入</h2>
+    <div class="toolbar">
+      <label>合格高品質流動性資產總額（元）</label>
+      <input type="number" id="hqla" value="1500000000" step="1000000" style="width:220px">
+      <button class="btn ghost" id="btnDemo">載入示範資料</button>
+      <button class="btn danger" id="btnClear">清空明細</button>
+    </div>
+    <p class="hint">第二層資產合計不得超過 HQLA 總額 40%，其中第二層 B 級資產不得超過 15%；本欄請填已完成上限調整後之 HQLA 淨額。</p>
+  </div>
+
+  <div class="card">
+    <h2>業務明細</h2>
+    <div class="toolbar">
+      <select id="addSel" style="min-width:420px"></select>
+      <input type="number" id="addAmt" placeholder="餘額（元）" style="width:180px">
+      <button class="btn" id="btnAdd">加入明細</button>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:90px">代碼</th><th style="width:60px">方向</th>
+            <th>業務項目</th><th style="width:150px">交易對手</th>
+            <th class="right" style="width:150px">餘額</th>
+            <th class="right" style="width:80px">係數</th>
+            <th class="right" style="width:150px">加權金額</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="tbLines"></tbody>
+        <tfoot id="tfLines"></tfoot>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ Mapping ============ -->
+<section id="map" class="page">
+  <div class="card">
+    <h2>LCR 業務對應係數表</h2>
+    <div class="toolbar">
+      <input id="q" placeholder="搜尋項目、對手或條件…" style="min-width:300px">
+      <select id="fDir"><option value="">全部方向</option><option>流出</option><option>流入</option></select>
+      <select id="fCat"><option value="">全部大類</option></select>
+      <span class="hint" id="cnt"></span>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:88px">代碼</th><th style="width:58px">方向</th>
+            <th style="width:130px">大類</th><th>業務／項目</th>
+            <th style="width:180px">交易對手</th><th style="width:210px">主要判斷條件</th>
+            <th class="right" style="width:70px">係數</th>
+            <th style="width:170px">計算基礎</th><th style="width:200px">備註</th>
+          </tr>
+        </thead>
+        <tbody id="tbMap"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 參數 ============ -->
+<section id="param" class="page">
+  <div class="card">
+    <h2>法定參數</h2>
+    <table>
+      <thead><tr><th style="width:220px">參數</th><th style="width:120px" class="right">數值</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>LCR 最低標準</td><td class="right"><input type="number" id="pMin" value="100" step="1" style="width:90px">%</td>
+            <td>一般適用銀行之最低比率；適用範圍與例外依實施標準辦理。</td></tr>
+        <tr><td>流入認列上限</td><td class="right"><input type="number" id="pCap" value="75" step="1" style="width:90px">%</td>
+            <td>總預期現金流入不得超過總預期現金流出之 75%。</td></tr>
+        <tr><td>第二層資產上限</td><td class="right">40%</td><td>第二層 A 級加 B 級合計不得超過 HQLA 總額 40%。</td></tr>
+        <tr><td>第二層 B 級上限</td><td class="right">15%</td><td>第二層 B 級不得超過 HQLA 總額 15%。</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 說明 ============ -->
+<section id="help" class="page">
+  <div class="card">
+    <h2>計算公式</h2>
+    <div class="formula">LCR ＝ 合格高品質流動性資產總額 ÷ 未來 30 個日曆日淨現金流出總額 × 100%
+
+淨現金流出 ＝ 總預期現金流出 － MIN(總預期現金流入, 總預期現金流出 × 75%)
+
+總預期現金流出 ＝ Σ (表內負債及表外承諾餘額 × 流失率或動撥率)
+總預期現金流入 ＝ Σ (各類契約應收款餘額 × 預期流入比率)</div>
+  </div>
+  <div class="card">
+    <h2>使用方式</h2>
+    <p class="hint">
+      1. 於「試算」頁輸入 HQLA 總額。<br>
+      2. 由下拉選單挑選業務項目、輸入餘額後按「加入明細」，係數會自動帶入。<br>
+      3. 明細可直接修改餘額，上方 KPI 即時重算。<br>
+      4. 「Mapping 表」可搜尋各業務對應之大類、對手別與係數。<br>
+      5. 本頁全部離線運作，不需網路，資料僅存於瀏覽器本機。
+    </p>
+  </div>
+  <div class="card">
+    <h2>重要限制</h2>
+    <p class="hint">
+      本工具為 Mapping 摘要與試算輔助，不取代主管機關完整條文、附錄及申報表格。複合性產品仍須依交易對手、剩餘期間、擔保品、可取消性及是否重複列計逐案判斷；同一項目符合兩個以上流出類別時，應適用較高係數且不得重複計算。使用前請確認主管機關是否另有更新函令。
+    </p>
+    <p class="small">
+      依據：金管會「流動性覆蓋比率之計算方法說明及表格」、「銀行流動性覆蓋比率實施標準」。
+    </p>
+  </div>
+</section>
+
+</main>
+
+<script>
+const MAP = [
+ {id:"LCR-001",dir:"流出",cat:"零售存款",item:"穩定零售存款",cp:"自然人",cond:"符合存款保險及穩定往來等規定",coef:0.05,base:"30日內可能流出之存款餘額",note:"須依附錄一判定穩定存款"},
+ {id:"LCR-002",dir:"流出",cat:"零售存款",item:"其他零售存款",cp:"自然人",cond:"不符合穩定零售存款條件",coef:0.10,base:"30日內可能流出之存款餘額",note:"高流失風險項目應依主管機關細項判定"},
+ {id:"LCR-003",dir:"流出",cat:"無擔保批發性融資",item:"營運存款",cp:"符合規定之客戶",cond:"符合附錄二營運存款條件",coef:0.25,base:"符合條件之存款餘額",note:"不符合條件部分改按對象別係數"},
+ {id:"LCR-004",dir:"流出",cat:"無擔保批發性融資",item:"非金融機構企業等之非營運存款",cp:"非金融機構企業、主權、央行、地方政府等",cond:"無存款保險或超過保額部分等依規定分類",coef:0.40,base:"存款餘額",note:"依完整條文判斷對象與保障狀態"},
+ {id:"LCR-005",dir:"流出",cat:"無擔保批發性融資",item:"金融機構及其他法律實體資金",cp:"金融機構、關聯企業等",cond:"30日內到期或可被提領",coef:1.00,base:"資金餘額",note:""},
+ {id:"LCR-006",dir:"流出",cat:"擔保融資",item:"以第一層資產擔保之30日內到期交易",cp:"各類對手",cond:"擔保品符合第一層資產",coef:0.00,base:"到期交易金額",note:"依擔保品類別與交易條件判定"},
+ {id:"LCR-007",dir:"流出",cat:"擔保融資",item:"以第二層A級資產擔保之30日內到期交易",cp:"各類對手",cond:"擔保品符合第二層A級資產",coef:0.15,base:"到期交易金額",note:""},
+ {id:"LCR-008",dir:"流出",cat:"授信承諾",item:"信用及流動性融資額度未動用餘額",cp:"零售及小型企業戶",cond:"不可取消或有條件可取消",coef:0.05,base:"未動用承諾額度",note:""},
+ {id:"LCR-009",dir:"流出",cat:"授信承諾",item:"信用融資額度未動用餘額",cp:"非金融機構企業、主權、央行、多邊開發銀行、地方政府及非營利國營事業",cond:"不可取消或有條件可取消",coef:0.10,base:"未動用承諾額度",note:""},
+ {id:"LCR-010",dir:"流出",cat:"授信承諾",item:"流動性融資額度未動用餘額",cp:"非金融機構企業、主權、央行、多邊開發銀行、地方政府及非營利國營事業",cond:"備援流動性融資",coef:0.30,base:"未動用承諾額度",note:"含NIFs、RUFs及證券化發行計畫備援"},
+ {id:"LCR-011",dir:"流出",cat:"授信承諾",item:"信用及流動性融資額度未動用餘額",cp:"銀行",cond:"不可取消或有條件可取消",coef:0.40,base:"未動用承諾額度",note:""},
+ {id:"LCR-012",dir:"流出",cat:"授信承諾",item:"信用融資額度未動用餘額",cp:"銀行以外其他金融機構",cond:"不可取消或有條件可取消",coef:0.40,base:"未動用承諾額度",note:""},
+ {id:"LCR-013",dir:"流出",cat:"授信承諾",item:"流動性融資額度未動用餘額",cp:"銀行以外其他金融機構",cond:"備援流動性融資",coef:1.00,base:"未動用承諾額度",note:""},
+ {id:"LCR-014",dir:"流出",cat:"授信承諾",item:"信用及流動性融資額度未動用餘額",cp:"其他法律實體客戶",cond:"不可取消或有條件可取消",coef:1.00,base:"未動用承諾額度",note:""},
+ {id:"LCR-015",dir:"流出",cat:"或有融資負債",item:"與貿易融資有關之保證、信用狀及未動用貿易融資額度",cp:"各類客戶",cond:"已開立尚未解除，或尚未開立之約定額度",coef:0.03,base:"相關表外餘額",note:"含進口擔保信用狀、擔保提貨、副提單背書等"},
+ {id:"LCR-016",dir:"流出",cat:"或有融資負債",item:"與貿易融資無關之保證、信用狀及其他或有融資義務",cp:"各類客戶",cond:"已開立尚未解除，或尚未開立之約定額度",coef:0.01,base:"相關表外餘額",note:"含無條件可取消之未動用信用及流動性額度"},
+ {id:"LCR-017",dir:"流出",cat:"其他",item:"其他約定現金流出",cp:"各類對手",cond:"30日內且未列入其他流出項目",coef:1.00,base:"契約現金流出",note:"避免與其他項目重複計算"},
+ {id:"LCR-018",dir:"流入",cat:"擔保借出交易",item:"以第一層資產為擔保之30日內到期交易",cp:"各類對手",cond:"擔保品未支應短部位等",coef:0.00,base:"30日內到期應收金額",note:"係數代表可認列流入比例"},
+ {id:"LCR-019",dir:"流入",cat:"擔保借出交易",item:"以第二層A級資產為擔保之30日內到期交易",cp:"各類對手",cond:"擔保品未支應短部位等",coef:0.15,base:"30日內到期應收金額",note:""},
+ {id:"LCR-020",dir:"流入",cat:"放款及其他應收款",item:"正常履約之零售及小型企業放款",cp:"零售及小型企業戶",cond:"30日內契約到期且無逾期",coef:0.50,base:"30日內契約應收本金及利息",note:"不得假設續作；仍受流入上限限制"},
+ {id:"LCR-021",dir:"流入",cat:"放款及其他應收款",item:"正常履約之非金融機構企業等放款",cp:"非金融機構企業及規範所列對象",cond:"30日內契約到期且無逾期",coef:0.50,base:"30日內契約應收本金及利息",note:""},
+ {id:"LCR-022",dir:"流入",cat:"放款及其他應收款",item:"金融機構及央行等到期應收款",cp:"金融機構及符合規定對象",cond:"30日內契約到期且無逾期",coef:1.00,base:"30日內契約應收本金及利息",note:"依對手及條文細項確認"},
+ {id:"LCR-023",dir:"流入",cat:"營運存款",item:"存放於其他金融機構之營運存款",cp:"金融機構",cond:"符合營運存款定義",coef:0.00,base:"存款餘額",note:"原則上不得計入流入"},
+ {id:"LCR-024",dir:"流入",cat:"衍生性商品",item:"衍生性商品契約淨現金流入",cp:"交易對手",cond:"30日內契約現金流入，依規定淨額計算",coef:1.00,base:"淨現金流入",note:"須與衍生性商品流出及擔保品規定配合"},
+ {id:"LCR-025",dir:"流入",cat:"其他",item:"其他約定現金流入",cp:"各類對手",cond:"30日內且符合規範",coef:1.00,base:"契約現金流入",note:"總認列流入不得超過總流出75%"}
+];
+
+const DEMO=[["LCR-001",8000000000],["LCR-002",3000000000],["LCR-004",2500000000],["LCR-005",600000000],
+            ["LCR-008",1000000000],["LCR-009",600000000],["LCR-015",200000000],["LCR-016",300000000],
+            ["LCR-020",900000000],["LCR-022",400000000]];
+
+let lines=[];
+const $=s=>document.querySelector(s);
+const fmt=n=>isFinite(n)?n.toLocaleString('zh-TW',{maximumFractionDigits:0}):'-';
+const pct=n=>(n*100).toFixed(1)+'%';
+
+/* 分頁 */
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active'); $('#'+b.dataset.p).classList.add('active');
+});
+
+/* 下拉 */
+$('#addSel').innerHTML = MAP.map(m=>`<option value="${m.id}">[${m.dir}] ${m.id}　${m.item}（${pct(m.coef)}）</option>`).join('');
+
+/* Mapping 表 */
+const cats=[...new Set(MAP.map(m=>m.cat))];
+$('#fCat').innerHTML += cats.map(c=>`<option>${c}</option>`).join('');
+function renderMap(){
+  const q=$('#q').value.trim(), d=$('#fDir').value, c=$('#fCat').value;
+  const rows=MAP.filter(m=>(!d||m.dir===d)&&(!c||m.cat===c)&&
+    (!q||[m.id,m.item,m.cp,m.cond,m.note,m.cat].join(' ').includes(q)));
+  $('#tbMap').innerHTML=rows.map(m=>`<tr>
+    <td>${m.id}</td><td><span class="tag ${m.dir==='流出'?'out':'in'}">${m.dir}</span></td>
+    <td>${m.cat}</td><td>${m.item}</td><td>${m.cp}</td><td>${m.cond}</td>
+    <td class="right coef">${pct(m.coef)}</td><td>${m.base}</td><td class="small">${m.note}</td></tr>`).join('');
+  $('#cnt').textContent=`顯示 ${rows.length} / ${MAP.length} 筆`;
+}
+['#q','#fDir','#fCat'].forEach(s=>$(s).addEventListener('input',renderMap));
+
+/* 明細 */
+function addLine(id,amt){
+  const m=MAP.find(x=>x.id===id); if(!m)return;
+  lines.push({id:m.id,dir:m.dir,item:m.item,cp:m.cp,coef:m.coef,amt:Number(amt)||0});
+  render();
+}
+$('#btnAdd').onclick=()=>{ addLine($('#addSel').value,$('#addAmt').value); $('#addAmt').value=''; };
+$('#btnClear').onclick=()=>{ lines=[]; render(); };
+$('#btnDemo').onclick=()=>{ lines=[]; DEMO.forEach(([id,a])=>addLine(id,a)); };
+$('#hqla').addEventListener('input',render);
+$('#pCap').addEventListener('input',render);
+$('#pMin').addEventListener('input',render);
+
+function render(){
+  $('#tbLines').innerHTML = lines.length? lines.map((l,i)=>`<tr>
+    <td>${l.id}</td><td><span class="tag ${l.dir==='流出'?'out':'in'}">${l.dir}</span></td>
+    <td>${l.item}</td><td class="small">${l.cp}</td>
+    <td class="right"><input type="number" value="${l.amt}" data-i="${i}" class="amt" style="width:140px"></td>
+    <td class="right coef">${pct(l.coef)}</td>
+    <td class="right num">${fmt(l.amt*l.coef)}</td>
+    <td><button class="del" data-d="${i}">✕</button></td></tr>`).join('')
+    : `<tr><td colspan="8" style="text-align:center;color:#8895a3;padding:24px">尚無明細，請於上方加入或按「載入示範資料」</td></tr>`;
+
+  document.querySelectorAll('.amt').forEach(el=>el.oninput=e=>{lines[e.target.dataset.i].amt=Number(e.target.value)||0;render();});
+  document.querySelectorAll('.del').forEach(el=>el.onclick=e=>{lines.splice(e.target.dataset.d,1);render();});
+
+  const out=lines.filter(l=>l.dir==='流出').reduce((s,l)=>s+l.amt*l.coef,0);
+  const inf=lines.filter(l=>l.dir==='流入').reduce((s,l)=>s+l.amt*l.coef,0);
+  const cap=(Number($('#pCap').value)||75)/100;
+  const inCap=Math.min(inf,out*cap);
+  const net=out-inCap;
+  const hqla=Number($('#hqla').value)||0;
+  const lcr=net>0?hqla/net:0;
+  const min=(Number($('#pMin').value)||100)/100;
+
+  $('#tfLines').innerHTML=`<tr style="background:#eef3f8;font-weight:700">
+    <td colspan="6">合計　流出 ${fmt(out)}　／　流入 ${fmt(inf)}</td>
+    <td class="right num">${fmt(out-inf)}</td><td></td></tr>`;
+
+  $('#kOut').textContent=fmt(out);
+  $('#kIn').textContent=fmt(inf);
+  $('#kInCap').textContent=fmt(inCap);
+  $('#kNet').textContent=fmt(net);
+  $('#kHqla').textContent=fmt(hqla);
+  const ok=net>0&&lcr>=min;
+  $('#kLcr').innerHTML = net>0
+    ? `<span class="${ok?'ok':'bad'}">${(lcr*100).toFixed(2)}%</span>`
+    : '<span class="bad">－</span>';
+
+  $('#fx').textContent =
+`總預期現金流出 = ${fmt(out)}
+總預期現金流入 = ${fmt(inf)}
+可認列流入 = MIN(${fmt(inf)} , ${fmt(out)} × ${(cap*100).toFixed(0)}%) = ${fmt(inCap)}
+淨現金流出 = ${fmt(out)} － ${fmt(inCap)} = ${fmt(net)}
+LCR = ${fmt(hqla)} ÷ ${fmt(net)} = ${net>0?(lcr*100).toFixed(2)+'%':'－'}
+法定門檻 ${(min*100).toFixed(0)}% → ${net>0?(ok?'符合':'未達標'):'請輸入明細'}`;
+}
+
+renderMap(); render();
+</script>
+</body>
+</html>
