@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent YAML Maker - progress.yaml 與 handoff.yaml 公版產生器</title>
+  
+  <!-- 立即偵測主題設定，預設淺色模式 (Default Light Mode)，防止載入時閃爍 -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('agent_yaml_theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+
+  <!-- Google Fonts: Plus Jakarta Sans & Noto Sans TC (慢活自然美學) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', '"Noto Sans TC"', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+          colors: {
+            // 慢活大地與溫潤棉麻色系 (Slow Living Organic Earth & Linen)
+            slate: {
+              50: '#faf8f5',   // 輕柔米白 / 溫潤棉麻底色 (Linen & Oat)
+              100: '#f4efe6',  // 溫暖淺灰沙 (Warm Sand)
+              200: '#e7e0d3',  // 質樸陶土與紙質邊框 (Paper & Ceramic Border)
+              300: '#d7cdbd',  // 柔和隔線
+              400: '#a39684',  // 沉靜次要文字
+              500: '#7d7160',  // 沉穩內文
+              600: '#5e5445',  // 質樸深褐
+              700: '#463e33',  // 溫暖深石色
+              800: '#302a22',  // 焙茶黑 / 慢活深木 (Roasted Tea / Walnut)
+              900: '#231e18',  // 深焙咖啡炭黑卡片底色 (Espresso Charcoal)
+              950: '#191612',  // 寂靜夜幕深色模式背景 (Quiet Nightfall)
+            },
+            // 植感草木綠取代冷硬科技藍 (Sage, Herb & Moss / 鼠尾草與苔蘚)
+            blue: {
+              50: '#f4f7f4',
+              100: '#e5ece5',
+              200: '#cbdacb',
+              300: '#a6c2a8',
+              400: '#7fa582',
+              500: '#5d8660',
+              600: '#486e4b',  // 主按鈕與焦點色
+              700: '#39573c',
+              800: '#2f4531',
+              900: '#28392a',
+              950: '#141e15',
+            },
+            // 大地陶土與溫暖赭石 (Terracotta & Clay)
+            amber: {
+              50: '#fbf7f0',
+              100: '#f6ecdd',
+              200: '#ebd6ba',
+              300: '#ddbc90',
+              400: '#cfa16a',
+              500: '#bc8348',  // 陶土赭黃
+              600: '#a66e3b',
+              700: '#845330',
+              800: '#6c442b',
+              900: '#583825',
+              950: '#321d12',
+            },
+            // 乾燥玫瑰與陶土紅 (Dried Rose & Clay Red)
+            rose: {
+              50: '#fdf6f5',
+              100: '#f9eae8',
+              200: '#f3d6d2',
+              300: '#e8b7b1',
+              400: '#d89189',
+              500: '#c16d64',
+              600: '#a9544b',
+              700: '#8a423b',
+              800: '#723832',
+              900: '#5f322d',
+              950: '#341714',
+            },
+            // 抹茶綠 / 甘草苔石 (Matcha & Olive)
+            emerald: {
+              50: '#f3f7f4',
+              100: '#e3ece4',
+              200: '#c7dbca',
+              300: '#a1c2a5',
+              400: '#75a37b',
+              500: '#55865b',
+              600: '#406c45',
+              700: '#345538',
+              800: '#2b442e',
+              900: '#243927',
+              950: '#111f13',
+            },
+            // 暮色靛藍 / 煙雨灰藍 (Dusk Indigo)
+            indigo: {
+              50: '#f5f6f8',
+              100: '#e9ebf0',
+              200: '#d5d9e2',
+              300: '#b4bece',
+              400: '#8c9db6',
+              500: '#6c7f9c',
+              600: '#556681',
+              700: '#455269',
+              800: '#3a4455',
+              900: '#323a48',
+              950: '#1f242d',
+            },
+            // 礦物青苔 / 溫泉天青 (Celadon Mineral)
+            cyan: {
+              50: '#f2f8f8',
+              100: '#e1f0ef',
+              200: '#c5e2e1',
+              300: '#9dcdcd',
+              400: '#6cb1b2',
+              500: '#529698',
+              600: '#427b7d',
+              700: '#386365',
+              800: '#325253',
+              900: '#2c4547',
+              950: '#192b2d',
+            },
+            // 暮靄灰紫 / 無花果 (Muted Fig & Plum)
+            purple: {
+              50: '#f9f6f9',
+              100: '#f2ebf2',
+              200: '#e6d8e6',
+              300: '#d2bed2',
+              400: '#b89cb9',
+              500: '#9e7da0',
+              600: '#846286',
+              700: '#6d4e6f',
+              800: '#5a415c',
+              900: '#4c384e',
+              950: '#2e1e30',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- js-yaml CDN for YAML dumping and parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+  <!-- JSZip CDN for bundle zip packaging -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col selection:bg-blue-600 selection:text-white transition-colors duration-300">
+
+  <!-- 頂部導航列 (Navbar - RWD 優化) -->
+  <header class="border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/80 backdrop-blur sticky top-0 z-30 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 transition-colors">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
+      
+      <!-- 標題與簡介 + 手機版深淺色按鈕 -->
+      <div class="flex items-center justify-between gap-3 w-full md:w-auto">
+        <div class="flex items-center gap-2.5 sm:gap-3">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-emerald-700 via-stone-800 to-amber-700 flex items-center justify-center shadow-md shadow-stone-800/10 shrink-0">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-amber-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-1.5 sm:gap-2">
+              <h1 class="text-base sm:text-lg font-bold tracking-tight text-slate-800 dark:text-slate-100">Agent YAML Maker</h1>
+            </div>
+            <p class="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate max-w-[220px] sm:max-w-none">AI Agent 狀態看板與交接工單</p>
+          </div>
+        </div>
+
+        <!-- 手機版深淺色模式切換按鈕 (小螢幕顯示) -->
+        <button type="button" onclick="toggleTheme()"
+          class="md:hidden p-2 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm"
+          title="切換深淺色模式">
+          <svg id="theme-sun-icon-mobile" class="w-4 h-4 hidden text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+          <svg id="theme-moon-icon-mobile" class="w-4 h-4 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+        </button>
+      </div>
+
+      <!-- 右側快速操作群 (自適應排版) -->
+      <div class="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full md:w-auto justify-start md:justify-end">
+        
+        <!-- 範本選取下拉選單與 CRUD 入口 -->
+        <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 rounded-lg p-1 text-xs text-slate-700 dark:text-slate-300 shadow-sm">
+          <div class="flex items-center gap-1.5 px-1.5 py-0.5">
+            <svg class="w-3.5 h-3.5 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+            <span class="text-slate-500 dark:text-slate-400 hidden sm:inline">範本:</span>
+            <select id="preset-selector" onchange="handlePresetSelection(this.value)"
+              class="bg-transparent border-0 text-slate-800 dark:text-slate-200 text-xs focus:ring-0 cursor-pointer font-medium p-0 max-w-[130px] sm:max-w-[180px] lg:max-w-[200px] truncate">
+              <optgroup label="✨ 內建系統範本" class="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+                <option value="software_dev" selected class="bg-white dark:bg-slate-800">軟體開發迭代 (Software Dev)</option>
+                <option value="data_etl" class="bg-white dark:bg-slate-800">數據分析與 ETL (Data Analytics)</option>
+                <option value="spec_doc" class="bg-white dark:bg-slate-800">規格與安全文檔 (Spec & Governance)</option>
+                <option value="blank" class="bg-white dark:bg-slate-800">空白模板 (Blank Template)</option>
+              </optgroup>
+              <optgroup label="📁 自訂範本庫" id="custom-presets-optgroup" class="bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-300 font-semibold">
+                <!-- 自訂範本動態渲染 -->
+              </optgroup>
+            </select>
+          </div>
+
+          <div class="h-4 w-px bg-slate-200 dark:bg-slate-700 mx-0.5"></div>
+
+          <!-- 另存為新範本按鈕 -->
+          <button type="button" onclick="openCreateTemplateModal()"
+            class="px-2 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-medium transition-colors flex items-center gap-1 shadow-sm shrink-0"
+            title="將當前內容另存為新範本">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span class="hidden sm:inline">存為範本</span>
+          </button>
+
+          <!-- 範本管理按鈕 -->
+          <button type="button" onclick="openTemplateManagerModal()"
+            class="p-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700/60 rounded transition-colors shrink-0"
+            title="開啟範本管理庫 (CRUD)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          </button>
+        </div>
+
+        <!-- 儲存快照至 IndexedDB 按鈕 -->
+        <button type="button" onclick="openSaveSnapshotModal()"
+          class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors shadow-sm shrink-0"
+          title="將當前設定存為 IndexedDB 快照">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+          <span class="hidden sm:inline">存為快照</span>
+          <span class="sm:hidden">快照</span>
+        </button>
+
+        <!-- 歷史快照匣按鈕 -->
+        <button type="button" onclick="openSnapshotModal()"
+          class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors shadow-sm shrink-0"
+          title="開啟 IndexedDB 歷史快照庫">
+          <svg class="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          <span class="hidden sm:inline">歷史庫</span> (<span id="snapshot-count" class="font-bold text-amber-600 dark:text-amber-300">0</span>)
+        </button>
+
+        <!-- 匯入現有 YAML 按鈕 -->
+        <button type="button" onclick="openImportModal()"
+          class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors shadow-sm shrink-0"
+          title="匯入並反向解析 YAML 檔">
+          <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+          <span class="hidden sm:inline">載入 YAML</span>
+          <span class="sm:hidden">載入</span>
+        </button>
+
+        <!-- 資料庫維護中心按鈕 -->
+        <button type="button" onclick="openDbToolsModal()"
+          class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors shadow-sm shrink-0"
+          title="IndexedDB 資料庫備份、匯入與出廠重設">
+          <svg class="w-3.5 h-3.5 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+          <span class="hidden sm:inline">資料庫</span>
+        </button>
+
+        <!-- 一鍵打包 ZIP 下載按鈕 -->
+        <button type="button" onclick="exportZipBundle()"
+          class="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors shadow-sm shadow-indigo-600/20 shrink-0"
+          title="打包下載 progress.yaml 與 handoff.yaml">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"></path></svg>
+          <span class="hidden sm:inline">打包 ZIP</span>
+          <span class="sm:hidden">ZIP</span>
+        </button>
+
+        <!-- 桌面版深淺色模式切換按鈕 -->
+        <button type="button" onclick="toggleTheme()" id="theme-toggle-btn"
+          class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors shadow-sm text-xs font-medium shrink-0"
+          title="切換深淺色模式">
+          <svg id="theme-sun-icon" class="w-3.5 h-3.5 hidden text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+          <svg id="theme-moon-icon" class="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+          <span id="theme-label">深色模式</span>
+        </button>
+
+      </div>
+
+    </div>
+  </header>
+
+  <!-- 頁籤導覽列 (Tabs & 手機視圖切換) -->
+  <div class="border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/50 px-3 sm:px-6 lg:px-8 transition-colors">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 py-1 sm:py-0">
+      
+      <!-- 主分頁按鈕 (progress.yaml vs. handoff.yaml) -->
+      <div class="flex space-x-1" role="tablist">
+        <button id="tab-progress" role="tab" onclick="switchTab('progress')"
+          class="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-500 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+          進度看板 (progress.yaml)
+        </button>
+        <button id="tab-handoff" role="tab" onclick="switchTab('handoff')"
+          class="flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 border-b-2 border-transparent transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+          代理交接 (handoff.yaml)
+        </button>
+      </div>
+
+      <!-- 右側：手機視圖切換鈕 + 資料庫同步燈號 -->
+      <div class="flex items-center justify-between sm:justify-end gap-3 text-xs py-1">
+        
+        <!-- 手機專屬「表單編輯 / 即時預覽」分頁切換鈕 (小螢幕極速切換) -->
+        <div class="flex lg:hidden items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-inner">
+          <button type="button" id="btn-mobile-form" onclick="setMobileView('form')"
+            class="px-2.5 py-1 rounded font-medium bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-sm transition-all text-xs">
+            📝 編輯表單
+          </button>
+          <button type="button" id="btn-mobile-preview" onclick="setMobileView('preview')"
+            class="px-2.5 py-1 rounded font-medium text-slate-500 dark:text-slate-400 transition-all text-xs">
+            👁️ 即時預覽
+          </button>
+        </div>
+
+        <!-- IndexedDB 連線與自動存檔狀態指示燈 -->
+        <div class="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+          <span id="db-status-dot" class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="db-status-text">IndexedDB 已連線</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 主要內容區 (雙欄響應式佈局) -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-6 lg:p-8">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+      
+      <!-- 左欄：動態輸入表單 (Form Area) -->
+      <section id="form-column" class="lg:col-span-7 space-y-4">
+        <div id="form-content-area">
+          <!-- 表單由 app.js 動態渲染 -->
+        </div>
+      </section>
+
+      <!-- 右欄：即時 YAML 預覽與下載面板 (Live Preview Panel) -->
+      <aside id="preview-column" class="hidden lg:block lg:col-span-5 sticky top-20 space-y-3">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-md dark:shadow-2xl transition-colors">
+          
+          <!-- 預覽標題工具列 -->
+          <div class="flex items-center justify-between px-4 py-3 bg-slate-100 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700/80">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+              <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+              <span id="preview-filename" class="ml-2 font-mono text-xs font-semibold text-slate-700 dark:text-slate-200">progress.yaml</span>
+            </div>
+
+            <!-- 操作按鈕：複製與下載單檔 -->
+            <div class="flex items-center gap-2">
+              <button type="button" onclick="copyYamlToClipboard()"
+                class="inline-flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-slate-50 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-medium rounded border border-slate-200 dark:border-transparent transition-colors shadow-sm"
+                title="複製 YAML 到剪貼簿">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                複製
+              </button>
+              <button type="button" onclick="downloadCurrentYaml()"
+                class="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded transition-colors shadow-sm"
+                title="下載當前 YAML 檔">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                下載 .yaml
+              </button>
+            </div>
+          </div>
+
+          <!-- 代碼展示區 (專業深色代碼風格，清晰高對比) -->
+          <div class="p-4 bg-slate-900 text-slate-100 max-h-[580px] overflow-auto">
+            <pre><code id="yaml-preview-code" class="code-preview text-slate-200"># Generating YAML...</code></pre>
+          </div>
+
+          <!-- 底部資訊條 -->
+          <div class="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+            <span id="preview-stats">0 行 | 0 bytes</span>
+            <span class="text-slate-400 dark:text-slate-500">標準 YAML 1.2 相容</span>
+          </div>
+
+        </div>
+
+        <!-- 小提示卡片 -->
+        <div class="p-3.5 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/40 rounded-xl text-xs text-blue-700 dark:text-blue-300 space-y-1">
+          <div class="font-semibold flex items-center gap-1.5 text-blue-800 dark:text-blue-200">
+            <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            使用小撇步
+          </div>
+          <p class="text-blue-600/90 dark:text-blue-300/80 leading-relaxed">
+            長任務執行時將 <code class="text-blue-800 dark:text-blue-200 font-mono bg-blue-100/60 dark:bg-blue-900/40 px-1 py-0.5 rounded">progress.yaml</code> 保存在專案根目錄；當需要交接給下一位 Agent 或開啟新對話時，點擊右上方「打包 ZIP」一次取得兩個標準狀態檔！
+          </p>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- 頁尾 (Footer) -->
+  <footer class="border-t border-slate-200 dark:border-slate-800 py-5 px-4 text-center text-xs text-slate-500 dark:text-slate-400 bg-white/60 dark:bg-slate-950/80 transition-colors">
+    <p class="flex items-center justify-center gap-1.5 flex-wrap">
+      <span>🌿 Agent YAML Maker</span>
+      <span>•</span>
+      <span>以慢活從容的節奏，沉澱構建 AI Agent 狀態機與無縫接力規範</span>
+    </p>
+  </footer>
+
+  <!-- 匯入現有 YAML Modal 彈窗 -->
+  <div id="import-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-xl overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+        <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+          載入並解析現有 YAML 檔案
+        </h3>
+        <button type="button" onclick="closeImportModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">&times;</button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">方式一：從本機選擇 .yaml 檔案</label>
+          <input type="file" accept=".yaml,.yml,.txt" onchange="handleImportFileSelect(event)"
+            class="block w-full text-xs text-slate-500 dark:text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 file:cursor-pointer">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-2">方式二：直接貼上 YAML 文字內容</label>
+          <textarea id="import-yaml-text" rows="8"
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-3 text-xs font-mono text-slate-800 dark:text-slate-200 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="請貼上 progress.yaml 或 handoff.yaml 的內容..."></textarea>
+        </div>
+
+        <p class="text-[11px] text-slate-500 dark:text-slate-400">
+          系統將自動辨識是 <code class="text-blue-600 dark:text-blue-300">progress.yaml</code> 還是 <code class="text-blue-600 dark:text-blue-300">handoff.yaml</code>，並自動切換至對應頁籤還原所有控制項。
+        </p>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800">
+        <button type="button" onclick="closeImportModal()"
+          class="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+          取消
+        </button>
+        <button type="button" onclick="executeImportYaml()"
+          class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors shadow-sm">
+          解析並填入表單
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 儲存快照 Modal -->
+  <div id="save-snapshot-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+        <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+          儲存快照至 IndexedDB
+        </h3>
+        <button type="button" onclick="closeSaveSnapshotModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">&times;</button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">快照名稱 / 專案識別</label>
+          <input type="text" id="snap-name-input"
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+            placeholder="例如：v1.2-付款閘道金流交接">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">儲存目標型態</label>
+          <select id="snap-type-select"
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200">
+            <option value="current">當前選取頁籤內容</option>
+            <option value="progress">僅儲存進度看板 (progress.yaml)</option>
+            <option value="handoff">僅儲存代理交接 (handoff.yaml)</option>
+            <option value="bundle">完整套件打包 (兩者同時存檔)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">版本備註說明 (選填)</label>
+          <textarea id="snap-notes-input" rows="2.5"
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+            placeholder="簡短備註此版本的改動重點..."></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800">
+        <button type="button" onclick="closeSaveSnapshotModal()"
+          class="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+          取消
+        </button>
+        <button type="button" onclick="executeSaveSnapshot()"
+          class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition-colors shadow-sm">
+          確認儲存
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 歷史快照管理庫 Modal -->
+  <div id="snapshot-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+      
+      <!-- 標題 -->
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">IndexedDB 歷史快照庫</h3>
+          <span class="text-xs text-slate-500 dark:text-slate-400">本機瀏覽器持久化儲存</span>
+        </div>
+        <button type="button" onclick="closeSnapshotModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">&times;</button>
+      </div>
+
+      <!-- 篩選列 -->
+      <div class="px-5 py-2.5 bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="text-slate-500 dark:text-slate-400">篩選:</span>
+          <button type="button" onclick="filterSnapshots('all')" id="filter-all" class="px-2 py-0.5 rounded bg-blue-600 text-white font-medium">全部</button>
+          <button type="button" onclick="filterSnapshots('progress')" id="filter-progress" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700">progress</button>
+          <button type="button" onclick="filterSnapshots('handoff')" id="filter-handoff" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700">handoff</button>
+          <button type="button" onclick="filterSnapshots('bundle')" id="filter-bundle" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700">bundle</button>
+        </div>
+        <span class="text-slate-400 dark:text-slate-500 text-[11px]">點擊「載入」即可還原至編輯器</span>
+      </div>
+
+      <!-- 快照清單滾動區 -->
+      <div id="snapshots-list-container" class="p-5 overflow-y-auto space-y-3 flex-1">
+        <!-- 由 app.js 動態渲染 -->
+      </div>
+
+      <!-- 底部操作列 -->
+      <div class="flex items-center justify-between px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 shrink-0">
+        <button type="button" onclick="clearAllSnapshots()"
+          class="text-rose-600 dark:text-rose-400 hover:underline text-xs flex items-center gap-1 font-medium">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          清空所有歷史快照
+        </button>
+        <button type="button" onclick="closeSnapshotModal()"
+          class="px-4 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+          關閉
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 範本管理與 CRUD Modal -->
+  <div id="template-manager-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+      
+      <!-- 標題 -->
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">範本庫管理中心 (Template CRUD)</h3>
+          <span class="text-xs text-slate-500 dark:text-slate-400">管理、自訂與覆寫 Agent 常用模板</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="openCreateTemplateModal()"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors shadow-sm">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            + 建立自訂範本
+          </button>
+          <button type="button" onclick="closeTemplateManagerModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg ml-2">&times;</button>
+        </div>
+      </div>
+
+      <!-- 滾動內容區 -->
+      <div class="p-5 overflow-y-auto space-y-6 flex-1">
+        
+        <!-- 自訂範本區塊 -->
+        <div>
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-xs font-bold text-amber-600 dark:text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span>📁 我的自訂範本 (IndexedDB 持久化)</span>
+              <span id="custom-tpl-count" class="px-1.5 py-0.2 bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 rounded text-[10px]">0</span>
+            </h4>
+            <span class="text-[11px] text-slate-500">可隨時修改名稱、覆寫內容或刪除</span>
+          </div>
+
+          <div id="custom-templates-list" class="space-y-3">
+            <!-- 由 app.js 動態渲染 -->
+          </div>
+        </div>
+
+        <!-- 系統內建範本區塊 -->
+        <div class="pt-4 border-t border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between mb-3">
+            <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span>✨ 系統內建預設範本</span>
+              <span class="px-1.5 py-0.2 bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300 rounded text-[10px]">4</span>
+            </h4>
+            <span class="text-[11px] text-slate-500">內建標準場景，可一鍵複製為自訂複本進行微調</span>
+          </div>
+
+          <div id="builtin-templates-list" class="space-y-2.5">
+            <!-- 由 app.js 動態渲染 -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 底部關閉按鈕 -->
+      <div class="flex items-center justify-end px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 shrink-0">
+        <button type="button" onclick="closeTemplateManagerModal()"
+          class="px-4 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+          完成 / 關閉
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 新增/編輯範本表單 Modal -->
+  <div id="template-form-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800">
+        <h3 id="tpl-modal-title" class="font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          新增自訂範本
+        </h3>
+        <button type="button" onclick="closeTemplateFormModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">&times;</button>
+      </div>
+
+      <div class="p-5 space-y-4">
+        <input type="hidden" id="tpl-edit-id" value="">
+
+        <div>
+          <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">範本名稱 (必填)</label>
+          <input type="text" id="tpl-name-input"
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+            placeholder="例如：資安稽核長任務範本">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">範本描述說明 (選填)</label>
+          <textarea id="tpl-desc-input" rows="2.5"
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500"
+            placeholder="說明此範本的適用專案、執行步驟與交接特性..."></textarea>
+        </div>
+
+        <div id="tpl-source-group">
+          <label class="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">內容來源資料</label>
+          <select id="tpl-source-select"
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-800 dark:text-slate-200">
+            <option value="current">直接採用當前編輯器中的進度與交接資料 (推薦)</option>
+            <option value="blank">採用乾淨空白模板架構</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2.5 px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800">
+        <button type="button" onclick="closeTemplateFormModal()"
+          class="px-3.5 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+          取消
+        </button>
+        <button type="button" onclick="saveTemplateForm()"
+          class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors shadow-sm">
+          確認儲存
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 資料庫維護中心 Modal (匯入 / 匯出 / 重設) -->
+  <div id="db-tools-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm hidden p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[88vh]">
+      
+      <!-- 標題列 -->
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-cyan-600 dark:text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+          <h3 class="font-bold text-sm text-slate-800 dark:text-slate-100">IndexedDB 資料庫維護中心</h3>
+          <span class="text-xs text-slate-500 dark:text-slate-400">AgentYamlMakerDB (v2)</span>
+        </div>
+        <button type="button" onclick="closeDbToolsModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg">&times;</button>
+      </div>
+
+      <!-- 滾動內容區 -->
+      <div class="p-5 overflow-y-auto space-y-6 flex-1 text-xs">
+        
+        <!-- 概況卡片 -->
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl p-3 text-center">
+            <div class="text-slate-500 dark:text-slate-400 text-[11px] mb-1">自訂範本數</div>
+            <div id="db-stat-tpl" class="text-base font-bold text-amber-600 dark:text-amber-300">0</div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl p-3 text-center">
+            <div class="text-slate-500 dark:text-slate-400 text-[11px] mb-1">歷史快照數</div>
+            <div id="db-stat-snap" class="text-base font-bold text-blue-600 dark:text-blue-300">0</div>
+          </div>
+          <div class="bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl p-3 text-center">
+            <div class="text-slate-500 dark:text-slate-400 text-[11px] mb-1">資料庫狀態</div>
+            <div id="db-stat-status" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1 mt-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+              正常連線
+            </div>
+          </div>
+        </div>
+
+        <!-- 區塊一：匯出資料庫備份 -->
+        <div class="bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+              <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+              匯出資料庫備份 (Export Backup)
+            </h4>
+            <span class="text-[11px] text-slate-500">JSON 格式封存</span>
+          </div>
+          <p class="text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+            將所有自訂範本、歷史快照以及當前工作草稿打包匯出為完整的 <code class="text-slate-700 dark:text-slate-300 font-mono bg-slate-200 dark:bg-slate-800 px-1 py-0.5 rounded">.json</code> 備份檔，便於跨裝置遷移或本機封存。
+          </p>
+          <div class="pt-1">
+            <button type="button" onclick="exportDatabaseBackup()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-colors shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+              下載資料庫備份 (.json)
+            </button>
+          </div>
+        </div>
+
+        <!-- 區塊二：匯入資料庫備份 -->
+        <div class="bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+              <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+              匯入資料庫還原 (Import & Restore)
+            </h4>
+            <span class="text-[11px] text-slate-500">支援合併或覆寫</span>
+          </div>
+          
+          <div class="space-y-2.5">
+            <div>
+              <label class="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">方式 A：選擇本機 .json 備份檔</label>
+              <input type="file" id="db-backup-file-input" accept=".json,.txt" onchange="handleDbBackupFileSelect(event)"
+                class="block w-full text-[11px] text-slate-500 dark:text-slate-400 file:mr-3 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-200 dark:file:bg-slate-700 file:text-slate-700 dark:file:text-slate-200 hover:file:bg-slate-300 dark:hover:file:bg-slate-600 file:cursor-pointer">
+            </div>
+
+            <div>
+              <label class="block text-[11px] text-slate-600 dark:text-slate-400 mb-1">方式 B：或直接貼上備份 JSON 文字</label>
+              <textarea id="import-db-text" rows="3"
+                class="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-lg p-2 font-mono text-[11px] text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-600"
+                placeholder='{"meta": {"app": "agent-yaml-maker"}, "templates": [...], ...}'></textarea>
+            </div>
+
+            <div class="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 pt-1">
+              <label class="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-300">
+                <input type="radio" name="db-import-mode" value="merge" checked class="text-blue-600 focus:ring-0">
+                <span>合併匯入 (保留現有資料並加入新項目)</span>
+              </label>
+              <label class="flex items-center gap-1.5 cursor-pointer text-slate-700 dark:text-slate-300">
+                <input type="radio" name="db-import-mode" value="overwrite" class="text-rose-600 focus:ring-0">
+                <span class="text-rose-600 dark:text-rose-300">覆寫還原 (清空現有資料後還原)</span>
+              </label>
+            </div>
+
+            <div class="pt-1">
+              <button type="button" onclick="executeDatabaseImport()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-lg transition-colors shadow-sm">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                開始匯入資料庫
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 區塊三：重設資料庫 (Factory Reset) -->
+        <div class="bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 rounded-xl p-4 space-y-2">
+          <div class="flex items-center justify-between">
+            <h4 class="font-bold text-rose-700 dark:text-rose-300 flex items-center gap-2">
+              <svg class="w-4 h-4 text-rose-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              重設資料庫 (Factory Reset)
+            </h4>
+            <span class="text-[10px] text-rose-600 dark:text-rose-400 uppercase tracking-wider font-semibold">危險操作</span>
+          </div>
+          <p class="text-rose-700/80 dark:text-rose-200/70 text-[11px] leading-relaxed">
+            清空所有自訂範本、歷史快照與未存草稿，將 IndexedDB 重設為初始預設狀態（保留系統內建範本）。此操作不可撤銷。
+          </p>
+          <div class="pt-1">
+            <button type="button" onclick="resetDatabaseToDefaults()"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-medium rounded-lg transition-colors shadow-sm">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              清空並重設資料庫 (Factory Reset)
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 底部關閉按鈕 -->
+      <div class="flex items-center justify-end px-5 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-800 shrink-0">
+        <button type="button" onclick="closeDbToolsModal()"
+          class="px-4 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+          關閉
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast 提示訊息元素 -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 flex items-center space-x-2 px-4 py-3 rounded-lg shadow-xl bg-emerald-600 text-white font-medium hide">
+    <span id="toast-icon"></span>
+    <span id="toast-message" class="text-xs">操作成功</span>
+  </div>
+
+  <!-- 應用程式主邏輯 -->
+  <script src="app.js"></script>
+</body>
+</html>
