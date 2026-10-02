@@ -1,6 +1,6 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供三個可在瀏覽器中直接使用的單頁網頁工具：AI Agent YAML 狀態與交接檔產生器、專案甘特圖與倒數看板，以及臺灣 LCR Mapping 試算工具。工具不需要本專案專用後端；請依需求開啟對應的 HTML 入口。
+本專案提供四個可在瀏覽器中直接使用的單頁網頁工具：AI Agent YAML 狀態與交接檔產生器、專案甘特圖與倒數看板、臺灣 LCR Mapping 試算工具，以及 SQL Catalog 檔案管理工具。工具不需要本專案專用後端；請依需求開啟對應的 HTML 入口。
 
 ## 目錄
 
@@ -10,6 +10,7 @@
 - [Agent YAML Maker](#agent-yaml-maker)
 - [動態甘特圖與專案倒數看板](#動態甘特圖與專案倒數看板)
 - [臺灣 LCR Mapping 與試算](#臺灣-lcr-mapping-與試算)
+- [SQL Catalog](#sql-catalog)
 - [資料保存、匯出與隱私](#資料保存匯出與隱私)
 - [常見問題](#常見問題)
 - [維護者驗證](#維護者驗證)
@@ -21,6 +22,7 @@
    - [`agent-yaml-maker/index.html`](./agent-yaml-maker/index.html)
    - [`project-manage-calc/dynamic_gantt_project_countdown.html`](./project-manage-calc/dynamic_gantt_project_countdown.html)
    - [`lcr-mapping-calc/LCR_Mapping_SPA.html`](./lcr-mapping-calc/LCR_Mapping_SPA.html)
+   - [`sql-mangage/SQL_Catalog.html`](./sql-mangage/SQL_Catalog.html)
 3. 使用瀏覽器頁面中的表單、按鈕與分頁完成操作。
 
 本專案沒有建置或打包步驟，也沒有根目錄 `package.json`。若瀏覽器限制 `file://` 頁面的部分功能，可在專案根目錄啟動任一靜態檔案伺服器，例如：
@@ -29,7 +31,7 @@
 python -m http.server 8080
 ```
 
-再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker 與甘特圖工具會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR 工具不依賴外部函式庫，可直接離線開啟。
+再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker 與甘特圖工具會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR 工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
 
 ## 整體使用流程
 
@@ -39,9 +41,11 @@ flowchart TD
     B -->|Agent 狀態與交接| C[填寫 YAML 表單]
     B -->|專案排程| D[建立專案與任務]
     B -->|LCR 試算| E[輸入 HQLA 與業務明細]
+    B -->|SQL 管理| I[選擇 SQL 根目錄]
     C --> F[預覽並下載 YAML 或 ZIP]
     D --> G[查看甘特圖與里程碑倒數]
     E --> H[查看流出 流入與 LCR]
+    I --> J[掃描 檢索與編輯說明]
 ```
 
 ## 工具總覽
@@ -51,6 +55,7 @@ flowchart TD
 | Agent YAML Maker | [`agent-yaml-maker/index.html`](./agent-yaml-maker/index.html) | 建立 `progress.yaml`、`handoff.yaml`、範本與快照 | 瀏覽器 IndexedDB；主題偏好使用 `localStorage` |
 | 動態甘特圖與專案倒數 | [`project-manage-calc/dynamic_gantt_project_countdown.html`](./project-manage-calc/dynamic_gantt_project_countdown.html) | 管理多個專案、任務、進度與重大里程碑 | 瀏覽器 IndexedDB |
 | 臺灣 LCR Mapping 與試算 | [`lcr-mapping-calc/LCR_Mapping_SPA.html`](./lcr-mapping-calc/LCR_Mapping_SPA.html) | 查詢業務係數並計算現金流與 LCR | 僅保留在目前頁面，重新整理會清除 |
+| SQL Catalog | [`sql-mangage/SQL_Catalog.html`](./sql-mangage/SQL_Catalog.html) | 掃描 SQL 根目錄、搜尋內容、維護用途與標籤、匯出清冊 | 根目錄 `sql_catalog.json`；瀏覽器 IndexedDB 作為快取與設定保存 |
 
 ## Agent YAML Maker
 
@@ -154,6 +159,43 @@ flowchart TD
 
 本工具是 Mapping 摘要與試算輔助，不取代主管機關完整條文、附錄、申報表格或正式法遵判定。複合性產品仍須依對手、剩餘期間、擔保品、可取消性與重複列計規定逐案判斷，使用前請確認相關函令是否更新。
 
+## SQL Catalog
+
+SQL Catalog 是單檔離線 SQL 檔案管理工具，用來建立 SQL 檔案目錄、搜尋內容並補充用途、分類、標籤與後續待辦。它只讀取與管理索引說明，不會修改 SQL 原始檔。
+
+### 開啟目錄與掃描
+
+1. 開啟 [`SQL_Catalog.html`](./sql-mangage/SQL_Catalog.html)。
+2. 按「選擇目錄」，選取 SQL 根目錄並允許編輯權限。
+3. 工具會遞迴掃描子資料夾中的 `.sql` 檔案，並在根目錄建立或讀取 `sql_catalog.json`。
+4. 點選清單中的 SQL 檔案，在右側編輯用途、分類、標籤、執行頻率、到期日、後續說明與備註；內容會延遲約 1 秒自動儲存。
+5. 若要重新讀取檔案狀態，按「重新掃描」。SQL 內容可在右側唯讀預覽中查看，工具也會自動判斷引用表格與語法類型。
+
+### 搜尋、篩選與匯出
+
+- 搜尋框可查找檔名、路徑、SQL 內容、用途與後續說明；也可依資料夾、標籤、引用表格或語法類型篩選。
+- 快速篩選可查看未填用途、本次有異動、待辦逾期、待辦未完成或已遺失的檔案。
+- 「批次編輯」可對選取檔案批量套用分類、標籤、頻率、到期日與後續說明；刪除已遺失紀錄前請確認不再需要該索引。
+- 「分類／標籤管理」可更名、合併或刪除分類與標籤；「統計」可查看資料夾與 SQL 語法類型分布。
+- 「匯出」可下載全部或目前篩選結果的 CSV、Markdown 清冊、HTML 報表與 `sql_catalog.json`；「匯入 JSON（合併）」可合併其他目錄的索引說明。
+- 「打包下載」會下載 SQL 原始檔的 ZIP；請先確認檔案內容與敏感資訊的分享範圍。
+
+### 權限與瀏覽器限制
+
+- Chrome／Edge 支援以目錄權限讀取及寫回 `sql_catalog.json`。重新開啟頁面後，可能需要再次授權上次使用的目錄。
+- 不支援 File System Access API 的瀏覽器會改用目錄檔案選取，這是唯讀模式；說明只保存於瀏覽器快取，請定期使用「匯出 → 下載 sql_catalog.json」並手動放回 SQL 根目錄。
+- 儲存失敗時，工具會將資料保留在目前瀏覽器的 IndexedDB 快取；修復權限後可按「儲存」，或先匯出 JSON 備份。
+
+```mermaid
+flowchart TD
+    A[選擇 SQL 根目錄] --> B[遞迴掃描 .sql]
+    B --> C[搜尋與篩選]
+    C --> D[編輯用途 標籤與待辦]
+    D --> E{儲存方式}
+    E -->|可寫目錄| F[寫回 sql_catalog.json]
+    E -->|唯讀模式| G[保存於瀏覽器快取並匯出 JSON]
+```
+
 ## 資料保存、匯出與隱私
 
 ```mermaid
@@ -162,13 +204,16 @@ flowchart LR
     B -->|Agent YAML| C[IndexedDB 草稿 快照 範本]
     B -->|甘特圖| D[IndexedDB 專案與任務]
     B -->|LCR| E[目前頁面記憶體]
+    B -->|SQL Catalog| I[sql_catalog.json 與瀏覽器快取]
     C --> F[JSON 備份或 YAML ZIP]
     D --> G[JSON 工作區備份]
     E --> H[重新整理後重新輸入]
+    I --> J[CSV Markdown HTML 或 JSON 匯出]
 ```
 
 - Agent YAML Maker 與甘特圖資料保存在目前瀏覽器的 IndexedDB；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得。
 - LCR 工具不自動保存、不上傳資料，也沒有內建匯出功能；重要結果請自行複製或列印保存。
+- SQL Catalog 會讀取使用者選定目錄中的 SQL 檔案，索引說明預設寫入該目錄的 `sql_catalog.json`；不支援目錄寫入時則保存於目前瀏覽器的 IndexedDB 快取。工具沒有遠端同步或後端上傳功能。
 - 本專案沒有內建後端同步。外部 CDN 只提供 Agent YAML Maker 與甘特圖所需的樣式、圖示或函式庫，不代表使用者資料會上傳至本專案伺服器。
 - 需要跨電腦或防止瀏覽器資料遺失時，請優先使用工具提供的 JSON、YAML 或 ZIP 匯出功能。
 
@@ -194,12 +239,20 @@ flowchart LR
 
 檢查 HQLA 是否為完成上限調整後的淨額、業務方向與係數是否正確，以及流入上限與最低標準是否符合目前採用的規範。必要時回到「Mapping 表」核對適用條件。
 
+### SQL Catalog 無法選取或儲存目錄
+
+請改用 Chrome 或 Edge，透過靜態檔案伺服器開啟頁面並重新授權目錄。若只能使用唯讀模式，請在每次編輯後匯出 `sql_catalog.json`；該模式不會直接寫回 SQL 根目錄。
+
+### SQL Catalog 顯示檔案已遺失
+
+請確認檔案仍位於原本的根目錄與相對路徑，再按「重新掃描」。若檔案已永久移除，可在批次編輯中移除已遺失紀錄；這只會刪除索引，不會復原或刪除原始檔。
+
 ## 維護者驗證
 
-本專案是免建置的靜態 HTML／CSS／JavaScript 專案，沒有統一的 npm 測試指令。修改文件後可先執行：
+本專案是免建置的靜態 HTML／CSS／JavaScript 專案，沒有統一的 npm 測試指令。實際頁面同時使用原生 HTML／CSS／Vanilla JavaScript；部分頁面透過 CDN 載入 Tailwind CSS 或圖示函式庫，這是目前程式現況，請以 `docs\使用技術棧.md` 的規範與實際程式碼一併核對。修改文件後可先執行：
 
 ```powershell
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟三個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果。
+若修改網頁程式，請分別在現代瀏覽器開啟四個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`。SQL Catalog 的目錄權限與瀏覽器相容性仍需實機驗證。
