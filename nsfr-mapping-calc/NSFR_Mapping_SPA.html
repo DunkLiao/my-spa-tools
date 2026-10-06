@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>臺灣 NSFR 淨穩定資金比率與試算（離線版）</title>
+<script>
+/* 於繪製前套用主題，避免閃爍 */
+try{var _t=localStorage.getItem('nsfr-theme');if(_t)document.documentElement.setAttribute('data-theme',_t);}catch(e){}
+</script>
+<style>
+:root{
+  --navy:#17365D; --navy2:#1f4e79; --line:#d7dee6; --bg:#f3f6f9;
+  --ink:#1b2733; --muted:#5b6b7c; --blue:#0b5ed7; --green:#127a4b;
+  --amber:#b26a00; --red:#b3261e; --card:#fff;
+  --row-alt:#fafcfe; --row-hover:#eef6ff; --thead:#17365D; --thead-ink:#fff;
+  --tbl-line:#edf1f5; --chip:#f7fafd; --input:#fff; --formula:#f5f8fb;
+  --ok-bg:#e3f3ea; --bad-bg:#fde8e6; --warn-bg:#fdf3e3;
+}
+:root[data-theme="dark"]{
+  --navy:#0d1f31; --navy2:#16324f; --line:#2b3f52; --bg:#0e1620;
+  --ink:#e6edf3; --muted:#93a4b5; --blue:#5aa2ff; --green:#4ad991;
+  --amber:#e0a441; --red:#ff7b7b; --card:#15222f;
+  --row-alt:#1a2836; --row-hover:#21344a; --thead:#16324f; --thead-ink:#e6edf3;
+  --tbl-line:#25364a; --chip:#1a2836; --input:#0f1a26; --formula:#1a2836;
+  --ok-bg:#123425; --bad-bg:#3a1c1c; --warn-bg:#3a2e14;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft JhengHei","Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:20px}
+header p{margin:4px 0 0;font-size:12.5px;opacity:.85}
+.themebtn{background:rgba(255,255,255,.12);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:6px;padding:7px 12px;cursor:pointer;font-size:13px;white-space:nowrap}
+nav{display:flex;gap:4px;background:var(--navy2);padding:0 12px;flex-wrap:wrap}
+nav button{background:transparent;border:0;color:#cfe0f0;padding:11px 16px;cursor:pointer;font-size:14px;border-bottom:3px solid transparent}
+nav button.active{color:#fff;border-bottom-color:#ffc000;font-weight:700}
+main{padding:18px;max-width:1400px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:17px;color:var(--navy2)}
+:root[data-theme="dark"] .card h2{color:#8fc0ef}
+.card h3{margin:16px 0 8px;font-size:15px;color:var(--navy2)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{background:var(--thead);color:var(--thead-ink);padding:8px;text-align:left;font-weight:600;position:sticky;top:0;z-index:1}
+td{padding:7px 8px;border-bottom:1px solid var(--tbl-line);vertical-align:top}
+tbody tr:nth-child(even){background:var(--row-alt)}
+tbody tr:hover{background:var(--row-hover)}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.coef{font-weight:700;color:var(--navy2)}
+:root[data-theme="dark"] .coef{color:#8fc0ef}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:700}
+.tag.asf{background:var(--ok-bg);color:var(--green)}
+.tag.rsf{background:var(--bad-bg);color:var(--red)}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center}
+label{font-size:13.5px;color:var(--muted)}
+input,select{padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:14px;font-family:inherit;background:var(--input);color:var(--ink)}
+input[type=number]{text-align:right}
+button.btn{background:var(--navy2);color:#fff;border:0;padding:8px 14px;border-radius:6px;cursor:pointer;font-size:14px}
+button.btn:hover{filter:brightness(1.08)}
+button.btn.ghost{background:transparent;color:var(--blue);border:1px solid var(--blue)}
+button.btn.danger{background:transparent;color:var(--red);border:1px solid var(--red)}
+.kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-top:6px}
+.kpi div{background:var(--chip);border:1px solid var(--line);border-left:4px solid var(--navy2);border-radius:6px;padding:11px 13px}
+.kpi span{display:block;font-size:12.5px;color:var(--muted)}
+.kpi b{font-size:20px;font-variant-numeric:tabular-nums}
+.ok{color:var(--green)}.bad{color:var(--red)}.warn{color:var(--amber)}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.75}
+.formula{background:var(--formula);border-left:3px solid var(--navy2);padding:10px 12px;font-family:Consolas,monospace;font-size:13px;white-space:pre-wrap;border-radius:0 6px 6px 0;margin:8px 0;overflow:auto}
+.scroll{overflow:auto;max-height:520px;border:1px solid var(--line);border-radius:6px}
+.right{text-align:right}
+a{color:var(--blue)}
+.del{background:none;border:0;color:var(--red);cursor:pointer;font-size:16px}
+.small{font-size:12.5px}
+.banner{border-radius:6px;padding:9px 12px;font-size:13px;margin:8px 0;border:1px solid transparent}
+.banner.ok{background:var(--ok-bg);color:var(--green);border-color:currentColor}
+.banner.bad{background:var(--bad-bg);color:var(--red);border-color:currentColor}
+.banner.warn{background:var(--warn-bg);color:var(--amber);border-color:currentColor}
+.muted{color:var(--muted)}
+@media (max-width:720px){
+  header h1{font-size:17px}
+  .scroll{max-height:none}
+}
+@media print{nav,.toolbar,.del,button{display:none}.page{display:block!important}}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>臺灣 NSFR 淨穩定資金比率與試算工具</h1>
+    <p>淨穩定資金比率　可用穩定資金（ASF）／應有穩定資金（RSF）　離線單機版</p>
+  </div>
+  <button class="themebtn" id="themeBtn" type="button">🌙 深色</button>
+</header>
+
+<nav>
+  <button class="active" data-p="calc">試算</button>
+  <button data-p="map">Mapping 表</button>
+  <button data-p="param">參數</button>
+  <button data-p="help">使用說明</button>
+</nav>
+
+<main>
+
+<!-- ============ 試算 ============ -->
+<section id="calc" class="page active">
+  <div class="card">
+    <h2>計算結果</h2>
+    <div class="kpi">
+      <div><span>可用穩定資金（ASF）</span><b id="kAsf">-</b></div>
+      <div><span>應有穩定資金（RSF）</span><b id="kRsf">-</b></div>
+      <div><span>淨穩定資金比率（NSFR）</span><b id="kNsfr">-</b></div>
+      <div><span>資金缺口（ASF － RSF）</span><b id="kGap">-</b></div>
+    </div>
+    <div class="banner" id="verdict" style="display:none"></div>
+    <div class="formula" id="fx"></div>
+  </div>
+
+  <div class="card">
+    <h2>加入明細</h2>
+    <div class="toolbar">
+      <select id="addSel" style="min-width:460px;max-width:100%"></select>
+      <input type="number" id="addAmt" placeholder="帳面金額（元）" style="width:180px">
+      <button class="btn" id="btnAdd">加入明細</button>
+      <button class="btn ghost" id="btnDemo">載入示範資料</button>
+      <button class="btn danger" id="btnClear">清空明細</button>
+    </div>
+    <p class="hint">下拉選單分成 ASF（可用穩定資金）與 RSF（應有穩定資金）兩組，選取後係數會自動帶入。金額一律以填報基準日之帳面金額（新臺幣）填列，外幣請先折算為新臺幣。</p>
+  </div>
+
+  <div class="card">
+    <h2>明細清單</h2>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:88px">代碼</th>
+            <th style="width:60px">方向</th>
+            <th>項目</th>
+            <th style="width:120px">大類</th>
+            <th class="right" style="width:170px">帳面金額</th>
+            <th class="right" style="width:80px">係數</th>
+            <th class="right" style="width:160px">加權金額</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="tbLines"></tbody>
+        <tfoot id="tfLines"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>試算情境（瀏覽器本機保存）</h2>
+    <div class="toolbar">
+      <input id="scName" placeholder="情境名稱（例如：2026Q1 申報）" style="min-width:260px;max-width:100%">
+      <button class="btn" id="btnSaveSc">儲存目前明細為情境</button>
+      <select id="scList" style="min-width:220px;max-width:100%"></select>
+      <button class="btn ghost" id="btnLoadSc">載入</button>
+      <button class="btn danger" id="btnDelSc">刪除</button>
+    </div>
+    <div class="toolbar">
+      <button class="btn ghost" id="btnExport">匯出備份（JSON）</button>
+      <button class="btn ghost" id="btnImport">匯入備份（JSON）</button>
+      <input type="file" id="fileImport" accept=".json,application/json" style="display:none">
+    </div>
+    <p class="hint" id="storeStatus"></p>
+  </div>
+</section>
+
+<!-- ============ Mapping ============ -->
+<section id="map" class="page">
+  <div class="card">
+    <h2>NSFR 可用穩定資金／應有穩定資金對應係數表</h2>
+    <div class="toolbar">
+      <input id="q" placeholder="搜尋項目、大類或判斷條件…" style="min-width:300px;max-width:100%">
+      <select id="fDir"><option value="">全部方向</option><option value="ASF">ASF 可用穩定資金</option><option value="RSF">RSF 應有穩定資金</option></select>
+      <select id="fCat"><option value="">全部大類</option></select>
+      <span class="hint" id="cnt"></span>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:88px">代碼</th>
+            <th style="width:58px">方向</th>
+            <th style="width:158px">大類</th>
+            <th>項目／內容</th>
+            <th style="width:240px">主要判斷條件</th>
+            <th class="right" style="width:70px">係數</th>
+            <th style="width:230px">備註</th>
+          </tr>
+        </thead>
+        <tbody id="tbMap"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 參數 ============ -->
+<section id="param" class="page">
+  <div class="card">
+    <h2>法定參數與警示</h2>
+    <table>
+      <thead><tr><th style="width:240px">參數</th><th style="width:130px" class="right">數值</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>NSFR 最低標準</td><td class="right"><input type="number" id="pMin" value="100" step="1" min="0" style="width:90px">%</td>
+            <td>依「銀行淨穩定資金比率實施標準」，銀行計算之淨穩定資金比率不得低於 100%。</td></tr>
+        <tr><td>內部警示門檻</td><td class="right"><input type="number" id="pWarn" value="110" step="1" min="0" style="width:90px">%</td>
+            <td>僅為工具內部提醒用途；當 NSFR 低於此門檻時，結果區會顯示警示訊息。</td></tr>
+      </tbody>
+    </table>
+    <p class="hint">參數設定會保存於目前瀏覽器本機，重新開啟頁面後自動帶回。</p>
+  </div>
+  <div class="card">
+    <h2>係數表來源</h2>
+    <p class="hint">
+      本工具之 ASF／RSF 係數依金融監督管理委員會「淨穩定資金比率之計算方法說明及表格」
+      （民國 105 年 12 月 26 日金管銀法字第 10510005801 號令訂定）之項目及係數整理而成。
+      相關名詞（金融機構、營運存款、穩定存款、風險權數、逾期放款、住宅擔保放款等）之定義，
+      同「流動性覆蓋比率之計算方法說明及表格」及「銀行自有資本與風險性資產之計算方法說明及表格」。
+    </p>
+  </div>
+</section>
+
+<!-- ============ 說明 ============ -->
+<section id="help" class="page">
+  <div class="card">
+    <h2>計算公式</h2>
+    <div class="formula">NSFR ＝ 可用穩定資金（ASF） ÷ 應有穩定資金（RSF） × 100%
+
+可用穩定資金 ＝ Σ (權益及負債項目帳面金額 × ASF 係數)
+應有穩定資金 ＝ Σ (表內資產及表外暴險帳面金額 × RSF 係數)
+
+NSFR 應等於或大於 100%。</div>
+    <p class="hint">
+      可用穩定資金（ASF）係指預期可支應超過 1 年之權益及負債項目；
+      應有穩定資金（RSF）係指對穩定資金之需求量，即銀行所持有各類型資產依其流動性特性及剩餘期間所計算之數額，包含資產負債表表外暴險。
+    </p>
+  </div>
+  <div class="card">
+    <h2>使用方式</h2>
+    <p class="hint">
+      1. 在「試算」頁以「加入明細」下拉選單挑選 ASF 或 RSF 項目，輸入帳面金額後按「加入明細」，係數會自動帶入。<br>
+      2. 明細表中的金額可直接修改，上方計算結果會即時重算。<br>
+      3. 「Mapping 表」可搜尋各項目之大類、判斷條件與係數。<br>
+      4. 「試算情境」可將目前明細命名保存於瀏覽器本機（IndexedDB），可載入、刪除，或匯出 JSON 備份。<br>
+      5. 本頁全部離線運作，不需網路，資料僅存於瀏覽器本機，不會上傳。
+    </p>
+  </div>
+  <div class="card">
+    <h2>重要限制</h2>
+    <p class="hint">
+      本工具為 NSFR 係數對照與試算輔助，不取代主管機關完整條文、附錄及申報表格。
+      複合性或具選擇權之商品仍須依交易對手、剩餘期間、擔保品、風險權數、受限制狀態及是否重複列計逐案判斷；
+      同一項目符合兩個以上類別時，應適用較高係數且不得重複計算。
+      表外暴險、衍生性商品淨額及相互依存項目之計算較為複雜，正式申報前請回歸主管機關規定及計算表逐項核對，並確認相關函令是否已更新。
+    </p>
+    <p class="small">
+      依據：金管會「淨穩定資金比率之計算方法說明及表格」、「銀行淨穩定資金比率實施標準」，
+      以及 Basel III 淨穩定資金比率架構。
+    </p>
+  </div>
+</section>
+
+</main>
+
+<script>
+/* =========================================================
+   係數資料：依金管會「淨穩定資金比率之計算方法說明及表格」整理
+   ========================================================= */
+const MAP = [
+  /* ---------- 可用穩定資金 ASF ---------- */
+  {id:"ASF-01",dir:"ASF",cat:"資本與長期負債",item:"得列入法定合格資本之權益及負債",cond:"不含第二類資本工具中剩餘期間小於 1 年之部分；庫藏股應扣除",coef:1.00,note:"含普通股權益合計、其他第一類及第二類資本工具"},
+  {id:"ASF-02",dir:"ASF",cat:"資本與長期負債",item:"剩餘期間 1 年以上之其他資本工具及負債",cond:"剩餘期間 1 年以上",coef:1.00,note:"含擔保及無擔保借款、定期性存款、可轉讓定期存單、結構型商品所收本金"},
+  {id:"ASF-03",dir:"ASF",cat:"零售與小型企業存款",item:"零售與小型企業戶「穩定存款」（無到期日或剩餘期間小於 1 年）",cond:"國內歸戶後存保額度內之新臺幣活期性及定期性存款等",coef:0.95,note:"穩定存款之認定依「流動性覆蓋比率」規定辦理"},
+  {id:"ASF-04",dir:"ASF",cat:"零售與小型企業存款",item:"零售與小型企業戶較不穩定存款（無到期日或剩餘期間小於 1 年）",cond:"超過存保額度之新臺幣存款及所有外幣存款等",coef:0.90,note:""},
+  {id:"ASF-05",dir:"ASF",cat:"網路合作存款",item:"於機構網路中合作銀行之存款",cond:"因法定最低存款要求或相互保障計畫而存放於集中機構",coef:0.75,note:"含農漁會信用部轉存存款、信用合作社轉存臺銀/土銀/合庫之存款"},
+  {id:"ASF-06",dir:"ASF",cat:"營運存款",item:"營運存款",cond:"剩餘期間小於 1 年；定義同「流動性覆蓋比率」營運存款",coef:0.50,note:""},
+  {id:"ASF-07",dir:"ASF",cat:"零售與小型企業其他資金",item:"零售與小型企業戶所提供之其他資金",cond:"剩餘期間小於 1 年（不含適用 95%、90% 之活期性與定期性存款）",coef:0.50,note:"含附買回票券及債券負債、結構型商品所收本金"},
+  {id:"ASF-08",dir:"ASF",cat:"法人與公部門資金",item:"非金融機構企業戶、主權國家、地方政府、非營利國營事業機構及多邊開發銀行所提供之資金",cond:"剩餘期間小於 1 年（不含小型企業戶）",coef:0.50,note:""},
+  {id:"ASF-09",dir:"ASF",cat:"中短期其他負債",item:"其他負債及權益（剩餘期間 6 個月以上未達 1 年）",cond:"剩餘期間 6 個月以上未達 1 年",coef:0.50,note:"含央行、金融機構、信託及基金、導管、特殊目的機構、關聯企業之存款或資金"},
+  {id:"ASF-10",dir:"ASF",cat:"其他負債與權益",item:"其他負債及權益（剩餘期間小於 6 個月或無特定到期日）",cond:"剩餘期間小於 6 個月，或無特定到期日",coef:0.00,note:"含本行支票、保付支票、遞延所得稅負債、員工福利負債準備等"},
+  {id:"ASF-11",dir:"ASF",cat:"其他負債與權益",item:"NSFR 衍生性商品負債淨額",cond:"衍生性商品負債大於資產者，以負債減資產之淨額列計",coef:0.00,note:"計算說明請參照金管會附錄"},
+  {id:"ASF-12",dir:"ASF",cat:"其他負債與權益",item:"買入金融工具、外匯及商品之應付款項",cond:"交易日與交割日不同所產生，且預期於標準期間交割",coef:0.00,note:""},
+  {id:"ASF-13",dir:"ASF",cat:"其他負債與權益",item:"與特定資產相互依存之負債",cond:"經主管機關核准並符合相互依存要件",coef:0.00,note:"含準備金乙戶、郵匯局轉存款、撥入放款基金等"},
+
+  /* ---------- 應有穩定資金 RSF ---------- */
+  {id:"RSF-01",dir:"RSF",cat:"現金與央行",item:"現金（含待交換票據）",cond:"",coef:0.00,note:""},
+  {id:"RSF-02",dir:"RSF",cat:"現金與央行",item:"央行準備金",cond:"含準備金甲戶、外匯存款準備金、跨行業務結算擔保專戶等",coef:0.00,note:""},
+  {id:"RSF-03",dir:"RSF",cat:"現金與央行",item:"剩餘期間小於 6 個月之中央銀行債權",cond:"含活期性存款、轉存央行存款、可轉讓及不可轉讓定期存單",coef:0.00,note:""},
+  {id:"RSF-04",dir:"RSF",cat:"應收款與依存資產",item:"出售金融工具、外匯及商品之應收款項",cond:"交易日與交割日不同所產生",coef:0.00,note:""},
+  {id:"RSF-05",dir:"RSF",cat:"應收款與依存資產",item:"與特定負債相互依存之資產",cond:"經主管機關核准並符合相互依存要件",coef:0.00,note:""},
+  {id:"RSF-06",dir:"RSF",cat:"優質流動性資產",item:"受限制期間小於 6 個月及未受限制之第一層資產",cond:"排除已計入 0% 者；提供央行流動性額度擔保未動用部分視同未受限",coef:0.05,note:""},
+  {id:"RSF-07",dir:"RSF",cat:"金融機構應收款項",item:"以第一層資產為擔保且剩餘期間小於 6 個月之金融機構應收款項",cond:"以第一層資產為擔保、剩餘期間小於 6 個月",coef:0.10,note:""},
+  {id:"RSF-08",dir:"RSF",cat:"金融機構應收款項",item:"以第一層資產以外資產為擔保或無擔保且剩餘期間小於 6 個月之金融機構應收款項",cond:"剩餘期間小於 6 個月（含活期性存款）",coef:0.15,note:""},
+  {id:"RSF-09",dir:"RSF",cat:"優質流動性資產",item:"受限制期間小於 6 個月及未受限制之第二層 A 級資產",cond:"",coef:0.15,note:""},
+  {id:"RSF-10",dir:"RSF",cat:"優質流動性資產",item:"受限制期間小於 6 個月及未受限制之第二層 B 級資產",cond:"",coef:0.50,note:""},
+  {id:"RSF-11",dir:"RSF",cat:"優質流動性資產",item:"受限制期間在 6 個月以上未達 1 年之高品質流動性資產",cond:"第一層資產、第二層 A 級及第二層 B 級資產",coef:0.50,note:""},
+  {id:"RSF-12",dir:"RSF",cat:"金融機構應收款項",item:"剩餘期間在 6 個月以上未達 1 年之金融機構應收款項及中央銀行債權",cond:"未受限制或受限制剩餘期間小於 1 年",coef:0.50,note:""},
+  {id:"RSF-13",dir:"RSF",cat:"存放與營運存款",item:"存放於其他金融機構之營運存款",cond:"符合「流動性覆蓋比率」營運存款定義及要件",coef:0.50,note:""},
+  {id:"RSF-14",dir:"RSF",cat:"放款與其他資產",item:"其他剩餘期間小於 1 年之資產",cond:"剩餘期間小於 1 年",coef:0.50,note:"含對零售、小型企業、非金融機構企業、主權、地方政府等放款、未違約債務證券、應收承購/承兌款、應收信用卡款"},
+  {id:"RSF-15",dir:"RSF",cat:"住宅與非金融放款",item:"風險權數 45% 以下且剩餘期間 1 年以上之住宅擔保放款",cond:"風險權數 45% 以下、剩餘期間 1 年以上",coef:0.65,note:""},
+  {id:"RSF-16",dir:"RSF",cat:"住宅與非金融放款",item:"其他風險權數 35% 以下且剩餘期間 1 年以上之非金融機構放款",cond:"風險權數 35% 以下、剩餘期間 1 年以上",coef:0.65,note:""},
+  {id:"RSF-17",dir:"RSF",cat:"衍生性與商品",item:"供作衍生性商品契約原始保證金或集中結算交割結算基金之資產",cond:"原適用 RSF 係數高於 85% 者，從其高者",coef:0.85,note:""},
+  {id:"RSF-18",dir:"RSF",cat:"住宅與非金融放款",item:"其他剩餘期間 1 年以上之住宅擔保放款及非金融機構放款",cond:"風險權數大於 35%、剩餘期間 1 年以上",coef:0.85,note:""},
+  {id:"RSF-19",dir:"RSF",cat:"有價證券",item:"剩餘期間 1 年以上之有價證券及交易所交易之權益證券",cond:"非屬高品質流動性資產、未違約、剩餘期間 1 年以上或無到期日",coef:0.85,note:"含基金"},
+  {id:"RSF-20",dir:"RSF",cat:"衍生性與商品",item:"實體交易商品",cond:"包括黃金",coef:0.85,note:""},
+  {id:"RSF-21",dir:"RSF",cat:"其他資產",item:"所有受限制期間達 1 年以上之資產",cond:"受限制期間 1 年以上",coef:1.00,note:""},
+  {id:"RSF-22",dir:"RSF",cat:"衍生性與商品",item:"NSFR 衍生性商品資產淨額",cond:"衍生性商品資產大於負債者，以資產減負債之淨額列計",coef:1.00,note:"計算說明請參照金管會附錄"},
+  {id:"RSF-23",dir:"RSF",cat:"衍生性與商品",item:"衍生性商品負債之 20%",cond:"重置成本為負者取絕對值之 20%（不扣減存出變動保證金）",coef:1.00,note:""},
+  {id:"RSF-24",dir:"RSF",cat:"其他資產",item:"其他未包含於上述類別之表內資產",cond:"未歸類於上述各項之表內資產",coef:1.00,note:"含逾期放款、剩餘期間 1 年以上之金融機構應收款項、違約證券、非交易所交易權益證券、固定資產、商譽及無形資產等"},
+  {id:"RSF-25",dir:"RSF",cat:"表外暴險",item:"不可取消及有條件可取消之信用融資額度及流動性融資額度之未動用餘額",cond:"未動用餘額",coef:0.05,note:""},
+  {id:"RSF-26",dir:"RSF",cat:"表外暴險",item:"與貿易融資有關之或有融資負債",cond:"",coef:0.03,note:"含貿易融資相關保證及信用狀、進出口押匯等未動用約定融資額度"},
+  {id:"RSF-27",dir:"RSF",cat:"表外暴險",item:"其他",cond:"與貿易融資無關之保證、信用狀及約定融資額度等",coef:0.01,note:""}
+];
+
+/* 示範資料（僅供操作示意，非任何實際機構資料） */
+const DEMO = [
+  ["ASF-01",45000000000],["ASF-02",20000000000],["ASF-03",30000000000],
+  ["ASF-04",12000000000],["ASF-06",8000000000],["ASF-08",6000000000],["ASF-10",4000000000],
+  ["RSF-01",3000000000],["RSF-02",12000000000],["RSF-06",15000000000],
+  ["RSF-09",4000000000],["RSF-10",2000000000],["RSF-14",18000000000],
+  ["RSF-15",25000000000],["RSF-18",30000000000],["RSF-24",6000000000],["RSF-25",5000000000]
+];
+
+const $=s=>document.querySelector(s);
+const $$=s=>[...document.querySelectorAll(s)];
+const fmt=n=>isFinite(n)?Math.round(n).toLocaleString('zh-TW'):'-';
+const pct=n=>{const v=n*100;return (Number.isInteger(v)?v:v.toFixed(1))+'%';};
+const clamp2=n=>isFinite(n)?n.toLocaleString('zh-TW',{minimumFractionDigits:2,maximumFractionDigits:2}):'-';
+
+let lines=[];                       /* {id,dir,cat,item,coef,amt} */
+let params={min:100,warn:110};
+
+/* =========================================================
+   主題切換
+   ========================================================= */
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  $('#themeBtn').textContent = t==='dark' ? '☀️ 淺色' : '🌙 深色';
+  try{localStorage.setItem('nsfr-theme',t);}catch(e){}
+}
+$('#themeBtn').onclick=()=>{
+  const cur=document.documentElement.getAttribute('data-theme')==='dark'?'dark':'light';
+  applyTheme(cur==='dark'?'light':'dark');
+};
+(function(){
+  let t='light';
+  try{t=localStorage.getItem('nsfr-theme')||'light';}catch(e){}
+  applyTheme(t);
+})();
+
+/* =========================================================
+   分頁切換
+   ========================================================= */
+$$('nav button').forEach(b=>b.onclick=()=>{
+  $$('nav button').forEach(x=>x.classList.remove('active'));
+  $$('.page').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  $('#'+b.dataset.p).classList.add('active');
+});
+
+/* =========================================================
+   儲存層：IndexedDB 優先，失敗時退回 localStorage，再退回記憶體
+   ========================================================= */
+const DB_NAME='nsfr-mapping-calc';
+let _db=null, _mode='mem', _mem={state:{},scenarios:[],seq:1};
+const LS_KEY='nsfr-mapping-calc:data';
+
+function idbOpen(){
+  return new Promise((resolve,reject)=>{
+    if(!('indexedDB' in window)){reject(new Error('no-indexeddb'));return;}
+    let req;
+    try{req=indexedDB.open(DB_NAME,1);}catch(e){reject(e);return;}
+    req.onupgradeneeded=e=>{
+      const d=e.target.result;
+      if(!d.objectStoreNames.contains('state')) d.createObjectStore('state');
+      if(!d.objectStoreNames.contains('scenarios')) d.createObjectStore('scenarios',{keyPath:'id',autoIncrement:true});
+    };
+    req.onsuccess=e=>resolve(e.target.result);
+    req.onerror=e=>reject(e.target.error||new Error('idb-open'));
+    req.onblocked=()=>reject(new Error('idb-blocked'));
+  });
+}
+function idbTx(store,mode,fn){
+  return new Promise((resolve,reject)=>{
+    const t=_db.transaction(store,mode);
+    const s=t.objectStore(store);
+    let out;
+    const r=fn(s);
+    if(r) r.onsuccess=()=>{out=r.result;};
+    t.oncomplete=()=>resolve(out);
+    t.onerror=()=>reject(t.error);
+    t.onabort=()=>reject(t.error);
+  });
+}
+function lsRead(){ try{return JSON.parse(localStorage.getItem(LS_KEY))||null;}catch(e){return null;} }
+function lsWrite(o){ try{localStorage.setItem(LS_KEY,JSON.stringify(o));return true;}catch(e){return false;} }
+function lsProbe(){ try{localStorage.setItem('__nsfr_t','1');localStorage.removeItem('__nsfr_t');return true;}catch(e){return false;} }
+
+const Store={
+  async get(key){
+    if(_mode==='idb') return await idbTx('state','readonly',s=>s.get(key));
+    if(_mode==='ls'){const o=lsRead()||_mem;return o.state[key];}
+    return _mem.state[key];
+  },
+  async set(key,val){
+    if(_mode==='idb') return await idbTx('state','readwrite',s=>s.put(val,key));
+    if(_mode==='ls'){const o=lsRead()||{state:{},scenarios:[],seq:1};o.state[key]=val;lsWrite(o);return;}
+    _mem.state[key]=val;
+  },
+  async listScenarios(){
+    if(_mode==='idb') return (await idbTx('scenarios','readonly',s=>s.getAll()))||[];
+    if(_mode==='ls'){const o=lsRead()||_mem;return o.scenarios||[];}
+    return _mem.scenarios;
+  },
+  async addScenario(sc){
+    if(_mode==='idb') return await idbTx('scenarios','readwrite',s=>s.add(sc));
+    if(_mode==='ls'){const o=lsRead()||{state:{},scenarios:[],seq:1};sc.id=(o.seq||1);o.seq=(o.seq||1)+1;(o.scenarios=o.scenarios||[]).push(sc);lsWrite(o);return sc.id;}
+    sc.id=_mem.seq++;_mem.scenarios.push(sc);return sc.id;
+  },
+  async delScenario(id){
+    if(_mode==='idb') return await idbTx('scenarios','readwrite',s=>s.delete(id));
+    if(_mode==='ls'){const o=lsRead()||{state:{},scenarios:[],seq:1};o.scenarios=(o.scenarios||[]).filter(x=>String(x.id)!==String(id));lsWrite(o);return;}
+    _mem.scenarios=_mem.scenarios.filter(x=>String(x.id)!==String(id));
+  },
+  async replaceScenarios(list){
+    if(_mode==='idb'){
+      await idbTx('scenarios','readwrite',s=>s.clear());
+      for(const sc of list){ const {id,...rest}=sc; await idbTx('scenarios','readwrite',s=>s.add(rest)); }
+      return;
+    }
+    if(_mode==='ls'){const o=lsRead()||{state:{},scenarios:[],seq:1};o.scenarios=list.map((x,i)=>({...x,id:i+1}));o.seq=list.length+1;lsWrite(o);return;}
+    _mem.scenarios=list.map((x,i)=>({...x,id:i+1}));
+  },
+  async mergeScenarios(list){
+    for(const sc of list){ const {id,...rest}=sc; await this.addScenario(rest); }
+  }
+};
+
+function setStoreStatus(text,cls){
+  const el=$('#storeStatus');
+  el.className='hint '+(cls||'');
+  el.textContent=text;
+}
+
+/* =========================================================
+   下拉選單
+   ========================================================= */
+function buildSelect(){
+  const opt=(m)=>`<option value="${m.id}">[${m.dir}] ${m.id}　${m.item.length>34?m.item.slice(0,34)+'…':m.item}（${pct(m.coef)}）</option>`;
+  $('#addSel').innerHTML =
+    `<optgroup label="ASF 可用穩定資金">${MAP.filter(m=>m.dir==='ASF').map(opt).join('')}</optgroup>`+
+    `<optgroup label="RSF 應有穩定資金">${MAP.filter(m=>m.dir==='RSF').map(opt).join('')}</optgroup>`;
+}
+
+/* =========================================================
+   Mapping 表
+   ========================================================= */
+function fillCatFilter(){
+  const cats=[...new Set(MAP.map(m=>m.cat))];
+  $('#fCat').innerHTML='<option value="">全部大類</option>'+cats.map(c=>`<option>${c}</option>`).join('');
+}
+function renderMap(){
+  const q=$('#q').value.trim(), d=$('#fDir').value, c=$('#fCat').value;
+  const rows=MAP.filter(m=>(!d||m.dir===d)&&(!c||m.cat===c)&&
+    (!q||[m.id,m.item,m.cp,m.cond,m.note,m.cat].join(' ').includes(q)));
+  $('#tbMap').innerHTML=rows.map(m=>`<tr>
+    <td>${m.id}</td>
+    <td><span class="tag ${m.dir==='ASF'?'asf':'rsf'}">${m.dir}</span></td>
+    <td>${m.cat}</td>
+    <td>${m.item}</td>
+    <td class="small">${m.cond||'—'}</td>
+    <td class="right coef">${pct(m.coef)}</td>
+    <td class="small">${m.note||''}</td></tr>`).join('')
+    || `<tr><td colspan="7" style="text-align:center;color:#8895a3;padding:24px">無符合條件的項目</td></tr>`;
+  $('#cnt').textContent=`顯示 ${rows.length} / ${MAP.length} 筆`;
+}
+
+/* =========================================================
+   明細
+   ========================================================= */
+function addLine(id,amt){
+  const m=MAP.find(x=>x.id===id); if(!m) return;
+  lines.push({id:m.id,dir:m.dir,cat:m.cat,item:m.item,coef:m.coef,amt:Number(amt)||0});
+}
+function renderLines(){
+  $('#tbLines').innerHTML = lines.length ? lines.map((l,i)=>`<tr>
+    <td>${l.id}</td>
+    <td><span class="tag ${l.dir==='ASF'?'asf':'rsf'}">${l.dir}</span></td>
+    <td>${l.item}</td>
+    <td class="small muted">${l.cat}</td>
+    <td class="right"><input type="number" class="amt" data-i="${i}" value="${l.amt}" style="width:150px"></td>
+    <td class="right coef">${pct(l.coef)}</td>
+    <td class="right num">${fmt(l.amt*l.coef)}</td>
+    <td><button class="del" data-d="${i}" title="刪除">✕</button></td></tr>`).join('')
+    : `<tr><td colspan="8" style="text-align:center;color:#8895a3;padding:24px">尚無明細，請於上方加入，或按「載入示範資料」</td></tr>`;
+
+  $$('.amt').forEach(el=>el.addEventListener('input',e=>{
+    const i=+e.target.dataset.i;
+    lines[i].amt=Number(e.target.value)||0;
+    const wgt=e.target.closest('tr').querySelector('.num');
+    if(wgt) wgt.textContent=fmt(lines[i].amt*lines[i].coef);
+    updateCalc(); scheduleSave();
+  }));
+  $$('.del').forEach(el=>el.onclick=e=>{
+    lines.splice(+e.target.dataset.d,1); renderLines(); updateCalc(); scheduleSave();
+  });
+}
+
+function updateCalc(){
+  const asf=lines.filter(l=>l.dir==='ASF').reduce((s,l)=>s+l.amt*l.coef,0);
+  const rsf=lines.filter(l=>l.dir==='RSF').reduce((s,l)=>s+l.amt*l.coef,0);
+  const nsfr=rsf>0?asf/rsf*100:NaN;
+  const gap=asf-rsf;
+  const min=Number($('#pMin').value)||0;
+  const warn=Number($('#pWarn').value)||0;
+
+  $('#tfLines').innerHTML=`<tr style="background:var(--chip);font-weight:700">
+    <td colspan="4">合計　ASF ${fmt(asf)}　／　RSF ${fmt(rsf)}</td>
+    <td></td><td></td>
+    <td class="right num">${fmt(asf-rsf)}</td><td></td></tr>`;
+
+  $('#kAsf').textContent=fmt(asf);
+  $('#kRsf').textContent=fmt(rsf);
+  $('#kGap').innerHTML = lines.length? `<span class="${gap>=0?'ok':'bad'}">${fmt(gap)}</span>` : '-';
+  $('#kNsfr').innerHTML = isFinite(nsfr)
+    ? `<span class="${nsfr>=min?'ok':(nsfr>=warn?'warn':'bad')}">${clamp2(nsfr)}%</span>`
+    : '<span class="bad">－</span>';
+
+  const v=$('#verdict');
+  if(!isFinite(nsfr)){
+    v.style.display='none';
+  }else{
+    v.style.display='block';
+    if(nsfr<min){ v.className='banner bad'; v.textContent=`未達法定最低標準：NSFR ${clamp2(nsfr)}% 低於最低標準 ${min}%，須增加穩定資金或降低應有穩定資金。`; }
+    else if(nsfr<warn){ v.className='banner warn'; v.textContent=`符合法定標準，但低於內部警示門檻 ${warn}%：NSFR ${clamp2(nsfr)}%。`; }
+    else{ v.className='banner ok'; v.textContent=`符合標準：NSFR ${clamp2(nsfr)}% 已達法定最低標準 ${min}% 及內部警示門檻 ${warn}%。`; }
+  }
+
+  $('#fx').textContent =
+`可用穩定資金（ASF） = ${fmt(asf)}
+應有穩定資金（RSF） = ${fmt(rsf)}
+淨穩定資金比率（NSFR） = ${fmt(asf)} ÷ ${fmt(rsf)} = ${isFinite(nsfr)?clamp2(nsfr)+'%':'－'}
+資金缺口 = ASF － RSF = ${fmt(gap)}
+法定門檻 ${min}% → ${isFinite(nsfr)?(nsfr>=min?'符合':'未達標'):'請輸入明細'}`;
+}
+
+/* =========================================================
+   自動保存草稿（延遲 500ms）
+   ========================================================= */
+let saveTimer=null;
+function scheduleSave(){
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{ Store.set('draft',lines); },500);
+}
+function setParams(){
+  params.min=Number($('#pMin').value)||0;
+  params.warn=Number($('#pWarn').value)||0;
+  Store.set('params',params);
+  updateCalc(); scheduleSave();
+}
+
+/* =========================================================
+   情境管理
+   ========================================================= */
+let curScenarios=[];
+async function refreshScenarios(){
+  curScenarios=await Store.listScenarios();
+  curScenarios.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  $('#scList').innerHTML = curScenarios.length
+    ? curScenarios.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}　(${s.lineCount||0} 項・${(s.createdAt?new Date(s.createdAt).toLocaleString('zh-TW'):'')})</option>`).join('')
+    : '<option value="">（尚無已存情境）</option>';
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+$('#btnSaveSc').onclick=async()=>{
+  if(!lines.length){ alert('目前沒有明細，請先加入明細。'); return; }
+  const name=$('#scName').value.trim() || ('情境 '+(new Date().toLocaleString('zh-TW')));
+  const asf=lines.filter(l=>l.dir==='ASF').reduce((s,l)=>s+l.amt*l.coef,0);
+  const rsf=lines.filter(l=>l.dir==='RSF').reduce((s,l)=>s+l.amt*l.coef,0);
+  const sc={name,createdAt:Date.now(),lines:JSON.parse(JSON.stringify(lines)),
+            params:{...params},asf,rsf,nsfr:rsf>0?asf/rsf*100:null,lineCount:lines.length};
+  await Store.addScenario(sc);
+  $('#scName').value='';
+  await refreshScenarios();
+  setStoreStatus(`已儲存情境「${name}」。`, 'ok');
+};
+$('#btnLoadSc').onclick=async()=>{
+  const id=$('#scList').value;
+  if(!id){ alert('尚無可載入的情境。'); return; }
+  const sc=curScenarios.find(s=>String(s.id)===String(id));
+  if(!sc) return;
+  if(lines.length && !confirm('載入情境會覆蓋目前編輯中的明細，是否繼續？')) return;
+  lines=JSON.parse(JSON.stringify(sc.lines||[]));
+  if(sc.params){ params={...params,...sc.params};
+    $('#pMin').value=params.min; $('#pWarn').value=params.warn; }
+  renderLines(); updateCalc(); scheduleSave();
+  setStoreStatus(`已載入情境「${sc.name}」。`, 'ok');
+};
+$('#btnDelSc').onclick=async()=>{
+  const id=$('#scList').value;
+  if(!id) return;
+  const sc=curScenarios.find(s=>String(s.id)===String(id));
+  if(!sc) return;
+  if(!confirm(`確定刪除情境「${sc.name}」？此動作無法復原。`)) return;
+  await Store.delScenario(id);
+  await refreshScenarios();
+  setStoreStatus(`已刪除情境「${sc.name}」。`, 'warn');
+};
+
+/* =========================================================
+   匯出 / 匯入 JSON
+   ========================================================= */
+$('#btnExport').onclick=async()=>{
+  const scenarios=await Store.listScenarios();
+  const data={app:'nsfr-mapping-calc',version:1,exportedAt:new Date().toISOString(),
+              params, draft:lines, scenarios};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const ts=new Date().toISOString().slice(0,19).replace(/[-:T]/g,'');
+  a.download=`nsfr_backup_${ts}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+};
+$('#btnImport').onclick=()=>$('#fileImport').click();
+$('#fileImport').addEventListener('change',async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{
+    const txt=await f.text();
+    const data=JSON.parse(txt);
+    if(!data || (data.app&&data.app!=='nsfr-mapping-calc')) {
+      if(!confirm('此檔案不是本工具匯出的備份格式，仍要嘗試匯入嗎？')){ e.target.value=''; return; }
+    }
+    let merge=true;
+    if(Array.isArray(data.scenarios)&&data.scenarios.length){
+      merge=confirm(`備份含 ${data.scenarios.length} 個情境。\n\n按「確定」＝合併（保留現有情境並新增）\n按「取消」＝覆寫（清除現有情境後還原）`);
+    }
+    if(Array.isArray(data.scenarios)&&data.scenarios.length){
+      if(merge) await Store.mergeScenarios(data.scenarios);
+      else await Store.replaceScenarios(data.scenarios);
+    }
+    if(data.params){ params={min:Number(data.params.min)||100,warn:Number(data.params.warn)||0};
+      $('#pMin').value=params.min; $('#pWarn').value=params.warn; await Store.set('params',params); }
+    if(Array.isArray(data.draft)){
+      const overwrite = !lines.length || confirm('備份也包含編輯中明細，是否覆蓋目前明細？');
+      if(overwrite) lines=JSON.parse(JSON.stringify(data.draft));
+    }
+    renderLines(); updateCalc(); scheduleSave(); await refreshScenarios();
+    setStoreStatus('匯入完成。', 'ok');
+  }catch(err){
+    alert('匯入失敗：'+err.message);
+  }
+  e.target.value='';
+});
+
+/* =========================================================
+   按鈕事件
+   ========================================================= */
+$('#btnAdd').onclick=()=>{
+  addLine($('#addSel').value,$('#addAmt').value);
+  $('#addAmt').value='';
+  renderLines(); updateCalc(); scheduleSave();
+};
+$('#btnClear').onclick=()=>{
+  if(!lines.length) return;
+  if(!confirm('確定清空目前所有明細？')) return;
+  lines=[]; renderLines(); updateCalc(); scheduleSave();
+};
+$('#btnDemo').onclick=()=>{
+  if(lines.length && !confirm('載入示範資料會覆蓋目前明細，是否繼續？')) return;
+  lines=[]; DEMO.forEach(([id,a])=>addLine(id,a));
+  renderLines(); updateCalc(); scheduleSave();
+};
+$('#pMin').addEventListener('input',setParams);
+$('#pWarn').addEventListener('input',setParams);
+$('#q').addEventListener('input',renderMap);
+$('#fDir').addEventListener('change',renderMap);
+$('#fCat').addEventListener('change',renderMap);
+
+/* =========================================================
+   初始化
+   ========================================================= */
+async function init(){
+  buildSelect();
+  fillCatFilter();
+  renderMap();
+
+  try{ _db=await idbOpen(); _mode='idb'; }
+  catch(e){ _mode = lsProbe() ? 'ls' : 'mem'; }
+
+  try{
+    const savedParams=await Store.get('params');
+    if(savedParams){ params={min:Number(savedParams.min)||100,warn:Number(savedParams.warn)||0};
+      $('#pMin').value=params.min; $('#pWarn').value=params.warn; }
+    const draft=await Store.get('draft');
+    if(Array.isArray(draft)) lines=draft;
+  }catch(e){}
+
+  renderLines(); updateCalc();
+  await refreshScenarios();
+
+  const modeText={idb:'資料以 IndexedDB 保存於目前瀏覽器本機。',
+                  ls:'瀏覽器不支援 IndexedDB，已改用 localStorage 保存。',
+                  mem:'此環境無法持久化（可能為 file:// 限制），資料僅保留於目前頁面；請用「匯出備份」保存。'}[_mode];
+  setStoreStatus(modeText, _mode==='mem'?'warn':'');
+}
+init();
+</script>
+</body>
+</html>
