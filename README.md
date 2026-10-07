@@ -12,6 +12,8 @@
 - [臺灣 LCR Mapping 與試算](#臺灣-lcr-mapping-與試算)
 - [臺灣 NSFR 淨穩定資金比率與試算](#臺灣-nsfr-淨穩定資金比率與試算)
 - [SQL Catalog](#sql-catalog)
+- [Oracle SQL Compare](#oracle-sql-compare)
+- [Oracle SQL Formatter Studio](#oracle-sql-formatter-studio)
 - [資料保存、匯出與隱私](#資料保存匯出與隱私)
 - [常見問題](#常見問題)
 - [維護者驗證](#維護者驗證)
@@ -25,6 +27,8 @@
    - [`lcr-mapping-calc/LCR_Mapping_SPA.html`](./lcr-mapping-calc/LCR_Mapping_SPA.html)
    - [`nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./nsfr-mapping-calc/NSFR_Mapping_SPA.html)
    - [`sql-mangage/SQL_Catalog.html`](./sql-mangage/SQL_Catalog.html)
+   - [`sql-mangage/sql-compare.html`](./sql-mangage/sql-compare.html)
+   - [`sql-mangage/OracleSqlFormatter.html`](./sql-mangage/OracleSqlFormatter.html)
 3. 使用瀏覽器頁面中的表單、按鈕與分頁完成操作。
 
 本專案沒有建置或打包步驟，也沒有根目錄 `package.json`。若瀏覽器限制 `file://` 頁面的部分功能，可在專案根目錄啟動任一靜態檔案伺服器，例如：
@@ -45,11 +49,15 @@ flowchart TD
     B -->|LCR 試算| E[輸入 HQLA 與業務明細]
     B -->|NSFR 試算| K[輸入 ASF 與 RSF 明細]
     B -->|SQL 管理| I[選擇 SQL 根目錄]
+    B -->|SQL 版本比對| M[貼上或開啟舊版與新版 SQL]
+    B -->|SQL 格式化與健檢| N[選擇 SQL 資料夾]
     C --> F[預覽並下載 YAML 或 ZIP]
     D --> G[查看甘特圖與里程碑倒數]
     E --> H[查看流出 流入與 LCR]
     K --> L[查看 ASF RSF 與 NSFR]
     I --> J[掃描 檢索與編輯說明]
+    M --> O[查看逐行與結構差異]
+    N --> P[預覽格式化 健檢並匯出或寫回]
 ```
 
 ## 工具總覽
@@ -61,6 +69,8 @@ flowchart TD
 | 臺灣 LCR Mapping 與試算 | [`lcr-mapping-calc/LCR_Mapping_SPA.html`](./lcr-mapping-calc/LCR_Mapping_SPA.html) | 查詢業務係數並計算現金流與 LCR | 僅保留在目前頁面，重新整理會清除 |
 | 臺灣 NSFR 淨穩定資金比率與試算 | [`nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./nsfr-mapping-calc/NSFR_Mapping_SPA.html) | 查詢 ASF／RSF 係數並計算 NSFR | 瀏覽器 IndexedDB（情境、草稿、參數）；主題偏好使用 `localStorage` |
 | SQL Catalog | [`sql-mangage/SQL_Catalog.html`](./sql-mangage/SQL_Catalog.html) | 掃描 SQL 根目錄、搜尋內容、維護用途與標籤、匯出清冊 | 根目錄 `sql_catalog.json`；瀏覽器 IndexedDB 作為快取與設定保存 |
+| Oracle SQL Compare | [`sql-mangage/sql-compare.html`](./sql-mangage/sql-compare.html) | 比對兩份 Oracle SQL 的逐行內容與結構差異 | SQL 只在目前頁面處理；比對選項保存於瀏覽器 `localStorage` |
+| Oracle SQL Formatter Studio | [`sql-mangage/OracleSqlFormatter.html`](./sql-mangage/OracleSqlFormatter.html) | 批次格式化 SQL／PL/SQL、執行健檢、預覽差異並匯出或寫回 | 檔案在瀏覽器本機處理；設定與健檢規則保存於 `localStorage` |
 
 ## Agent YAML Maker
 
@@ -235,6 +245,82 @@ flowchart TD
     E -->|唯讀模式| G[保存於瀏覽器快取並匯出 JSON]
 ```
 
+## Oracle SQL Compare
+
+Oracle SQL Compare V2.1 是雙欄、純離線的 SQL 比對工具，適合檢查舊版與新版 Oracle SQL 的程式碼變更。可直接貼上內容、開啟檔案或將檔案拖放至「舊版／新版」窗格；支援 `.sql`、`.txt`、`.pks`、`.pkb`、`.prc`、`.fnc`、`.trg`、`.vw`、`.pls`、`.pck` 等常見副檔名。
+
+### 比對 SQL
+
+1. 開啟 [`sql-compare.html`](./sql-mangage/sql-compare.html)。
+2. 將舊版 SQL 放入左側、新版 SQL 放入右側；可貼上文字、按「開啟檔案」或拖放檔案。
+3. 依需求調整比對選項：忽略大小寫、空白、註解、空行，以及結尾 `;`／單獨一行的 `/`。
+4. 按「比對」，在「逐行差異」查看新增、刪除、修改與移動內容。
+5. 切換至「結構差異摘要」查看 SELECT、JOIN、欄位、條件、排序、GROUP BY、PL/SQL 或其他敘述的整理結果；摘要位置可點擊跳回逐行差異。
+
+### 結果操作與快捷鍵
+
+- 「並排」適合同時查看舊版與新版；「整合」適合依單一內容順序閱讀。
+- 「僅顯示差異」可收合未變更區段；「上一個／下一個」可在差異區塊間巡覽。
+- 「複製差異 (Unified)」與「複製結構摘要」會將結果放入剪貼簿；「匯出 HTML 報表」會下載可保存或分享的差異報表。
+- `Ctrl+Enter` 執行比對；`F7`／`Shift+F7` 跳至下一個／上一個差異；`Alt+1`／`Alt+2` 切換逐行差異與結構摘要；`Esc` 返回編輯畫面。
+- 「交換」可互換舊版與新版；「範例」會載入內建 Oracle SQL 範例；「清除」會移除目前兩側內容。
+
+工具會將比對選項、顯示方式、編碼與目前頁籤保存於目前瀏覽器的 `localStorage`，不會上傳 SQL 內容。檔案讀取支援自動判斷 UTF-8／Big5，也可手動指定編碼；若要保留結果，請使用複製或 HTML 報表匯出。
+
+```mermaid
+flowchart LR
+    A[貼上或開啟舊版 SQL] --> C[設定忽略與編碼選項]
+    B[貼上或開啟新版 SQL] --> C
+    C --> D[執行比對]
+    D --> E[逐行差異]
+    D --> F[結構差異摘要]
+    E --> G[複製 Unified 或匯出 HTML]
+    F --> G
+```
+
+## Oracle SQL Formatter Studio
+
+Oracle SQL Formatter Studio v1.1 是純離線的批次 SQL／PL/SQL 格式化與健檢工具。它會遞迴掃描選定資料夾中的指定副檔名，先在瀏覽器記憶體中產生格式化預覽；只有按下「寫回檔案」並確認後，才會覆寫來源檔案。
+
+### 掃描與格式化預覽
+
+1. 開啟 [`OracleSqlFormatter.html`](./sql-mangage/OracleSqlFormatter.html)。
+2. 在「副檔名」欄確認要處理的副檔名，預設為 `.sql,.pks,.pkb,.prc,.fnc,.vw,.trg`。
+3. 按「選擇資料夾」。Chrome／Edge 等支援 File System Access API 的瀏覽器可取得資料夾讀寫權限；其他瀏覽器會進入唯讀相容模式。
+4. 調整檔案編碼（自動偵測 UTF-8／Big5、UTF-8 或 Big5）、縮排、識別字大小寫、SQL 關鍵字／函數大小寫與 SELECT／SET 欄位逐行排列。
+5. 在左側勾選要處理的檔案，按「格式化預覽」，再從「差異預覽」逐檔檢查格式化前後內容。
+6. PL/SQL 檔預設使用安全模式，只調整大小寫與行尾空白；也可選擇略過 PL/SQL，避免改變其版面。
+
+### SQL 健檢
+
+「SQL 健檢」會依檔案逐行列出錯誤、注意與提示，涵蓋 `= NULL`、ROWNUM 與 ORDER BY 同層、LEFT JOIN 被 WHERE 轉為 INNER、無 WHERE 的 UPDATE／DELETE、舊式逗號 JOIN、`&` 未設定 `DEFINE OFF`、PL/SQL 缺少 `/`、全形符號、不可見字元、條件欄位套用函數、`SELECT *`、`NOT IN`、CROSS JOIN、`WHERE 1=1`、高風險 DDL／DCL 與寫死的密碼等規則。
+
+- 可依嚴重度或規則篩選問題，點擊健檢明細跳至檔案位置。
+- 健檢規則可個別啟用／停用，也可調整嚴重度；「全部啟用／停用／恢復預設」會立即重新整理結果。
+- 若特定行或整個檔案不需要某規則，可在 SQL 加上 `-- sqlfmt:ignore RULE_ID` 或 `-- sqlfmt:ignore-file RULE_ID`；不寫規則代碼則忽略該行或檔案的全部規則。
+- 「快速測試」可直接貼上單段 SQL，立即查看格式化結果與健檢問題，不必先選擇資料夾。
+
+### 寫回、還原與匯出
+
+- 「寫回檔案」只會處理已勾選且預覽狀態為「有變更」的檔案。執行前會要求確認；預設先將原始檔案備份到根目錄的 `_sqlfmt_backup/<時間戳>`，完成後可用「還原本次」復原本次寫回的檔案。
+- 寫回前請逐檔檢查差異與健檢結果。關閉頁面、重新整理或重新選擇資料夾後，當次「還原本次」資訊不保證保留；備份目錄才是主要復原依據。
+- 「匯出 ZIP」會依原相對路徑打包勾選檔案，預覽後可取得格式化副本；唯讀相容模式只能使用此方式，不會修改來源檔案。
+- 「匯出報告」會產生 HTML，包含檔案狀態、編碼、變更／失敗統計、健檢規則統計與行號明細。
+- 「重新掃描」會重新讀取目前資料夾；工具會略過 `_sqlfmt_backup`、`.git`、`.svn`、`node_modules` 目錄。
+
+```mermaid
+flowchart TD
+    A[選擇 SQL 資料夾] --> B[掃描指定副檔名]
+    B --> C[執行格式化預覽與 SQL 健檢]
+    C --> D{輸出方式}
+    D -->|確認後寫回| E[建立備份並覆寫變更檔案]
+    E --> F[必要時還原本次]
+    D -->|不修改來源| G[匯出格式化 ZIP]
+    C --> H[匯出 HTML 健檢報告]
+```
+
+若瀏覽器不支援資料夾直接寫回，工具會使用檔案選取器載入唯讀資料；此時「寫回檔案」不可用，但仍可預覽、健檢、匯出 ZIP 與報告。格式化設定與健檢規則保存於目前瀏覽器的 `localStorage`，SQL 內容與報告均在本機處理。
+
 ## 資料保存、匯出與隱私
 
 ```mermaid
@@ -245,17 +331,22 @@ flowchart LR
     B -->|LCR| E[目前頁面記憶體]
     B -->|NSFR| K[IndexedDB 情境 草稿 參數]
     B -->|SQL Catalog| I[sql_catalog.json 與瀏覽器快取]
+    B -->|SQL Compare| M[目前頁面與 localStorage 選項]
+    B -->|SQL Formatter| N[目前頁面與 localStorage 設定]
     C --> F[JSON 備份或 YAML ZIP]
     D --> G[JSON 工作區備份]
     E --> H[重新整理後重新輸入]
     K --> L[JSON 備份與情境還原]
     I --> J[CSV Markdown HTML 或 JSON 匯出]
+    M --> O[複製或 HTML 報表]
+    N --> P[寫回備份或 ZIP 報告]
 ```
 
 - Agent YAML Maker 與甘特圖資料保存在目前瀏覽器的 IndexedDB；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得。
 - LCR 工具不自動保存、不上傳資料，也沒有內建匯出功能；重要結果請自行複製或列印保存。
 - NSFR 工具會將情境、編輯草稿與參數保存在目前瀏覽器的 IndexedDB，並提供 JSON 匯出／匯入備份；主題偏好使用 `localStorage`。若瀏覽器不支援持久化（例如部分 `file://` 環境），資料僅保留於目前頁面，請使用「匯出備份」保存。
 - SQL Catalog 會讀取使用者選定目錄中的 SQL 檔案，索引說明預設寫入該目錄的 `sql_catalog.json`；不支援目錄寫入時則保存於目前瀏覽器的 IndexedDB 快取。工具沒有遠端同步或後端上傳功能。
+- Oracle SQL Compare 與 Oracle SQL Formatter Studio 都在瀏覽器本機處理 SQL；前者不修改來源檔案，後者只有在使用者確認「寫回檔案」時才會覆寫，且預設先建立 `_sqlfmt_backup` 備份。
 - 本專案沒有內建後端同步。外部 CDN 只提供 Agent YAML Maker 與甘特圖所需的樣式、圖示或函式庫，不代表使用者資料會上傳至本專案伺服器。
 - 需要跨電腦或防止瀏覽器資料遺失時，請優先使用工具提供的 JSON、YAML 或 ZIP 匯出功能。
 
@@ -297,6 +388,22 @@ flowchart LR
 
 請確認檔案仍位於原本的根目錄與相對路徑，再按「重新掃描」。若檔案已永久移除，可在批次編輯中移除已遺失紀錄；這只會刪除索引，不會復原或刪除原始檔。
 
+### SQL Compare 的結果與預期不同
+
+檢查是否勾選了忽略大小寫、空白、註解、空行或結尾分隔符；這些選項會改變比對結果。若需要確認原始文字差異，請關閉相關忽略選項，並確認兩份檔案的編碼設定正確。
+
+### SQL Formatter 無法寫回檔案
+
+請使用支援 File System Access API 的 Chrome／Edge，並透過「選擇資料夾」重新授予讀寫權限。若仍使用唯讀相容模式，請改以「匯出 ZIP」取得格式化副本；唯讀模式不會修改來源檔案。
+
+### SQL Formatter 預覽沒有變更
+
+確認檔案已勾選，且格式化設定沒有被保存的舊設定覆蓋；設定變更後必須重新按「格式化預覽」。若檔案是 PL/SQL，預設安全模式只調整大小寫，或目前已選擇略過 PL/SQL，也可能看不到版面變化。
+
+### SQL Formatter 寫回前要如何復原
+
+預設設定會在根目錄建立 `_sqlfmt_backup/<時間戳>`；同一頁工作階段可按「還原本次」。若已關閉頁面或重新整理，請從備份目錄手動還原，並先確認備份檔案與原始相對路徑。
+
 ## 維護者驗證
 
 本專案是免建置的靜態 HTML／CSS／JavaScript 專案，沒有統一的 npm 測試指令。實際頁面同時使用原生 HTML／CSS／Vanilla JavaScript；部分頁面透過 CDN 載入 Tailwind CSS 或圖示函式庫，這是目前程式現況，請以 `docs\使用技術棧.md` 的規範與實際程式碼一併核對。修改文件後可先執行：
@@ -305,4 +412,4 @@ flowchart LR
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟五個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`。SQL Catalog 的目錄權限與瀏覽器相容性仍需實機驗證。
+若修改網頁程式，請分別在現代瀏覽器開啟七個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出。SQL Catalog 與 SQL Formatter 的目錄權限及瀏覽器相容性仍需實機驗證。
