@@ -1,6 +1,6 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供八個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、專案排程、臺灣 LCR／NSFR 試算，以及 SQL 目錄、比對、格式化與個資清除。工具不需要本專案專用後端；請依需求開啟對應的 HTML 入口。
+本專案提供九個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、專案排程、臺灣 LCR／NSFR 試算，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；請依需求開啟對應的 HTML 入口。
 
 ## 目錄
 
@@ -15,6 +15,7 @@
 - [Oracle SQL Compare](#oracle-sql-compare)
 - [Oracle SQL Formatter Studio](#oracle-sql-formatter-studio)
 - [SQL／TXT 個資掃描與清除](#sqltxt-個資掃描與清除)
+- [SQL Column Lineage Analyzer](#sql-column-lineage-analyzer)
 - [資料保存、匯出與隱私](#資料保存匯出與隱私)
 - [技術棧與離線範圍](#技術棧與離線範圍)
 - [常見問題](#常見問題)
@@ -32,6 +33,7 @@
    - [`sql-mangage/sql-compare.html`](./sql-mangage/sql-compare.html)
    - [`sql-mangage/OracleSqlFormatter.html`](./sql-mangage/OracleSqlFormatter.html)
    - [`sql-mangage/sql-pii-cleaner.html`](./sql-mangage/sql-pii-cleaner.html)
+   - [`sql-mangage/SQL_Column_Lineage_Analyzer.html`](./sql-mangage/SQL_Column_Lineage_Analyzer.html)
 3. 使用瀏覽器頁面中的表單、按鈕與分頁完成操作。
 
 本專案沒有建置或打包步驟，也沒有根目錄 `package.json`。若瀏覽器限制 `file://` 頁面的部分功能，可在專案根目錄啟動任一靜態檔案伺服器，例如：
@@ -57,6 +59,7 @@ flowchart TD
     B -->|SQL 版本比對| M[貼上或開啟舊版與新版 SQL]
     B -->|SQL 格式化與健檢| N[選擇 SQL 資料夾]
     B -->|SQL 個資清除| Q[選擇 SQL／TXT 資料夾]
+    B -->|SQL 欄位血緣分析| S[載入或貼上 SQL]
     C --> F[預覽並下載 YAML 或 ZIP]
     D --> G[查看甘特圖與里程碑倒數]
     E --> H[查看流出 流入與 LCR]
@@ -65,6 +68,7 @@ flowchart TD
     M --> O[查看逐行與結構差異]
     N --> P[預覽格式化 健檢並匯出或寫回]
     Q --> R[掃描命中並匯出清除副本或寫回]
+    S --> T[分析血緣圖、欄位對照與上下游追溯]
 ```
 
 ## 工具總覽
@@ -79,6 +83,7 @@ flowchart TD
 | Oracle SQL Compare | [`sql-mangage/sql-compare.html`](./sql-mangage/sql-compare.html) | 比對兩份 Oracle SQL 的逐行內容與結構差異 | SQL 只在目前頁面處理；比對選項保存於瀏覽器 `localStorage` |
 | Oracle SQL Formatter Studio | [`sql-mangage/OracleSqlFormatter.html`](./sql-mangage/OracleSqlFormatter.html) | 批次格式化 SQL／PL/SQL、執行健檢、預覽差異並匯出或寫回 | 檔案在瀏覽器本機處理；設定與健檢規則保存於 `localStorage` |
 | SQL／TXT 個資掃描與清除 | [`sql-mangage/sql-pii-cleaner.html`](./sql-mangage/sql-pii-cleaner.html) | 掃描常見身分證字號、帳號、統編與擔保品編號，產生清除副本或寫回 | 檔案只在目前頁面記憶體處理，不保存掃描結果 |
+| SQL Column Lineage Analyzer | [`sql-mangage/SQL_Column_Lineage_Analyzer.html`](./sql-mangage/SQL_Column_Lineage_Analyzer.html) | 分析 Oracle SQL 欄位來源、轉換、上下游影響與 CTE 結構，匯出血緣資料 | SQL 與分析結果只在目前頁面記憶體處理，不保存或上傳 |
 
 ## Agent YAML Maker
 
@@ -359,6 +364,45 @@ flowchart TD
     E -->|保留紀錄| H[匯出遮罩 CSV 報告]
 ```
 
+## SQL Column Lineage Analyzer
+
+SQL Column Lineage Analyzer v1.5.1 是純離線的 Oracle SQL 欄位血緣分析器。它會在瀏覽器記憶體中解析載入的 SQL，建立資料表、CTE、View、寫入／結果物件與欄位之間的直接或間接關係；不需要後端，也不會上傳 SQL 內容。
+
+### 載入 SQL 並分析
+
+1. 開啟 [`SQL_Column_Lineage_Analyzer.html`](./sql-mangage/SQL_Column_Lineage_Analyzer.html)。
+2. 以「載入檔案」選取一或多個 `.sql`、`.txt`、`.ddl` 檔案；也可以用「載入資料夾」遞迴載入子資料夾，或按「貼上 SQL」輸入內容。
+3. 也可按「內建範例」快速載入範例；檔案可直接拖放到載入區。
+4. 在左側檢查目前 SQL，按「分析」或使用 `Ctrl+Enter`。
+5. 若要重新開始，按「全部清除」；此動作會移除目前載入的 SQL 與分析結果。
+
+支援常見 Oracle SQL 結構，包括 `SELECT`、CTE、View、資料表定義、`INSERT`／`UPDATE`／`MERGE` 等寫入語句、JOIN、子查詢、集合運算，以及 PIVOT／UNPIVOT。解析器會盡可能建立欄位關係；語法不完整或不支援的語句會在「語句與訊息」頁顯示解析狀態與行號。
+
+### 檢視血緣與欄位關係
+
+- 「血緣圖」以物件卡片與連線呈現欄位來源；可用滑鼠拖曳畫布、滾輪縮放，切換「隱藏行內子查詢」、「完整」或「僅實體表與結果」顯示層級。
+- 點選物件標題可聚焦物件，點選欄位可在右側查看運算式、直接來源、間接來源、最終來源實體表、直接下游、最終影響與條件欄位。
+- 「只看選取欄位路徑」可收斂圖面；「適合視窗」與「100%」可調整視圖。血緣圖可匯出 SVG 或 PNG。
+- 「欄位對照表」可依目標／來源物件、關係類型與關鍵字篩選，並查看目標欄位、來源欄位、直接／間接關係、轉換類型與運算式；可匯出 CSV、JSON 或 Mermaid。
+- 「上下游追溯樹」可輸入欄位名稱或 `物件.欄位`，選擇上游、下游或上下游、追溯深度，以及是否包含間接來源與略過行內查詢。可全部展開、收合或清除重設。
+- 「CTE 大綱」列出 CTE／結果物件的檔案行號、欄位數、上游物件、下游物件與未使用欄位；點選列可跳回血緣圖聚焦。
+- 「語句與訊息」列出解析語句狀態與警告／錯誤；可勾選「只看警告／錯誤」縮小範圍。
+
+### 使用流程
+
+```mermaid
+flowchart TD
+    A[載入 檔案 資料夾或貼上 SQL] --> B[按分析或 Ctrl+Enter]
+    B --> C[檢視血緣圖與欄位明細]
+    C --> D{需要哪種結果?}
+    D -->|欄位對照| E[篩選並匯出 CSV JSON Mermaid]
+    D -->|圖形報告| F[匯出 SVG 或 PNG]
+    D -->|來源追蹤| G[輸入欄位並查看上下游追溯樹]
+    D -->|解析檢查| H[查看 CTE 大綱與語句訊息]
+```
+
+SQL、圖形與分析結果只保留在目前頁面記憶體；重新整理、關閉頁面或按「全部清除」後需要重新載入。匯出檔案可能包含原始欄位名稱、表名與運算式，分享前請確認 SQL 的敏感資訊範圍。
+
 ## 資料保存、匯出與隱私
 
 ```mermaid
@@ -371,6 +415,7 @@ flowchart LR
     B -->|SQL Catalog| I[sql_catalog.json 與瀏覽器快取]
     B -->|SQL Compare| M[目前頁面與 localStorage 選項]
     B -->|SQL Formatter| N[目前頁面與 localStorage 設定]
+    B -->|SQL 欄位血緣| R[目前頁面記憶體]
     C --> F[JSON 備份或 YAML ZIP]
     D --> G[JSON 工作區備份]
     E --> H[重新整理後重新輸入]
@@ -378,6 +423,7 @@ flowchart LR
     I --> J[CSV Markdown HTML 或 JSON 匯出]
     M --> O[複製或 HTML 報表]
     N --> P[寫回備份或 ZIP 報告]
+    R --> S[CSV JSON Mermaid SVG 或 PNG 匯出]
 ```
 
 - Agent YAML Maker 與甘特圖資料保存在目前瀏覽器的 IndexedDB；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得。
@@ -386,6 +432,7 @@ flowchart LR
 - SQL Catalog 會讀取使用者選定目錄中的 SQL 檔案，索引說明預設寫入該目錄的 `sql_catalog.json`；不支援目錄寫入時則保存於目前瀏覽器的 IndexedDB 快取。工具沒有遠端同步或後端上傳功能。
 - Oracle SQL Compare 與 Oracle SQL Formatter Studio 都在瀏覽器本機處理 SQL；前者不修改來源檔案，後者只有在使用者確認「寫回檔案」時才會覆寫，且預設先建立 `_sqlfmt_backup` 備份。
 - SQL／TXT 個資清除工具只在目前頁面記憶體中處理檔案；關閉或重新整理後需重新選取資料夾。可寫回模式會依設定建立 `_backup_時間` 備份，唯讀模式請使用 ZIP 保存結果。
+- SQL Column Lineage Analyzer 只在目前頁面記憶體中解析 SQL 與建立血緣結果；不使用 IndexedDB 或 `localStorage`，關閉、重新整理或清除頁面後需重新載入。CSV、JSON、Mermaid、SVG 與 PNG 都是由使用者主動下載的輸出檔。
 - 本專案沒有內建後端同步。外部 CDN 只提供 Agent YAML Maker 與甘特圖所需的樣式、圖示或函式庫，不代表使用者資料會上傳至本專案伺服器。
 - 需要跨電腦或防止瀏覽器資料遺失時，請優先使用工具提供的 JSON、YAML 或 ZIP 匯出功能。
 
@@ -395,7 +442,7 @@ flowchart LR
 
 - Agent YAML Maker：由 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，因此完整使用需能存取 CDN。
 - 動態甘特圖與專案倒數：由 CDN 載入 Tailwind CSS，因此完整使用需能存取 CDN。
-- LCR、NSFR、SQL Catalog、SQL Compare、SQL Formatter 與 SQL／TXT 個資清除：主要邏輯在瀏覽器本機執行；是否能直接以 `file://` 使用資料夾權限，仍取決於瀏覽器安全限制。
+- LCR、NSFR、SQL Catalog、SQL Compare、SQL Formatter、SQL／TXT 個資清除與 SQL Column Lineage Analyzer：主要邏輯在瀏覽器本機執行；是否能直接以 `file://` 使用資料夾權限，仍取決於瀏覽器安全限制。SQL Column Lineage Analyzer 本身不依賴外部 CDN。
 
 「本機處理」表示檔案與計算資料不會送到本專案後端，不代表所有外部 CDN 資源都已內嵌在 HTML 中。若工作環境禁止外部網路，請優先使用不依賴 CDN 的工具，並在正式處理資料前確認頁面功能與資料匯出結果。
 
@@ -457,6 +504,10 @@ flowchart LR
 
 先調整日期／時間排除選項與檢查碼規則，再查看遮罩後的命中前後文；不要未檢查就直接寫回。建議保留「寫回前備份」，或改用「下載清除後 ZIP」在副本上驗證。工具只掃描 `.sql` 與 `.txt`，且不會自動修正清除後可能產生的 SQL 語法問題。
 
+### SQL Column Lineage Analyzer 沒有解析出完整血緣
+
+先到「語句與訊息」查看錯誤或警告及對應行號，再確認 SQL 語法完整、別名與欄位名稱沒有歧義。若欄位名稱在多個物件中重複，請在「上下游追溯樹」使用 `物件.欄位` 指定起點；必要時降低追溯深度或關閉「略過行內查詢」後重新查看。分析器是靜態解析輔助工具，不能取代資料庫實際執行計畫或人工審查。
+
 ## 維護者驗證
 
 本專案是免建置的靜態 HTML／CSS／JavaScript 專案，沒有統一的 npm 測試指令。實際頁面同時使用原生 HTML／CSS／Vanilla JavaScript；Agent YAML Maker 與甘特圖透過 CDN 載入部分資源，這是目前程式現況。`docs\使用技術棧.md` 是目標技術棧規範，若要達成完全離線的共通標準，仍需另行移除或內嵌這些 CDN 依賴。修改文件後可先執行：
@@ -465,4 +516,4 @@ flowchart LR
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟八個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
+若修改網頁程式，請分別在現代瀏覽器開啟九個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
