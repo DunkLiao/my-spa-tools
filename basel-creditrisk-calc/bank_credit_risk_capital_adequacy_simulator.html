@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>銀行信用風險情境壓力測試與資本適足模擬器 (Credit Risk Stress Simulator)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for financial charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bank: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0284c7',
+              600: '#0369a1',
+              700: '#075985',
+              800: '#0c4a6e',
+              900: '#082f49'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+    body {
+      font-family: 'Inter', 'Noto Sans TC', sans-serif;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #0284c7;
+      cursor: pointer;
+      box-shadow: 0 0 6px rgba(2, 132, 199, 0.45);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #cbd5e1;
+      border-radius: 3px;
+    }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+      background-color: #334155;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-200">
+
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <header class="border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="p-2.5 bg-sky-500/10 text-sky-600 dark:text-sky-400 rounded-xl border border-sky-500/20">
+          <i data-lucide="building-2" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight">銀行信用風險與資本適足模擬器</h1>
+            <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300">Basel III / EAD-PD-LGD</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">多重宏觀壓力情境・預期損失(EL)・風險性資產(RWA)與資本適足率(CAR)敏感度試算</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button id="export-json-btn" class="px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center space-x-1.5 transition">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          <span>匯出資產模型</span>
+        </button>
+        <label class="cursor-pointer px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center space-x-1.5 transition">
+          <i data-lucide="upload" class="w-4 h-4"></i>
+          <span>匯入</span>
+          <input type="file" id="import-json-file" accept=".json" class="hidden">
+        </label>
+        <button id="theme-toggle-btn" class="p-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition" title="切換深淺模式">
+          <i data-lucide="moon" class="w-4 h-4 hidden dark:inline"></i>
+          <i data-lucide="sun" class="w-4 h-4 inline dark:hidden"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">資本適足率 (CAR / BIS)</span>
+          <span class="p-1.5 rounded-md bg-sky-50 dark:bg-sky-950/50 text-sky-600 dark:text-sky-400">
+            <i data-lucide="percent" class="w-4 h-4"></i>
+          </span>
+        </div>
+        <p id="kpi-car" class="text-2xl font-bold mt-2 text-slate-900 dark:text-white">12.5%</p>
+        <div class="flex items-center space-x-1.5 mt-1">
+          <span id="kpi-car-status-badge" class="text-[11px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400">優於監理門檻</span>
+          <span id="kpi-car-diff" class="text-xs text-slate-400">-0.0%</span>
+        </div>
+      </div>
+
+      <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">年化預期信用損失 (EL)</span>
+          <span class="p-1.5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+          </span>
+        </div>
+        <p id="kpi-expected-loss" class="text-2xl font-bold mt-2 text-slate-900 dark:text-white">$0</p>
+        <span id="kpi-loss-ratio" class="text-xs font-medium mt-1 inline-block text-amber-600 dark:text-amber-400">佔總曝險 0.85%</span>
+      </div>
+
+      <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">受壓後加權風險資產 (RWA)</span>
+          <span class="p-1.5 rounded-md bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400">
+            <i data-lucide="scale" class="w-4 h-4"></i>
+          </span>
+        </div>
+        <p id="kpi-rwa" class="text-2xl font-bold mt-2 text-slate-900 dark:text-white">$0</p>
+        <span id="kpi-rwa-density" class="text-xs font-medium mt-1 inline-block text-slate-500">平均風險權數密度: 68%</span>
+      </div>
+
+      <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm relative overflow-hidden">
+        <div class="flex justify-between items-start">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">備抵呆帳提存覆蓋比率</span>
+          <span id="kpi-provision-icon" class="p-1.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+          </span>
+        </div>
+        <p id="kpi-provision-coverage" class="text-2xl font-bold mt-2 text-emerald-600 dark:text-emerald-400">180%</p>
+        <span id="kpi-provision-need" class="text-xs font-medium mt-1 inline-block text-slate-500">增提呆帳準備需求: $0</span>
+      </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Left Panel: Capital Base, Scenario Presets & Macro Factors -->
+      <div class="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-5">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <h2 class="text-sm font-bold flex items-center gap-2">
+            <i data-lucide="sliders" class="w-4 h-4 text-sky-500"></i>
+            資本防線與總經壓力情境
+          </h2>
+          <button id="reset-default-btn" class="text-xs text-slate-400 hover:text-sky-500 transition">還原預設</button>
+        </div>
+
+        <!-- Bank Capital & Regulatory Floors -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">合格自有資本淨額 ($百萬)</label>
+            <input type="number" id="input-tier1-capital" value="12500" step="100" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm font-semibold">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">法定最低 CAR 門檻 (%)</label>
+            <input type="number" id="input-min-car" value="10.5" step="0.1" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm font-semibold">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-500 mb-1">現有提存備抵呆帳準備金 ($百萬)</label>
+          <input type="number" id="input-current-provisions" value="1100" step="50" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm font-semibold">
+        </div>
+
+        <!-- Scenario Mode Presets -->
+        <div class="space-y-2">
+          <label class="block text-xs font-medium text-slate-500">信貸壓力情境預設 (Macro Scenario)</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button class="scenario-btn active py-2.5 px-2 rounded-lg border text-xs font-semibold flex flex-col items-center justify-center transition" data-mode="baseline">
+              <span>基準常態</span>
+              <span class="text-[10px] text-slate-400 font-normal mt-0.5">無異常衝擊</span>
+            </button>
+            <button class="scenario-btn py-2.5 px-2 rounded-lg border text-xs font-semibold flex flex-col items-center justify-center transition" data-mode="moderate">
+              <span>經濟景氣趨緩</span>
+              <span class="text-[10px] text-slate-400 font-normal mt-0.5">升息/PD上升30%</span>
+            </button>
+            <button class="scenario-btn py-2.5 px-2 rounded-lg border text-xs font-semibold flex flex-col items-center justify-center transition" data-mode="severe">
+              <span>系統性金融風暴</span>
+              <span class="text-[10px] text-slate-400 font-normal mt-0.5">資產崩跌/PD翻倍</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Macro Stress Factor Sliders -->
+        <div class="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-4">
+          <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+            <span>宏觀衝擊因子微調</span>
+            <span class="text-[10px] text-sky-500 font-normal">即時重新定價</span>
+          </h3>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-500">違約率激增乘數 (PD Shock)</span>
+              <span id="label-stress-pd" class="font-bold text-rose-500">x1.00</span>
+            </div>
+            <input type="range" id="input-stress-pd" min="1.0" max="3.5" value="1.0" step="0.05" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-500">擔保品折價/違約損失加劇 (LGD Shock)</span>
+              <span id="label-stress-lgd" class="font-bold text-amber-500">+0%</span>
+            </div>
+            <input type="range" id="input-stress-lgd" min="0" max="60" value="0" step="5" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none">
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-slate-500">風險資產信用降評移轉 (RWA Migration)</span>
+              <span id="label-stress-rwa" class="font-bold text-indigo-500">+0%</span>
+            </div>
+            <input type="range" id="input-stress-rwa" min="0" max="40" value="0" step="2" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none">
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-2 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+          <div>
+            <h2 class="text-sm font-bold flex items-center gap-2">
+              <i data-lucide="bar-chart-3" class="w-4 h-4 text-sky-500"></i>
+              各資產組合之曝險 (EAD) 與預期損失 (EL) 分布
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">長條圖為各板塊信貸資產額度，折線標記衝擊後的年化預期信用損失金額</p>
+          </div>
+          <div class="flex items-center space-x-3 text-xs">
+            <span class="flex items-center text-slate-500">
+              <span class="w-3 h-3 rounded bg-sky-500 inline-block mr-1"></span> 曝險額 (EAD)
+            </span>
+            <span class="flex items-center text-slate-500">
+              <span class="w-3 h-3 rounded bg-amber-500 inline-block mr-1"></span> 受測損失 (Stressed EL)
+            </span>
+          </div>
+        </div>
+
+        <div class="relative w-full h-[300px] sm:h-[340px]">
+          <canvas id="creditRiskChart"></canvas>
+        </div>
+
+        <div id="chart-alert-banner" class="mt-4 p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50 flex items-center space-x-3 text-xs">
+          <i id="chart-alert-icon" data-lucide="shield-check" class="w-5 h-5 flex-shrink-0 text-emerald-500"></i>
+          <span id="chart-alert-text">當前資本充裕，資本適足率 (CAR) 高於主管機關警戒門檻。</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center space-x-2">
+          <span class="p-1.5 rounded-lg bg-sky-50 dark:bg-sky-950 text-sky-600 dark:text-sky-400">
+            <i data-lucide="layers" class="w-4 h-4"></i>
+          </span>
+          <div>
+            <h3 class="text-sm font-bold">信貸資產組合資產配置 (Loan Portfolio Segments)</h3>
+            <p class="text-xs text-slate-400">各區隔基準參數：曝險額 (EAD)、違約機率 (PD)、違約損失率 (LGD) 與標準風險權數 (RW)</p>
+          </div>
+        </div>
+        <button id="add-segment-btn" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 hover:bg-sky-700 text-white flex items-center space-x-1.5 transition">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>新增資產組合</span>
+        </button>
+      </div>
+
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-700">
+            <tr>
+              <th class="py-2.5 px-3">資產類別</th>
+              <th class="py-2.5 px-3">曝險額 EAD ($百萬)</th>
+              <th class="py-2.5 px-3">基準 PD</th>
+              <th class="py-2.5 px-3">壓力後 PD</th>
+              <th class="py-2.5 px-3">基準 LGD</th>
+              <th class="py-2.5 px-3">受壓後 EL ($百萬)</th>
+              <th class="py-2.5 px-3">風險權數 (RW)</th>
+              <th class="py-2.5 px-3">貢獻 RWA ($百萬)</th>
+              <th class="py-2.5 px-3 text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody id="segment-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
+            <!-- Dynamic rows rendered via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
+      <div class="flex items-center justify-between mb-2">
+        <div>
+          <h3 class="text-sm font-bold flex items-center gap-2">
+            <i data-lucide="git-compare" class="w-4 h-4 text-sky-500"></i>
+            跨情境敏感度對比矩陣 (Scenario Comparison Matrix)
+          </h3>
+          <p class="text-xs text-slate-400 mt-0.5">預先推演主管機關常見之壓力等級，比較各情境下資本侵蝕與增提壓力</p>
+        </div>
+      </div>
+      <div class="overflow-x-auto custom-scrollbar">
+        <table class="w-full text-xs text-left">
+          <thead class="bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 font-semibold border-b border-slate-200 dark:border-slate-700">
+            <tr>
+              <th class="py-2.5 px-3">情境名稱</th>
+              <th class="py-2.5 px-3">衝擊假設 (PD / LGD / RWA)</th>
+              <th class="py-2.5 px-3">總預期損失 (EL)</th>
+              <th class="py-2.5 px-3">加權風險資產 (RWA)</th>
+              <th class="py-2.5 px-3">扣除損失後資本</th>
+              <th class="py-2.5 px-3">受測 CAR (%)</th>
+              <th class="py-2.5 px-3">監理合規評等</th>
+            </tr>
+          </thead>
+          <tbody id="matrix-comparison-body" class="divide-y divide-slate-100 dark:divide-slate-800">
+            <!-- Rendered via JS -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="segment-modal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+        <h4 id="modal-title" class="text-base font-bold text-slate-900 dark:text-white">編輯信貸資產組合</h4>
+        <button id="modal-close-btn" class="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      
+      <form id="segment-form" class="space-y-3.5">
+        <input type="hidden" id="modal-segment-id">
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">資產組合名稱</label>
+          <input type="text" id="modal-segment-name" required placeholder="如：大型企業聯貸 / 房貸質押" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">曝險額 EAD ($百萬)</label>
+          <input type="number" id="modal-segment-ead" required min="1" step="10" placeholder="25000" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">基準違約率 PD (%)</label>
+            <input type="number" id="modal-segment-pd" required min="0.01" max="100" step="0.01" value="1.2" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">違約損失率 LGD (%)</label>
+            <input type="number" id="modal-segment-lgd" required min="1" max="100" step="0.5" value="40" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1">標準風險權數 RW (%)</label>
+          <input type="number" id="modal-segment-rw" required min="0" max="250" step="5" value="100" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+          <p class="text-[10px] text-slate-400 mt-1">例如：優質房貸為 35%、商業不動產為 100%、高收益企業信貸為 150%</p>
+        </div>
+
+        <div class="flex justify-end space-x-2 pt-3">
+          <button type="button" id="modal-cancel-btn" class="px-4 py-2 text-xs font-semibold rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">取消</button>
+          <button type="submit" class="px-4 py-2 text-xs font-semibold rounded-lg bg-sky-600 hover:bg-sky-700 text-white transition">儲存資產板塊</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Initial Credit Risk Portfolio Model
+    const DEFAULT_DATA = {
+      capital: 13500, // $Millions Tier 1 + Tier 2 Net Capital
+      regulatoryMinCar: 10.5, // 10.5% Minimum Basel III target
+      provisions: 1200, // $Millions current credit allowance
+      scenarioMode: 'baseline', // baseline, moderate, severe, custom
+      stressFactors: {
+        pdMultiplier: 1.0, // PD multiplier (e.g. 1.3 = +30%)
+        lgdInflation: 0, // % LGD increase (e.g. 40% -> 40*(1+0.15))
+        rwaInflation: 0 // % RWA inflation due to rating migration
+      },
+      segments: [
+        { id: 'seg-1', name: '頂級跨國企業與公營聯貸 (Prime Corporate)', ead: 38000, pd: 0.45, lgd: 35, rw: 50 },
+        { id: 'seg-2', name: '一般中小企業商業擔保放款 (SME Loans)', ead: 26000, pd: 1.80, lgd: 45, rw: 85 },
+        { id: 'seg-3', name: '自住住宅優質抵押貸款 (Prime Mortgages)', ead: 42000, pd: 0.25, lgd: 20, rw: 35 },
+        { id: 'seg-4', name: '無擔保個人消費性信貸 (Unsecured Retail)', ead: 8500, pd: 3.20, lgd: 75, rw: 110 },
+        { id: 'seg-5', name: '高槓桿商用不動產放款 (Commercial Real Estate)', ead: 14000, pd: 2.10, lgd: 55, rw: 120 }
+      ]
+    };
+
+    let state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    let creditChartInstance = null;
+
+    // Currency & Number Formatters
+    const formatCurrencyM = (val) => '$' + Math.round(val).toLocaleString('en-US') + ' M';
+    const formatPercent = (val) => val.toFixed(2) + '%';
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      const colors = {
+        info: 'bg-slate-800 text-white border-slate-700',
+        success: 'bg-emerald-600 text-white border-emerald-500',
+        warning: 'bg-amber-600 text-white border-amber-500',
+        danger: 'bg-rose-600 text-white border-rose-500'
+      };
+      toast.className = `px-4 py-2.5 rounded-xl shadow-lg border text-xs font-semibold flex items-center space-x-2 transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto ${colors[type] || colors.info}`;
+      toast.innerHTML = `<span>${message}</span>`;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    function computeRiskMetrics(stressFactorsOverride = null) {
+      const factors = stressFactorsOverride || state.stressFactors;
+      const { capital, regulatoryMinCar, provisions, segments } = state;
+
+      let totalEAD = 0;
+      let totalBaseEL = 0;
+      let totalStressedEL = 0;
+      let totalStressedRWA = 0;
+
+      const evaluatedSegments = segments.map(seg => {
+        const stressedPD = Math.min(100, seg.pd * factors.pdMultiplier);
+        const stressedLGD = Math.min(100, seg.lgd * (1 + factors.lgdInflation / 100));
+        
+        // Expected Loss = EAD * (PD / 100) * (LGD / 100)
+        const baseEL = seg.ead * (seg.pd / 100) * (seg.lgd / 100);
+        const stressedEL = seg.ead * (stressedPD / 100) * (stressedLGD / 100);
+
+        // Stressed RWA considers rating downgrades / RWA inflation factor
+        const effectiveRW = seg.rw * (1 + factors.rwaInflation / 100);
+        const segmentRWA = seg.ead * (effectiveRW / 100);
+
+        totalEAD += seg.ead;
+        totalBaseEL += baseEL;
+        totalStressedEL += stressedEL;
+        totalStressedRWA += segmentRWA;
+
+        return {
+          ...seg,
+          stressedPD,
+          stressedLGD,
+          baseEL,
+          stressedEL,
+          effectiveRW,
+          segmentRWA
+        };
+      });
+
+      // Capital Adequacy Ratio (CAR) calculation
+      // Adjusted Capital = Total Capital - Excess Loss over existing provisions
+      const lossExceedingProvisions = Math.max(0, totalStressedEL - provisions);
+      const adjustedCapital = Math.max(0, capital - lossExceedingProvisions);
+      const carRatio = totalStressedRWA > 0 ? (adjustedCapital / totalStressedRWA) * 100 : 0;
+
+      // Base CAR before stress
+      let baseRWA = 0;
+      segments.forEach(s => baseRWA += s.ead * (s.rw / 100));
+      const baseCAR = baseRWA > 0 ? (capital / baseRWA) * 100 : 0;
+
+      // Provision Coverage Ratio
+      const provisionCoverage = totalStressedEL > 0 ? (provisions / totalStressedEL) * 100 : 100;
+      const provisionDeficit = Math.max(0, totalStressedEL - provisions);
+
+      return {
+        totalEAD,
+        totalBaseEL,
+        totalStressedEL,
+        totalStressedRWA,
+        adjustedCapital,
+        carRatio,
+        baseCAR,
+        provisionCoverage,
+        provisionDeficit,
+        regulatoryMinCar,
+        evaluatedSegments
+      };
+    }
+
+    function renderKPIsAndAlerts(metrics) {
+      const { carRatio, baseCAR, totalStressedEL, totalEAD, totalStressedRWA, provisionCoverage, provisionDeficit, regulatoryMinCar } = metrics;
+
+      // CAR Metric
+      const kpiCar = document.getElementById('kpi-car');
+      kpiCar.textContent = formatPercent(carRatio);
+      const carBadge = document.getElementById('kpi-car-status-badge');
+      const carDiff = document.getElementById('kpi-car-diff');
+      
+      const diffVal = carRatio - baseCAR;
+      carDiff.textContent = `${diffVal >= 0 ? '+' : ''}${diffVal.toFixed(2)}% vs 基準`;
+
+      if (carRatio >= regulatoryMinCar + 2) {
+        kpiCar.className = 'text-2xl font-bold mt-2 text-emerald-600 dark:text-emerald-400';
+        carBadge.className = 'text-[11px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400';
+        carBadge.textContent = '資本適足穩健';
+      } else if (carRatio >= regulatoryMinCar) {
+        kpiCar.className = 'text-2xl font-bold mt-2 text-amber-500';
+        carBadge.className = 'text-[11px] font-semibold px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400';
+        carBadge.textContent = '接近法定門檻';
+      } else {
+        kpiCar.className = 'text-2xl font-bold mt-2 text-rose-600';
+        carBadge.className = 'text-[11px] font-semibold px-1.5 py-0.5 rounded bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-400';
+        carBadge.textContent = '跌破法定標準 (違規)';
+      }
+
+      // Expected Loss
+      document.getElementById('kpi-expected-loss').textContent = formatCurrencyM(totalStressedEL);
+      const elRatio = totalEAD > 0 ? (totalStressedEL / totalEAD) * 100 : 0;
+      document.getElementById('kpi-loss-ratio').textContent = `佔總曝險 ${elRatio.toFixed(2)}% (基準: ${formatCurrencyM(metrics.totalBaseEL)})`;
+
+      // Stressed RWA
+      document.getElementById('kpi-rwa').textContent = formatCurrencyM(totalStressedRWA);
+      const rwaDensity = totalEAD > 0 ? (totalStressedRWA / totalEAD) * 100 : 0;
+      document.getElementById('kpi-rwa-density').textContent = `平均風險密度: ${rwaDensity.toFixed(1)}%`;
+
+      // Provision Coverage
+      const kpiProv = document.getElementById('kpi-provision-coverage');
+      const provIcon = document.getElementById('kpi-provision-icon');
+      const provNeed = document.getElementById('kpi-provision-need');
+      kpiProv.textContent = `${provisionCoverage.toFixed(1)}%`;
+
+      if (provisionCoverage >= 100) {
+        kpiProv.className = 'text-2xl font-bold mt-2 text-emerald-600 dark:text-emerald-400';
+        provIcon.className = 'p-1.5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600';
+        provNeed.textContent = `現有準備充裕 (溢額: ${formatCurrencyM(state.provisions - totalStressedEL)})`;
+      } else {
+        kpiProv.className = 'text-2xl font-bold mt-2 text-rose-600';
+        provIcon.className = 'p-1.5 rounded-md bg-rose-50 dark:bg-rose-950/50 text-rose-600';
+        provNeed.textContent = `資本侵蝕增提需求: ${formatCurrencyM(provisionDeficit)}`;
+      }
+
+      // Chart Alert Banner
+      const alertBanner = document.getElementById('chart-alert-banner');
+      const alertIcon = document.getElementById('chart-alert-icon');
+      const alertText = document.getElementById('chart-alert-text');
+
+      if (carRatio < regulatoryMinCar) {
+        alertBanner.className = 'mt-4 p-3 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 flex items-center space-x-3 text-xs text-rose-800 dark:text-rose-200';
+        alertIcon.setAttribute('data-lucide', 'alert-octagon');
+        alertIcon.className = 'w-5 h-5 flex-shrink-0 text-rose-600';
+        alertText.innerHTML = `<strong>重大資本違規警訊：</strong>當前壓力情境使 CAR 降至 <strong>${formatPercent(carRatio)}</strong>（低於法定下限 ${regulatoryMinCar}%）。預期損失超過既有呆帳準備，銀行須立即啟動應變資本補充計畫（Contingency Capital Plan）！`;
+      } else if (carRatio < regulatoryMinCar + 1.5) {
+        alertBanner.className = 'mt-4 p-3 rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50 dark:bg-amber-950/40 flex items-center space-x-3 text-xs text-amber-800 dark:text-amber-200';
+        alertIcon.setAttribute('data-lucide', 'alert-triangle');
+        alertIcon.className = 'w-5 h-5 flex-shrink-0 text-amber-600';
+        alertText.innerHTML = `<strong>資本防護警戒：</strong>CAR 為 <strong>${formatPercent(carRatio)}</strong>，資本緩衝（Buffer）已受嚴重侵蝕，逼近主管機關干預警戒線。`;
+      } else {
+        alertBanner.className = 'mt-4 p-3 rounded-xl border border-emerald-200 dark:border-emerald-900/60 bg-emerald-50 dark:bg-emerald-950/40 flex items-center space-x-3 text-xs text-emerald-800 dark:text-emerald-200';
+        alertIcon.setAttribute('data-lucide', 'shield-check');
+        alertIcon.className = 'w-5 h-5 flex-shrink-0 text-emerald-600';
+        alertText.innerHTML = `<strong>資本適足健康：</strong>受測 CAR 為 <strong>${formatPercent(carRatio)}</strong>，具備足夠資本緩衝空間以抵禦當前設定之總體信用衝擊。`;
+      }
+
+      lucide.createIcons();
+    }
+
+    function renderChart(metrics) {
+      const ctx = document.getElementById('creditRiskChart').getContext('2d');
+      const labels = metrics.evaluatedSegments.map(s => s.name);
+      const eadData = metrics.evaluatedSegments.map(s => s.ead);
+      const elData = metrics.evaluatedSegments.map(s => s.stressedEL);
+
+      const isDarkMode = document.documentElement.classList.contains('dark');
+      const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.07)' : 'rgba(0, 0, 0, 0.05)';
+      const textColor = isDarkMode ? '#94a3b8' : '#64748b';
+
+      if (creditChartInstance) {
+        creditChartInstance.destroy();
+      }
+
+      creditChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              type: 'bar',
+              label: '曝險額度 (EAD)',
+              data: eadData,
+              backgroundColor: isDarkMode ? 'rgba(2, 132, 199, 0.7)' : 'rgba(2, 132, 199, 0.85)',
+              borderRadius: 6,
+              yAxisID: 'y'
+            },
+            {
+              type: 'line',
+              label: '受測預期損失 (EL)',
+              data: elData,
+              borderColor: '#f59e0b',
+              backgroundColor: '#f59e0b',
+              borderWidth: 2.5,
+              tension: 0.25,
+              pointRadius: 5,
+              pointHoverRadius: 7,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: {
+            mode: 'index',
+            intersect: false
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: isDarkMode ? '#0f172a' : '#ffffff',
+              titleColor: isDarkMode ? '#ffffff' : '#0f172a',
+              bodyColor: isDarkMode ? '#cbd5e1' : '#334155',
+              borderColor: isDarkMode ? '#334155' : '#e2e8f0',
+              borderWidth: 1,
+              callbacks: {
+                label: function(context) {
+                  return ` ${context.dataset.label}: ${formatCurrencyM(context.parsed.y)}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: gridColor },
+              ticks: {
+                color: textColor,
+                font: { size: 10.5 },
+                callback: function(val, index) {
+                  const label = this.getLabelForValue(val);
+                  return label.length > 14 ? label.slice(0, 14) + '...' : label;
+                }
+              }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              grid: { color: gridColor },
+              ticks: {
+                color: textColor,
+                font: { size: 10 },
+                callback: (val) => '$' + val.toLocaleString() + 'M'
+              },
+              title: {
+                display: true,
+                text: 'EAD 曝險額 ($百萬)',
+                color: textColor,
+                font: { size: 10 }
+              }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              ticks: {
+                color: '#f59e0b',
+                font: { size: 10 },
+                callback: (val) => '$' + val.toLocaleString() + 'M'
+              },
+              title: {
+                display: true,
+                text: 'EL 損失 ($百萬)',
+                color: '#f59e0b',
+                font: { size: 10 }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    function renderSegmentsTable(metrics) {
+      const tbody = document.getElementById('segment-table-body');
+      tbody.innerHTML = metrics.evaluatedSegments.map(s => {
+        return `
+          <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+            <td class="py-2.5 px-3 font-semibold text-slate-800 dark:text-slate-200">${s.name}</td>
+            <td class="py-2.5 px-3 font-medium text-sky-600 dark:text-sky-400">${formatCurrencyM(s.ead)}</td>
+            <td class="py-2.5 px-3 text-slate-500">${formatPercent(s.pd)}</td>
+            <td class="py-2.5 px-3 font-semibold ${s.stressedPD > s.pd ? 'text-rose-500' : 'text-slate-700 dark:text-slate-300'}">
+              ${formatPercent(s.stressedPD)}
+            </td>
+            <td class="py-2.5 px-3 text-slate-500">${formatPercent(s.stressedLGD)}</td>
+            <td class="py-2.5 px-3 font-bold text-amber-500">${formatCurrencyM(s.stressedEL)}</td>
+            <td class="py-2.5 px-3 text-slate-500">${s.effectiveRW.toFixed(0)}%</td>
+            <td class="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300">${formatCurrencyM(s.segmentRWA)}</td>
+            <td class="py-2.5 px-3 text-right space-x-1">
+              <button onclick="editSegment('${s.id}')" class="p-1 rounded text-slate-400 hover:text-sky-500 transition" title="編輯板塊">
+                <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="deleteSegment('${s.id}')" class="p-1 rounded text-slate-400 hover:text-rose-500 transition" title="刪除板塊">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('') || `<tr><td colspan="9" class="py-4 text-center text-slate-400">尚無信貸資產組合項目</td></tr>`;
+
+      lucide.createIcons();
+    }
+
+    function renderSensitivityMatrix() {
+      const presets = [
+        { name: '基準常態 (Baseline)', desc: 'PD x1.0 / LGD +0% / RWA +0%', factors: { pdMultiplier: 1.0, lgdInflation: 0, rwaInflation: 0 } },
+        { name: '溫和逆風 (Mild Downturn)', desc: 'PD x1.3 / LGD +10% / RWA +5%', factors: { pdMultiplier: 1.3, lgdInflation: 10, rwaInflation: 5 } },
+        { name: '深度衰退 (Severe Recession)', desc: 'PD x1.8 / LGD +25% / RWA +15%', factors: { pdMultiplier: 1.8, lgdInflation: 25, rwaInflation: 15 } },
+        { name: '極端流動性與房市崩跌 (Global Crisis)', desc: 'PD x2.5 / LGD +45% / RWA +25%', factors: { pdMultiplier: 2.5, lgdInflation: 45, rwaInflation: 25 } }
+      ];
+
+      const matrixBody = document.getElementById('matrix-comparison-body');
+      matrixBody.innerHTML = presets.map(p => {
+        const res = computeRiskMetrics(p.factors);
+        const isBreached = res.carRatio < state.regulatoryMinCar;
+        const isNear = res.carRatio < state.regulatoryMinCar + 1.5;
+
+        const badge = isBreached
+          ? `<span class="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 text-[11px] font-bold">未達標準 (Breached)</span>`
+          : isNear
+            ? `<span class="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-600 text-[11px] font-bold">防護警戒</span>`
+            : `<span class="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-600 text-[11px] font-semibold">資本充足</span>`;
+
+        return `
+          <tr class="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+            <td class="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-200">${p.name}</td>
+            <td class="py-2.5 px-3 text-slate-500">${p.desc}</td>
+            <td class="py-2.5 px-3 font-semibold text-amber-500">${formatCurrencyM(res.totalStressedEL)}</td>
+            <td class="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300">${formatCurrencyM(res.totalStressedRWA)}</td>
+            <td class="py-2.5 px-3 font-medium text-slate-700 dark:text-slate-300">${formatCurrencyM(res.adjustedCapital)}</td>
+            <td class="py-2.5 px-3 font-bold ${isBreached ? 'text-rose-600' : isNear ? 'text-amber-500' : 'text-emerald-500'}">
+              ${formatPercent(res.carRatio)}
+            </td>
+            <td class="py-2.5 px-3">${badge}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function syncAndRecalculate() {
+      // Sync basic input controls
+      document.getElementById('input-tier1-capital').value = state.capital;
+      document.getElementById('input-min-car').value = state.regulatoryMinCar;
+      document.getElementById('input-current-provisions').value = state.provisions;
+
+      // Sync stress sliders and labels
+      document.getElementById('input-stress-pd').value = state.stressFactors.pdMultiplier;
+      document.getElementById('label-stress-pd').textContent = `x${Number(state.stressFactors.pdMultiplier).toFixed(2)}`;
+
+      document.getElementById('input-stress-lgd').value = state.stressFactors.lgdInflation;
+      document.getElementById('label-stress-lgd').textContent = `+${state.stressFactors.lgdInflation}%`;
+
+      document.getElementById('input-stress-rwa').value = state.stressFactors.rwaInflation;
+      document.getElementById('label-stress-rwa').textContent = `+${state.stressFactors.rwaInflation}%`;
+
+      // Update scenario buttons styling
+      document.querySelectorAll('.scenario-btn').forEach(btn => {
+        const mode = btn.getAttribute('data-mode');
+        if (mode === state.scenarioMode) {
+          btn.className = "scenario-btn py-2.5 px-2 rounded-lg border text-xs font-semibold flex flex-col items-center justify-center transition border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300";
+        } else {
+          btn.className = "scenario-btn py-2.5 px-2 rounded-lg border text-xs font-semibold flex flex-col items-center justify-center transition border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800";
+        }
+      });
+
+      // Execute simulation model
+      const metrics = computeRiskMetrics();
+
+      // Render modules
+      renderKPIsAndAlerts(metrics);
+      renderChart(metrics);
+      renderSegmentsTable(metrics);
+      renderSensitivityMatrix();
+    }
+
+    // Segment Modal Management
+    const segmentModal = document.getElementById('segment-modal');
+    const segmentForm = document.getElementById('segment-form');
+
+    function openSegmentModal(item = null) {
+      document.getElementById('modal-segment-id').value = item ? item.id : '';
+      document.getElementById('modal-title').textContent = item ? '編輯信貸資產組合' : '新增信貸資產組合';
+
+      document.getElementById('modal-segment-name').value = item ? item.name : '';
+      document.getElementById('modal-segment-ead').value = item ? item.ead : '';
+      document.getElementById('modal-segment-pd').value = item ? item.pd : 1.5;
+      document.getElementById('modal-segment-lgd').value = item ? item.lgd : 45;
+      document.getElementById('modal-segment-rw').value = item ? item.rw : 100;
+
+      segmentModal.classList.remove('hidden');
+    }
+
+    function closeSegmentModal() {
+      segmentModal.classList.add('hidden');
+    }
+
+    window.editSegment = function(id) {
+      const seg = state.segments.find(s => s.id === id);
+      if (seg) openSegmentModal(seg);
+    };
+
+    window.deleteSegment = function(id) {
+      if (state.segments.length <= 1) {
+        showToast('至少須保留一個信貸資產組合以進行模型試算', 'warning');
+        return;
+      }
+      state.segments = state.segments.filter(s => s.id !== id);
+      showToast('資產組合已刪除', 'info');
+      syncAndRecalculate();
+    };
+
+    segmentForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = document.getElementById('modal-segment-id').value;
+      const name = document.getElementById('modal-segment-name').value.trim();
+      const ead = parseFloat(document.getElementById('modal-segment-ead').value) || 0;
+      const pd = parseFloat(document.getElementById('modal-segment-pd').value) || 0;
+      const lgd = parseFloat(document.getElementById('modal-segment-lgd').value) || 0;
+      const rw = parseFloat(document.getElementById('modal-segment-rw').value) || 0;
+
+      if (id) {
+        const target = state.segments.find(s => s.id === id);
+        if (target) {
+          target.name = name;
+          target.ead = ead;
+          target.pd = pd;
+          target.lgd = lgd;
+          target.rw = rw;
+        }
+      } else {
+        state.segments.push({
+          id: `seg-${Date.now()}`,
+          name,
+          ead,
+          pd,
+          lgd,
+          rw
+        });
+      }
+
+      closeSegmentModal();
+      showToast('資產組合已更新', 'success');
+      syncAndRecalculate();
+    });
+
+    document.getElementById('input-tier1-capital').addEventListener('input', (e) => {
+      state.capital = Math.max(0, parseFloat(e.target.value) || 0);
+      syncAndRecalculate();
+    });
+
+    document.getElementById('input-min-car').addEventListener('input', (e) => {
+      state.regulatoryMinCar = Math.max(0, parseFloat(e.target.value) || 0);
+      syncAndRecalculate();
+    });
+
+    document.getElementById('input-current-provisions').addEventListener('input', (e) => {
+      state.provisions = Math.max(0, parseFloat(e.target.value) || 0);
+      syncAndRecalculate();
+    });
+
+    document.getElementById('input-stress-pd').addEventListener('input', (e) => {
+      state.stressFactors.pdMultiplier = parseFloat(e.target.value);
+      state.scenarioMode = 'custom';
+      syncAndRecalculate();
+    });
+
+    document.getElementById('input-stress-lgd').addEventListener('input', (e) => {
+      state.stressFactors.lgdInflation = parseInt(e.target.value, 10);
+      state.scenarioMode = 'custom';
+      syncAndRecalculate();
+    });
+
+    document.getElementById('input-stress-rwa').addEventListener('input', (e) => {
+      state.stressFactors.rwaInflation = parseInt(e.target.value, 10);
+      state.scenarioMode = 'custom';
+      syncAndRecalculate();
+    });
+
+    // Scenario Preset Selectors
+    document.querySelectorAll('.scenario-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const mode = btn.getAttribute('data-mode');
+        state.scenarioMode = mode;
+
+        if (mode === 'baseline') {
+          state.stressFactors = { pdMultiplier: 1.0, lgdInflation: 0, rwaInflation: 0 };
+        } else if (mode === 'moderate') {
+          state.stressFactors = { pdMultiplier: 1.35, lgdInflation: 15, rwaInflation: 8 };
+        } else if (mode === 'severe') {
+          state.stressFactors = { pdMultiplier: 2.2, lgdInflation: 40, rwaInflation: 20 };
+        }
+        showToast(`已切換為「${btn.querySelector('span').textContent}」壓力測試`, 'info');
+        syncAndRecalculate();
+      });
+    });
+
+    document.getElementById('reset-default-btn').addEventListener('click', () => {
+      state = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      showToast('已還原為銀行預設信用資產模型', 'info');
+      syncAndRecalculate();
+    });
+
+    document.getElementById('add-segment-btn').addEventListener('click', () => openSegmentModal());
+    document.getElementById('modal-close-btn').addEventListener('click', closeSegmentModal);
+    document.getElementById('modal-cancel-btn').addEventListener('click', closeSegmentModal);
+
+    // Export Model to JSON
+    document.getElementById('export-json-btn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bank-credit-risk-model-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('信用風險資產模型已順利匯出 JSON', 'success');
+    });
+
+    // Import Model from JSON
+    document.getElementById('import-json-file').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const parsed = JSON.parse(event.target.result);
+          if (parsed && typeof parsed.capital === 'number' && Array.isArray(parsed.segments)) {
+            state = parsed;
+            showToast('外部信貸資產模型已成功載入', 'success');
+            syncAndRecalculate();
+          } else {
+            showToast('JSON 格式與銀行風險模型不符', 'danger');
+          }
+        } catch (err) {
+          showToast('無法解析檔案，請確認 JSON 格式', 'danger');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    // Dark Mode Toggle
+    document.getElementById('theme-toggle-btn').addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      syncAndRecalculate();
+    });
+
+    window.onload = function() {
+      if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.classList.add('dark');
+      }
+      lucide.createIcons();
+      syncAndRecalculate();
+    };
+  </script>
+</body>
+</html>

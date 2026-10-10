@@ -1,6 +1,6 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供九個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、專案排程、臺灣 LCR／NSFR 試算，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；請依需求開啟對應的 HTML 入口。
+本專案提供十個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、專案排程、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；請依需求開啟對應的 HTML 入口。
 
 ## 目錄
 
@@ -11,6 +11,7 @@
 - [動態甘特圖與專案倒數看板](#動態甘特圖與專案倒數看板)
 - [臺灣 LCR Mapping 與試算](#臺灣-lcr-mapping-與試算)
 - [臺灣 NSFR 淨穩定資金比率與試算](#臺灣-nsfr-淨穩定資金比率與試算)
+- [銀行信用風險與資本適足模擬器](#銀行信用風險與資本適足模擬器)
 - [SQL Catalog](#sql-catalog)
 - [Oracle SQL Compare](#oracle-sql-compare)
 - [Oracle SQL Formatter Studio](#oracle-sql-formatter-studio)
@@ -29,6 +30,7 @@
    - [`project-manage-calc/dynamic_gantt_project_countdown.html`](./project-manage-calc/dynamic_gantt_project_countdown.html)
    - [`lcr-mapping-calc/LCR_Mapping_SPA.html`](./lcr-mapping-calc/LCR_Mapping_SPA.html)
    - [`nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./nsfr-mapping-calc/NSFR_Mapping_SPA.html)
+   - [`basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html`](./basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html)
    - [`sql-mangage/SQL_Catalog.html`](./sql-mangage/SQL_Catalog.html)
    - [`sql-mangage/sql-compare.html`](./sql-mangage/sql-compare.html)
    - [`sql-mangage/OracleSqlFormatter.html`](./sql-mangage/OracleSqlFormatter.html)
@@ -42,7 +44,7 @@
 python -m http.server 8080
 ```
 
-再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker 與甘特圖工具會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR 工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
+再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、甘特圖與銀行信用風險模擬器會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR 工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
 
 本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，甘特圖工具需要從 CDN 載入 Tailwind CSS。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化與 SQL／TXT 個資清除工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
 
@@ -55,6 +57,7 @@ flowchart TD
     B -->|專案排程| D[建立專案與任務]
     B -->|LCR 試算| E[輸入 HQLA 與業務明細]
     B -->|NSFR 試算| K[輸入 ASF 與 RSF 明細]
+    B -->|信用風險壓力試算| U[設定資本 資產與壓力情境]
     B -->|SQL 管理| I[選擇 SQL 根目錄]
     B -->|SQL 版本比對| M[貼上或開啟舊版與新版 SQL]
     B -->|SQL 格式化與健檢| N[選擇 SQL 資料夾]
@@ -64,6 +67,7 @@ flowchart TD
     D --> G[查看甘特圖與里程碑倒數]
     E --> H[查看流出 流入與 LCR]
     K --> L[查看 ASF RSF 與 NSFR]
+    U --> V[查看預期損失 RWA 與 CAR]
     I --> J[掃描 檢索與編輯說明]
     M --> O[查看逐行與結構差異]
     N --> P[預覽格式化 健檢並匯出或寫回]
@@ -79,6 +83,7 @@ flowchart TD
 | 動態甘特圖與專案倒數 | [`project-manage-calc/dynamic_gantt_project_countdown.html`](./project-manage-calc/dynamic_gantt_project_countdown.html) | 管理多個專案、任務、進度與重大里程碑 | 瀏覽器 IndexedDB |
 | 臺灣 LCR Mapping 與試算 | [`lcr-mapping-calc/LCR_Mapping_SPA.html`](./lcr-mapping-calc/LCR_Mapping_SPA.html) | 查詢業務係數並計算現金流與 LCR | 僅保留在目前頁面，重新整理會清除 |
 | 臺灣 NSFR 淨穩定資金比率與試算 | [`nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./nsfr-mapping-calc/NSFR_Mapping_SPA.html) | 查詢 ASF／RSF 係數並計算 NSFR | IndexedDB 優先，必要時退回 `localStorage` 或僅保留於目前頁面 |
+| 銀行信用風險與資本適足模擬器 | [`basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html`](./basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html) | 編輯信貸資產組合，觀察壓力情境下預期損失、RWA 與 CAR 敏感度 | 只保留在目前頁面；可匯出／匯入 JSON 模型 |
 | SQL Catalog | [`sql-mangage/SQL_Catalog.html`](./sql-mangage/SQL_Catalog.html) | 掃描 SQL 根目錄、搜尋內容、維護用途與標籤、匯出清冊 | 根目錄 `sql_catalog.json`；瀏覽器 IndexedDB 作為快取與設定保存 |
 | Oracle SQL Compare | [`sql-mangage/sql-compare.html`](./sql-mangage/sql-compare.html) | 比對兩份 Oracle SQL 的逐行內容與結構差異 | SQL 只在目前頁面處理；比對選項保存於瀏覽器 `localStorage` |
 | Oracle SQL Formatter Studio | [`sql-mangage/OracleSqlFormatter.html`](./sql-mangage/OracleSqlFormatter.html) | 批次格式化 SQL／PL/SQL、執行健檢、預覽差異並匯出或寫回 | 檔案在瀏覽器本機處理；設定與健檢規則保存於 `localStorage` |
@@ -220,6 +225,28 @@ flowchart LR
     D --> E[匯出 JSON 備份]
     E --> F[匯入 JSON 還原]
 ```
+
+## 銀行信用風險與資本適足模擬器
+
+此工具以資產組合參數推演不同信用壓力下的預期損失（EL）、風險性資產（RWA）與資本適足率（CAR），並提供情境比較矩陣。模型數值供情境分析與敏感度觀察，不是正式監理計算或申報結果。
+
+### 設定資產組合與壓力情境
+
+1. 開啟 [`bank_credit_risk_capital_adequacy_simulator.html`](./basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html)。
+2. 輸入合格自有資本淨額、法定最低 CAR 門檻與現有提存備抵呆帳準備金。
+3. 選擇「基準常態」、「經濟景氣趨緩」或「系統性金融風暴」，也可調整 PD、LGD 與 RWA 衝擊滑桿。
+4. 按「新增資產組合」，輸入名稱、曝險額（EAD）、基準違約機率（PD）、違約損失率（LGD）與風險權數（RW）；既有組合可編輯或刪除，至少保留一組。
+5. 查看即時更新的總覽指標、資產組合圖表、受壓後 EL 與 RWA，以及跨情境敏感度比較矩陣。
+
+### 匯入、匯出與重設
+
+- 按「匯出資產模型」下載目前資本、壓力因子與資產組合資料的 JSON 檔。
+- 按「匯入資產模型」選擇先前匯出的 JSON；匯入後會取代目前頁面模型，請先匯出目前資料以保留副本。
+- 按「還原預設」會以內建銀行信用資產模型取代目前資料。
+- 模型不會自動保存；重新整理或關閉頁面後，未匯出的修改會消失。
+- 頁面使用 CDN 載入 Tailwind CSS、Chart.js、Lucide 圖示與 Google Fonts，首次完整使用需能連線至這些資源。
+
+PD、LGD、RW 與情境衝擊假設皆可調整，結果僅供內部估算及敏感度分析。正式風險衡量、資本適足判斷與監理申報，請依適用法規、銀行內部模型及核准流程覆核。
 
 ## SQL Catalog
 
@@ -412,6 +439,7 @@ flowchart LR
     B -->|甘特圖| D[IndexedDB 專案與任務]
     B -->|LCR| E[目前頁面記憶體]
     B -->|NSFR| K[IndexedDB 情境 草稿 參數]
+    B -->|信用風險模擬器| U[目前頁面記憶體]
     B -->|SQL Catalog| I[sql_catalog.json 與瀏覽器快取]
     B -->|SQL Compare| M[目前頁面與 localStorage 選項]
     B -->|SQL Formatter| N[目前頁面與 localStorage 設定]
@@ -420,6 +448,7 @@ flowchart LR
     D --> G[JSON 工作區備份]
     E --> H[重新整理後重新輸入]
     K --> L[JSON 備份與情境還原]
+    U --> V[JSON 模型匯出與匯入]
     I --> J[CSV Markdown HTML 或 JSON 匯出]
     M --> O[複製或 HTML 報表]
     N --> P[寫回備份或 ZIP 報告]
@@ -429,6 +458,7 @@ flowchart LR
 - Agent YAML Maker 與甘特圖資料保存在目前瀏覽器的 IndexedDB；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得。
 - LCR 工具不自動保存、不上傳資料，也沒有內建匯出功能；重要結果請自行複製或列印保存。
 - NSFR 工具會將情境、編輯草稿與參數保存在目前瀏覽器的 IndexedDB，並提供 JSON 匯出／匯入備份；主題偏好使用 `localStorage`。若瀏覽器不支援持久化（例如部分 `file://` 環境），資料僅保留於目前頁面，請使用「匯出備份」保存。
+- 銀行信用風險模擬器不會自動保存模型；頁面重新整理或關閉後，資料會遺失。請使用 JSON 匯出／匯入保留或移轉模型。該頁也會從 CDN 載入前端資源。
 - SQL Catalog 會讀取使用者選定目錄中的 SQL 檔案，索引說明預設寫入該目錄的 `sql_catalog.json`；不支援目錄寫入時則保存於目前瀏覽器的 IndexedDB 快取。工具沒有遠端同步或後端上傳功能。
 - Oracle SQL Compare 與 Oracle SQL Formatter Studio 都在瀏覽器本機處理 SQL；前者不修改來源檔案，後者只有在使用者確認「寫回檔案」時才會覆寫，且預設先建立 `_sqlfmt_backup` 備份。
 - SQL／TXT 個資清除工具只在目前頁面記憶體中處理檔案；關閉或重新整理後需重新選取資料夾。可寫回模式會依設定建立 `_backup_時間` 備份，唯讀模式請使用 ZIP 保存結果。
@@ -438,19 +468,32 @@ flowchart LR
 
 ## 技術棧與離線範圍
 
-本專案依 `docs\\使用技術棧.md` 採用 HTML5、CSS3、原生 JavaScript、響應式版面與瀏覽器本機儲存；沒有 Node.js、npm 或專用後端的建置流程。實際頁面仍存在下列外部資源差異：
+本節依目前各入口頁面的實際程式整理。專案由多個獨立 HTML 頁面組成，使用 HTML5、CSS3、原生 JavaScript 與響應式版面；沒有統一的建置／打包流程、根目錄 `package.json` 或專用後端。實際使用技術棧與 `docs\\使用技術棧.md` 的公版規範不完全一致：部分頁面使用 CDN 載入外部函式庫，且各工具自行決定資料保存方式。
 
-- Agent YAML Maker：由 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，因此完整使用需能存取 CDN。
-- 動態甘特圖與專案倒數：由 CDN 載入 Tailwind CSS，因此完整使用需能存取 CDN。
-- LCR、NSFR、SQL Catalog、SQL Compare、SQL Formatter、SQL／TXT 個資清除與 SQL Column Lineage Analyzer：主要邏輯在瀏覽器本機執行；是否能直接以 `file://` 使用資料夾權限，仍取決於瀏覽器安全限制。SQL Column Lineage Analyzer 本身不依賴外部 CDN。
+### 外部資源與離線需求
 
-「本機處理」表示檔案與計算資料不會送到本專案後端，不代表所有外部 CDN 資源都已內嵌在 HTML 中。若工作環境禁止外部網路，請優先使用不依賴 CDN 的工具，並在正式處理資料前確認頁面功能與資料匯出結果。
+- Agent YAML Maker：從 CDN 載入 Tailwind CSS、js-yaml、JSZip 與 Google Fonts。
+- 動態甘特圖與專案倒數：從 CDN 載入 Tailwind CSS 與 Lucide 圖示。
+- 銀行信用風險與資本適足模擬器：從 CDN 載入 Tailwind CSS、Chart.js、Lucide 圖示與 Google Fonts。
+- 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；SQL Column Lineage Analyzer 也不依賴外部 CDN。
+
+Agent YAML Maker、甘特圖與信用風險模擬器若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
+
+### 瀏覽器資料保存
+
+- Agent YAML Maker 使用 IndexedDB 保存草稿、快照與範本，並以 `localStorage` 記憶主題；甘特圖使用 IndexedDB 保存專案與任務。
+- NSFR 優先使用 IndexedDB，無法使用時退回 `localStorage`，再退回目前頁面記憶體。
+- SQL Catalog 將目錄說明寫入使用者選定根目錄的 `sql_catalog.json`，並以 IndexedDB 保存瀏覽器快取與設定。
+- SQL Compare、SQL Formatter 與 NSFR 主題等偏好／選項會使用 `localStorage`。
+- LCR 與信用風險模擬器不會自動保存試算資料；其他未列出的臨時分析內容則依各工具說明於目前頁面處理。
+
+本機處理表示主要計算與檔案操作在瀏覽器端執行，不代表每個入口都能完全離線啟動，也不代表瀏覽器資料會自動同步或備份。重要資料請使用各工具提供的匯出功能另存檔案。
 
 ## 常見問題
 
 ### 開啟後畫面樣式不完整或按鈕沒有作用
 
-確認瀏覽器可以連線到工具引用的 CDN（Agent YAML Maker 與甘特圖）；也可改用 `python -m http.server 8080` 後從 `http://localhost:8080/` 開啟。LCR 與 NSFR 工具為純離線、不依賴 CDN，若仍異常，請確認開啟的是對應子資料夾（`lcr-mapping-calc` 或 `nsfr-mapping-calc`）內的入口檔。
+確認瀏覽器可以連線到工具引用的 CDN（Agent YAML Maker、甘特圖與銀行信用風險模擬器）；也可改用 `python -m http.server 8080` 後從 `http://localhost:8080/` 開啟。LCR 與 NSFR 工具為純離線、不依賴 CDN，若仍異常，請確認開啟的是對應子資料夾（`lcr-mapping-calc` 或 `nsfr-mapping-calc`）內的入口檔。
 
 ### 甘特圖或 Agent YAML 的資料不見了
 
@@ -516,4 +559,4 @@ flowchart LR
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟九個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
+若修改網頁程式，請分別在現代瀏覽器開啟十個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
