@@ -13,7 +13,9 @@ my-spa-tools/
 ├─ index.html                    入口大廳（分類卡片、搜尋、連結使用手冊）
 ├─ README.md                     使用者操作手冊
 ├─ AGENTS.md                     本文件（開發慣例）
-├─ agent/agent-yaml-maker/       Agent YAML Maker
+├─ agent/                        AI Agent
+│  ├─ agent-yaml-maker/          Agent YAML Maker
+│  └─ prompt-studio/             Prompt Studio 結構化提示詞工作台
 ├─ finance/                      金融試算
 │  ├─ lcr-mapping-calc/
 │  ├─ nsfr-mapping-calc/
@@ -91,7 +93,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 14 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 15 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

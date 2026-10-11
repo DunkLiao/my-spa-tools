@@ -1,6 +1,6 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供十四個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、專案排程、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、色彩故事盤，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
+本專案提供十五個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、色彩故事盤，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
 
 ## 目錄
 
@@ -9,6 +9,7 @@
 - [整體使用流程](#整體使用流程)
 - [工具總覽](#工具總覽)
 - [Agent YAML Maker](#agent-yaml-maker)
+- [Prompt Studio 結構化提示詞工作台](#prompt-studio-結構化提示詞工作台)
 - [動態甘特圖與專案倒數看板](#動態甘特圖與專案倒數看板)
 - [臺灣 LCR Mapping 與試算](#臺灣-lcr-mapping-與試算)
 - [臺灣 NSFR 淨穩定資金比率與試算](#臺灣-nsfr-淨穩定資金比率與試算)
@@ -32,6 +33,7 @@
 1. 下載或複製本專案。
 2. 建議先開啟根目錄的入口大廳 [`index.html`](./index.html)，以分類卡片瀏覽並進入全部工具；也可直接開啟下列任一入口：
    - [`agent/agent-yaml-maker/index.html`](./agent/agent-yaml-maker/index.html)
+   - [`agent/prompt-studio/prompt-studio.html`](./agent/prompt-studio/prompt-studio.html)
    - [`docs/project-gantt/dynamic_gantt_project_countdown.html`](./docs/project-gantt/dynamic_gantt_project_countdown.html)
    - [`finance/lcr-mapping-calc/LCR_Mapping_SPA.html`](./finance/lcr-mapping-calc/LCR_Mapping_SPA.html)
    - [`finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html)
@@ -53,9 +55,9 @@
 python -m http.server 8080
 ```
 
-再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、甘特圖、銀行信用風險模擬器、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器與色彩故事盤會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR 工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
+再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、Prompt Studio、甘特圖、銀行信用風險模擬器、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器與色彩故事盤會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR 工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
 
-本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS，公文簽／函排版工具需要從 CDN 載入 Tailwind CSS 與 docx.js，剪貼簿洗滌器需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 Google Fonts，色彩故事盤需要從 CDN 載入 Tailwind CSS 與 Google Fonts。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化與 SQL／TXT 個資清除工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
+本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，Prompt Studio 需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS，公文簽／函排版工具需要從 CDN 載入 Tailwind CSS 與 docx.js，剪貼簿洗滌器需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 Google Fonts，色彩故事盤需要從 CDN 載入 Tailwind CSS 與 Google Fonts。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化與 SQL／TXT 個資清除工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
 
 ## 專案結構
 
@@ -64,7 +66,8 @@ my-spa-tools/
 ├─ index.html                    入口大廳（分類卡片、搜尋、連結使用手冊）
 ├─ README.md                     本使用手冊
 ├─ agent/
-│  └─ agent-yaml-maker/          Agent YAML Maker（index.html + app.js + styles.css）
+│  ├─ agent-yaml-maker/          Agent YAML Maker（index.html + app.js + styles.css）
+│  └─ prompt-studio/             Prompt Studio 結構化提示詞工作台
 ├─ finance/                      臺灣監理試算
 │  ├─ lcr-mapping-calc/
 │  ├─ nsfr-mapping-calc/
@@ -92,6 +95,7 @@ my-spa-tools/
 flowchart TD
     A[選擇網頁工具] --> B{工具類型}
     B -->|Agent 狀態與交接| C[填寫 YAML 表單]
+    B -->|提示詞工程| AE[選擇框架並填寫結構區塊]
     B -->|專案排程| D[建立專案與任務]
     B -->|LCR 試算| E[輸入 HQLA 與業務明細]
     B -->|NSFR 試算| K[輸入 ASF 與 RSF 明細]
@@ -104,6 +108,7 @@ flowchart TD
     B -->|文字洗滌與個資脫敏| Y[貼上雜亂文字並勾選洗滌規則]
     B -->|配色設計| W[輸入意境文字生成色盤]
     C --> F[預覽並下載 YAML 或 ZIP]
+    AE --> AF[填入變數並複製組裝結果]
     D --> G[查看甘特圖與里程碑倒數]
     E --> H[查看流出 流入與 LCR]
     K --> L[查看 ASF RSF 與 NSFR]
@@ -122,6 +127,7 @@ flowchart TD
 | 工具 | 入口 | 適合用途 | 資料保存方式 |
 | --- | --- | --- | --- |
 | Agent YAML Maker | [`agent/agent-yaml-maker/index.html`](./agent/agent-yaml-maker/index.html) | 建立 `progress.yaml`、`handoff.yaml`、範本與快照 | 瀏覽器 IndexedDB；主題偏好使用 `localStorage` |
+| Prompt Studio 結構化提示詞工作台 | [`agent/prompt-studio/prompt-studio.html`](./agent/prompt-studio/prompt-studio.html) | 以 10 種經典框架模組化組裝提示詞，抽取 `{{變數}}`、估算 Token 並保存版本快照 | 瀏覽器 IndexedDB（`PromptStudioDB`：`prompts` 專案與 `versions` 版本快照） |
 | 動態甘特圖與專案倒數 | [`docs/project-gantt/dynamic_gantt_project_countdown.html`](./docs/project-gantt/dynamic_gantt_project_countdown.html) | 管理多個專案、任務、進度與重大里程碑 | 瀏覽器 IndexedDB |
 | 臺灣 LCR Mapping 與試算 | [`finance/lcr-mapping-calc/LCR_Mapping_SPA.html`](./finance/lcr-mapping-calc/LCR_Mapping_SPA.html) | 查詢業務係數並計算現金流與 LCR | 僅保留在目前頁面，重新整理會清除 |
 | 臺灣 NSFR 淨穩定資金比率與試算 | [`finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html) | 查詢 ASF／RSF 係數並計算 NSFR | IndexedDB 優先，必要時退回 `localStorage` 或僅保留於目前頁面 |
@@ -250,6 +256,40 @@ constraints_and_notes:                     # 邊界約束與注意事項
 3. 若需切換 Session 或移交給下一位 Agent，請生成或更新 `handoff.yaml`，
    固定關鍵決策並列出接手者的 next_steps。
 ```
+
+## Prompt Studio 結構化提示詞工作台
+
+Prompt Studio 是單檔的結構化提示詞工程工作台：把提示詞拆成「情境、目標、受眾、格式」等模組化區塊個別填寫，即時組裝成標準 Markdown，並提供字元數、預估 Token 與結構區塊統計。內建 CO-STAR、CRISPE、RTF、TAG、APE、CARE、ROSES、TRACE、GRADE 與簡約三段式共 10 種經典框架，可隨任務切換。
+
+### 組裝提示詞
+
+1. 開啟 [`prompt-studio.html`](./agent/prompt-studio/prompt-studio.html)。
+2. 在「請輸入提示詞專案名稱」欄填寫專案名稱，再從編輯區上方的「快速切換提示詞框架」或左側「常用框架 (10)」選單挑選框架。
+3. 依框架顯示的結構欄位（例如 CO-STAR 的情境背景、明確目標、表達風格、語氣基調、受眾輪廓與輸出格式）逐欄輸入內容。
+4. 右側「組裝結果預覽 (Markdown)」會即時產生提示詞，下方並顯示總字元數、預估 Tokens 與結構區塊數。
+5. 按「一鍵複製」將組裝後的提示詞複製到剪貼簿。
+
+### 動態變數與版本管理
+
+- 在任一欄位以雙大括號撰寫變數，例如 `{{產品名稱}}`、`{{targetAudience}}`，支援中文、英文與底線；工具會自動抽出「偵測到動態變數」填空欄位，填入替換值後右側預覽即時更新。
+- 上方「使用說明」彈窗提供變數語法與結構化提示詞四部曲說明，並可按「載入動態變數範例」直接體驗 CARE 框架的多變數範本。
+- 按「儲存版本」會將目前內容寫入 IndexedDB 並產生 `v1.0`、`v2.0` 版本快照；可用右側「歷史版本快照」下拉選單還原任一版本。
+- 左側「我的提示詞」列出已儲存專案，可切換載入或刪除（刪除會一併移除其版本歷史）；按「新增專案」開啟空白提示詞。
+- 左下角垃圾桶按鈕會清空 IndexedDB 中的所有提示詞與歷史記錄，執行前請先確認。
+
+```mermaid
+flowchart TD
+    A[選擇提示詞框架] --> B[填寫模組化結構區塊]
+    B --> C[系統抽取雙大括號變數]
+    C --> D[填入變數替換值]
+    D --> E[右側即時組裝 Markdown 與 Token 統計]
+    E --> F{輸出方式}
+    F -->|使用| G[一鍵複製提示詞]
+    F -->|保存| H[儲存版本至 IndexedDB 並產生快照]
+    H --> I[從歷史下拉選單還原版本]
+```
+
+本工具從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，首次開啟需保持網路連線。所有提示詞、變數與版本快照只保存在目前瀏覽器的 IndexedDB（資料庫名稱 `PromptStudioDB`，object stores：`prompts`、`versions`），不會上傳至任何伺服器；換瀏覽器、使用無痕視窗或清除網站資料後可能無法取得，重要提示詞請先複製保存。
 
 ## 動態甘特圖與專案倒數看板
 
@@ -715,6 +755,7 @@ flowchart TD
 flowchart LR
     A[編輯工具資料] --> B{工具}
     B -->|Agent YAML| C[IndexedDB 草稿 快照 範本]
+    B -->|提示詞工作台| AE[IndexedDB 專案與版本快照]
     B -->|甘特圖| D[IndexedDB 專案與任務]
     B -->|LCR| E[目前頁面記憶體]
     B -->|NSFR| K[IndexedDB 情境 草稿 參數]
@@ -740,9 +781,11 @@ flowchart LR
     Y --> Z[複製或下載 docx]
     AC --> AD[複製洗滌後純文字]
     AA --> AB[複製 CSS Tailwind JSON 或收藏]
+    AE --> AF[複製提示詞]
 ```
 
 - Agent YAML Maker 與甘特圖資料保存在目前瀏覽器的 IndexedDB；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得。
+- Prompt Studio 會將提示詞專案、自訂變數與歷史版本快照保存在目前瀏覽器的 IndexedDB（`PromptStudioDB`）；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得，重要提示詞請先複製保存。
 - LCR 工具不自動保存、不上傳資料，也沒有內建匯出功能；重要結果請自行複製或列印保存。
 - NSFR 工具會將情境、編輯草稿與參數保存在目前瀏覽器的 IndexedDB，並提供 JSON 匯出／匯入備份；主題偏好使用 `localStorage`。若瀏覽器不支援持久化（例如部分 `file://` 環境），資料僅保留於目前頁面，請使用「匯出備份」保存。
 - 銀行信用風險模擬器不會自動保存模型；頁面重新整理或關閉後，資料會遺失。請使用 JSON 匯出／匯入保留或移轉模型。該頁也會從 CDN 載入前端資源。
@@ -764,6 +807,7 @@ flowchart LR
 ### 外部資源與離線需求
 
 - Agent YAML Maker：從 CDN 載入 Tailwind CSS、js-yaml、JSZip 與 Google Fonts。
+- Prompt Studio 結構化提示詞工作台：從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示。
 - 動態甘特圖與專案倒數：從 CDN 載入 Tailwind CSS 與 Lucide 圖示。
 - 銀行信用風險與資本適足模擬器：從 CDN 載入 Tailwind CSS、Chart.js、Lucide 圖示與 Google Fonts。
 - Markdown 卡片簡報工具：編輯介面從 CDN 載入 Tailwind CSS；「匯出展示檔」產生的單一 HTML 不含外部依賴。
@@ -772,11 +816,12 @@ flowchart LR
 - Palette Lore 色彩故事盤：從 CDN 載入 Tailwind CSS 與 Google Fonts。
 - 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；SQL Column Lineage Analyzer 也不依賴外部 CDN。
 
-Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器與色彩故事盤若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
+Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器與色彩故事盤若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
 
 ### 瀏覽器資料保存
 
 - Agent YAML Maker 使用 IndexedDB（資料庫名稱 `AgentYamlMakerDB`，版本 2）保存草稿、快照與範本，並以 `localStorage` 記憶主題；甘特圖使用 IndexedDB 保存專案與任務。
+- Prompt Studio 使用 IndexedDB（資料庫名稱 `PromptStudioDB`，object stores：`prompts`、`versions`）保存提示詞專案與歷史版本快照。
 - Markdown 卡片簡報工具使用 IndexedDB 保存範本與編輯草稿，並以 `localStorage` 記憶主題偏好。
 - NSFR 優先使用 IndexedDB，無法使用時退回 `localStorage`，再退回目前頁面記憶體。
 - SQL Catalog 將目錄說明寫入使用者選定根目錄的 `sql_catalog.json`，並以 IndexedDB 保存瀏覽器快取與設定。
@@ -805,6 +850,10 @@ Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工�
 ### YAML 匯入或 JSON 還原失敗
 
 請確認檔案是由對應工具匯出的完整檔案，沒有被截斷或手動改壞。Agent YAML Maker 的資料庫備份可選擇合併或覆寫；甘特圖完整工作區匯入會取代現有工作區。
+
+### Prompt Studio 的提示詞或版本不見了
+
+確認使用同一個瀏覽器與一般視窗，且沒有清除網站資料；提示詞、變數與版本快照存放在瀏覽器 IndexedDB（`PromptStudioDB`），不會同步到其他裝置。若要保留組裝結果，請先用「一鍵複製」取出提示詞。若頁面樣式或圖示缺漏，請確認可連線至 CDN（Tailwind CSS 與 Font Awesome）。
 
 ### LCR 結果與預期不同
 
@@ -868,10 +917,10 @@ Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工�
 
 ## 維護者驗證
 
-本專案是免建置的靜態 HTML／CSS／JavaScript 專案，沒有統一的 npm 測試指令。實際頁面同時使用原生 HTML／CSS／Vanilla JavaScript；Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工具、公文簽／函排版工具與剪貼簿洗滌器透過 CDN 載入部分資源，這是目前程式現況。若要達成完全離線的共通標準，仍需另行移除或內嵌這些 CDN 依賴。修改文件後可先執行：
+本專案是免建置的靜態 HTML／CSS／JavaScript 專案，沒有統一的 npm 測試指令。實際頁面同時使用原生 HTML／CSS／Vanilla JavaScript；Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、Markdown 卡片簡報工具、公文簽／函排版工具與剪貼簿洗滌器透過 CDN 載入部分資源，這是目前程式現況。若要達成完全離線的共通標準，仍需另行移除或內嵌這些 CDN 依賴。修改文件後可先執行：
 
 ```powershell
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟十四個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
+若修改網頁程式，請分別在現代瀏覽器開啟十五個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。

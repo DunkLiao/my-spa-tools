@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prompt Studio - 結構化提示詞工作台</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8'
+            }
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    /* 簡約半透明捲軸樣式 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.04);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.5);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.8);
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased h-screen flex flex-col overflow-hidden font-sans">
+
+  <!-- 頂部主要導覽列 -->
+  <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-xs flex-shrink-0 z-20">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-sm">
+        <i class="fa-solid fa-wand-magic-sparkles text-lg"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-slate-800 text-lg leading-tight flex items-center gap-2">
+          Prompt Studio
+          <span class="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full border border-blue-200">IndexedDB 離線版</span>
+        </h1>
+        <p class="text-xs text-slate-400">結構化提示詞工程・動態變數模板・版本控制工作台</p>
+      </div>
+    </div>
+
+    <!-- 頂部快速操作按鈕 -->
+    <div class="flex items-center gap-2">
+      <button id="btnHelpGuide" class="px-3.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-medium transition flex items-center gap-1.5" title="使用說明與變數指南">
+        <i class="fa-regular fa-circle-question text-blue-600"></i>
+        <span>使用說明</span>
+      </button>
+      <button id="btnNewPrompt" class="px-3.5 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-700 text-xs sm:text-sm font-medium transition flex items-center gap-1.5">
+        <i class="fa-solid fa-plus text-xs"></i> 新增專案
+      </button>
+      <button id="btnSavePrompt" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium transition shadow-sm flex items-center gap-1.5">
+        <i class="fa-solid fa-floppy-disk text-xs"></i> 儲存版本
+      </button>
+    </div>
+  </header>
+
+  <!-- 三欄式主要工作區 -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- 左側欄：歷史專案與 10 大框架庫 -->
+    <aside class="w-72 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
+      <!-- 分頁標籤切換 -->
+      <div class="flex border-b border-slate-200 px-4 pt-3 gap-4 text-sm font-medium text-slate-500">
+        <button id="tabPrompts" class="pb-2 border-b-2 border-blue-600 text-blue-600 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-folder-open text-xs"></i> 我的提示詞
+        </button>
+        <button id="tabTemplates" class="pb-2 border-b-2 border-transparent hover:text-slate-800 flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-shapes text-xs"></i> 常用框架 (10)
+        </button>
+      </div>
+
+      <!-- 側邊欄列表容器 -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-2" id="sidebarList">
+        <!-- 動態渲染清單內容 -->
+      </div>
+
+      <!-- 底部 IndexedDB 狀態資訊 -->
+      <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          IndexedDB 本地安全儲存
+        </span>
+        <button id="btnClearAll" title="清空所有專案與歷史" class="text-slate-400 hover:text-red-500 transition p-1">
+          <i class="fa-regular fa-trash-can"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 中間欄：提示詞編輯主面板 -->
+    <main class="flex-1 flex flex-col bg-slate-50 overflow-y-auto border-r border-slate-200">
+      <div class="p-6 max-w-4xl w-full mx-auto space-y-5">
+        
+        <!-- 專案標題與當前框架選擇列 -->
+        <div class="bg-white p-5 rounded-2xl shadow-xs border border-slate-200/90 space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <input type="text" id="promptTitle" placeholder="請輸入提示詞專案名稱..." class="text-lg sm:text-xl font-bold text-slate-800 border-b border-transparent hover:border-slate-300 focus:border-blue-600 focus:outline-none w-full bg-transparent pb-1 transition" />
+            <span id="currentVersionBadge" class="text-xs px-2.5 py-1 bg-slate-100 text-slate-600 rounded-lg font-mono flex-shrink-0 font-semibold">
+              v1.0
+            </span>
+          </div>
+
+          <!-- 10 大框架快速標籤群組 -->
+          <div class="space-y-1.5 pt-1">
+            <div class="text-xs text-slate-400 font-medium flex items-center justify-between">
+              <span>快速切換提示詞框架 (10 種經典模式)：</span>
+              <span id="currentFwDesc" class="text-[11px] text-blue-600 font-medium"></span>
+            </div>
+            <div id="frameworkButtonsContainer" class="flex flex-wrap gap-1.5">
+              <!-- 動態產生 10 種框架切換按鈕 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 變數語法動態提示條 -->
+        <div class="bg-blue-50/80 border border-blue-200/90 rounded-xl px-4 py-3 flex items-center justify-between text-xs text-blue-900 shadow-2xs">
+          <div class="flex items-center gap-2.5">
+            <i class="fa-solid fa-circle-info text-blue-500 text-sm"></i>
+            <span>
+              在任意欄位中使用 <code class="bg-blue-100 text-blue-900 px-1.5 py-0.5 rounded font-mono font-bold">{{變數名稱}}</code>，系統將自動抽出專屬填空表單！
+            </span>
+          </div>
+          <button id="btnShowQuickHelp" class="underline text-blue-600 hover:text-blue-800 font-semibold shrink-0 ml-2 cursor-pointer transition">
+            查看變數指南
+          </button>
+        </div>
+
+        <!-- 模組化結構輸入欄位容器 -->
+        <div id="moduleFieldsContainer" class="space-y-4">
+          <!-- 動態載入結構區塊文字輸入框 -->
+        </div>
+
+        <!-- 自動抽取出的變數即時替換欄位 ({{變數}}) -->
+        <div id="variablesContainer" class="bg-amber-50/40 p-5 rounded-2xl shadow-xs border border-amber-200 hidden space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-amber-800 font-bold text-sm">
+              <i class="fa-solid fa-bolt text-amber-500"></i>
+              <span>偵測到動態變數 (<span id="variableCountBadge">0</span> 個)</span>
+            </div>
+            <span class="text-xs text-amber-700">填寫後右側預覽將即時替換</span>
+          </div>
+          <div id="variableInputsList" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <!-- 動態注入變數 input 表單 -->
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- 右側欄：即時 Markdown 預覽與 Token 統計 -->
+    <aside class="w-96 bg-white flex flex-col flex-shrink-0 shadow-lg relative z-10">
+      
+      <!-- 頂部動作列 -->
+      <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/60">
+        <h2 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+          <i class="fa-regular fa-file-lines text-blue-600"></i>
+          組裝結果預覽 (Markdown)
+        </h2>
+        <button id="btnCopyPrompt" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-xs">
+          <i class="fa-regular fa-copy"></i> 一鍵複製
+        </button>
+      </div>
+
+      <!-- 即時組裝渲染區塊 -->
+      <div class="flex-1 p-4 overflow-y-auto">
+        <pre id="previewArea" class="w-full h-full p-4 bg-slate-900 text-slate-100 rounded-xl font-mono text-xs leading-relaxed whitespace-pre-wrap select-all overflow-y-auto border border-slate-800"></pre>
+      </div>
+
+      <!-- 統計分析與歷史快照還原 -->
+      <div class="p-4 border-t border-slate-200 bg-slate-50 space-y-3">
+        <div class="grid grid-cols-3 gap-2 text-center text-xs">
+          <div class="bg-white p-2 rounded-xl border border-slate-200/90 shadow-2xs">
+            <div class="text-slate-400 font-medium">總字元數</div>
+            <div id="statChars" class="font-bold text-slate-800 text-sm mt-0.5">0</div>
+          </div>
+          <div class="bg-white p-2 rounded-xl border border-slate-200/90 shadow-2xs">
+            <div class="text-slate-400 font-medium">預估 Tokens</div>
+            <div id="statTokens" class="font-bold text-blue-600 text-sm mt-0.5">0</div>
+          </div>
+          <div class="bg-white p-2 rounded-xl border border-slate-200/90 shadow-2xs">
+            <div class="text-slate-400 font-medium">結構區塊數</div>
+            <div id="statBlocks" class="font-bold text-slate-800 text-sm mt-0.5">0</div>
+          </div>
+        </div>
+
+        <!-- 歷史版本下拉選單 -->
+        <div class="flex items-center justify-between text-xs text-slate-500 pt-1">
+          <span class="flex items-center gap-1">
+            <i class="fa-solid fa-clock-rotate-left"></i> 歷史版本快照
+          </span>
+          <select id="versionSelector" class="bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="">(尚無歷史快照)</option>
+          </select>
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- 提示氣泡通知 Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2.5 z-50 pointer-events-none">
+    <i id="toastIcon" class="fa-solid fa-check text-emerald-400"></i>
+    <span id="toastMsg">通知內容</span>
+  </div>
+
+  <!-- 自訂確認對話盒 (替代 window.confirm) -->
+  <div id="modalConfirm" class="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 border border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-red-50 text-red-600 flex items-center justify-center flex-shrink-0 text-base">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <div>
+          <h3 class="font-bold text-slate-800 text-base" id="modalConfirmTitle">確認操作</h3>
+          <p class="text-xs text-slate-500 mt-0.5" id="modalConfirmDesc">你確定要執行此操作嗎？這項動作無法復原。</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button id="modalBtnCancel" class="px-3.5 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-xs font-medium hover:bg-slate-100 transition">取消</button>
+        <button id="modalBtnConfirm" class="px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition shadow-xs">確認執行</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 使用說明與變數指南 Modal -->
+  <div id="modalHelp" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-50 hidden p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center">
+            <i class="fa-solid fa-book-open text-sm"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 text-base">Prompt Studio 使用手冊與變數指南</h3>
+            <p class="text-xs text-slate-400">掌握結構化提示詞工程與動態模板技巧</p>
+          </div>
+        </div>
+        <button id="modalHelpClose" class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-200/60 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 overflow-y-auto space-y-6 text-sm text-slate-600 leading-relaxed">
+        
+        <!-- 核心亮點：如何定義動態變數 -->
+        <section class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 space-y-3">
+          <div class="flex items-center gap-2 text-amber-900 font-bold text-sm">
+            <i class="fa-solid fa-bolt text-amber-500"></i>
+            <span>重點教學：如何定義與使用動態變數（Variables）</span>
+          </div>
+          <p class="text-xs text-amber-800 leading-relaxed">
+            在撰寫 Prompt 時，將重複性高或經常更換的受詞、品牌、受眾以<strong>雙大括號</strong>包覆，工作台會<strong>即時自動識別並抽出變數填空欄位</strong>，讓同一個提示詞模板能隨插即用。
+          </p>
+          
+          <div class="bg-white/95 p-3 rounded-lg border border-amber-200/80 text-xs font-mono space-y-1.5 text-slate-700">
+            <div class="text-amber-800 font-semibold font-sans">📌 語法規則：</div>
+            <div>使用雙大括號包裹變數名稱，支援中文、英文與底線：</div>
+            <div class="bg-slate-100 p-2 rounded text-blue-700 font-semibold select-all font-mono">
+              {{產品名稱}}、{{targetAudience}}、{{user_role}}、{{預期效益}}
+            </div>
+            <div class="text-slate-500 font-sans pt-1">
+              💡 <strong>實例範例：</strong>「你是一位專精於 <code class="text-amber-700 font-bold font-mono">{{產業領域}}</code> 的文案顧問，請為 <code class="text-amber-700 font-bold font-mono">{{品牌名稱}}</code> 撰寫一封針對 <code class="text-amber-700 font-bold font-mono">{{目標受眾}}</code> 的促銷郵件。」
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-1 flex-wrap gap-2">
+            <span class="text-[11px] text-amber-800 font-medium">想直接體驗？點擊右側按鈕自動注入示範範本：</span>
+            <button id="btnLoadVariableDemo" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition shadow-xs flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-wand-magic-sparkles"></i> 載入動態變數範例
+            </button>
+          </div>
+        </section>
+
+        <!-- 結構化提示詞 4 大工作流 -->
+        <section class="space-y-3">
+          <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+            <i class="fa-solid fa-list-check text-blue-500"></i>
+            結構化提示詞工程四部曲
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded-full bg-blue-600 text-white inline-flex items-center justify-center text-[10px]">1</span>
+                挑選適合的框架
+              </div>
+              <p class="text-slate-500">
+                點擊編輯區上方或左側「常用框架」選單（例如高精確度的 <strong>CO-STAR</strong>、任務導向的 <strong>RTF</strong>、或含範例的 <strong>CARE</strong>）。
+              </p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded-full bg-blue-600 text-white inline-flex items-center justify-center text-[10px]">2</span>
+                模組化拆解填寫
+              </div>
+              <p class="text-slate-500">
+                依據各區塊提示（情境、目標、受眾、格式規範）個別輸入，避免傳統單一大段落容易遺漏限制條件的缺點。
+              </p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded-full bg-blue-600 text-white inline-flex items-center justify-center text-[10px]">3</span>
+                即時預覽與 Token 評估
+              </div>
+              <p class="text-slate-500">
+                右側即時組裝標準 Markdown 語法，並提供總字數、Tokens 預估量及結構區塊統計，確保不會超出模型上下文上限。
+              </p>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <div class="font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                <span class="w-4 h-4 rounded-full bg-blue-600 text-white inline-flex items-center justify-center text-[10px]">4</span>
+                版本控管與儲存
+              </div>
+              <p class="text-slate-500">
+                點擊「儲存版本」將於 IndexedDB 自動記錄 v1.0、v2.0 快照，日後可透過下拉選單隨時無損還原任意歷史狀態。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- IndexedDB 資料儲存與隱私保證 -->
+        <section class="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs space-y-2">
+          <div class="font-bold text-slate-700 flex items-center gap-1.5">
+            <i class="fa-solid fa-shield-halved text-emerald-500"></i>
+            <span>資料安全與 IndexedDB 本地儲存保證</span>
+          </div>
+          <p class="text-slate-500 leading-relaxed">
+            本工具所有專案、範本、自訂變數與歷史版本快照皆保存在您本地瀏覽器的 <strong>IndexedDB (PromptStudioDB)</strong>。完全不會將您的商業 Prompt 或機密內容上傳至任何雲端伺服器，離線亦可正常運作。
+          </p>
+        </section>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-end">
+        <button id="modalHelpConfirm" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-xs transition">
+          我知道了，開始使用
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // 10 種業界經典與實戰提示詞工程框架資料定義
+    const FRAMEWORKS = {
+      CO_STAR: {
+        id: 'CO_STAR',
+        name: 'CO-STAR',
+        desc: '六維度嚴謹架構，輸出極度精準',
+        badge: '全方位分析',
+        blocks: {
+          context: { label: '情境背景 (Context)', placeholder: '提供任務背景資訊，例如：目前公司正進行數位轉型...', default: '我們是一家專為中小企業打造 CRM 解決方案的科技新創。' },
+          objective: { label: '明確目標 (Objective)', placeholder: '你希望模型達成的核心任務...', default: '撰寫一份針對零售業客戶的產品推廣行銷規劃書。' },
+          style: { label: '表達風格 (Style)', placeholder: '寫作風格（商業正式、活潑親民、學術嚴謹）...', default: '具說服力且邏輯清晰的商業策略風格。' },
+          tone: { label: '語氣基調 (Tone)', placeholder: '專業、同理、激勵或客觀...', default: '專業自信、誠懇有遠見。' },
+          audience: { label: '受眾輪廓 (Audience)', placeholder: '閱聽受眾的角色、痛點與知識程度...', default: '傳統零售業的中高階營運主管與採購決策者。' },
+          response: { label: '輸出格式 (Response)', placeholder: '條列式、表格、Markdown、特定字數限制...', default: '包含執行摘要、核心痛點解方、時程規劃與預期效益之 Markdown 格式。' }
+        }
+      },
+      CRISPE: {
+        id: 'CRISPE',
+        name: 'CRISPE',
+        desc: '角色與邊界明確，適合複雜技術與專業諮詢',
+        badge: '專業顧問',
+        blocks: {
+          capacity: { label: '角色能力 (Capacity)', placeholder: '設定 AI 扮演的角色與專長領域...', default: '資深全端系統架構師與資安稽核專家。' },
+          insight: { label: '背景洞察 (Insight)', placeholder: '專案目前面臨的挑戰與限制...', default: '系統正面臨流量激增與微服務解耦的架構轉型期。' },
+          statement: { label: '任務陳述 (Statement)', placeholder: '具體要執行的架構設計或分析...', default: '提出一套高可用性、支援負載平衡的後端快取與資料庫讀寫分離方案。' },
+          personality: { label: '個性風格 (Personality)', placeholder: '直截了當、分析型、注重資安守則...', default: '工程導向、直指核心風險與最佳實踐。' },
+          experiment: { label: '實驗要求 (Experiment)', placeholder: '需要比較的替代方案或限制條件...', default: '請比較 Redis 與 Memcached 在高併發情境下的延遲與維運成本差異。' }
+        }
+      },
+      RTF: {
+        id: 'RTF',
+        name: 'RTF',
+        desc: '簡潔直接，適合日常迅速產出明確格式的任務',
+        badge: '敏捷高效',
+        blocks: {
+          role: { label: '角色 (Role)', placeholder: '指定專家角色...', default: '資深社群行銷策略總監。' },
+          task: { label: '任務 (Task)', placeholder: '執行的任務與關鍵資訊...', default: '為即將上線的 {{產品名稱}} 規劃 3 篇 Threads 短文案。' },
+          format: { label: '格式 (Format)', placeholder: '規範輸出條列式、代碼或特定排版...', default: '包含吸引人的 Hook 開頭、核心亮點、Call to Action 及 3 個熱門 Hashtag。' }
+        }
+      },
+      TAG: {
+        id: 'TAG',
+        name: 'TAG',
+        desc: '直指行動與成果，適合營運規劃與流程制定',
+        badge: '行動導向',
+        blocks: {
+          task: { label: '任務 (Task)', placeholder: '說明要處理的事件...', default: '優化客戶服務退貨流程。' },
+          action: { label: '行動 (Action)', placeholder: 'AI 應該採取何種分析或步驟...', default: '梳理現有退換貨痛點，並提出標準化 SOP 處理流程。' },
+          goal: { label: '目標 (Goal)', placeholder: '最終希望達成的具體量化或質化效益...', default: '將客戶平均退款處理時間從 5 天縮短至 24 小時內。' }
+        }
+      },
+      APE: {
+        id: 'APE',
+        name: 'APE',
+        desc: '行動、目的與期望成果緊密對齊，降低認知偏差',
+        badge: '成果驗證',
+        blocks: {
+          action: { label: '行動 (Action)', placeholder: '明確指令與分析工作...', default: '審閱以下使用者回饋，並進行情緒與痛點分類。' },
+          purpose: { label: '目的 (Purpose)', placeholder: '進行此任務背後的商業或組織目的...', default: '找出第 2 季產品更新中最需優先修復的體驗瑕疵。' },
+          expectation: { label: '期望成果 (Expectation)', placeholder: '期望的產出品質標準與交付物規格...', default: '以 Markdown 彙整出 Top 3 痛點問題、受影響情境與建議工程改進清單。' }
+        }
+      },
+      CARE: {
+        id: 'CARE',
+        name: 'CARE',
+        desc: '結合少樣本（Few-Shot）範例，產出最貼合期望格式',
+        badge: '示範學習',
+        blocks: {
+          context: { label: '情境 (Context)', placeholder: '任務發生的背景環境...', default: '我們正在設計一款面向大學生與新鮮人的個人理財 App。' },
+          action: { label: '行動 (Action)', placeholder: '需要執行的創作或分析...', default: '撰寫 3 組引導用戶開啟「自動儲蓄挑戰」的推播通知文案。' },
+          result: { label: '結果 (Result)', placeholder: '預期的成效與語調特色...', default: '激發探索好奇心，點擊率高且不具說教感。' },
+          example: { label: '範例 (Example)', placeholder: '提供給 AI 的好範例或格式參考...', default: '範例：「咖啡錢也能變成機票基金？開啟你的第一週 50 元小資挑戰 ☕✈️」' }
+        }
+      },
+      ROSES: {
+        id: 'ROSES',
+        name: 'ROSES',
+        desc: '角色情境與詳細步驟指引，適合複雜策略或教學手冊',
+        badge: '步驟拆解',
+        blocks: {
+          role: { label: '角色 (Role)', placeholder: '擔當角色...', default: '跨國軟體公司新進員工訓練講師。' },
+          objective: { label: '目標 (Objective)', placeholder: '教育訓練的主要目標...', default: '為新進工程師制定第一週 Git 分支管理與 Code Review 規範指引。' },
+          scenario: { label: '情境 (Scenario)', placeholder: '面臨的實際工作場景...', default: '團隊採 Trunk-based 與 Feature Branch 混合開發模式。' },
+          solution: { label: '期望解方 (Expected Solution)', placeholder: '期望提供的建議方向...', default: '兼具安全性與開發流暢度的 Commit 規範與 PR 合併檢查清單。' },
+          steps: { label: '步驟規劃 (Steps)', placeholder: '希望 AI 依序回答的結構步驟...', default: '1. 分支命名規範 2. Commit Message 撰寫原則 3. Code Review 核心檢核點。' }
+        }
+      },
+      TRACE: {
+        id: 'TRACE',
+        name: 'TRACE',
+        desc: '任務、請求與限制層層扣合，適合數據與合約審查',
+        badge: '邊界約束',
+        blocks: {
+          task: { label: '任務 (Task)', placeholder: '整體任務定義...', default: '審閱技術外包合約條款草案。' },
+          request: { label: '具體請求 (Request)', placeholder: '要求 AI 提出的審查建議...', default: '標示智慧財產權歸屬、驗收延遲罰則與保密協議中的潛在風險。' },
+          action: { label: '行動準則 (Action)', placeholder: '處理與呈現方式...', default: '針對每個風險條款提供修訂前後之對照建議。' },
+          context: { label: '限制情境 (Context)', placeholder: '適用法規與管轄權條件...', default: '依據台灣營業秘密法與一般民商法合約慣例為基準。' },
+          example: { label: '範例 (Example)', placeholder: '條款修改參考範例...', default: '例如：將「無條件轉讓」修訂為「自付清尾款之日起移轉原始碼所有權」。' }
+        }
+      },
+      GRADE: {
+        id: 'GRADE',
+        name: 'GRADE',
+        desc: '目標導向與負向約束清單，有效消除 AI 幻覺',
+        badge: '原則防護',
+        blocks: {
+          goal: { label: '核心目標 (Goal)', placeholder: '期望達成的終極成效...', default: '為企業內部知識庫整理一份精確的常見 FAQ 解答。' },
+          role: { label: '專家角色 (Role)', placeholder: '回答者的身份...', default: '內部人資與差旅政策專員。' },
+          audience: { label: '受眾群體 (Audience)', placeholder: '提問同仁的背景...', default: '經常有跨國差旅需求的業務與技術顧問同仁。' },
+          directives: { label: '指令與負向原則 (Directives)', placeholder: '必須遵守的限制或禁止事項...', default: '僅依據已知規定回答，若政策未明訂請直言「須專案簽核」，切勿自行臆測報銷上限。' },
+          examples: { label: '少樣本範例 (Examples)', placeholder: '問答示範...', default: 'Q: 週末出差膳雜費如何報銷？ A: 依差旅出勤核准單所列工作日核算，休假日若無公務行程不予請領。' }
+        }
+      },
+      SIMPLE: {
+        id: 'SIMPLE',
+        name: '簡約三段式',
+        desc: '極簡結構，快速理清角色、任務與限制',
+        badge: '極簡實用',
+        blocks: {
+          role: { label: '角色身分 (Role)', placeholder: '你是誰...', default: '專業中英雙向商務編譯專家。' },
+          task: { label: '核心任務 (Task)', placeholder: '你要做什麼...', default: '將以下中文商務簡報內容翻譯成流暢自然的專業美式商用英語。' },
+          constraints: { label: '限制條件 (Constraints)', placeholder: '不該做什麼、用詞禁忌...', default: '保留專業術語，語氣簡潔俐落，避免過度中式直譯，提供 2 種不同語調版本。' }
+        }
+      }
+    };
+
+    // DOM 元素引用
+    const btnNewPrompt = document.getElementById('btnNewPrompt');
+    const btnSavePrompt = document.getElementById('btnSavePrompt');
+    const btnCopyPrompt = document.getElementById('btnCopyPrompt');
+    const btnClearAll = document.getElementById('btnClearAll');
+    const tabPrompts = document.getElementById('tabPrompts');
+    const tabTemplates = document.getElementById('tabTemplates');
+    const sidebarList = document.getElementById('sidebarList');
+    const promptTitleInput = document.getElementById('promptTitle');
+    const currentVersionBadge = document.getElementById('currentVersionBadge');
+    const currentFwDesc = document.getElementById('currentFwDesc');
+    const frameworkButtonsContainer = document.getElementById('frameworkButtonsContainer');
+    const moduleFieldsContainer = document.getElementById('moduleFieldsContainer');
+    const variablesContainer = document.getElementById('variablesContainer');
+    const variableInputsList = document.getElementById('variableInputsList');
+    const variableCountBadge = document.getElementById('variableCountBadge');
+    const previewArea = document.getElementById('previewArea');
+    const statChars = document.getElementById('statChars');
+    const statTokens = document.getElementById('statTokens');
+    const statBlocks = document.getElementById('statBlocks');
+    const versionSelector = document.getElementById('versionSelector');
+
+    // 說明視窗與提示元件
+    const btnHelpGuide = document.getElementById('btnHelpGuide');
+    const btnShowQuickHelp = document.getElementById('btnShowQuickHelp');
+    const modalHelp = document.getElementById('modalHelp');
+    const modalHelpClose = document.getElementById('modalHelpClose');
+    const modalHelpConfirm = document.getElementById('modalHelpConfirm');
+    const btnLoadVariableDemo = document.getElementById('btnLoadVariableDemo');
+
+    // Toast 訊息提示元件
+    const toast = document.getElementById('toast');
+    const toastIcon = document.getElementById('toastIcon');
+    const toastMsg = document.getElementById('toastMsg');
+    let toastTimeout = null;
+
+    // 自訂確認對話盒元件
+    const modalConfirm = document.getElementById('modalConfirm');
+    const modalConfirmTitle = document.getElementById('modalConfirmTitle');
+    const modalConfirmDesc = document.getElementById('modalConfirmDesc');
+    const modalBtnConfirm = document.getElementById('modalBtnConfirm');
+    const modalBtnCancel = document.getElementById('modalBtnCancel');
+
+    // 應用程式狀態物件
+    let activeTab = 'prompts';
+    let currentPrompt = {
+      id: crypto.randomUUID(),
+      title: '高轉換率商業推廣提示詞',
+      framework: 'CO_STAR',
+      blocks: {},
+      variableValues: {},
+      version: 1,
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
+
+    // 建立框架預設區塊內容
+    function initDefaultBlocks(frameworkKey) {
+      const fw = FRAMEWORKS[frameworkKey] || FRAMEWORKS.CO_STAR;
+      const blocks = {};
+      Object.keys(fw.blocks).forEach((key) => {
+        blocks[key] = fw.blocks[key].default || '';
+      });
+      return blocks;
+    }
+
+    // 建立框架空白區塊內容
+    function createEmptyBlocks(frameworkKey) {
+      const fw = FRAMEWORKS[frameworkKey] || FRAMEWORKS.CO_STAR;
+      const blocks = {};
+      Object.keys(fw.blocks).forEach((key) => {
+        blocks[key] = '';
+      });
+      return blocks;
+    }
+    currentPrompt.blocks = initDefaultBlocks('CO_STAR');
+
+    // Toast 提示通知功能
+    function showToast(message, type = 'success') {
+      if (!toast) return;
+      if (toastTimeout) clearTimeout(toastTimeout);
+
+      toastMsg.textContent = message;
+      if (type === 'success') {
+        toastIcon.className = 'fa-solid fa-check text-emerald-400';
+      } else if (type === 'info') {
+        toastIcon.className = 'fa-solid fa-circle-info text-blue-400';
+      } else if (type === 'error') {
+        toastIcon.className = 'fa-solid fa-circle-exclamation text-rose-400';
+      }
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 2500);
+    }
+
+    // 自訂確認對話盒
+    function showConfirmModal(title, desc, onConfirm) {
+      if (!modalConfirm) return;
+      modalConfirmTitle.textContent = title;
+      modalConfirmDesc.textContent = desc;
+      modalConfirm.classList.remove('hidden');
+
+      const handleConfirm = () => {
+        cleanup();
+        if (typeof onConfirm === 'function') onConfirm();
+      };
+
+      const cleanup = () => {
+        modalConfirm.classList.add('hidden');
+        modalBtnConfirm.removeEventListener('click', handleConfirm);
+        modalBtnCancel.removeEventListener('click', cleanup);
+      };
+
+      modalBtnConfirm.addEventListener('click', handleConfirm);
+      modalBtnCancel.addEventListener('click', cleanup);
+    }
+
+    // 原生 IndexedDB 資料庫連線與非同步 Promise 封裝
+    let dbInstance = null;
+    const DB_NAME = 'PromptStudioDB';
+    const DB_VERSION = 1;
+
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        if (dbInstance) return resolve(dbInstance);
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('prompts')) {
+            db.createObjectStore('prompts', { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains('versions')) {
+            const verStore = db.createObjectStore('versions', { keyPath: 'versionId' });
+            verStore.createIndex('promptId', 'promptId', { unique: false });
+          }
+        };
+        req.onsuccess = (e) => {
+          dbInstance = e.target.result;
+          resolve(dbInstance);
+        };
+        req.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    const DB = {
+      async getAllPrompts() {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('prompts', 'readonly');
+          const store = tx.objectStore('prompts');
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      },
+      async getPrompt(id) {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('prompts', 'readonly');
+          const store = tx.objectStore('prompts');
+          const req = store.get(id);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      },
+      async savePrompt(promptData) {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('prompts', 'readwrite');
+          const store = tx.objectStore('prompts');
+          const req = store.put(promptData);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      },
+      async deletePrompt(id) {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(['prompts', 'versions'], 'readwrite');
+          tx.objectStore('prompts').delete(id);
+          const verStore = tx.objectStore('versions');
+          const index = verStore.index('promptId');
+          const req = index.openCursor(IDBKeyRange.only(id));
+          req.onsuccess = (e) => {
+            const cursor = e.target.result;
+            if (cursor) {
+              cursor.delete();
+              cursor.continue();
+            }
+          };
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      },
+      async getVersionsForPrompt(promptId) {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('versions', 'readonly');
+          const store = tx.objectStore('versions');
+          const index = store.index('promptId');
+          const req = index.getAll(IDBKeyRange.only(promptId));
+          req.onsuccess = () => {
+            const list = req.result || [];
+            list.sort((a, b) => b.version - a.version);
+            resolve(list);
+          };
+          req.onerror = () => reject(req.error);
+        });
+      },
+      async saveVersion(versionRecord) {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction('versions', 'readwrite');
+          const store = tx.objectStore('versions');
+          const req = store.put(versionRecord);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      },
+      async clearDatabase() {
+        const db = await openDatabase();
+        return new Promise((resolve, reject) => {
+          const tx = db.transaction(['prompts', 'versions'], 'readwrite');
+          tx.objectStore('prompts').clear();
+          tx.objectStore('versions').clear();
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => reject(tx.error);
+        });
+      }
+    };
+
+    // 解析文字內部的 {{變數名稱}}
+    function extractVariablesFromText(text) {
+      if (!text || typeof text !== 'string') return [];
+      const regex = /\{\{\s*([a-zA-Z0-9_\u4e00-\u9fa5]+)\s*\}\}/g;
+      const matches = new Set();
+      let match;
+      while ((match = regex.exec(text)) !== null) {
+        matches.add(match[1]);
+      }
+      return Array.from(matches);
+    }
+
+    function getAllCurrentVariables() {
+      const vars = new Set();
+      if (!currentPrompt.blocks) return [];
+      Object.values(currentPrompt.blocks).forEach((val) => {
+        extractVariablesFromText(val).forEach((v) => vars.add(v));
+      });
+      return Array.from(vars);
+    }
+
+    // 渲染頂部 10 大框架快速切換按鈕
+    function renderFrameworkButtons() {
+      frameworkButtonsContainer.innerHTML = '';
+      const currentFw = FRAMEWORKS[currentPrompt.framework] || FRAMEWORKS.CO_STAR;
+      currentFwDesc.textContent = `${currentFw.name}：${currentFw.desc}`;
+
+      Object.keys(FRAMEWORKS).forEach((key) => {
+        const fw = FRAMEWORKS[key];
+        const isCurrent = currentPrompt.framework === key;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `px-2.5 py-1 rounded-lg text-xs font-semibold transition border ${
+          isCurrent
+            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+        }`;
+        btn.textContent = fw.name;
+        btn.title = `${fw.name} - ${fw.desc}`;
+        btn.addEventListener('click', () => switchFramework(key));
+        frameworkButtonsContainer.appendChild(btn);
+      });
+    }
+
+    // 切換框架
+    function switchFramework(frameworkKey) {
+      if (!FRAMEWORKS[frameworkKey]) return;
+      currentPrompt.framework = frameworkKey;
+      const targetFw = FRAMEWORKS[frameworkKey];
+      const newBlocks = {};
+      Object.keys(targetFw.blocks).forEach((blkKey) => {
+        // 保留使用者已輸入的同名區塊內容，無內容時保持空白
+        newBlocks[blkKey] = currentPrompt.blocks[blkKey] || '';
+      });
+      currentPrompt.blocks = newBlocks;
+      renderFrameworkButtons();
+      renderFields();
+      showToast(`已切換至「${targetFw.name}」提示詞框架`, 'info');
+    }
+
+    // 渲染編輯欄位與動態變數表單
+    function renderFields() {
+      promptTitleInput.value = currentPrompt.title || '';
+      currentVersionBadge.textContent = `v${currentPrompt.version || 1}.0`;
+      renderFrameworkButtons();
+
+      const fw = FRAMEWORKS[currentPrompt.framework] || FRAMEWORKS.CO_STAR;
+      moduleFieldsContainer.innerHTML = '';
+
+      // 產生各結構欄位
+      Object.keys(fw.blocks).forEach((fieldKey) => {
+        const fieldMeta = fw.blocks[fieldKey];
+        const currentValue = currentPrompt.blocks[fieldKey] || '';
+
+        const card = document.createElement('div');
+        card.className = 'bg-white p-4 rounded-xl border border-slate-200/90 shadow-2xs space-y-2';
+
+        const header = document.createElement('div');
+        header.className = 'flex items-center justify-between text-xs font-medium text-slate-700';
+        header.innerHTML = `
+          <label class="font-bold text-slate-800 flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+            ${fieldMeta.label}
+          </label>
+          <span class="text-slate-400 font-mono text-[11px]">${fieldKey}</span>
+        `;
+
+        const textarea = document.createElement('textarea');
+        textarea.rows = 3;
+        textarea.className = 'w-full px-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition resize-y text-slate-700 leading-relaxed';
+        textarea.placeholder = fieldMeta.placeholder;
+        textarea.value = currentValue;
+
+        textarea.addEventListener('input', (e) => {
+          currentPrompt.blocks[fieldKey] = e.target.value;
+          renderDynamicVariables();
+          updatePreview();
+        });
+
+        card.appendChild(header);
+        card.appendChild(textarea);
+        moduleFieldsContainer.appendChild(card);
+      });
+
+      renderDynamicVariables();
+      updatePreview();
+    }
+
+    // 渲染即時抽取的動態變數填空欄位
+    function renderDynamicVariables() {
+      const vars = getAllCurrentVariables();
+      if (!currentPrompt.variableValues) currentPrompt.variableValues = {};
+
+      if (vars.length === 0) {
+        variablesContainer.classList.add('hidden');
+        variableInputsList.innerHTML = '';
+        return;
+      }
+
+      variablesContainer.classList.remove('hidden');
+      variableCountBadge.textContent = vars.length;
+      variableInputsList.innerHTML = '';
+
+      vars.forEach((vName) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'flex flex-col gap-1';
+
+        const label = document.createElement('label');
+        label.className = 'text-xs font-semibold text-amber-800 flex items-center gap-1';
+        label.innerHTML = `<code class="bg-amber-100 text-amber-900 px-1 py-0.5 rounded text-[11px] font-mono font-bold">{{${vName}}}</code> 替換值:`;
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'px-3 py-1.5 bg-white border border-amber-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-400/40';
+        input.placeholder = `請輸入 ${vName} 的填寫值...`;
+        input.value = currentPrompt.variableValues[vName] || '';
+
+        input.addEventListener('input', (e) => {
+          currentPrompt.variableValues[vName] = e.target.value;
+          updatePreview();
+        });
+
+        wrap.appendChild(label);
+        wrap.appendChild(input);
+        variableInputsList.appendChild(wrap);
+      });
+    }
+
+    // 組裝 Markdown 預覽與計算 Token / 字數
+    function assemblePromptText() {
+      const fw = FRAMEWORKS[currentPrompt.framework] || FRAMEWORKS.CO_STAR;
+      const lines = [];
+
+      lines.push(`# ${currentPrompt.title || '結構化提示詞'}`);
+      lines.push(`> 採用架構：${fw.name} (${fw.desc})\n`);
+
+      let totalBlocks = 0;
+      Object.keys(fw.blocks).forEach((key) => {
+        let content = currentPrompt.blocks[key] || '';
+        if (content.trim()) {
+          totalBlocks++;
+          // 替換動態變數
+          if (currentPrompt.variableValues) {
+            Object.keys(currentPrompt.variableValues).forEach((varName) => {
+              const val = currentPrompt.variableValues[varName];
+              if (val) {
+                const reg = new RegExp(`\\{\\{\\s*${varName}\\s*\\}\\}`, 'g');
+                content = content.replace(reg, val);
+              }
+            });
+          }
+          lines.push(`### ${fw.blocks[key].label}`);
+          lines.push(`${content}\n`);
+        }
+      });
+
+      return {
+        text: lines.join('\n').trim(),
+        blockCount: totalBlocks
+      };
+    }
+
+    function updatePreview() {
+      const { text, blockCount } = assemblePromptText();
+      previewArea.textContent = text || '(請在左側輸入各結構區塊內容...)';
+
+      const charLen = text.length;
+      statChars.textContent = charLen.toLocaleString();
+      // 繁中與英文混合的估算演算法：約 1 個字元約 0.7 token
+      const estTokens = Math.ceil(charLen * 0.7);
+      statTokens.textContent = estTokens.toLocaleString();
+      statBlocks.textContent = blockCount;
+    }
+
+    // 渲染側邊欄清單（我的提示詞 / 10 種框架庫）
+    async function renderSidebar() {
+      sidebarList.innerHTML = '';
+
+      if (activeTab === 'prompts') {
+        const prompts = await DB.getAllPrompts();
+        if (prompts.length === 0) {
+          sidebarList.innerHTML = `
+            <div class="p-6 text-center text-xs text-slate-400 space-y-1">
+              <i class="fa-regular fa-folder-open text-2xl text-slate-300"></i>
+              <div>尚未儲存任何提示詞</div>
+              <div class="text-[11px] text-slate-400">點擊上方「儲存版本」即可存檔</div>
+            </div>`;
+          return;
+        }
+
+        prompts.forEach((p) => {
+          const item = document.createElement('div');
+          const isSelected = p.id === currentPrompt.id;
+          item.className = `p-3 rounded-xl border text-xs transition cursor-pointer flex items-center justify-between group ${
+            isSelected
+              ? 'bg-blue-50/80 border-blue-300 text-blue-900 shadow-2xs'
+              : 'bg-white border-slate-200/80 hover:bg-slate-50 text-slate-700'
+          }`;
+
+          const infoWrap = document.createElement('div');
+          infoWrap.className = 'flex-1 min-w-0 pr-2';
+          infoWrap.innerHTML = `
+            <div class="font-bold truncate">${p.title || '未命名提示詞'}</div>
+            <div class="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+              <span class="px-1.5 py-0.2 bg-slate-100 rounded text-slate-500 font-mono">v${p.version || 1}.0</span>
+              <span>${p.framework}</span>
+            </div>
+          `;
+          infoWrap.addEventListener('click', () => loadPromptById(p.id));
+
+          const delBtn = document.createElement('button');
+          delBtn.className = 'text-slate-300 hover:text-red-500 p-1 transition opacity-0 group-hover:opacity-100';
+          delBtn.title = '刪除此專案';
+          delBtn.innerHTML = '<i class="fa-regular fa-trash-can"></i>';
+          delBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showConfirmModal('確認刪除專案？', `確定要刪除「${p.title}」及其所有版本歷史嗎？`, async () => {
+              await DB.deletePrompt(p.id);
+              showToast('提示詞專案已刪除', 'info');
+              if (currentPrompt.id === p.id) {
+                createNewPrompt();
+              } else {
+                renderSidebar();
+              }
+            });
+          });
+
+          item.appendChild(infoWrap);
+          item.appendChild(delBtn);
+          sidebarList.appendChild(item);
+        });
+      } else {
+        // 渲染 10 種框架卡片
+        Object.keys(FRAMEWORKS).forEach((fKey) => {
+          const fw = FRAMEWORKS[fKey];
+          const isSelected = currentPrompt.framework === fKey;
+          const card = document.createElement('div');
+          card.className = `p-3 rounded-xl border text-xs transition cursor-pointer space-y-1.5 ${
+            isSelected
+              ? 'bg-blue-50/80 border-blue-300 shadow-2xs'
+              : 'bg-white border-slate-200/80 hover:bg-slate-50'
+          }`;
+          card.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-800">${fw.name}</span>
+              <span class="text-[10px] px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-md font-medium">${fw.badge}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 line-clamp-2">${fw.desc}</p>
+            <div class="text-[10px] text-slate-400 flex flex-wrap gap-1 pt-1">
+              ${Object.keys(fw.blocks)
+                .map((b) => `<span class="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded font-mono">${b}</span>`)
+                .join('')}
+            </div>
+          `;
+          card.addEventListener('click', () => {
+            switchFramework(fKey);
+            showToast(`已載入 ${fw.name} 框架模組`, 'success');
+          });
+          sidebarList.appendChild(card);
+        });
+      }
+    }
+
+    // 載入指定專案
+    async function loadPromptById(id) {
+      const found = await DB.getPrompt(id);
+      if (found) {
+        currentPrompt = found;
+        renderFields();
+        await updateVersionList(found.id);
+        renderSidebar();
+        showToast(`已載入專案：${found.title}`, 'info');
+      }
+    }
+
+    // 更新歷史版本選單
+    async function updateVersionList(promptId) {
+      versionSelector.innerHTML = '';
+      const versions = await DB.getVersionsForPrompt(promptId);
+      if (versions.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '(尚無歷史快照)';
+        versionSelector.appendChild(opt);
+        return;
+      }
+      versions.forEach((v) => {
+        const opt = document.createElement('option');
+        opt.value = v.versionId;
+        const d = new Date(v.createdAt);
+        const timeStr = `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        opt.textContent = `v${v.version}.0 (${timeStr}) - ${v.framework}`;
+        versionSelector.appendChild(opt);
+      });
+    }
+
+    // 儲存當前專案並產出新版本快照
+    async function saveCurrentPrompt() {
+      currentPrompt.title = promptTitleInput.value.trim() || '未命名提示詞';
+      currentPrompt.version = (currentPrompt.version || 1) + 1;
+      currentPrompt.updatedAt = Date.now();
+
+      // 儲存主表
+      await DB.savePrompt(currentPrompt);
+
+      // 記錄版本快照
+      const snapshot = {
+        versionId: crypto.randomUUID(),
+        promptId: currentPrompt.id,
+        version: currentPrompt.version,
+        title: currentPrompt.title,
+        framework: currentPrompt.framework,
+        blocks: JSON.parse(JSON.stringify(currentPrompt.blocks)),
+        variableValues: JSON.parse(JSON.stringify(currentPrompt.variableValues || {})),
+        createdAt: Date.now()
+      };
+      await DB.saveVersion(snapshot);
+
+      currentVersionBadge.textContent = `v${currentPrompt.version}.0`;
+      await updateVersionList(currentPrompt.id);
+      await renderSidebar();
+      showToast(`已儲存版本快照 v${currentPrompt.version}.0 至 IndexedDB！`, 'success');
+    }
+
+    // 新增專案（標題與所有區塊內容維持完全空白）
+    function createNewPrompt() {
+      currentPrompt = {
+        id: crypto.randomUUID(),
+        title: '',
+        framework: 'CO_STAR',
+        blocks: createEmptyBlocks('CO_STAR'),
+        variableValues: {},
+        version: 1,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      renderFields();
+      updateVersionList(currentPrompt.id);
+      renderSidebar();
+      showToast('已開啟全新空白提示詞專案', 'info');
+    }
+
+    // 開關使用說明視窗
+    function openHelpModal() {
+      if (modalHelp) modalHelp.classList.remove('hidden');
+    }
+
+    function closeHelpModal() {
+      if (modalHelp) modalHelp.classList.add('hidden');
+    }
+
+    // 載入多變數示範資料
+    function loadVariableDemo() {
+      currentPrompt = {
+        id: crypto.randomUUID(),
+        title: 'B2B 軟體客戶成功開發信 (動態變數範例)',
+        framework: 'CARE',
+        blocks: {
+          context: '我們是一家專注於 {{產業領域}} 的 SaaS 科技團隊，旗下核心產品為 {{產品名稱}}。近期發現潛在客戶 {{目標企業}} 正在評估內部升級方案。',
+          action: '以 {{顧問職稱}} 的口吻，撰寫一封針對 {{窗口職位}} 的商務拓展信函，邀請對方進行一場 15 分鐘的線上架構諮詢。',
+          result: '突顯能為對方降低 {{預期效益}} 的核心價值，並引導點擊預約連結。',
+          example: '參考主旨：「關於 {{目標企業}} 的自動化部署評估 - 15 分鐘交流邀請」'
+        },
+        variableValues: {
+          '產業領域': '雲端資安與邊緣運算',
+          '產品名稱': 'SecureMesh Pro',
+          '目標企業': '富邦智能物流',
+          '顧問職稱': '資深解決方案架構師',
+          '窗口職位': 'DevOps 部門負責人',
+          '預期效益': '40% 的伺服器維運工時與零停機風險'
+        },
+        version: 1,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      };
+      renderFields();
+      updateVersionList(currentPrompt.id);
+      renderSidebar();
+      closeHelpModal();
+      showToast('已成功載入動態變數示範範本！請看編輯區下方變數欄位', 'success');
+    }
+
+    // 複製至剪貼簿（依照 iframe 友善規範）
+    function copyPromptText() {
+      const { text } = assemblePromptText();
+      if (!text) {
+        showToast('目前無提示詞內容可複製', 'error');
+        return;
+      }
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        const ok = document.execCommand('copy');
+        if (ok) {
+          showToast('已成功複製組裝後的提示詞！', 'success');
+        } else {
+          showToast('複製失敗，請手動選取文字複製', 'error');
+        }
+      } catch (e) {
+        showToast('瀏覽器限制複製，請選取右側文字複製', 'error');
+      } finally {
+        document.body.removeChild(ta);
+      }
+    }
+
+    // 事件監聽綁定
+    btnSavePrompt.addEventListener('click', saveCurrentPrompt);
+    btnNewPrompt.addEventListener('click', createNewPrompt);
+    btnCopyPrompt.addEventListener('click', copyPromptText);
+
+    // 說明彈窗事件綁定
+    if (btnHelpGuide) btnHelpGuide.addEventListener('click', openHelpModal);
+    if (btnShowQuickHelp) btnShowQuickHelp.addEventListener('click', openHelpModal);
+    if (modalHelpClose) modalHelpClose.addEventListener('click', closeHelpModal);
+    if (modalHelpConfirm) modalHelpConfirm.addEventListener('click', closeHelpModal);
+    if (btnLoadVariableDemo) btnLoadVariableDemo.addEventListener('click', loadVariableDemo);
+
+    if (modalHelp) {
+      modalHelp.addEventListener('click', (e) => {
+        if (e.target === modalHelp) closeHelpModal();
+      });
+    }
+
+    // 標題輸入監聽
+    promptTitleInput.addEventListener('input', (e) => {
+      currentPrompt.title = e.target.value;
+    });
+
+    // 側邊欄切換
+    tabPrompts.addEventListener('click', () => {
+      activeTab = 'prompts';
+      tabPrompts.className = 'pb-2 border-b-2 border-blue-600 text-blue-600 flex items-center gap-1.5 transition font-semibold';
+      tabTemplates.className = 'pb-2 border-b-2 border-transparent hover:text-slate-800 text-slate-500 flex items-center gap-1.5 transition';
+      renderSidebar();
+    });
+
+    tabTemplates.addEventListener('click', () => {
+      activeTab = 'templates';
+      tabTemplates.className = 'pb-2 border-b-2 border-blue-600 text-blue-600 flex items-center gap-1.5 transition font-semibold';
+      tabPrompts.className = 'pb-2 border-b-2 border-transparent hover:text-slate-800 text-slate-500 flex items-center gap-1.5 transition';
+      renderSidebar();
+    });
+
+    // 版本選擇器切換快照
+    versionSelector.addEventListener('change', async (e) => {
+      const vId = e.target.value;
+      if (!vId) return;
+      const all = await DB.getVersionsForPrompt(currentPrompt.id);
+      const targetVersion = all.find((v) => v.versionId === vId);
+      if (targetVersion) {
+        currentPrompt.blocks = JSON.parse(JSON.stringify(targetVersion.blocks));
+        currentPrompt.framework = targetVersion.framework;
+        currentPrompt.variableValues = JSON.parse(JSON.stringify(targetVersion.variableValues || {}));
+        renderFields();
+        showToast(`已載入快照版本 v${targetVersion.version}.0`, 'info');
+      }
+    });
+
+    // 清空資料庫
+    btnClearAll.addEventListener('click', () => {
+      showConfirmModal('清空所有本地資料？', '這將會重設 IndexedDB 中的所有提示詞與歷史記錄，無法復原。', async () => {
+        await DB.clearDatabase();
+        showToast('IndexedDB 資料庫已清空重設', 'info');
+        createNewPrompt();
+      });
+    });
+
+    // 初始化應用程式啟動
+    window.addEventListener('DOMContentLoaded', async () => {
+      try {
+        await openDatabase();
+        const existing = await DB.getAllPrompts();
+        if (existing.length === 0) {
+          await DB.savePrompt(currentPrompt);
+          await DB.saveVersion({
+            versionId: crypto.randomUUID(),
+            promptId: currentPrompt.id,
+            version: currentPrompt.version,
+            title: currentPrompt.title,
+            framework: currentPrompt.framework,
+            blocks: currentPrompt.blocks,
+            variableValues: currentPrompt.variableValues,
+            createdAt: Date.now()
+          });
+        } else {
+          currentPrompt = existing[0];
+        }
+
+        renderFields();
+        await updateVersionList(currentPrompt.id);
+        await renderSidebar();
+      } catch (err) {
+        console.error('初始化失敗:', err);
+        showToast('IndexedDB 初始化失敗，請確認瀏覽器支援度', 'error');
+      }
+    });
+  </script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
