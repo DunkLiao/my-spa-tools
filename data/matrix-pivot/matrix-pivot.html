@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MatrixPivot - 表格矩陣轉置與格式轉換器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .dark ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(156, 163, 175, 0.5);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(107, 114, 128, 0.8);
+    }
+    .grid-cell-clamp {
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .grid-cell-multiline {
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 80px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
+
+  <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16M10 6v12M14 6v12" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
+            MatrixPivot
+            <span class="text-[11px] font-medium tracking-wide bg-brand-50 dark:bg-brand-900/40 text-brand-600 dark:text-brand-300 px-2 py-0.5 rounded-full border border-brand-200 dark:border-brand-800">
+              SPA Utility
+            </span>
+          </h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400">表格矩陣即時轉置、清洗與格式轉換中心</p>
+        </div>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button id="btn-theme-toggle" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="切換深淺模式">
+          <svg id="theme-sun" class="w-4 h-4 hidden" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd"/>
+          </svg>
+          <svg id="theme-moon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"/>
+          </svg>
+        </button>
+
+        <button id="btn-load-sample" class="px-3.5 py-2 text-xs font-medium rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition">
+          載入範例資料
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
+    <!-- Top Action Ribbon -->
+    <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Transpose primary button -->
+        <button id="btn-transpose" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white font-medium text-sm flex items-center gap-2 shadow-sm transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+          </svg>
+          一鍵行列轉置 (Transpose)
+        </button>
+
+        <!-- Header toggle -->
+        <label class="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer select-none hover:bg-slate-50 dark:hover:bg-slate-800/60">
+          <input type="checkbox" id="check-has-header" checked class="rounded text-brand-600 focus:ring-brand-500 w-4 h-4">
+          首行作為欄位表頭
+        </label>
+
+        <!-- Clean options dropdown / group -->
+        <div class="flex items-center gap-1.5">
+          <button id="btn-clean-empty" class="px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="移除全空白的列與欄">
+            清理空白行列
+          </button>
+          <button id="btn-trim-cells" class="px-3 py-2 text-xs font-medium rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="清除所有儲存格首尾空白">
+            去空格 (Trim)
+          </button>
+          <button id="btn-clear-all" class="px-3 py-2 text-xs font-medium rounded-xl border border-rose-200 dark:border-rose-950/60 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition">
+            清空所有內容
+          </button>
+        </div>
+      </div>
+
+      <!-- Live metrics -->
+      <div id="stats-badge" class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+        <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono">
+          <strong id="stat-rows" class="text-brand-600 dark:text-brand-400 font-semibold mr-1">0</strong> 列
+        </span>
+        <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono">
+          <strong id="stat-cols" class="text-brand-600 dark:text-brand-400 font-semibold mr-1">0</strong> 欄
+        </span>
+        <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 font-mono">
+          <strong id="stat-cells" class="text-slate-700 dark:text-slate-300 font-semibold mr-1">0</strong> 儲存格
+        </span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Left Panel: Raw Input Area -->
+      <div class="lg:col-span-5 flex flex-col space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <span>來源資料貼入 / 匯入</span>
+            <span class="text-[10px] text-slate-400 font-normal">支援 TSV、CSV、繁中編碼</span>
+          </h2>
+          <div class="flex items-center space-x-2">
+            <!-- Hidden File Input -->
+            <input type="file" id="file-input" accept=".csv,.tsv,.txt" class="hidden">
+            
+            <!-- Import Button -->
+            <button id="btn-import-file" class="px-2.5 py-1 text-xs font-medium bg-brand-50 hover:bg-brand-100 dark:bg-brand-900/40 dark:hover:bg-brand-800 text-brand-700 dark:text-brand-300 rounded-lg border border-brand-200 dark:border-brand-700/60 flex items-center gap-1 transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+              匯入 CSV / 檔案
+            </button>
+
+            <!-- Direct Paste -->
+            <button id="btn-paste-clipboard" class="text-xs text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+              貼上
+            </button>
+          </div>
+        </div>
+
+        <!-- Encoding Bar -->
+        <div class="flex items-center justify-between px-3 py-1.5 bg-slate-100/80 dark:bg-slate-800/60 rounded-xl text-xs border border-slate-200/80 dark:border-slate-800">
+          <div class="flex items-center gap-2">
+            <span class="text-slate-500 dark:text-slate-400 text-[11px] font-medium flex items-center gap-1">
+              <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+              編碼設定:
+            </span>
+            <select id="select-encoding" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-0.5 text-xs text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-brand-500">
+              <option value="auto">✨ 自動偵測 (Auto Detect)</option>
+              <option value="big5">Big5 / CP950 (Windows 繁中 Excel)</option>
+              <option value="utf-8">UTF-8 (通用標準 / 含 BOM)</option>
+              <option value="utf-16le">UTF-16 LE (Excel Unicode 格式)</option>
+              <option value="utf-16be">UTF-16 BE (大端序)</option>
+            </select>
+          </div>
+          <span id="detected-encoding-badge" class="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/50 hidden">
+            UTF-8
+          </span>
+        </div>
+        <div class="relative flex-1 min-h-[300px]">
+          <textarea id="raw-input" class="w-full h-full min-h-[360px] p-4 text-xs font-mono bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none resize-none transition" placeholder="在此貼上來自 Excel、Google Sheets、CSV 檔案或任意分隔符號的表格文字..."></textarea>
+          <div id="drag-drop-overlay" class="hidden absolute inset-0 bg-brand-50/90 dark:bg-slate-900/90 border-2 border-dashed border-brand-500 rounded-2xl flex flex-col items-center justify-center pointer-events-none">
+            <svg class="w-10 h-10 text-brand-500 animate-bounce mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
+            <span class="text-sm font-medium text-brand-700 dark:text-brand-300">放開以載入 CSV / TSV / TXT (自動偵測 Big5 / UTF-8)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Visual Table & Data Grid -->
+      <div class="lg:col-span-7 flex flex-col space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+            <span>矩陣即時網格預覽</span>
+            <span id="filter-status" class="text-xs text-brand-600 dark:text-brand-400 font-normal"></span>
+          </h2>
+          <!-- Table Search Filter -->
+          <div class="relative w-48">
+            <input type="text" id="table-search" placeholder="在表格中搜尋..." class="w-full pl-7 pr-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-1 focus:ring-brand-500">
+            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2 top-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex-1 flex flex-col overflow-hidden min-h-[360px] shadow-sm">
+          <div class="overflow-x-auto overflow-y-auto max-h-[380px] flex-1">
+            <table id="preview-table" class="w-full text-left border-collapse text-xs">
+              <thead id="preview-thead" class="sticky top-0 bg-slate-50 dark:bg-slate-800/90 backdrop-blur z-10 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-800">
+                <!-- Dynamic Header Columns -->
+              </thead>
+              <tbody id="preview-tbody" class="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono text-[11px] text-slate-700 dark:text-slate-300">
+                <!-- Dynamic Content Rows -->
+              </tbody>
+            </table>
+            <!-- Empty state fallback -->
+            <div id="table-empty-state" class="py-16 flex flex-col items-center justify-center text-slate-400 text-center">
+              <svg class="w-10 h-10 mb-2 opacity-50 stroke-current" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <p class="text-xs">尚無任何資料，請在左側輸入或點擊「載入範例資料」</p>
+            </div>
+          </div>
+
+          <!-- Bottom bar for table pagination / sub-actions -->
+          <div class="px-4 py-2.5 bg-slate-50/70 dark:bg-slate-800/40 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+            <span id="grid-meta-text">顯示 0 列</span>
+            <div class="flex items-center gap-2">
+              <button id="btn-export-csv" class="hover:text-brand-600 transition">下載為 CSV</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-800 dark:text-slate-200">格式轉換與代碼產生器</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">即時將當前矩陣狀態輸出為工程常用結構格式</p>
+        </div>
+
+        <!-- Format tabs -->
+        <div class="flex flex-wrap items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-medium">
+          <button class="format-tab-btn active px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 transition" data-format="markdown">Markdown</button>
+          <button class="format-tab-btn px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 transition" data-format="json">JSON Array</button>
+          <button class="format-tab-btn px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 transition" data-format="sql">SQL INSERT</button>
+          <button class="format-tab-btn px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 transition" data-format="html">HTML Table</button>
+          <button class="format-tab-btn px-3 py-1.5 rounded-lg text-slate-600 dark:text-slate-300 hover:text-slate-900 transition" data-format="csv">標準 CSV</button>
+        </div>
+      </div>
+
+      <!-- Output view area -->
+      <div class="relative">
+        <textarea id="output-preview" readonly class="w-full h-56 p-4 text-xs font-mono bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none text-slate-800 dark:text-slate-200 leading-relaxed"></textarea>
+        <!-- Floating Copy Button -->
+        <div class="absolute top-3 right-3 flex items-center gap-2">
+          <span id="copy-feedback" class="text-xs font-medium text-emerald-600 dark:text-emerald-400 opacity-0 transition-opacity">已複製！</span>
+          <button id="btn-copy-output" class="px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-700 text-white font-medium text-xs flex items-center gap-1.5 shadow-sm transition active:scale-95">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+            複製程式碼
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-12 opacity-0 transition-all duration-300 bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-4 py-2.5 rounded-xl shadow-lg text-xs font-medium flex items-center gap-2">
+    <span id="toast-message">操作完成</span>
+  </div>
+
+  <script>
+    // Global Application State
+    const AppState = {
+      matrix: [], // 2D array of strings: [ [col1, col2], ... ]
+      hasHeader: true,
+      currentFormat: 'markdown',
+      searchQuery: '',
+      isDark: false,
+      lastFileBuffer: null, // Cached raw ArrayBuffer for instant re-encoding
+      selectedEncoding: 'auto'
+    };
+
+    // Sample Datasets for Quick Testing
+    const SAMPLE_DATA = [
+      "季別\t2025-Q1\t2025-Q2\t2025-Q3\t2025-Q4\t2026-Q1",
+      "營收 (百萬)\t120.5\t145.2\t168.0\t210.4\t225.8",
+      "毛利率 (%)\t42.1\t44.5\t43.8\t46.2\t47.0",
+      "研發費用\t18.2\t19.0\t21.5\t23.0\t24.8",
+      "活躍用戶 (K)\t840\t920\t1050\t1200\t1350"
+    ].join('\n');
+
+    /**
+     * RFC 4180 compliant tabular parser.
+     * Supports:
+     * - Embedded line breaks (\r, \n) inside quoted fields
+     * - Escaped double quotes ("") inside quotes
+     * - Automatic delimiter inference (Tab, Comma, Semicolon)
+     */
+    function parseTextToMatrix(text) {
+      if (!text || !text.trim()) return [];
+
+      // Detect delimiter by inspecting character distribution outside quotes
+      let delimiter = '\t';
+      let tabCount = 0;
+      let commaCount = 0;
+      let semiCount = 0;
+      let testInQuotes = false;
+      const testLimit = Math.min(text.length, 3000);
+
+      for (let i = 0; i < testLimit; i++) {
+        const ch = text[i];
+        if (ch === '"') {
+          testInQuotes = !testInQuotes;
+        } else if (!testInQuotes) {
+          if (ch === '\t') tabCount++;
+          else if (ch === ',') commaCount++;
+          else if (ch === ';') semiCount++;
+        }
+      }
+
+      if (tabCount > 0 && tabCount >= commaCount && tabCount >= semiCount) {
+        delimiter = '\t';
+      } else if (commaCount >= semiCount && commaCount > 0) {
+        delimiter = ',';
+      } else if (semiCount > 0) {
+        delimiter = ';';
+      }
+
+      // State machine parser compliant with RFC 4180
+      const rows = [];
+      let currentRow = [];
+      let currentCell = '';
+      let insideQuotes = false;
+      const len = text.length;
+
+      for (let i = 0; i < len; i++) {
+        const char = text[i];
+        const nextChar = text[i + 1];
+
+        if (insideQuotes) {
+          if (char === '"') {
+            if (nextChar === '"') {
+              // Escaped double quote ("")
+              currentCell += '"';
+              i++; // Skip the escaped quote
+            } else {
+              // Closing quote
+              insideQuotes = false;
+            }
+          } else {
+            // Include all characters (including \r and \n) inside quotes
+            currentCell += char;
+          }
+        } else {
+          if (char === '"') {
+            insideQuotes = true;
+          } else if (char === delimiter) {
+            currentRow.push(currentCell.trim());
+            currentCell = '';
+          } else if (char === '\r') {
+            // Handle \r\n or standalone \r
+            if (nextChar === '\n') {
+              i++;
+            }
+            currentRow.push(currentCell.trim());
+            currentCell = '';
+            // Only push non-empty rows
+            if (currentRow.some(c => c !== '')) {
+              rows.push(currentRow);
+            }
+            currentRow = [];
+          } else if (char === '\n') {
+            currentRow.push(currentCell.trim());
+            currentCell = '';
+            if (currentRow.some(c => c !== '')) {
+              rows.push(currentRow);
+            }
+            currentRow = [];
+          } else {
+            currentCell += char;
+          }
+        }
+      }
+
+      // Flush final cell and row
+      if (currentCell !== '' || currentRow.length > 0) {
+        currentRow.push(currentCell.trim());
+        if (currentRow.some(c => c !== '')) {
+          rows.push(currentRow);
+        }
+      }
+
+      return rows;
+    }
+
+    /**
+     * Mathematical 2D Matrix Transpose: M[i][j] -> M[j][i]
+     */
+    function transposeMatrix(grid) {
+      if (!grid || grid.length === 0) return [];
+      const maxCols = Math.max(...grid.map(row => row.length));
+      const result = [];
+
+      for (let c = 0; c < maxCols; c++) {
+        const newRow = [];
+        for (let r = 0; r < grid.length; r++) {
+          newRow.push(grid[r][c] !== undefined ? grid[r][c] : '');
+        }
+        result.push(newRow);
+      }
+      return result;
+    }
+
+    /**
+     * Convert 2D Matrix into standard delimiter separated string
+     */
+    function matrixToDelimitedText(grid, delimiter = '\t') {
+      return grid.map(row => 
+        row.map(cell => {
+          const str = String(cell || '');
+          if (delimiter === ',') {
+            if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
+              return `"${str.replace(/"/g, '""')}"`;
+            }
+          } else if (delimiter === '\t') {
+            if (str.includes('\t') || str.includes('\n') || str.includes('\r') || str.includes('"')) {
+              return `"${str.replace(/"/g, '""')}"`;
+            }
+          }
+          return str;
+        }).join(delimiter)
+      ).join('\n');
+    }
+
+    function generateFormattedOutput(grid, format, hasHeader) {
+      if (!grid || grid.length === 0) return '';
+      
+      const headers = hasHeader && grid.length > 0 
+        ? grid[0] 
+        : Array.from({ length: Math.max(...grid.map(r => r.length)) }, (_, i) => `Col_${i + 1}`);
+      const dataRows = hasHeader ? grid.slice(1) : grid;
+
+      switch (format) {
+        case 'markdown': {
+          if (grid.length === 0) return '';
+          // Markdown tables do not support literal newlines in cells; convert to <br>
+          const formatMdCell = (text) => (text || '').replace(/\r?\n/g, '<br>').replace(/\|/g, '\\|');
+
+          const safeHeaders = headers.map(h => formatMdCell(h));
+          const colWidths = safeHeaders.map((h, i) => {
+            const rowMax = dataRows.reduce((max, r) => Math.max(max, formatMdCell(r[i] || '').length), 0);
+            return Math.max(h.length, rowMax, 3);
+          });
+
+          const headLine = '| ' + safeHeaders.map((h, i) => h.padEnd(colWidths[i])).join(' | ') + ' |';
+          const sepLine = '| ' + colWidths.map(w => '-'.repeat(w)).join(' | ') + ' |';
+          const bodyLines = dataRows.map(row => 
+            '| ' + headers.map((_, i) => formatMdCell(row[i] || '').padEnd(colWidths[i])).join(' | ') + ' |'
+          );
+
+          return [headLine, sepLine, ...bodyLines].join('\n');
+        }
+
+        case 'json': {
+          const records = dataRows.map(row => {
+            const obj = {};
+            headers.forEach((h, idx) => {
+              const key = h || `Column_${idx + 1}`;
+              const val = row[idx] !== undefined ? row[idx] : '';
+              // Automatic number coercion if purely numeric and without line break
+              obj[key] = (!isNaN(val) && val.trim() !== '' && !val.includes('\n')) ? Number(val) : val;
+            });
+            return obj;
+          });
+          return JSON.stringify(records, null, 2);
+        }
+
+        case 'sql': {
+          const tableName = 'import_table';
+          const safeCols = headers.map(h => `\`${(h || 'col').replace(/`/g, '')}\``).join(', ');
+          
+          const insertLines = dataRows.map(row => {
+            const values = headers.map((_, i) => {
+              const val = row[i] || '';
+              if (!isNaN(val) && val.trim() !== '' && !val.includes('\n')) return val;
+              return `'${val.replace(/'/g, "''")}'`;
+            }).join(', ');
+            return `INSERT INTO ${tableName} (${safeCols}) VALUES (${values});`;
+          });
+
+          return insertLines.join('\n');
+        }
+
+        case 'html': {
+          let html = '<table class="data-table">\n  <thead>\n    <tr>\n';
+          headers.forEach(h => {
+            html += `      <th>${escapeHtml(h)}</th>\n`;
+          });
+          html += '    </tr>\n  </thead>\n  <tbody>\n';
+          dataRows.forEach(row => {
+            html += '    <tr>\n';
+            headers.forEach((_, i) => {
+              const formattedCell = escapeHtml(row[i] || '').replace(/\r?\n/g, '<br>');
+              html += `      <td>${formattedCell}</td>\n`;
+            });
+            html += '    </tr>\n';
+          });
+          html += '  </tbody>\n</table>';
+          return html;
+        }
+
+        case 'csv': {
+          return matrixToDelimitedText(grid, ',');
+        }
+
+        default:
+          return '';
+      }
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      }[m]));
+    }
+
+    /**
+     * Decode ArrayBuffer with support for all mainstream Traditional Chinese encodings:
+     * - UTF-8 (with BOM / without BOM)
+     * - Big5 / CP950 (Standard Windows Traditional Chinese)
+     * - UTF-16 LE / BE (Common Excel Unicode export formats)
+     */
+    function decodeFileBuffer(buffer, encodingChoice = 'auto') {
+      const bytes = new Uint8Array(buffer);
+      
+      if (encodingChoice === 'auto') {
+        // 1. Check for standard Byte Order Marks (BOM)
+        if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+          return { text: new TextDecoder('utf-8').decode(bytes.slice(3)), detected: 'UTF-8 (BOM)' };
+        }
+        if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+          return { text: new TextDecoder('utf-16le').decode(bytes.slice(2)), detected: 'UTF-16 LE (BOM)' };
+        }
+        if (bytes.length >= 2 && bytes[0] === 0xFE && bytes[1] === 0xFF) {
+          return { text: new TextDecoder('utf-16be').decode(bytes.slice(2)), detected: 'UTF-16 BE (BOM)' };
+        }
+
+        // 2. Strict UTF-8 validation attempt
+        try {
+          const strictUtf8 = new TextDecoder('utf-8', { fatal: true });
+          const text = strictUtf8.decode(bytes);
+          return { text, detected: 'UTF-8' };
+        } catch (e) {
+          // If UTF-8 fails with byte violations, decode using Big5 / CP950
+          try {
+            const big5Decoder = new TextDecoder('big5');
+            const text = big5Decoder.decode(bytes);
+            return { text, detected: 'Big5 (CP950 繁中)' };
+          } catch (errBig5) {
+            // Fallback
+            return { text: new TextDecoder('utf-8').decode(bytes), detected: 'UTF-8 (相容)' };
+          }
+        }
+      } else {
+        // Manual override from user dropdown
+        try {
+          const decoder = new TextDecoder(encodingChoice);
+          const text = decoder.decode(bytes);
+          return { text, detected: encodingChoice.toUpperCase() };
+        } catch (err) {
+          return { text: new TextDecoder('utf-8').decode(bytes), detected: 'UTF-8' };
+        }
+      }
+    }
+
+    const rawInputEl = document.getElementById('raw-input');
+    const theadEl = document.getElementById('preview-thead');
+    const tbodyEl = document.getElementById('preview-tbody');
+    const tableEmptyEl = document.getElementById('table-empty-state');
+    const outputPreviewEl = document.getElementById('output-preview');
+    const statRowsEl = document.getElementById('stat-rows');
+    const statColsEl = document.getElementById('stat-cols');
+    const statCellsEl = document.getElementById('stat-cells');
+    const checkHeaderEl = document.getElementById('check-has-header');
+    const tableSearchEl = document.getElementById('table-search');
+    const gridMetaTextEl = document.getElementById('grid-meta-text');
+    const fileInputEl = document.getElementById('file-input');
+    const selectEncodingEl = document.getElementById('select-encoding');
+    const detectedBadgeEl = document.getElementById('detected-encoding-badge');
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      toastMsg.innerText = message;
+      toast.classList.remove('translate-y-12', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+      clearTimeout(window.__toastTimeout);
+      window.__toastTimeout = setTimeout(() => {
+        toast.classList.add('translate-y-12', 'opacity-0');
+        toast.classList.remove('translate-y-0', 'opacity-100');
+      }, 2500);
+    }
+
+    function updateStats() {
+      const rows = AppState.matrix.length;
+      const cols = rows > 0 ? Math.max(...AppState.matrix.map(r => r.length)) : 0;
+      const cells = rows * cols;
+      statRowsEl.innerText = rows;
+      statColsEl.innerText = cols;
+      statCellsEl.innerText = cells;
+    }
+
+    function renderTablePreview() {
+      theadEl.innerHTML = '';
+      tbodyEl.innerHTML = '';
+
+      if (AppState.matrix.length === 0) {
+        tableEmptyEl.classList.remove('hidden');
+        gridMetaTextEl.innerText = '顯示 0 列';
+        return;
+      }
+
+      tableEmptyEl.classList.add('hidden');
+
+      const maxCols = Math.max(...AppState.matrix.map(r => r.length));
+      const hasHeader = AppState.hasHeader && AppState.matrix.length > 0;
+      const headerRow = hasHeader ? AppState.matrix[0] : null;
+      const dataRows = hasHeader ? AppState.matrix.slice(1) : AppState.matrix;
+
+      const query = AppState.searchQuery.trim().toLowerCase();
+      const filteredRows = query 
+        ? dataRows.filter(row => row.some(cell => String(cell || '').toLowerCase().includes(query)))
+        : dataRows;
+
+      // Build Header
+      const trHead = document.createElement('tr');
+      const thIndex = document.createElement('th');
+      thIndex.className = 'py-2.5 px-3 font-semibold text-slate-500 dark:text-slate-400 w-12';
+      thIndex.innerText = '#';
+      trHead.appendChild(thIndex);
+
+      for (let c = 0; c < maxCols; c++) {
+        const th = document.createElement('th');
+        th.className = 'py-2.5 px-3 font-semibold text-slate-700 dark:text-slate-200 border-l border-slate-200/50 dark:border-slate-800 grid-cell-clamp';
+        th.innerText = headerRow && headerRow[c] !== undefined ? headerRow[c] : `欄位 ${c + 1}`;
+        trHead.appendChild(th);
+      }
+      theadEl.appendChild(trHead);
+
+      // Build Data Rows
+      filteredRows.forEach((row, rowIndex) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-brand-50/40 dark:hover:bg-slate-800/40 transition-colors align-top';
+
+        const tdIndex = document.createElement('td');
+        tdIndex.className = 'py-2 px-3 text-slate-400 font-mono text-[10px] select-none';
+        tdIndex.innerText = rowIndex + 1;
+        tr.appendChild(tdIndex);
+
+        for (let c = 0; c < maxCols; c++) {
+          const td = document.createElement('td');
+          const cellValue = row[c] !== undefined ? row[c] : '';
+          
+          if (cellValue.includes('\n')) {
+            // Multiline cell rendering
+            td.className = 'py-2 px-3 border-l border-slate-100 dark:border-slate-800/50 min-w-[140px] max-w-[280px]';
+            const badge = document.createElement('span');
+            badge.className = 'inline-flex items-center px-1.5 py-0.5 rounded text-[9px] bg-brand-50 dark:bg-brand-950/60 text-brand-600 dark:text-brand-400 border border-brand-200 dark:border-brand-800 mb-1 select-none font-sans';
+            badge.innerText = '↵ 多行';
+            
+            const content = document.createElement('div');
+            content.className = 'grid-cell-multiline font-mono text-[11px]';
+            content.innerText = cellValue;
+            
+            td.appendChild(badge);
+            td.appendChild(content);
+          } else {
+            td.className = 'py-2 px-3 border-l border-slate-100 dark:border-slate-800/50 grid-cell-clamp';
+            td.innerText = cellValue;
+          }
+          
+          td.title = cellValue;
+          tr.appendChild(td);
+        }
+        tbodyEl.appendChild(tr);
+      });
+
+      gridMetaTextEl.innerText = query 
+        ? `過濾後顯示 ${filteredRows.length} / ${dataRows.length} 列` 
+        : `顯示 ${dataRows.length} 列`;
+    }
+
+    function updateOutputCode() {
+      const code = generateFormattedOutput(AppState.matrix, AppState.currentFormat, AppState.hasHeader);
+      outputPreviewEl.value = code;
+    }
+
+    function syncStateFromRawInput() {
+      const text = rawInputEl.value;
+      AppState.matrix = parseTextToMatrix(text);
+      updateStats();
+      renderTablePreview();
+      updateOutputCode();
+    }
+
+    // Raw Input typing event
+    rawInputEl.addEventListener('input', () => {
+      syncStateFromRawInput();
+    });
+
+    // Transpose Button Click
+    document.getElementById('btn-transpose').addEventListener('click', () => {
+      if (AppState.matrix.length === 0) {
+        showToast('請先輸入或貼上表格資料');
+        return;
+      }
+      AppState.matrix = transposeMatrix(AppState.matrix);
+      rawInputEl.value = matrixToDelimitedText(AppState.matrix, '\t');
+      updateStats();
+      renderTablePreview();
+      updateOutputCode();
+      showToast('已完成行列矩陣轉置！');
+    });
+
+    // Header Toggle
+    checkHeaderEl.addEventListener('change', (e) => {
+      AppState.hasHeader = e.target.checked;
+      renderTablePreview();
+      updateOutputCode();
+    });
+
+    // Table Search
+    tableSearchEl.addEventListener('input', (e) => {
+      AppState.searchQuery = e.target.value;
+      renderTablePreview();
+    });
+
+    // Clean Empty Rows & Cols
+    document.getElementById('btn-clean-empty').addEventListener('click', () => {
+      if (AppState.matrix.length === 0) return;
+      // Remove all-empty rows
+      let cleaned = AppState.matrix.filter(row => row.some(c => c && c.trim() !== ''));
+      if (cleaned.length === 0) {
+        AppState.matrix = [];
+      } else {
+        // Transpose to remove empty cols then transpose back
+        cleaned = transposeMatrix(cleaned);
+        cleaned = cleaned.filter(col => col.some(c => c && c.trim() !== ''));
+        cleaned = transposeMatrix(cleaned);
+        AppState.matrix = cleaned;
+      }
+      rawInputEl.value = matrixToDelimitedText(AppState.matrix, '\t');
+      updateStats();
+      renderTablePreview();
+      updateOutputCode();
+      showToast('已剔除無效空白行列');
+    });
+
+    // Trim Cell Spaces
+    document.getElementById('btn-trim-cells').addEventListener('click', () => {
+      AppState.matrix = AppState.matrix.map(row => row.map(c => (c || '').trim()));
+      rawInputEl.value = matrixToDelimitedText(AppState.matrix, '\t');
+      renderTablePreview();
+      updateOutputCode();
+      showToast('已完成儲存格首尾空格修剪');
+    });
+
+    // Clear All
+    document.getElementById('btn-clear-all').addEventListener('click', () => {
+      AppState.matrix = [];
+      AppState.lastFileBuffer = null;
+      rawInputEl.value = '';
+      tableSearchEl.value = '';
+      AppState.searchQuery = '';
+      detectedBadgeEl.classList.add('hidden');
+      updateStats();
+      renderTablePreview();
+      updateOutputCode();
+      showToast('已清空所有內容');
+    });
+
+    // Load Sample Data
+    document.getElementById('btn-load-sample').addEventListener('click', () => {
+      rawInputEl.value = SAMPLE_DATA;
+      syncStateFromRawInput();
+      showToast('已載入示範財務報表矩陣');
+    });
+
+    // Format Tab Buttons
+    document.querySelectorAll('.format-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.format-tab-btn').forEach(b => {
+          b.classList.remove('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-brand-600', 'dark:text-brand-300');
+        });
+        btn.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-brand-600', 'dark:text-brand-300');
+        AppState.currentFormat = btn.dataset.format;
+        updateOutputCode();
+      });
+    });
+
+    // Direct Clipboard Paste button
+    document.getElementById('btn-paste-clipboard').addEventListener('click', async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          rawInputEl.value = text;
+          syncStateFromRawInput();
+          showToast('已成功讀取剪貼簿內容');
+        }
+      } catch (err) {
+        rawInputEl.focus();
+        showToast('請使用鍵盤 Ctrl+V / Cmd+V 貼上');
+      }
+    });
+
+    // Copy formatted output safely
+    document.getElementById('btn-copy-output').addEventListener('click', () => {
+      const output = outputPreviewEl.value;
+      if (!output) {
+        showToast('無可複製之內容');
+        return;
+      }
+      outputPreviewEl.select();
+      document.execCommand('copy');
+      
+      const feedback = document.getElementById('copy-feedback');
+      feedback.classList.remove('opacity-0');
+      feedback.classList.add('opacity-100');
+      setTimeout(() => {
+        feedback.classList.remove('opacity-100');
+        feedback.classList.add('opacity-0');
+      }, 1500);
+      showToast('代碼已複製到剪貼簿！');
+    });
+
+    // Download CSV
+    document.getElementById('btn-export-csv').addEventListener('click', () => {
+      if (AppState.matrix.length === 0) return;
+      const csvContent = generateFormattedOutput(AppState.matrix, 'csv', AppState.hasHeader);
+      const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `matrix_export_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('CSV 檔案下載完成');
+    });
+
+    /**
+     * Process an ArrayBuffer representing a loaded CSV/TSV file
+     */
+    function processUploadedFileBuffer(buffer, fileName = '') {
+      AppState.lastFileBuffer = buffer;
+      const { text, detected } = decodeFileBuffer(buffer, AppState.selectedEncoding);
+      
+      rawInputEl.value = text;
+      syncStateFromRawInput();
+
+      detectedBadgeEl.innerText = `編碼: ${detected}`;
+      detectedBadgeEl.classList.remove('hidden');
+
+      showToast(`已載入 ${fileName || '檔案'} (${detected})`);
+    }
+
+    // File Input Trigger Button
+    document.getElementById('btn-import-file').addEventListener('click', () => {
+      fileInputEl.click();
+    });
+
+    // Handle File Input Change
+    fileInputEl.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        processUploadedFileBuffer(event.target.result, file.name);
+      };
+      reader.readAsArrayBuffer(file);
+      fileInputEl.value = ''; // Reset input to allow re-uploading same file
+    });
+
+    // Handle Encoding Selector Change
+    selectEncodingEl.addEventListener('change', (e) => {
+      AppState.selectedEncoding = e.target.value;
+      if (AppState.lastFileBuffer) {
+        // Instantly re-decode cached file buffer with new encoding selection
+        processUploadedFileBuffer(AppState.lastFileBuffer, '重新解碼');
+      } else if (rawInputEl.value.trim().length > 0) {
+        showToast('建議點擊「匯入 CSV / 檔案」以套用特定繁中編碼解析');
+      }
+    });
+
+    // Drag & Drop
+    const dropArea = rawInputEl;
+    const overlay = document.getElementById('drag-drop-overlay');
+
+    ['dragenter', 'dragover'].forEach(name => {
+      window.addEventListener(name, (e) => {
+        e.preventDefault();
+        overlay.classList.remove('hidden');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(name => {
+      overlay.addEventListener(name, (e) => {
+        e.preventDefault();
+        overlay.classList.add('hidden');
+      });
+    });
+
+    overlay.addEventListener('drop', (e) => {
+      e.preventDefault();
+      overlay.classList.add('hidden');
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        const file = files[0];
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          processUploadedFileBuffer(event.target.result, file.name);
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    });
+
+    // Theme Toggle
+    const themeBtn = document.getElementById('btn-theme-toggle');
+    const sunIcon = document.getElementById('theme-sun');
+    const moonIcon = document.getElementById('theme-moon');
+
+    function initTheme() {
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        document.documentElement.classList.add('dark');
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+        AppState.isDark = true;
+      }
+    }
+
+    themeBtn.addEventListener('click', () => {
+      document.documentElement.classList.toggle('dark');
+      AppState.isDark = document.documentElement.classList.contains('dark');
+      if (AppState.isDark) {
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+      } else {
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+      }
+    });
+
+    // Init with Sample Data Onload
+    window.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      // Select first format tab style
+      const firstTab = document.querySelector('.format-tab-btn');
+      if (firstTab) {
+        firstTab.classList.add('bg-white', 'dark:bg-slate-700', 'shadow-sm', 'text-brand-600', 'dark:text-brand-300');
+      }
+      rawInputEl.value = SAMPLE_DATA;
+      syncStateFromRawInput();
+    });
+  </script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

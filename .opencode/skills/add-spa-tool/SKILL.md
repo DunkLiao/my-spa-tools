@@ -13,7 +13,7 @@ description: 把新的單頁網頁工具 HTML 分類並設定進 my-spa-tools：
 
 固定事實：
 
-- 分類層固定五類：`agent/`、`finance/`、`sql/`、`docs/`、`design/`。
+- 分類層固定六類：`agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`。
 - 每個工具自成一層子資料夾：`<類別>/<工具>/<檔名>.html`。
 - **所有工具頁面都在根目錄下兩層**，因此「回入口」連結固定為 `../../index.html`。
 - 檔名與資料夾名稱使用小寫 kebab-case。
@@ -27,7 +27,7 @@ description: 把新的單頁網頁工具 HTML 分類並設定進 my-spa-tools：
 讀取使用者提供的 HTML，判斷：
 
 - **用途／一句話說明**：從 `<title>`、`<h1>` 與主要區塊整理。
-- **分類歸屬**：屬於既有五類之一，還是需要新分類。
+- **分類歸屬**：屬於既有六類之一，還是需要新分類。
 - **外部相依**：是否有 `cdn.`、`googleapis`、`unpkg` 等，決定標籤為「需 CDN」或「離線可用」。
 - **資料保存**：搜尋 `indexedDB`、`localStorage` 或皆無（頁面記憶體），以及資料庫名稱。
 
