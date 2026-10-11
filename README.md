@@ -1,10 +1,11 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供十二個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、專案排程、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、公文簽／函排版與 Word 匯出、Markdown 卡片簡報，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；請依需求開啟對應的 HTML 入口。
+本專案提供十三個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、專案排程、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、色彩故事盤，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
 
 ## 目錄
 
 - [快速開始](#快速開始)
+- [專案結構](#專案結構)
 - [整體使用流程](#整體使用流程)
 - [工具總覽](#工具總覽)
 - [Agent YAML Maker](#agent-yaml-maker)
@@ -19,6 +20,7 @@
 - [SQL Column Lineage Analyzer](#sql-column-lineage-analyzer)
 - [Markdown 卡片簡報工具 (Card Presenter)](#markdown-卡片簡報工具-card-presenter)
 - [公文簽／函排版與 Word 匯出 (DocuFormatter)](#公文簽函排版與-word-匯出-docuformatter)
+- [Palette Lore 色彩故事盤](#palette-lore-色彩故事盤)
 - [資料保存、匯出與隱私](#資料保存匯出與隱私)
 - [技術棧與離線範圍](#技術棧與離線範圍)
 - [常見問題](#常見問題)
@@ -27,19 +29,20 @@
 ## 快速開始
 
 1. 下載或複製本專案。
-2. 在檔案總管中開啟下列任一入口：
-   - [`agent-yaml-maker/index.html`](./agent-yaml-maker/index.html)
-   - [`project-manage-calc/dynamic_gantt_project_countdown.html`](./project-manage-calc/dynamic_gantt_project_countdown.html)
-   - [`lcr-mapping-calc/LCR_Mapping_SPA.html`](./lcr-mapping-calc/LCR_Mapping_SPA.html)
-   - [`nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./nsfr-mapping-calc/NSFR_Mapping_SPA.html)
-   - [`basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html`](./basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html)
-   - [`sql-mangage/SQL_Catalog.html`](./sql-mangage/SQL_Catalog.html)
-   - [`sql-mangage/sql-compare.html`](./sql-mangage/sql-compare.html)
-   - [`sql-mangage/OracleSqlFormatter.html`](./sql-mangage/OracleSqlFormatter.html)
-   - [`sql-mangage/sql-pii-cleaner.html`](./sql-mangage/sql-pii-cleaner.html)
-   - [`sql-mangage/SQL_Column_Lineage_Analyzer.html`](./sql-mangage/SQL_Column_Lineage_Analyzer.html)
-   - [`ppt-present/markdown_card_presenter.html`](./ppt-present/markdown_card_presenter.html)
-   - [`word/DocuForm.html`](./word/DocuForm.html)
+2. 建議先開啟根目錄的入口大廳 [`index.html`](./index.html)，以分類卡片瀏覽並進入全部工具；也可直接開啟下列任一入口：
+   - [`agent/agent-yaml-maker/index.html`](./agent/agent-yaml-maker/index.html)
+   - [`docs/project-gantt/dynamic_gantt_project_countdown.html`](./docs/project-gantt/dynamic_gantt_project_countdown.html)
+   - [`finance/lcr-mapping-calc/LCR_Mapping_SPA.html`](./finance/lcr-mapping-calc/LCR_Mapping_SPA.html)
+   - [`finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html)
+   - [`finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html`](./finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html)
+   - [`sql/sql-catalog/SQL_Catalog.html`](./sql/sql-catalog/SQL_Catalog.html)
+   - [`sql/sql-compare/sql-compare.html`](./sql/sql-compare/sql-compare.html)
+   - [`sql/oracle-sql-formatter/OracleSqlFormatter.html`](./sql/oracle-sql-formatter/OracleSqlFormatter.html)
+   - [`sql/sql-pii-cleaner/sql-pii-cleaner.html`](./sql/sql-pii-cleaner/sql-pii-cleaner.html)
+   - [`sql/sql-lineage-analyzer/SQL_Column_Lineage_Analyzer.html`](./sql/sql-lineage-analyzer/SQL_Column_Lineage_Analyzer.html)
+   - [`docs/card-presenter/markdown_card_presenter.html`](./docs/card-presenter/markdown_card_presenter.html)
+   - [`docs/docuformatter/DocuForm.html`](./docs/docuformatter/DocuForm.html)
+   - [`design/palette-lore/palette-lore.html`](./design/palette-lore/palette-lore.html)
 3. 使用瀏覽器頁面中的表單、按鈕與分頁完成操作。
 
 本專案沒有建置或打包步驟，也沒有根目錄 `package.json`。若瀏覽器限制 `file://` 頁面的部分功能，可在專案根目錄啟動任一靜態檔案伺服器，例如：
@@ -48,9 +51,37 @@
 python -m http.server 8080
 ```
 
-再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、甘特圖、銀行信用風險模擬器、Markdown 卡片簡報工具與公文簽／函排版工具會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR 工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
+再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、甘特圖、銀行信用風險模擬器、Markdown 卡片簡報工具、公文簽／函排版工具與色彩故事盤會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR 工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
 
-本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS，公文簽／函排版工具需要從 CDN 載入 Tailwind CSS 與 docx.js。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化與 SQL／TXT 個資清除工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
+本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS，公文簽／函排版工具需要從 CDN 載入 Tailwind CSS 與 docx.js，色彩故事盤需要從 CDN 載入 Tailwind CSS 與 Google Fonts。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化與 SQL／TXT 個資清除工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
+
+## 專案結構
+
+```text
+my-spa-tools/
+├─ index.html                    入口大廳（分類卡片、搜尋、連結使用手冊）
+├─ README.md                     本使用手冊
+├─ agent/
+│  └─ agent-yaml-maker/          Agent YAML Maker（index.html + app.js + styles.css）
+├─ finance/                      臺灣監理試算
+│  ├─ lcr-mapping-calc/
+│  ├─ nsfr-mapping-calc/
+│  └─ basel-creditrisk-calc/
+├─ sql/                          SQL 工具
+│  ├─ sql-catalog/
+│  ├─ sql-compare/
+│  ├─ oracle-sql-formatter/
+│  ├─ sql-pii-cleaner/
+│  └─ sql-lineage-analyzer/
+├─ docs/                         文書與簡報
+│  ├─ project-gantt/
+│  ├─ card-presenter/
+│  └─ docuformatter/
+└─ design/                       設計工具
+   └─ palette-lore/
+```
+
+各工具以獨立子資料夾存放單一入口 HTML；`agent-yaml-maker` 另含 `app.js` 與 `styles.css`。資料夾依「Agent／金融試算／SQL／文書與簡報／設計工具」五類歸類，HTML 檔名維持工具原名。
 
 ## 整體使用流程
 
@@ -67,6 +98,7 @@ flowchart TD
     B -->|SQL 格式化與健檢| N[選擇 SQL 資料夾]
     B -->|SQL 個資清除| Q[選擇 SQL／TXT 資料夾]
     B -->|SQL 欄位血緣分析| S[載入或貼上 SQL]
+    B -->|配色設計| W[輸入意境文字生成色盤]
     C --> F[預覽並下載 YAML 或 ZIP]
     D --> G[查看甘特圖與里程碑倒數]
     E --> H[查看流出 流入與 LCR]
@@ -77,30 +109,32 @@ flowchart TD
     N --> P[預覽格式化 健檢並匯出或寫回]
     Q --> R[掃描命中並匯出清除副本或寫回]
     S --> T[分析血緣圖、欄位對照與上下游追溯]
+    W --> X[檢視 WCAG 對比並匯出色碼或收藏]
 ```
 
 ## 工具總覽
 
 | 工具 | 入口 | 適合用途 | 資料保存方式 |
 | --- | --- | --- | --- |
-| Agent YAML Maker | [`agent-yaml-maker/index.html`](./agent-yaml-maker/index.html) | 建立 `progress.yaml`、`handoff.yaml`、範本與快照 | 瀏覽器 IndexedDB；主題偏好使用 `localStorage` |
-| 動態甘特圖與專案倒數 | [`project-manage-calc/dynamic_gantt_project_countdown.html`](./project-manage-calc/dynamic_gantt_project_countdown.html) | 管理多個專案、任務、進度與重大里程碑 | 瀏覽器 IndexedDB |
-| 臺灣 LCR Mapping 與試算 | [`lcr-mapping-calc/LCR_Mapping_SPA.html`](./lcr-mapping-calc/LCR_Mapping_SPA.html) | 查詢業務係數並計算現金流與 LCR | 僅保留在目前頁面，重新整理會清除 |
-| 臺灣 NSFR 淨穩定資金比率與試算 | [`nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./nsfr-mapping-calc/NSFR_Mapping_SPA.html) | 查詢 ASF／RSF 係數並計算 NSFR | IndexedDB 優先，必要時退回 `localStorage` 或僅保留於目前頁面 |
-| 銀行信用風險與資本適足模擬器 | [`basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html`](./basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html) | 編輯信貸資產組合，觀察壓力情境下預期損失、RWA 與 CAR 敏感度 | 只保留在目前頁面；可匯出／匯入 JSON 模型 |
-| SQL Catalog | [`sql-mangage/SQL_Catalog.html`](./sql-mangage/SQL_Catalog.html) | 掃描 SQL 根目錄、搜尋內容、維護用途與標籤、匯出清冊 | 根目錄 `sql_catalog.json`；瀏覽器 IndexedDB 作為快取與設定保存 |
-| Oracle SQL Compare | [`sql-mangage/sql-compare.html`](./sql-mangage/sql-compare.html) | 比對兩份 Oracle SQL 的逐行內容與結構差異 | SQL 只在目前頁面處理；比對選項保存於瀏覽器 `localStorage` |
-| Oracle SQL Formatter Studio | [`sql-mangage/OracleSqlFormatter.html`](./sql-mangage/OracleSqlFormatter.html) | 批次格式化 SQL／PL/SQL、執行健檢、預覽差異並匯出或寫回 | 檔案在瀏覽器本機處理；設定與健檢規則保存於 `localStorage` |
-| SQL／TXT 個資掃描與清除 | [`sql-mangage/sql-pii-cleaner.html`](./sql-mangage/sql-pii-cleaner.html) | 掃描常見身分證字號、帳號、統編與擔保品編號，產生清除副本或寫回 | 檔案只在目前頁面記憶體處理，不保存掃描結果 |
-| SQL Column Lineage Analyzer | [`sql-mangage/SQL_Column_Lineage_Analyzer.html`](./sql-mangage/SQL_Column_Lineage_Analyzer.html) | 分析 Oracle SQL 欄位來源、轉換、上下游影響與 CTE 結構，匯出血緣資料 | SQL 與分析結果只在目前頁面記憶體處理，不保存或上傳 |
-| Markdown 卡片簡報工具 | [`ppt-present/markdown_card_presenter.html`](./ppt-present/markdown_card_presenter.html) | 以 Markdown 撰寫卡片式投影片、即時預覽、全螢幕播放，並匯出離線單一 HTML | 瀏覽器 IndexedDB（範本與草稿）；主題偏好使用 `localStorage` |
-| 公文簽／函排版與 Word 匯出 (DocuFormatter) | [`word/DocuForm.html`](./word/DocuForm.html) | 以表單或 Markdown 撰寫簽／函公文、校正標點與中英間距，並匯出 Word 文件 | 只保留在目前頁面記憶體；輸出為剪貼簿或 `.docx` 檔 |
+| Agent YAML Maker | [`agent/agent-yaml-maker/index.html`](./agent/agent-yaml-maker/index.html) | 建立 `progress.yaml`、`handoff.yaml`、範本與快照 | 瀏覽器 IndexedDB；主題偏好使用 `localStorage` |
+| 動態甘特圖與專案倒數 | [`docs/project-gantt/dynamic_gantt_project_countdown.html`](./docs/project-gantt/dynamic_gantt_project_countdown.html) | 管理多個專案、任務、進度與重大里程碑 | 瀏覽器 IndexedDB |
+| 臺灣 LCR Mapping 與試算 | [`finance/lcr-mapping-calc/LCR_Mapping_SPA.html`](./finance/lcr-mapping-calc/LCR_Mapping_SPA.html) | 查詢業務係數並計算現金流與 LCR | 僅保留在目前頁面，重新整理會清除 |
+| 臺灣 NSFR 淨穩定資金比率與試算 | [`finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html) | 查詢 ASF／RSF 係數並計算 NSFR | IndexedDB 優先，必要時退回 `localStorage` 或僅保留於目前頁面 |
+| 銀行信用風險與資本適足模擬器 | [`finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html`](./finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html) | 編輯信貸資產組合，觀察壓力情境下預期損失、RWA 與 CAR 敏感度 | 只保留在目前頁面；可匯出／匯入 JSON 模型 |
+| SQL Catalog | [`sql/sql-catalog/SQL_Catalog.html`](./sql/sql-catalog/SQL_Catalog.html) | 掃描 SQL 根目錄、搜尋內容、維護用途與標籤、匯出清冊 | 根目錄 `sql_catalog.json`；瀏覽器 IndexedDB 作為快取與設定保存 |
+| Oracle SQL Compare | [`sql/sql-compare/sql-compare.html`](./sql/sql-compare/sql-compare.html) | 比對兩份 Oracle SQL 的逐行內容與結構差異 | SQL 只在目前頁面處理；比對選項保存於瀏覽器 `localStorage` |
+| Oracle SQL Formatter Studio | [`sql/oracle-sql-formatter/OracleSqlFormatter.html`](./sql/oracle-sql-formatter/OracleSqlFormatter.html) | 批次格式化 SQL／PL/SQL、執行健檢、預覽差異並匯出或寫回 | 檔案在瀏覽器本機處理；設定與健檢規則保存於 `localStorage` |
+| SQL／TXT 個資掃描與清除 | [`sql/sql-pii-cleaner/sql-pii-cleaner.html`](./sql/sql-pii-cleaner/sql-pii-cleaner.html) | 掃描常見身分證字號、帳號、統編與擔保品編號，產生清除副本或寫回 | 檔案只在目前頁面記憶體處理，不保存掃描結果 |
+| SQL Column Lineage Analyzer | [`sql/sql-lineage-analyzer/SQL_Column_Lineage_Analyzer.html`](./sql/sql-lineage-analyzer/SQL_Column_Lineage_Analyzer.html) | 分析 Oracle SQL 欄位來源、轉換、上下游影響與 CTE 結構，匯出血緣資料 | SQL 與分析結果只在目前頁面記憶體處理，不保存或上傳 |
+| Markdown 卡片簡報工具 | [`docs/card-presenter/markdown_card_presenter.html`](./docs/card-presenter/markdown_card_presenter.html) | 以 Markdown 撰寫卡片式投影片、即時預覽、全螢幕播放，並匯出離線單一 HTML | 瀏覽器 IndexedDB（範本與草稿）；主題偏好使用 `localStorage` |
+| 公文簽／函排版與 Word 匯出 (DocuFormatter) | [`docs/docuformatter/DocuForm.html`](./docs/docuformatter/DocuForm.html) | 以表單或 Markdown 撰寫簽／函公文、校正標點與中英間距，並匯出 Word 文件 | 只保留在目前頁面記憶體；輸出為剪貼簿或 `.docx` 檔 |
+| Palette Lore 色彩故事盤 | [`design/palette-lore/palette-lore.html`](./design/palette-lore/palette-lore.html) | 以抽象意境文字生成五色配色盤，附實境 UI 模擬、WCAG 對比評測與 CSS／Tailwind／JSON 匯出 | 瀏覽器 IndexedDB（`PaletteLoreDB`：`palettes` 典藏與 `app_state` 工作階段／主題） |
 
 ## Agent YAML Maker
 
 ### 建立進度看板或交接工單
 
-1. 開啟 `agent-yaml-maker/index.html`。
+1. 開啟 [`agent/agent-yaml-maker/index.html`](./agent/agent-yaml-maker/index.html)。
 2. 從上方範本選單選擇內建範本：軟體開發、數據分析與 ETL、規格與安全文檔，或空白模板。
 3. 在「進度看板 (`progress.yaml`)」分頁填寫專案、狀態、目前階段、里程碑、工件與阻礙事項。
 4. 切換到「代理交接 (`handoff.yaml`)」分頁，填寫交接單號、交付方、接收方、交接原因、已完成工作、關鍵決策、下一步與限制條件。
@@ -137,11 +171,85 @@ flowchart LR
     G --> H[命名保存快照或匯出 JSON 備份]
 ```
 
+### YAML 欄位規範
+
+**`progress.yaml`（長任務進度狀態機）**
+
+```yaml
+project: "agent-yaml-maker"                # 專案唯一識別名稱
+status: "in_progress"                      # pending | in_progress | paused | completed | failed
+current_phase: "phase_2_core_development"  # 當前階段識別名稱
+updated_at: "2026-09-26T12:00:00.000Z"     # ISO-8601 時間戳記
+
+milestones:                                # 階層式里程碑清單
+  - id: 1
+    name: "核心支付閘道串接"
+    status: "in_progress"                  # pending | in_progress | completed | blocked
+    completed_at: ""                       # 完成時自動填入 ISO 時間戳記
+    tasks:                                 # 具體子任務 Checklist
+      - task: "撰寫 Webhook 簽名驗證"
+        status: "completed"                # pending | in_progress | completed | blocked
+      - task: "實作冪等性交易快取"
+        status: "in_progress"
+
+artifacts:                                 # 關鍵產出檔案清單
+  - path: "src/services/payment.py"
+    description: "支付主處理器與回調驗證邏輯"
+
+blockers:                                  # 阻礙與風險清單
+  - issue: "第三方測試沙盒網路偶發逾時"
+    severity: "medium"                     # low | medium | high | critical
+    status: "investigating"                # investigating | blocked | resolved
+```
+
+**`handoff.yaml`（跨 Session／跨 Agent 移交工單）**
+
+```yaml
+handoff_id: "handoff-20260926-7f8a9b"      # 唯一交接單號
+timestamp: "2026-09-26T12:00:00.000Z"      # 交接時間戳記
+from_agent: "ArchitectAgent"               # 交付方角色
+to_agent: "BackendDeveloperAgent"          # 接收方角色
+reason: "系統架構審查完畢，交接進入編碼實作階段"
+
+summary_of_work:                           # 已完成之關鍵工作條列
+  - "完成系統架構設計與 API 規格草擬"
+  - "定義資料庫 Schema 與安全存取邊界"
+
+key_decisions:                             # 關鍵架構決策（防止後續 Agent 擅自推翻或重做）
+  - "採用非同步事件隊列處理高並發 Webhook"
+  - "敏感參數一律由 Vault 動態注入，禁止寫入環境設定檔"
+
+next_steps:                                # 接手者優先執行清單
+  - priority: 1                            # 數字越小優先度越高 (1~10)
+    action: "依據 payment_spec.md 實作支付 Webhook 接收端點"
+    target_files:
+      - "src/webhooks/signature.py"
+      - "src/webhooks/router.py"
+
+constraints_and_notes:                     # 邊界約束與注意事項
+  - "必須維持向前相容性，不可修改既有交易欄位型態"
+  - "單元測試覆蓋率需高於 85%"
+```
+
+內建範本包含軟體開發、數據 ETL、資安合規與空白模板四種，可一鍵複製為自訂複本。
+
+### 提示詞整合範例
+
+可直接在給 AI Agent 的 Prompt 中要求遵循此規範：
+
+```markdown
+每次對話或任務執行前後，請嚴格遵守專案狀態機規範：
+1. 讀取根目錄下的 `progress.yaml` 確認當前階段與 Milestone Checklist。
+2. 任務執行完畢時，更新 `progress.yaml` 中的 tasks 狀態與 artifacts。
+3. 若需切換 Session 或移交給下一位 Agent，請生成或更新 `handoff.yaml`，
+   固定關鍵決策並列出接手者的 next_steps。
+```
+
 ## 動態甘特圖與專案倒數看板
 
 ### 建立專案與任務
 
-1. 開啟 [`dynamic_gantt_project_countdown.html`](./project-manage-calc/dynamic_gantt_project_countdown.html)。
+1. 開啟 [`dynamic_gantt_project_countdown.html`](./docs/project-gantt/dynamic_gantt_project_countdown.html)。
 2. 按「新增專案」，輸入專案名稱與簡述，再按「確認儲存」。
 3. 按「新增任務」，填寫任務名稱、開始日期、截止日期、負責人、狀態與完成進度。
 4. 交付節點若要顯示在上方倒數區，勾選「設為重大里程碑」。
@@ -182,7 +290,7 @@ flowchart TD
 
 ### 進行試算
 
-1. 開啟 [`LCR_Mapping_SPA.html`](./lcr-mapping-calc/LCR_Mapping_SPA.html)。
+1. 開啟 [`LCR_Mapping_SPA.html`](./finance/lcr-mapping-calc/LCR_Mapping_SPA.html)。
 2. 在「試算」頁的「HQLA 輸入」填入已完成法規上限調整後的合格高品質流動性資產總額。
 3. 從業務下拉選單選擇項目，輸入餘額後按「加入明細」。係數會依 Mapping 自動帶入。
 4. 在明細表檢查方向、係數與金額；不需要的項目可按刪除。
@@ -202,7 +310,7 @@ flowchart TD
 
 ### 進行試算
 
-1. 開啟 [`NSFR_Mapping_SPA.html`](./nsfr-mapping-calc/NSFR_Mapping_SPA.html)。
+1. 開啟 [`NSFR_Mapping_SPA.html`](./finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html)。頁面分成「試算」「Mapping 表」「參數」「使用說明」四個分頁。
 2. 在「試算」頁的「加入明細」下拉選單選擇 ASF（可用穩定資金）或 RSF（應有穩定資金）項目，輸入帳面金額後按「加入明細」。係數會依 Mapping 自動帶入。
 3. 在明細清單檢查方向、大類、係數與加權金額；可直接修改金額，或按刪除移除不需要的項目。
 4. 查看計算結果中的可用穩定資金（ASF）、應有穩定資金（RSF）、淨穩定資金比率（NSFR）與資金缺口（ASF － RSF）。
@@ -211,16 +319,16 @@ flowchart TD
 
 ### 查詢 Mapping 與公式
 
-- 「Mapping 表」可用關鍵字搜尋，並依 ASF／RSF 方向及大類篩選各項目之判斷條件與係數。
+- 「Mapping 表」列出全部 ASF（13 項）與 RSF（27 項）係數，可用關鍵字搜尋，並依 ASF／RSF 方向及大類篩選各項目之判斷條件與係數。
 - 「參數」頁列出預設的 NSFR 最低標準 100%，以及僅供提醒使用的內部警示門檻 110%。
 - 「使用說明」頁列出公式與適用限制：`NSFR ＝ 可用穩定資金（ASF） ÷ 應有穩定資金（RSF） × 100%`。
 
-本工具是 NSFR 係數對照與試算輔助，不取代主管機關完整條文、附錄、申報表格或正式法遵判定。複合性或具選擇權之商品仍須依交易對手、剩餘期間、擔保品、風險權數、受限制狀態及是否重複列計逐案判斷；表外暴險與衍生性商品淨額計算較為複雜，正式申報前請回歸主管機關計算表逐項核對，並確認相關函令是否更新。
+本工具是 NSFR 係數對照與試算輔助，不取代主管機關完整條文、附錄、申報表格或正式法遵判定。複合性或具選擇權之商品仍須依交易對手、剩餘期間、擔保品、風險權數、受限制狀態及是否重複列計逐案判斷；同一項目符合兩個以上類別時，應適用較高係數且不得重複計算；表外暴險、衍生性商品淨額與相互依存項目之計算較為複雜，正式申報前請回歸主管機關計算表逐項核對，並確認相關函令是否更新。係數表依金管會民國 105 年 12 月 26 日金管銀法字第 10510005801 號令訂定之版本整理；示範資料僅為操作示意，非任何實際機構資料。
 
 ### 資料保存與備份
 
-- 明細與參數變更後會自動保存為草稿；「試算情境」可將目前明細命名後保存於瀏覽器本機（IndexedDB），可載入、刪除。
-- 「匯出備份（JSON）」會下載包含參數、目前明細與所有情境的備份檔；「匯入備份（JSON）」可選擇合併或覆寫情境後還原。
+- 明細與參數變更後會自動保存為草稿；「試算情境」可將目前明細命名後保存於瀏覽器本機（IndexedDB，資料庫名稱 `nsfr-mapping-calc`），可載入、刪除。
+- 「匯出備份（JSON）」會下載包含參數、目前明細與所有情境的 `nsfr_backup_YYYYMMDDHHmmss.json`；「匯入備份（JSON）」可選擇合併或覆寫情境後還原。
 - 換瀏覽器、使用無痕視窗或清除網站資料後，本機保存的資料可能無法取得，建議定期匯出備份。
 
 ```mermaid
@@ -238,7 +346,7 @@ flowchart LR
 
 ### 設定資產組合與壓力情境
 
-1. 開啟 [`bank_credit_risk_capital_adequacy_simulator.html`](./basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html)。
+1. 開啟 [`bank_credit_risk_capital_adequacy_simulator.html`](./finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html)。
 2. 輸入合格自有資本淨額、法定最低 CAR 門檻與現有提存備抵呆帳準備金。
 3. 選擇「基準常態」、「經濟景氣趨緩」或「系統性金融風暴」，也可調整 PD、LGD 與 RWA 衝擊滑桿。
 4. 按「新增資產組合」，輸入名稱、曝險額（EAD）、基準違約機率（PD）、違約損失率（LGD）與風險權數（RW）；既有組合可編輯或刪除，至少保留一組。
@@ -260,7 +368,7 @@ SQL Catalog 是單檔離線 SQL 檔案管理工具，用來建立 SQL 檔案目�
 
 ### 開啟目錄與掃描
 
-1. 開啟 [`SQL_Catalog.html`](./sql-mangage/SQL_Catalog.html)。
+1. 開啟 [`SQL_Catalog.html`](./sql/sql-catalog/SQL_Catalog.html)。
 2. 按「選擇目錄」，選取 SQL 根目錄並允許編輯權限。
 3. 工具會遞迴掃描子資料夾中的 `.sql` 檔案，並在根目錄建立或讀取 `sql_catalog.json`。
 4. 點選清單中的 SQL 檔案，在右側編輯用途、分類、標籤、執行頻率、到期日、後續說明與備註；內容會延遲約 1 秒自動儲存。
@@ -297,7 +405,7 @@ Oracle SQL Compare V2.1 是雙欄、純離線的 SQL 比對工具，適合檢查
 
 ### 比對 SQL
 
-1. 開啟 [`sql-compare.html`](./sql-mangage/sql-compare.html)。
+1. 開啟 [`sql-compare.html`](./sql/sql-compare/sql-compare.html)。
 2. 將舊版 SQL 放入左側、新版 SQL 放入右側；可貼上文字、按「開啟檔案」或拖放檔案。
 3. 依需求調整比對選項：忽略大小寫、空白、註解、空行，以及結尾 `;`／單獨一行的 `/`。
 4. 按「比對」，在「逐行差異」查看新增、刪除、修改與移動內容。
@@ -330,7 +438,7 @@ Oracle SQL Formatter Studio v1.1 是純離線的批次 SQL／PL/SQL 格式化與
 
 ### 掃描與格式化預覽
 
-1. 開啟 [`OracleSqlFormatter.html`](./sql-mangage/OracleSqlFormatter.html)。
+1. 開啟 [`OracleSqlFormatter.html`](./sql/oracle-sql-formatter/OracleSqlFormatter.html)。
 2. 在「副檔名」欄確認要處理的副檔名，預設為 `.sql,.pks,.pkb,.prc,.fnc,.vw,.trg`。
 3. 按「選擇資料夾」。Chrome／Edge 等支援 File System Access API 的瀏覽器可取得資料夾讀寫權限；其他瀏覽器會進入唯讀相容模式。
 4. 調整檔案編碼（自動偵測 UTF-8／Big5、UTF-8 或 Big5）、縮排、識別字大小寫、SQL 關鍵字／函數大小寫與 SELECT／SET 欄位逐行排列。
@@ -373,18 +481,30 @@ flowchart TD
 
 ### 掃描與檢視命中
 
-1. 開啟 [`sql-pii-cleaner.html`](./sql-mangage/sql-pii-cleaner.html)。
+1. 開啟 [`sql-pii-cleaner.html`](./sql/sql-pii-cleaner/sql-pii-cleaner.html)。
 2. 使用新版 Chrome 或 Edge 按「選擇資料夾（可寫回）」；若瀏覽器不支援資料夾寫入，改用「選擇資料夾（唯讀相容模式）」。
 3. 確認身分證、帳號、統編、彙整編號，以及日期／時間排除規則；需要時設定排除資料夾或檔名。
 4. 掃描完成後點選檔案，檢查編碼、命中數量與遮罩後的行號前後文。編碼不確定時，可在表格中改選 UTF-8、Big5、GB18030 或 UTF-16 後重新掃描。
 5. 勾選要處理的檔案，再選擇寫回、下載清除後 ZIP 或匯出 CSV 報告。
 
+### 掃描項目與選項
+
+工具預設偵測下列格式：
+
+- **身分證字號**：依格式與檢查碼判斷，可選擇是否接受第二碼 `8`、`9`，以及是否忽略大小寫。
+- **帳號**：偵測 12～14 位數字；符合 14 位時間格式時，依選項排除。
+- **彙整序號**：偵測以 `61` 或 `62` 開頭的 15 位數字。
+- **彙整子號**：偵測以 `6` 加英文字母開頭的 15 碼值。
+- **統編**：依 8 位格式與檢查碼判斷；符合日期格式 `yyyyMMdd` 時，依選項排除。
+
+可用選項包含身分證檢查碼、含第二碼 8／9、忽略大小寫、排除 14 位時間、統編檢查碼、排除 8 位日期，以及以逗號分隔的「排除資料夾或檔案名稱」（可用 `*` 萬用字元，例如 `_backup_*,.git`）。表格欄位可點選排序；編碼不確定時可於「編碼」欄改選 UTF-8、Big5、GB18030、UTF-16LE 或 UTF-16BE 後重新掃描該檔。
+
 ### 清除與安全注意事項
 
-- 「清除勾選檔案並寫回」只在可寫回模式可用；啟用備份時，原始檔會先保存至來源資料夾的 `_backup_時間` 目錄。
-- 清除動作會直接移除命中的位元組，不是以固定字元取代；未被引號包住的命中可能造成 SQL 語法錯誤，寫回前務必檢查並保留備份。
-- 「下載清除後 ZIP」不會修改來源檔案，會產生保留相對路徑與編碼的清除副本。
-- 「匯出報告（CSV）」只輸出遮罩後的命中明細，不會輸出完整個資值。大量檔案建議分批處理，避免瀏覽器記憶體不足。
+- 「清除勾選檔案並寫回」只在可寫回模式可用；啟用備份時，原始檔會先保存至來源資料夾的 `_backup_YYYYMMDDHHmmss` 目錄，並保留原本的子目錄結構。
+- 清除動作會直接移除命中的位元組，不是以固定字元取代；未被引號包住的命中可能造成 SQL 語法錯誤，寫回前務必檢查並保留備份。寫回前工具會檢查檔案是否被其他程式修改，已變更者會跳過並要求重新掃描。
+- 「下載清除後 ZIP」不會修改來源檔案，會產生 `sql_cleaned_YYYYMMDDHHmmss.zip`，保留相對路徑與編碼的清除副本。
+- 「匯出報告（CSV）」產生 `sql_pii_report_YYYYMMDDHHmmss.csv`，只輸出遮罩後的命中明細與統計，不會輸出完整個資值。大量檔案建議分批處理，避免瀏覽器記憶體不足。
 
 ```mermaid
 flowchart TD
@@ -403,7 +523,7 @@ SQL Column Lineage Analyzer v1.5.1 是純離線的 Oracle SQL 欄位血緣分析
 
 ### 載入 SQL 並分析
 
-1. 開啟 [`SQL_Column_Lineage_Analyzer.html`](./sql-mangage/SQL_Column_Lineage_Analyzer.html)。
+1. 開啟 [`SQL_Column_Lineage_Analyzer.html`](./sql/sql-lineage-analyzer/SQL_Column_Lineage_Analyzer.html)。
 2. 以「載入檔案」選取一或多個 `.sql`、`.txt`、`.ddl` 檔案；也可以用「載入資料夾」遞迴載入子資料夾，或按「貼上 SQL」輸入內容。
 3. 也可按「內建範例」快速載入範例；檔案可直接拖放到載入區。
 4. 在左側檢查目前 SQL，按「分析」或使用 `Ctrl+Enter`。
@@ -442,7 +562,7 @@ Card Presenter 是單檔的卡片式投影片編輯器：可用 Markdown（含�
 
 ### 編輯與預覽
 
-1. 開啟 [`markdown_card_presenter.html`](./ppt-present/markdown_card_presenter.html)。
+1. 開啟 [`markdown_card_presenter.html`](./docs/card-presenter/markdown_card_presenter.html)。
 2. 在左側編輯區輸入 Markdown；以獨立一行的 `---` 切分不同頁面。
 3. 可用工具列的「📊 KPI 指標」、「🗂️ 雙欄卡片」、「💡 提示框」快速插入語法片段。
 4. 右側預覽會即時更新，每張卡片右下角顯示頁碼。
@@ -483,7 +603,7 @@ DocuFormatter（Word 匯出版）是單檔的公文排版精靈，可依「簽�
 
 ### 選擇公文類型與填寫內容
 
-1. 開啟 [`DocuForm.html`](./word/DocuForm.html)。
+1. 開啟 [`DocuForm.html`](./docs/docuformatter/DocuForm.html)。
 2. 在最上方「公文類型」選擇要產出的格式：
    - 「簽（主旨／說明／擬辦）」：填寫承辦單位、日期（民國年）、主旨、說明與擬辦。
    - 「函（主旨／說明／辦法）」：填寫受文者、發文字號、速別、密等及解密條件、主旨、說明與辦法。
@@ -502,7 +622,7 @@ DocuFormatter（Word 匯出版）是單檔的公文排版精靈，可依「簽�
 - 右側「正式公文排版預覽」以標楷體即時呈現成品並顯示字數；相同字型與行高也會套用於 Word 匯出。
 - 「複製純文字」將預覽內容複製為純文字；「複製 Word 格式」複製為保留標楷體與固定行高的富文字，可直接貼入 Word。
 - 「下載 .docx」以 docx.js 產生 Word 檔，檔名依公文類型為 `簽呈_日期.docx`、`公文函稿_日期.docx` 或 `公務報告_日期.docx`。
-- 兩顆複製按鈕與下載功能需要瀏覽器剪貼簿／檔案 API 以及 docx.js CDN；建議透過 `python -m http.server 8080` 後從 `http://localhost:8080/word/` 開啟。
+- 兩顆複製按鈕與下載功能需要瀏覽器剪貼簿／檔案 API 以及 docx.js CDN；建議透過 `python -m http.server 8080` 後從 `http://localhost:8080/docs/docuformatter/` 開啟。
 
 ```mermaid
 flowchart TD
@@ -521,6 +641,38 @@ flowchart TD
 
 本工具不使用 IndexedDB 或 `localStorage`，關閉或重新整理頁面後內容需重新輸入；重要公文請先下載 `.docx` 或複製保存。排版僅為格式輔助，正式發文前仍應依機關文書規範覆核用語與簽核流程。
 
+## Palette Lore 色彩故事盤
+
+Palette Lore 是單檔的「意境色彩演算器」：輸入抽象意境文字（例如「北歐晨霧」「賽博初雪」），工具會依內建色相／飽和度／明度公式生成一組五色配色盤，並即時套用到實境 UI 元件模擬、WCAG 2.1 對比評測與工程端格式匯出。收藏的色盤會保存在瀏覽器 IndexedDB 典藏庫。
+
+### 生成與調整配色
+
+1. 開啟 [`palette-lore.html`](./design/palette-lore/palette-lore.html)。
+2. 在輸入框輸入意境文字，按「生成色譜」或 `Space`；也可按「🎲 靈感」隨機切換內建意境。
+3. 五個色彩槽分別對應「基底背景、卡片邊界、主視覺色、輔助過渡、點睛強調」；點擊色塊可複製 Hex，點擊調色盤圖示可自訂顏色，並可鎖定個別色塊，避免重新生成時變動。
+4. 左側「實境 UI 元件模擬」會以目前色盤即時呈現卡片、按鈕與文字組合。
+5. 右側「WCAG 2.1 無障礙對比評測」列出各配對組合的對比比例與 AA／AAA 檢核結果。
+
+### 匯出與典藏
+
+- 「工程端格式匯出」可切換 CSS、Tailwind 或 JSON，並以「複製代碼」取得內容。
+- 右上角「收藏當前色盤」會將目前意境與色盤存入 IndexedDB 典藏庫；「資料庫典藏庫」按鈕可開啟清單，支援搜尋、刪除單筆與清空典藏。
+- 右上角可切換深／淺色模式，工作階段與主題偏好會隨 `app_state` 保存。
+
+```mermaid
+flowchart TD
+    A[輸入意境文字] --> B[生成五色配色盤]
+    B --> C[鎖定或自訂個別色塊]
+    C --> D[實境 UI 元件模擬]
+    C --> E[WCAG 2.1 對比評測]
+    C --> F{輸出方式}
+    F -->|匯出| G[CSS 或 Tailwind 或 JSON]
+    F -->|收藏| H[存入 IndexedDB 典藏庫]
+    H --> I[搜尋 載入或刪除]
+```
+
+本工具使用 CDN 載入 Tailwind CSS 與 Google Fonts，首次開啟需保持網路連線。典藏庫 `PaletteLoreDB` 將資料保存在目前瀏覽器（object stores：`palettes`、`app_state`）；換瀏覽器、使用無痕視窗或清除網站資料後可能無法取得。色彩公式與 WCAG 對比僅供設計參考，正式無障礙與品牌規範仍應以實際量測與規範為準。
+
 ## 資料保存、匯出與隱私
 
 ```mermaid
@@ -537,6 +689,7 @@ flowchart LR
     B -->|SQL 欄位血緣| R[目前頁面記憶體]
     B -->|卡片簡報| W[IndexedDB 範本與草稿]
     B -->|公文排版| Y[目前頁面記憶體]
+    B -->|色彩故事盤| AA[IndexedDB 典藏與工作階段]
     C --> F[JSON 備份或 YAML ZIP]
     D --> G[JSON 工作區備份]
     E --> H[重新整理後重新輸入]
@@ -548,6 +701,7 @@ flowchart LR
     R --> S[CSV JSON Mermaid SVG 或 PNG 匯出]
     W --> X[匯出離線單一 HTML]
     Y --> Z[複製或下載 docx]
+    AA --> AB[複製 CSS Tailwind JSON 或收藏]
 ```
 
 - Agent YAML Maker 與甘特圖資料保存在目前瀏覽器的 IndexedDB；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得。
@@ -560,7 +714,8 @@ flowchart LR
 - SQL Column Lineage Analyzer 只在目前頁面記憶體中解析 SQL 與建立血緣結果；不使用 IndexedDB 或 `localStorage`，關閉、重新整理或清除頁面後需重新載入。CSV、JSON、Mermaid、SVG 與 PNG 都是由使用者主動下載的輸出檔。
 - Markdown 卡片簡報工具會將範本與編輯草稿保存在目前瀏覽器的 IndexedDB，主題偏好使用 `localStorage`；「匯出展示檔」產生完全離線的單一 HTML，但編輯介面樣式仍由 CDN 載入 Tailwind CSS。
 - 公文簽／函排版工具不使用 IndexedDB 或 `localStorage`，內容只保留在目前頁面記憶體；輸出為剪貼簿或使用者主動下載的 `.docx` 檔，關閉或重新整理後需重新輸入。
-- 本專案沒有內建後端同步。外部 CDN 只提供部分工具（Agent YAML Maker、甘特圖、銀行信用風險模擬器、Markdown 卡片簡報工具與公文簽／函排版工具）所需的樣式、圖示或函式庫，不代表使用者資料會上傳至本專案伺服器。
+- Palette Lore 色彩故事盤會將收藏的色盤與工作階段（含主題偏好）保存在目前瀏覽器的 IndexedDB（`PaletteLoreDB`）；輸出為複製的 CSS／Tailwind／JSON 代碼。換瀏覽器、使用無痕視窗或清除網站資料後，典藏可能無法取得。
+- 本專案沒有內建後端同步。外部 CDN 只提供部分工具（Agent YAML Maker、甘特圖、銀行信用風險模擬器、Markdown 卡片簡報工具、公文簽／函排版工具與色彩故事盤）所需的樣式、圖示或函式庫，不代表使用者資料會上傳至本專案伺服器。
 - 需要跨電腦或防止瀏覽器資料遺失時，請優先使用工具提供的 JSON、YAML 或 ZIP 匯出功能。
 
 ## 技術棧與離線範圍
@@ -574,19 +729,21 @@ flowchart LR
 - 銀行信用風險與資本適足模擬器：從 CDN 載入 Tailwind CSS、Chart.js、Lucide 圖示與 Google Fonts。
 - Markdown 卡片簡報工具：編輯介面從 CDN 載入 Tailwind CSS；「匯出展示檔」產生的單一 HTML 不含外部依賴。
 - 公文簽／函排版與 Word 匯出：從 CDN 載入 Tailwind CSS 與 docx.js。
+- Palette Lore 色彩故事盤：從 CDN 載入 Tailwind CSS 與 Google Fonts。
 - 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；SQL Column Lineage Analyzer 也不依賴外部 CDN。
 
-Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工具與公文簽／函排版工具若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
+Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工具、公文簽／函排版工具與色彩故事盤若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
 
 ### 瀏覽器資料保存
 
-- Agent YAML Maker 使用 IndexedDB 保存草稿、快照與範本，並以 `localStorage` 記憶主題；甘特圖使用 IndexedDB 保存專案與任務。
+- Agent YAML Maker 使用 IndexedDB（資料庫名稱 `AgentYamlMakerDB`，版本 2）保存草稿、快照與範本，並以 `localStorage` 記憶主題；甘特圖使用 IndexedDB 保存專案與任務。
 - Markdown 卡片簡報工具使用 IndexedDB 保存範本與編輯草稿，並以 `localStorage` 記憶主題偏好。
 - NSFR 優先使用 IndexedDB，無法使用時退回 `localStorage`，再退回目前頁面記憶體。
 - SQL Catalog 將目錄說明寫入使用者選定根目錄的 `sql_catalog.json`，並以 IndexedDB 保存瀏覽器快取與設定。
 - SQL Compare、SQL Formatter 與 NSFR 主題等偏好／選項會使用 `localStorage`。
 - LCR 與信用風險模擬器不會自動保存試算資料；其他未列出的臨時分析內容則依各工具說明於目前頁面處理。
 - 公文簽／函排版工具不使用 IndexedDB 或 `localStorage`，內容只在目前頁面處理，重新整理後需重新輸入。
+- Palette Lore 色彩故事盤使用 IndexedDB（資料庫名稱 `PaletteLoreDB`；object stores：`palettes`、`app_state`）保存典藏色盤與工作階段／主題。
 
 本機處理表示主要計算與檔案操作在瀏覽器端執行，不代表每個入口都能完全離線啟動，也不代表瀏覽器資料會自動同步或備份。重要資料請使用各工具提供的匯出功能另存檔案。
 
@@ -594,7 +751,7 @@ Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工�
 
 ### 開啟後畫面樣式不完整或按鈕沒有作用
 
-確認瀏覽器可以連線到工具引用的 CDN（Agent YAML Maker、甘特圖與銀行信用風險模擬器）；也可改用 `python -m http.server 8080` 後從 `http://localhost:8080/` 開啟。LCR 與 NSFR 工具為純離線、不依賴 CDN，若仍異常，請確認開啟的是對應子資料夾（`lcr-mapping-calc` 或 `nsfr-mapping-calc`）內的入口檔。
+確認瀏覽器可以連線到工具引用的 CDN（Agent YAML Maker、甘特圖與銀行信用風險模擬器）；也可改用 `python -m http.server 8080` 後從 `http://localhost:8080/` 開啟。LCR 與 NSFR 工具為純離線、不依賴 CDN，若仍異常，請確認開啟的是對應子資料夾（`finance/lcr-mapping-calc` 或 `finance/nsfr-mapping-calc`）內的入口檔。
 
 ### 甘特圖或 Agent YAML 的資料不見了
 
@@ -654,7 +811,7 @@ Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工�
 
 ### Card Presenter 開啟後沒有樣式
 
-編輯介面樣式由 CDN 載入 Tailwind CSS，請確認瀏覽器可連線至網路，或改以 `python -m http.server 8080` 後從 `http://localhost:8080/ppt-present/` 開啟。若只是要分享簡報，按「匯出展示檔」取得的單一 HTML 不含外部依賴，可離線開啟。
+編輯介面樣式由 CDN 載入 Tailwind CSS，請確認瀏覽器可連線至網路，或改以 `python -m http.server 8080` 後從 `http://localhost:8080/docs/card-presenter/` 開啟。若只是要分享簡報，按「匯出展示檔」取得的單一 HTML 不含外部依賴，可離線開啟。
 
 ### Card Presenter 的範本或草稿不見了
 
@@ -662,7 +819,7 @@ Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工�
 
 ### DocuFormatter 無法複製或下載 .docx
 
-確認瀏覽器可連線至 CDN（Tailwind CSS 與 docx.js）。「複製純文字」「複製 Word 格式」使用瀏覽器剪貼簿 API，建議透過 `python -m http.server 8080` 後從 `http://localhost:8080/word/` 開啟；在 `file://` 或未授權剪貼簿時可能失敗，可改用「下載 .docx」。
+確認瀏覽器可連線至 CDN（Tailwind CSS 與 docx.js）。「複製純文字」「複製 Word 格式」使用瀏覽器剪貼簿 API，建議透過 `python -m http.server 8080` 後從 `http://localhost:8080/docs/docuformatter/` 開啟；在 `file://` 或未授權剪貼簿時可能失敗，可改用「下載 .docx」。
 
 ### DocuFormatter 的排版結果與預期不同
 
@@ -676,4 +833,4 @@ Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工�
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟十二個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
+若修改網頁程式，請分別在現代瀏覽器開啟十三個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。

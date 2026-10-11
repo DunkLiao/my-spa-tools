@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Palette Lore - 色彩故事盤 (IndexedDB 典藏版)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      transition: background-color 0.25s ease, color 0.25s ease;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(100, 116, 139, 0.15);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.4);
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.7);
+    }
+    .swatch-card {
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease;
+    }
+    .swatch-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 flex flex-col items-center bg-slate-50 text-slate-800 dark:bg-[#0b0f19] dark:text-[#f1f5f9]">
+  <div class="w-full max-w-6xl flex flex-col gap-6">
+    <!-- Header with Theme Toggle -->
+    <header class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div>
+        <div class="flex items-center gap-3">
+          <span class="text-3xl p-2 bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-500/30 rounded-xl shadow-sm">🎨</span>
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+              Palette Lore
+              <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 font-mono font-medium">IndexedDB Ready</span>
+            </h1>
+            <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400">意境色彩演算器 · 全客戶端高效資料庫永續儲存</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 w-full md:w-auto">
+        <!-- Theme Toggle Button -->
+        <button id="themeToggleBtn" class="inline-flex items-center justify-center p-2.5 rounded-xl bg-white dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-medium text-sm transition shadow-sm" title="切換深淺模式">
+          <span id="themeIconSun" class="flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+            <span class="text-xs">淺色</span>
+          </span>
+          <span id="themeIconMoon" class="hidden items-center gap-1.5">
+            <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+            <span class="text-xs">深色</span>
+          </span>
+        </button>
+
+        <button id="openLibraryBtn" class="flex-1 md:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800/90 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-medium text-sm transition shadow-sm">
+          <svg class="w-4 h-4 text-indigo-500 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          資料庫典藏庫 (<span id="savedCountBadge" class="font-mono text-emerald-600 dark:text-emerald-400">0</span>)
+        </button>
+        <button id="saveToDbBtn" class="flex-1 md:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm shadow-md shadow-indigo-600/20 transition">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+          收藏當前色盤
+        </button>
+      </div>
+    </header>
+
+    <section class="bg-white dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800/80 p-4 rounded-2xl flex flex-col md:flex-row items-center gap-3 shadow-sm dark:shadow-xl backdrop-blur-sm">
+      <div class="relative w-full flex-1">
+        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 dark:text-slate-500 text-sm">✨</span>
+        <input
+          type="text"
+          id="loreInput"
+          placeholder="輸入抽象意境（例如：雨後青苔、賽博初雪、落日鹽湖、京都枯山水）..."
+          value="北歐晨霧"
+          class="w-full bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 focus:border-indigo-500 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 text-sm rounded-xl pl-10 pr-4 py-2.5 focus:outline-none transition font-sans shadow-inner"
+        >
+      </div>
+      <div class="flex items-center gap-2 w-full md:w-auto">
+        <button id="generateBtn" class="flex-1 md:flex-initial px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm rounded-xl transition shadow-md shadow-indigo-600/20 whitespace-nowrap">
+          生成色譜 (Space)
+        </button>
+        <button id="randomPromptBtn" class="px-3.5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-sm rounded-xl transition font-medium whitespace-nowrap" title="隨機切換預設意境">
+          🎲 靈感
+        </button>
+      </div>
+    </section>
+
+    <section>
+      <div class="flex items-center justify-between mb-2 px-1">
+        <div class="flex items-center gap-2">
+          <span class="text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 font-semibold">當前意境色彩槽</span>
+          <span id="paletteSourceBadge" class="text-xs font-mono px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-indigo-700 dark:text-indigo-300 border border-slate-300 dark:border-slate-700">北歐晨霧</span>
+        </div>
+        <p class="text-xs text-slate-500">點擊色塊複製 Hex · 點擊調色盤圖示自訂 · 支援鎖定</p>
+      </div>
+
+      <div id="paletteStrip" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+        <!-- Palette swatches will be dynamically injected here -->
+      </div>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <!-- Left Column: UI Real-world Sandbox -->
+      <section class="lg:col-span-6 bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 flex flex-col gap-4 shadow-sm dark:shadow-xl">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span>
+            <h2 class="text-sm font-bold text-slate-800 dark:text-slate-200">實境 UI 元件模擬</h2>
+          </div>
+          <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">Dynamic Surface Sync</span>
+        </div>
+
+        <!-- Sandbox Preview Frame -->
+        <div id="previewSandbox" class="p-5 rounded-xl transition-all duration-300 min-h-[260px] flex flex-col justify-between border">
+          <div class="flex items-center justify-between">
+            <span id="previewTag" class="text-xs font-bold px-2.5 py-1 rounded-md tracking-wider uppercase font-mono">FEATURED COMPONENT</span>
+            <div class="flex items-center gap-1.5 opacity-70">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-400/80 inline-block"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-yellow-400/80 inline-block"></span>
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400/80 inline-block"></span>
+            </div>
+          </div>
+
+          <div id="previewCard" class="my-4 p-4 rounded-xl border transition-all duration-300 flex flex-col gap-2">
+            <h3 id="previewTitle" class="font-bold text-lg leading-snug">探索自然光影與數位排版的極限融合</h3>
+            <p id="previewText" class="text-xs md:text-sm opacity-85 leading-relaxed">
+              當前調色盤的基底色、卡片表面層與強調點綴色已實時注入此虛擬 DOM。檢測在不同光度環境中的字體閱讀舒適度。
+            </p>
+            <div class="flex items-center gap-3 mt-3 pt-2 border-t border-white/10">
+              <button id="previewBtn" class="text-xs font-bold px-4 py-2 rounded-lg transition-transform active:scale-95 shadow">
+                開始體驗流程
+              </button>
+              <button id="previewGhostBtn" class="text-xs font-medium px-3 py-2 rounded-lg border transition">
+                檢視技術規格
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] opacity-70 font-mono">
+            <span>ROLE SYNC: 5 CHANNELS</span>
+            <span>WCAG CHECKED</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right Column: Contrast Matrix & Exporter -->
+      <section class="lg:col-span-6 flex flex-col gap-6">
+        <!-- Contrast Matrix -->
+        <div class="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm dark:shadow-xl">
+          <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800/80 pb-3 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+              <h2 class="text-sm font-bold text-slate-800 dark:text-slate-200">WCAG 2.1 無障礙對比評測</h2>
+            </div>
+            <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">A11y Standard</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead>
+                <tr class="text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 font-mono text-[11px]">
+                  <th class="py-2 px-1">測試配對組合</th>
+                  <th class="py-2 px-1">對比比例</th>
+                  <th class="py-2 px-1">AA 級 (3.0+)</th>
+                  <th class="py-2 px-1">AAA 級 (7.0+)</th>
+                </tr>
+              </thead>
+              <tbody id="contrastTbody" class="divide-y divide-slate-200 dark:divide-slate-800/60 font-sans">
+                <!-- Dynamically rendered rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Export Center -->
+        <div class="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-5 shadow-sm dark:shadow-xl">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+              工程端格式匯出
+            </h2>
+            <div class="flex items-center gap-1.5" id="exportTabs">
+              <button data-type="css" class="export-tab px-2.5 py-1 text-xs rounded-lg font-mono bg-indigo-600 text-white font-medium">CSS</button>
+              <button data-type="tailwind" class="export-tab px-2.5 py-1 text-xs rounded-lg font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200">Tailwind</button>
+              <button data-type="json" class="export-tab px-2.5 py-1 text-xs rounded-lg font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200">JSON</button>
+            </div>
+          </div>
+
+          <div class="relative">
+            <textarea id="exportOutput" readonly class="w-full h-24 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs font-mono text-cyan-600 dark:text-cyan-300 resize-none focus:outline-none custom-scrollbar leading-relaxed"></textarea>
+            <button id="copyCodeBtn" class="absolute bottom-2.5 right-2.5 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium rounded-lg shadow-sm flex items-center gap-1.5 transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+              複製代碼
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <div id="libraryModal" class="fixed inset-0 z-50 bg-black/60 dark:bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-300">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden transform scale-95 transition-all duration-300" id="libraryModalCard">
+      <!-- Modal Header -->
+      <div class="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/90">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span>🗄️</span> IndexedDB 典藏色彩庫
+          </h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">永久保存在本瀏覽器 IndexedDB 資料庫中，無效期限制</p>
+        </div>
+        <button id="closeLibraryBtn" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+      </div>
+
+      <!-- Search & Bulk action -->
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between gap-3">
+        <div class="relative flex-1">
+          <input type="text" id="dbSearchInput" placeholder="搜尋已收藏的意境名稱..." class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+        </div>
+        <button id="clearAllDbBtn" class="text-xs px-3 py-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg border border-rose-200 dark:border-rose-900/40 transition">
+          清空典藏
+        </button>
+      </div>
+
+      <!-- Saved List -->
+      <div id="savedListContainer" class="p-4 overflow-y-auto custom-scrollbar flex-1 flex flex-col gap-3 min-h-[250px] bg-white dark:bg-transparent">
+        <!-- Cards injected dynamically -->
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-center text-xs text-slate-500">
+        Database: <span class="font-mono text-slate-600 dark:text-slate-400">PaletteLoreDB</span> · Object Store: <span class="font-mono text-slate-600 dark:text-slate-400">palettes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast notification banner -->
+  <div id="toastNotification" class="fixed bottom-6 right-6 z-50 bg-slate-900 dark:bg-slate-800 border border-slate-700 text-slate-100 px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs transform translate-y-8 opacity-0 pointer-events-none transition-all duration-300">
+    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+    <span id="toastMsg" class="font-medium">通知訊息</span>
+  </div>
+
+  <!-- Confirmation Modal for Delete -->
+  <div id="confirmModal" class="fixed inset-0 z-50 bg-black/60 dark:bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-200">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-6 rounded-2xl max-w-sm w-full shadow-2xl flex flex-col gap-4">
+      <h4 class="font-bold text-slate-900 dark:text-white text-base" id="confirmTitle">確認操作</h4>
+      <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed" id="confirmDesc">此操作將永久移除本筆色彩紀錄。</p>
+      <div class="flex items-center justify-end gap-2.5 mt-2">
+        <button id="confirmCancelBtn" class="px-3.5 py-1.5 rounded-lg text-xs bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-medium">取消</button>
+        <button id="confirmOkBtn" class="px-3.5 py-1.5 rounded-lg text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold">確認刪除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden Native Color Input for fine tuning -->
+  <input type="color" id="hiddenColorPicker" class="sr-only">
+
+  <script>
+    const DB_NAME = 'PaletteLoreDB';
+    const DB_VERSION = 1;
+    const STORE_PALETTES = 'palettes';
+    const STORE_STATE = 'app_state';
+
+    let dbInstance = null;
+    let currentTheme = 'light'; // Default to light mode
+
+    // Presets with chromatic formulas
+    const LORE_PRESETS = [
+      { title: "北歐晨霧", baseH: 205, sat: 20, lum: [12, 20, 52, 70, 85] },
+      { title: "午後暴雨", baseH: 220, sat: 35, lum: [10, 18, 48, 65, 88] },
+      { title: "荒漠霓虹", baseH: 32, sat: 75, lum: [14, 22, 55, 68, 86] },
+      { title: "廢棄溫室", baseH: 145, sat: 38, lum: [11, 19, 50, 68, 84] },
+      { title: "黑膠爵士", baseH: 28, sat: 45, lum: [13, 21, 52, 66, 88] },
+      { title: "賽博深網", baseH: 275, sat: 80, lum: [9, 17, 56, 72, 85] },
+      { title: "落日鹽湖", baseH: 345, sat: 65, lum: [14, 23, 58, 75, 90] },
+      { title: "深海鯨落", baseH: 195, sat: 55, lum: [8, 15, 45, 64, 82] },
+      { title: "京都苔庭", baseH: 95, sat: 30, lum: [12, 20, 48, 65, 84] }
+    ];
+
+    const ROLE_METAS = [
+      { id: "bg", name: "Deep Background", label: "基底背景", desc: "主體底色" },
+      { id: "surface", name: "Elevated Surface", label: "卡片邊界", desc: "容器與卡片" },
+      { id: "primary", name: "Brand Primary", label: "主視覺色", desc: "品牌核心" },
+      { id: "secondary", name: "Secondary Muted", label: "輔助過渡", desc: "標籤與線條" },
+      { id: "accent", name: "Dynamic Accent", label: "點睛強調", desc: "CTA動作按鈕" }
+    ];
+
+    // Current State
+    let currentLore = "北歐晨霧";
+    let currentPalette = [
+      { hex: "#0f172a", locked: false },
+      { hex: "#1e293b", locked: false },
+      { hex: "#38bdf8", locked: false },
+      { hex: "#818cf8", locked: false },
+      { hex: "#f43f5e", locked: false }
+    ];
+    let currentExportType = "css";
+    let activeColorPickerIndex = null;
+    let pendingConfirmAction = null;
+
+    function initIndexedDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_PALETTES)) {
+            const paletteStore = db.createObjectStore(STORE_PALETTES, { keyPath: 'id', autoIncrement: true });
+            paletteStore.createIndex('timestamp', 'timestamp', { unique: false });
+            paletteStore.createIndex('title', 'title', { unique: false });
+          }
+          if (!db.objectStoreNames.contains(STORE_STATE)) {
+            db.createObjectStore(STORE_STATE, { keyPath: 'key' });
+          }
+        };
+
+        request.onsuccess = (event) => {
+          dbInstance = event.target.result;
+          resolve(dbInstance);
+        };
+
+        request.onerror = (event) => {
+          console.error("IndexedDB Open Error:", event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    function dbSavePalette(paletteData) {
+      return new Promise((resolve, reject) => {
+        if (!dbInstance) return reject("Database not initialized");
+        const tx = dbInstance.transaction(STORE_PALETTES, 'readwrite');
+        const store = tx.objectStore(STORE_PALETTES);
+        const record = {
+          ...paletteData,
+          timestamp: Date.now()
+        };
+        const request = store.add(record);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    function dbGetAllPalettes() {
+      return new Promise((resolve, reject) => {
+        if (!dbInstance) return reject("Database not initialized");
+        const tx = dbInstance.transaction(STORE_PALETTES, 'readonly');
+        const store = tx.objectStore(STORE_PALETTES);
+        const index = store.index('timestamp');
+        const request = index.getAll();
+        request.onsuccess = () => {
+          const results = (request.result || []).reverse();
+          resolve(results);
+        };
+        request.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    function dbDeletePalette(id) {
+      return new Promise((resolve, reject) => {
+        if (!dbInstance) return reject("Database not initialized");
+        const tx = dbInstance.transaction(STORE_PALETTES, 'readwrite');
+        const store = tx.objectStore(STORE_PALETTES);
+        const request = store.delete(Number(id));
+        request.onsuccess = () => resolve(true);
+        request.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    function dbClearAllPalettes() {
+      return new Promise((resolve, reject) => {
+        if (!dbInstance) return reject("Database not initialized");
+        const tx = dbInstance.transaction(STORE_PALETTES, 'readwrite');
+        const store = tx.objectStore(STORE_PALETTES);
+        const request = store.clear();
+        request.onsuccess = () => resolve(true);
+        request.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    function dbSaveCurrentSessionState() {
+      if (!dbInstance) return;
+      try {
+        const tx = dbInstance.transaction(STORE_STATE, 'readwrite');
+        const store = tx.objectStore(STORE_STATE);
+        store.put({
+          key: 'session_palette',
+          lore: currentLore,
+          palette: currentPalette,
+          theme: currentTheme,
+          updatedAt: Date.now()
+        });
+      } catch (err) {
+        console.warn("Could not save session state:", err);
+      }
+    }
+
+    function dbLoadCurrentSessionState() {
+      return new Promise((resolve) => {
+        if (!dbInstance) return resolve(null);
+        try {
+          const tx = dbInstance.transaction(STORE_STATE, 'readonly');
+          const store = tx.objectStore(STORE_STATE);
+          const request = store.get('session_palette');
+          request.onsuccess = () => resolve(request.result || null);
+          request.onerror = () => resolve(null);
+        } catch {
+          resolve(null);
+        }
+      });
+    }
+
+    function applyTheme(theme) {
+      currentTheme = theme;
+      const htmlEl = document.documentElement;
+      const sunIcon = document.getElementById("themeIconSun");
+      const moonIcon = document.getElementById("themeIconMoon");
+
+      if (theme === 'dark') {
+        htmlEl.classList.add('dark');
+        htmlEl.classList.remove('light');
+        if (sunIcon && moonIcon) {
+          sunIcon.classList.add('hidden');
+          sunIcon.classList.remove('flex');
+          moonIcon.classList.remove('hidden');
+          moonIcon.classList.add('flex');
+        }
+      } else {
+        htmlEl.classList.remove('dark');
+        htmlEl.classList.add('light');
+        if (sunIcon && moonIcon) {
+          sunIcon.classList.remove('hidden');
+          sunIcon.classList.add('flex');
+          moonIcon.classList.add('hidden');
+          moonIcon.classList.remove('flex');
+        }
+      }
+    }
+
+    function toggleTheme() {
+      const nextTheme = currentTheme === 'light' ? 'dark' : 'light';
+      applyTheme(nextTheme);
+      dbSaveCurrentSessionState();
+      showToast(`已切換為${nextTheme === 'dark' ? '深色' : '淺色'}模式`);
+    }
+
+    function hashString(str) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return Math.abs(hash);
+    }
+
+    function hslToHex(h, s, l) {
+      h = (h % 360 + 360) % 360;
+      s = Math.max(0, Math.min(100, s)) / 100;
+      l = Math.max(0, Math.min(100, l)) / 100;
+      const a = s * Math.min(l, 1 - l);
+      const f = n => {
+        const k = (n + h / 30) % 12;
+        const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+        return Math.round(255 * color).toString(16).padStart(2, '0');
+      };
+      return `#${f(0)}${f(8)}${f(4)}`.toLowerCase();
+    }
+
+    function hexToRgb(hex) {
+      hex = hex.replace('#', '');
+      if (hex.length === 3) {
+        hex = hex.split('').map(c => c + c).join('');
+      }
+      const num = parseInt(hex, 16);
+      return {
+        r: (num >> 16) & 255,
+        g: (num >> 8) & 255,
+        b: num & 255
+      };
+    }
+
+    function getRelativeLuminance(r, g, b) {
+      const parts = [r, g, b].map(val => {
+        val /= 255;
+        return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+      });
+      return parts[0] * 0.2126 + parts[1] * 0.7152 + parts[2] * 0.0722;
+    }
+
+    function getContrastRatio(hexA, hexB) {
+      const rgbA = hexToRgb(hexA);
+      const rgbB = hexToRgb(hexB);
+      const lumA = getRelativeLuminance(rgbA.r, rgbA.g, rgbA.b);
+      const lumB = getRelativeLuminance(rgbB.r, rgbB.g, rgbB.b);
+      const max = Math.max(lumA, lumB);
+      const min = Math.min(lumA, lumB);
+      return ((max + 0.05) / (min + 0.05)).toFixed(2);
+    }
+
+    function getIdealTextColor(bgHex) {
+      const rgb = hexToRgb(bgHex);
+      const lum = getRelativeLuminance(rgb.r, rgb.g, rgb.b);
+      return lum > 0.38 ? "#090d16" : "#f8fafc";
+    }
+
+    function generateLorePalette(promptText) {
+      promptText = (promptText || "自然光影").trim();
+      currentLore = promptText;
+      document.getElementById('paletteSourceBadge').textContent = currentLore;
+
+      const preset = LORE_PRESETS.find(p => p.title === promptText);
+      let baseH, baseS;
+
+      if (preset) {
+        baseH = preset.baseH;
+        baseS = preset.sat;
+      } else {
+        const hash = hashString(promptText);
+        baseH = hash % 360;
+        baseS = 30 + (hash % 45);
+      }
+
+      const roleConfigs = [
+        { hOffset: 0, s: Math.max(15, baseS * 0.4), l: 10 },
+        { hOffset: 4, s: Math.max(20, baseS * 0.5), l: 18 },
+        { hOffset: 0, s: baseS, l: 56 },
+        { hOffset: 32, s: Math.min(95, baseS + 18), l: 68 },
+        { hOffset: 175, s: Math.min(96, baseS + 25), l: 62 }
+      ];
+
+      currentPalette.forEach((slot, idx) => {
+        if (!slot.locked) {
+          const cfg = roleConfigs[idx];
+          const jitterH = Math.floor(Math.random() * 8) - 4;
+          const jitterL = Math.floor(Math.random() * 6) - 3;
+          slot.hex = hslToHex(
+            baseH + cfg.hOffset + jitterH,
+            cfg.s,
+            Math.min(Math.max(cfg.l + jitterL, 7), 95)
+          );
+        }
+      });
+
+      renderApp();
+      dbSaveCurrentSessionState();
+    }
+
+    function renderApp() {
+      renderPaletteStrip();
+      renderSandbox();
+      renderContrastTable();
+      renderExportOutput();
+    }
+
+    function renderPaletteStrip() {
+      const container = document.getElementById("paletteStrip");
+      container.innerHTML = "";
+
+      currentPalette.forEach((item, index) => {
+        const role = ROLE_METAS[index];
+        const textColor = getIdealTextColor(item.hex);
+        const isLocked = item.locked;
+
+        const card = document.createElement("div");
+        card.className = "swatch-card rounded-2xl p-4 flex flex-col justify-between h-48 border border-black/10 dark:border-white/10 relative overflow-hidden shadow-sm hover:shadow-lg cursor-pointer select-none group";
+        card.style.backgroundColor = item.hex;
+        card.style.color = textColor;
+
+        card.innerHTML = `
+          <div class="flex items-start justify-between z-10">
+            <div>
+              <span class="text-[10px] font-bold tracking-widest uppercase opacity-80 px-2 py-0.5 rounded-full bg-black/20 font-mono">${role.label}</span>
+              <p class="text-xs font-semibold opacity-90 mt-1">${role.name}</p>
+            </div>
+            <button class="lock-toggle-btn p-1.5 rounded-lg bg-black/25 hover:bg-black/40 text-current transition backdrop-blur-sm" title="${isLocked ? '解鎖色彩' : '鎖定色彩'}">
+              ${isLocked
+                ? '<svg class="w-4 h-4 text-amber-300" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>'
+                : '<svg class="w-4 h-4 opacity-70" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z"></path></svg>'
+              }
+            </button>
+          </div>
+
+          <div class="z-10 flex items-end justify-between">
+            <div>
+              <span class="text-lg font-mono font-bold tracking-wider">${item.hex.toUpperCase()}</span>
+              <p class="text-[10px] opacity-75">${role.desc}</p>
+            </div>
+            <button class="picker-trigger-btn p-1.5 rounded-lg bg-black/20 hover:bg-black/40 text-current transition opacity-80 hover:opacity-100" title="自訂此色彩">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            </button>
+          </div>
+        `;
+
+        const lockBtn = card.querySelector(".lock-toggle-btn");
+        lockBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          item.locked = !item.locked;
+          renderApp();
+          dbSaveCurrentSessionState();
+        });
+
+        const pickerBtn = card.querySelector(".picker-trigger-btn");
+        pickerBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          activeColorPickerIndex = index;
+          const nativePicker = document.getElementById("hiddenColorPicker");
+          nativePicker.value = item.hex;
+          nativePicker.click();
+        });
+
+        card.addEventListener("click", () => {
+          copyClipboardFallback(item.hex.toUpperCase());
+          showToast(`已複製色碼：${item.hex.toUpperCase()}`);
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    function renderSandbox() {
+      const [bgHex, surfaceHex, primaryHex, secondaryHex, accentHex] = currentPalette.map(p => p.hex);
+
+      const sandbox = document.getElementById("previewSandbox");
+      const card = document.getElementById("previewCard");
+      const tag = document.getElementById("previewTag");
+      const title = document.getElementById("previewTitle");
+      const text = document.getElementById("previewText");
+      const btn = document.getElementById("previewBtn");
+      const ghostBtn = document.getElementById("previewGhostBtn");
+
+      sandbox.style.backgroundColor = bgHex;
+      sandbox.style.borderColor = `${secondaryHex}33`;
+
+      card.style.backgroundColor = surfaceHex;
+      card.style.borderColor = `${primaryHex}30`;
+      card.style.boxShadow = `0 10px 25px -5px ${bgHex}cc`;
+
+      const surfaceTextColor = getIdealTextColor(surfaceHex);
+      title.style.color = surfaceTextColor;
+      text.style.color = surfaceTextColor;
+
+      tag.style.backgroundColor = `${primaryHex}20`;
+      tag.style.color = primaryHex;
+      tag.style.borderColor = `${primaryHex}40`;
+
+      btn.style.backgroundColor = accentHex;
+      btn.style.color = getIdealTextColor(accentHex);
+
+      ghostBtn.style.color = surfaceTextColor;
+      ghostBtn.style.borderColor = `${secondaryHex}50`;
+    }
+
+    function renderContrastTable() {
+      const tbody = document.getElementById("contrastTbody");
+      tbody.innerHTML = "";
+
+      const [bgHex, surfaceHex, primaryHex, secondaryHex, accentHex] = currentPalette.map(p => p.hex);
+      const accentText = getIdealTextColor(accentHex);
+      const surfaceText = getIdealTextColor(surfaceHex);
+
+      const pairs = [
+        { label: "CTA 文字 / 強調按鈕底色", fg: accentText, bg: accentHex },
+        { label: "卡片文字 / 表面背景色", fg: surfaceText, bg: surfaceHex },
+        { label: "主視覺強調 / 基底背景", fg: primaryHex, bg: bgHex },
+        { label: "輔助過渡色 / 表面卡片", fg: secondaryHex, bg: surfaceHex }
+      ];
+
+      pairs.forEach(pair => {
+        const ratio = parseFloat(getContrastRatio(pair.fg, pair.bg));
+        const passAA = ratio >= 4.5 || (ratio >= 3.0 ? "大型字" : false);
+        const passAAA = ratio >= 7.0;
+
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-100 dark:hover:bg-slate-800/40 transition";
+        tr.innerHTML = `
+          <td class="py-2.5 px-1 font-medium text-slate-700 dark:text-slate-200">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full border border-slate-300 dark:border-slate-700 shadow-sm" style="background:${pair.fg}"></span>
+              <span class="w-3 h-3 rounded-full border border-slate-300 dark:border-slate-700 shadow-sm" style="background:${pair.bg}"></span>
+              <span>${pair.label}</span>
+            </div>
+          </td>
+          <td class="py-2.5 px-1 font-mono font-bold ${ratio >= 4.5 ? 'text-emerald-600 dark:text-emerald-400' : (ratio >= 3.0 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400')}">
+            ${ratio}:1
+          </td>
+          <td class="py-2.5 px-1">
+            ${passAA === true
+              ? '<span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono text-[10px] font-bold">PASS</span>'
+              : (passAA
+                  ? '<span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono text-[10px] font-bold">LARGE ONLY</span>'
+                  : '<span class="px-2 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-mono text-[10px] font-bold">FAIL</span>'
+                )
+            }
+          </td>
+          <td class="py-2.5 px-1">
+            ${passAAA
+              ? '<span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono text-[10px] font-bold">PASS</span>'
+              : '<span class="px-2 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-mono text-[10px] font-bold">FAIL</span>'
+            }
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderExportOutput() {
+      const output = document.getElementById("exportOutput");
+      const hexes = currentPalette.map(p => p.hex);
+
+      if (currentExportType === "css") {
+        output.value = `/* Palette Lore: ${currentLore} */\n:root {\n  --color-bg:        ${hexes[0]};\n  --color-surface:   ${hexes[1]};\n  --color-primary:   ${hexes[2]};\n  --color-secondary: ${hexes[3]};\n  --color-accent:    ${hexes[4]};\n}`;
+      } else if (currentExportType === "tailwind") {
+        output.value = `// tailwind.config.js - ${currentLore}\nmodule.exports = {\n  theme: {\n    extend: {\n      colors: {\n        lore: {\n          bg: '${hexes[0]}',\n          surface: '${hexes[1]}',\n          primary: '${hexes[2]}',\n          secondary: '${hexes[3]}',\n          accent: '${hexes[4]}',\n        }\n      }\n    }\n  }\n};`;
+      } else if (currentExportType === "json") {
+        output.value = JSON.stringify({
+          lore: currentLore,
+          createdAt: new Date().toISOString(),
+          palette: {
+            background: hexes[0],
+            surface: hexes[1],
+            primary: hexes[2],
+            secondary: hexes[3],
+            accent: hexes[4]
+          }
+        }, null, 2);
+      }
+    }
+
+    async function updateLibraryBadge() {
+      try {
+        const palettes = await dbGetAllPalettes();
+        document.getElementById("savedCountBadge").textContent = palettes.length;
+      } catch (err) {
+        console.error("Badge update error:", err);
+      }
+    }
+
+    async function renderLibraryModalList(searchTerm = "") {
+      const container = document.getElementById("savedListContainer");
+      container.innerHTML = "";
+
+      try {
+        const palettes = await dbGetAllPalettes();
+        const filtered = palettes.filter(item =>
+          item.title.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        if (filtered.length === 0) {
+          container.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12 text-center text-slate-400 dark:text-slate-500">
+              <span class="text-4xl mb-3">📦</span>
+              <p class="text-sm font-medium text-slate-600 dark:text-slate-400">目前尚無符合的收藏色彩</p>
+              <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">點擊上方「收藏當前色盤」將當前意境持久化存入 IndexedDB</p>
+            </div>
+          `;
+          return;
+        }
+
+        filtered.forEach(record => {
+          const dateStr = new Date(record.timestamp).toLocaleString("zh-TW", {
+            month: "numeric",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+          });
+
+          const itemEl = document.createElement("div");
+          itemEl.className = "bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 hover:border-slate-300 dark:hover:border-slate-700 transition";
+
+          itemEl.innerHTML = `
+            <div class="flex flex-col gap-2 flex-1 w-full sm:w-auto">
+              <div class="flex items-center justify-between sm:justify-start gap-2">
+                <span class="font-bold text-sm text-slate-800 dark:text-slate-200">${record.title}</span>
+                <span class="text-[11px] font-mono text-slate-400 dark:text-slate-500">${dateStr}</span>
+              </div>
+              <div class="flex h-5 w-full max-w-xs rounded-md overflow-hidden border border-black/10 dark:border-white/10 shadow-sm">
+                ${record.colors.map(c => `<div class="flex-1 h-full" style="background:${c.hex}" title="${c.hex}"></div>`).join('')}
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2 self-end sm:self-center">
+              <button class="load-btn px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-1 transition shadow">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                套用
+              </button>
+              <button class="del-btn p-1.5 rounded-lg text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition" title="從 IndexedDB 刪除">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+              </button>
+            </div>
+          `;
+
+          itemEl.querySelector(".load-btn").addEventListener("click", () => {
+            currentLore = record.title;
+            document.getElementById("loreInput").value = record.title;
+            currentPalette = record.colors.map(c => ({ hex: c.hex, locked: false }));
+            renderApp();
+            dbSaveCurrentSessionState();
+            closeLibraryModal();
+            showToast(`已自 IndexedDB 載入：${record.title}`);
+          });
+
+          itemEl.querySelector(".del-btn").addEventListener("click", () => {
+            triggerConfirm(`確定刪除「${record.title}」？`, "此操作將永久自 IndexedDB 移除該色盤，無法復原。", async () => {
+              await dbDeletePalette(record.id);
+              await updateLibraryBadge();
+              renderLibraryModalList(document.getElementById("dbSearchInput").value);
+              showToast("已從資料庫移除色盤");
+            });
+          });
+
+          container.appendChild(itemEl);
+        });
+      } catch (err) {
+        console.error("Library render error:", err);
+      }
+    }
+
+    function openLibraryModal() {
+      const modal = document.getElementById("libraryModal");
+      const card = document.getElementById("libraryModalCard");
+      modal.classList.remove("opacity-0", "pointer-events-none");
+      card.classList.remove("scale-95");
+      card.classList.add("scale-100");
+      renderLibraryModalList();
+    }
+
+    function closeLibraryModal() {
+      const modal = document.getElementById("libraryModal");
+      const card = document.getElementById("libraryModalCard");
+      modal.classList.add("opacity-0", "pointer-events-none");
+      card.classList.remove("scale-100");
+      card.classList.add("scale-95");
+    }
+
+    function triggerConfirm(title, desc, onConfirm) {
+      const modal = document.getElementById("confirmModal");
+      document.getElementById("confirmTitle").textContent = title;
+      document.getElementById("confirmDesc").textContent = desc;
+      pendingConfirmAction = onConfirm;
+      modal.classList.remove("opacity-0", "pointer-events-none");
+    }
+
+    function closeConfirmModal() {
+      const modal = document.getElementById("confirmModal");
+      modal.classList.add("opacity-0", "pointer-events-none");
+      pendingConfirmAction = null;
+    }
+
+    document.getElementById("confirmCancelBtn").addEventListener("click", closeConfirmModal);
+    document.getElementById("confirmOkBtn").addEventListener("click", async () => {
+      if (typeof pendingConfirmAction === "function") {
+        await pendingConfirmAction();
+      }
+      closeConfirmModal();
+    });
+
+    function showToast(message) {
+      const toast = document.getElementById("toastNotification");
+      const msg = document.getElementById("toastMsg");
+      msg.textContent = message;
+      toast.classList.remove("opacity-0", "translate-y-8", "pointer-events-none");
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => {
+        toast.classList.add("opacity-0", "translate-y-8", "pointer-events-none");
+      }, 2200);
+    }
+
+    function copyClipboardFallback(text) {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand("copy");
+      } catch (e) {
+        console.warn("Clipboard fallback failed", e);
+      }
+      document.body.removeChild(textarea);
+    }
+
+    function attachEventListeners() {
+      // Theme toggle trigger
+      document.getElementById("themeToggleBtn").addEventListener("click", toggleTheme);
+
+      // Prompt Generation Trigger
+      document.getElementById("generateBtn").addEventListener("click", () => {
+        generateLorePalette(document.getElementById("loreInput").value);
+      });
+
+      document.getElementById("loreInput").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          generateLorePalette(e.target.value);
+        }
+      });
+
+      document.getElementById("randomPromptBtn").addEventListener("click", () => {
+        const randItem = LORE_PRESETS[Math.floor(Math.random() * LORE_PRESETS.length)];
+        document.getElementById("loreInput").value = randItem.title;
+        generateLorePalette(randItem.title);
+      });
+
+      document.getElementById("saveToDbBtn").addEventListener("click", async () => {
+        try {
+          const payload = {
+            title: currentLore || "未命名意境",
+            colors: currentPalette.map(p => ({ hex: p.hex }))
+          };
+          await dbSavePalette(payload);
+          await updateLibraryBadge();
+          showToast(`已成功保存「${payload.title}」至 IndexedDB！`);
+        } catch (err) {
+          console.error("Save error:", err);
+          showToast("儲存至 IndexedDB 失敗");
+        }
+      });
+
+      document.getElementById("openLibraryBtn").addEventListener("click", openLibraryModal);
+      document.getElementById("closeLibraryBtn").addEventListener("click", closeLibraryModal);
+
+      document.getElementById("dbSearchInput").addEventListener("input", (e) => {
+        renderLibraryModalList(e.target.value);
+      });
+
+      document.getElementById("clearAllDbBtn").addEventListener("click", () => {
+        triggerConfirm("清空所有收藏？", "此操作將刪除 IndexedDB 中的所有色彩紀錄，無法復原。", async () => {
+          await dbClearAllPalettes();
+          await updateLibraryBadge();
+          renderLibraryModalList();
+          showToast("已清空 IndexedDB 色彩庫");
+        });
+      });
+
+      document.querySelectorAll(".export-tab").forEach(tab => {
+        tab.addEventListener("click", (e) => {
+          document.querySelectorAll(".export-tab").forEach(t => {
+            t.className = "export-tab px-2.5 py-1 text-xs rounded-lg font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200";
+          });
+          e.target.className = "export-tab px-2.5 py-1 text-xs rounded-lg font-mono bg-indigo-600 text-white font-medium";
+          currentExportType = e.target.dataset.type;
+          renderExportOutput();
+        });
+      });
+
+      document.getElementById("copyCodeBtn").addEventListener("click", () => {
+        const code = document.getElementById("exportOutput").value;
+        copyClipboardFallback(code);
+        showToast("已複製工程代碼至剪貼簿！");
+      });
+
+      document.getElementById("hiddenColorPicker").addEventListener("input", (e) => {
+        if (activeColorPickerIndex !== null && currentPalette[activeColorPickerIndex]) {
+          currentPalette[activeColorPickerIndex].hex = e.target.value.toLowerCase();
+          renderApp();
+          dbSaveCurrentSessionState();
+        }
+      });
+
+      window.addEventListener("keydown", (e) => {
+        if (e.code === "Space" && e.target.tagName !== "INPUT" && e.target.tagName !== "TEXTAREA") {
+          e.preventDefault();
+          generateLorePalette(document.getElementById("loreInput").value);
+        }
+      });
+    }
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      attachEventListeners();
+
+      try {
+        await initIndexedDB();
+        await updateLibraryBadge();
+
+        const savedSession = await dbLoadCurrentSessionState();
+        if (savedSession) {
+          if (savedSession.theme) {
+            applyTheme(savedSession.theme);
+          } else {
+            applyTheme('light');
+          }
+
+          if (Array.isArray(savedSession.palette) && savedSession.palette.length === 5) {
+            currentLore = savedSession.lore || "北歐晨霧";
+            document.getElementById("loreInput").value = currentLore;
+            currentPalette = savedSession.palette;
+            document.getElementById('paletteSourceBadge').textContent = currentLore;
+            renderApp();
+            return;
+          }
+        } else {
+          applyTheme('light');
+        }
+      } catch (err) {
+        console.warn("IndexedDB initialization error, fallback to memory mode:", err);
+        applyTheme('light');
+      }
+
+      generateLorePalette("北歐晨霧");
+    });
+  </script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
