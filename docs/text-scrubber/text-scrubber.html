@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>剪貼簿洗滌器 (Text Scrubber) - 純文字智慧淨化與脫敏工具</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Google Fonts: Inter & Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans TC', 'sans-serif'],
+            mono: ['Fira Code', 'monospace']
+          },
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 自訂滾動條 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #475569;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .tooltip {
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.15s ease-in-out;
+    }
+    .has-tooltip:hover .tooltip {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body class="h-full bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 font-sans flex flex-col antialiased selection:bg-indigo-500 selection:text-white transition-colors duration-200">
+  
+  <!-- 頂部導航欄 -->
+  <header class="border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur sticky top-0 z-30 px-4 lg:px-8 py-3 flex items-center justify-between shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+        <i class="ph-bold ph-broom text-xl"></i>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base lg:text-lg font-bold tracking-tight text-slate-900 dark:text-white">剪貼簿洗滌器</h1>
+          <span class="text-xs bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-medium px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">純前端離線運行</span>
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400">PDF 斷行修復・隱形字元滌清・繁中個資一鍵脫敏</p>
+      </div>
+    </div>
+
+    <!-- 頂部操作群 -->
+    <div class="flex items-center gap-2">
+      <!-- 快速範本按鈕 -->
+      <button onclick="loadSampleText()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-slate-700/60 rounded-lg transition-colors border border-slate-200 dark:border-slate-700">
+        <i class="ph ph-file-text text-sm"></i>
+        <span>載入混亂範本</span>
+      </button>
+
+      <!-- 暗黑模式切換 -->
+      <button id="themeToggleBtn" onclick="toggleTheme()" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors" title="切換深淺外觀">
+        <i id="themeIcon" class="ph-bold ph-moon"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- 情境預設情境按鈕列 -->
+  <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 lg:px-8 py-2.5">
+    <div class="flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
+      <span class="text-slate-400 dark:text-slate-500 font-medium whitespace-nowrap flex items-center gap-1">
+        <i class="ph-bold ph-magic-wand"></i> 一鍵情境套用:
+      </span>
+      <button onclick="applyPreset('pdf')" class="px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 font-medium whitespace-nowrap transition-colors">
+        📄 PDF 論文/報告接合
+      </button>
+      <button onclick="applyPreset('privacy')" class="px-2.5 py-1 rounded-md bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 font-medium whitespace-nowrap transition-colors">
+        🛡️ AI 提詞個資嚴格脫敏
+      </button>
+      <button onclick="applyPreset('clean')" class="px-2.5 py-1 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 font-medium whitespace-nowrap transition-colors">
+        ✨ 格式純粹化 (去空格符號)
+      </button>
+      <button onclick="applyPreset('markdown')" class="px-2.5 py-1 rounded-md bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 font-medium whitespace-nowrap transition-colors">
+        📝 標準清單修復
+      </button>
+    </div>
+  </div>
+
+  <!-- 主工作區 (左原稿、中清洗開關、右洗滌輸出) -->
+  <main class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+
+    <!-- 左側：原始文字輸入區 -->
+    <section class="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 min-h-[300px]">
+      <!-- 區塊標題與統計 -->
+      <div class="px-4 py-2.5 bg-slate-100/70 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+            <i class="ph-bold ph-pencil-simple-slash text-slate-400"></i> 原文字串 (Dirty Source)
+          </span>
+          <span id="sourceStats" class="text-slate-500 font-mono">0 字 / 0 行</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button onclick="pasteClipboard()" class="hover:text-indigo-600 dark:hover:text-indigo-400 text-slate-600 dark:text-slate-300 px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm flex items-center gap-1 transition-colors">
+            <i class="ph ph-clipboard-text"></i> 從剪貼簿貼上
+          </button>
+          <button onclick="clearSource()" class="hover:text-rose-600 dark:hover:text-rose-400 text-slate-600 dark:text-slate-300 px-2 py-1 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm transition-colors" title="清空全部">
+            <i class="ph ph-trash"></i>
+          </button>
+        </div>
+      </div>
+      <!-- 輸入框 -->
+      <div class="flex-1 relative p-3">
+        <textarea id="sourceText" 
+                  class="w-full h-full p-3 font-mono text-xs sm:text-sm bg-transparent resize-none outline-none text-slate-800 dark:text-slate-200 placeholder-slate-400 leading-relaxed overflow-y-auto" 
+                  placeholder="在此貼上任何雜亂文字（如 PDF 複製出的碎片、含敏感個資的公文、夾帶零寬空格的文本）..."
+                  spellcheck="false"></textarea>
+      </div>
+    </section>
+
+    <!-- 中間：洗滌規則面板 (在寬螢幕下為抽屜欄，小螢幕下可摺疊) -->
+    <aside class="w-full lg:w-72 border-b lg:border-b-0 lg:border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col flex-shrink-0">
+      <div class="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+          <i class="ph-bold ph-sliders"></i> 洗滌配置規則
+        </span>
+        <button onclick="toggleAllRules(true)" class="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline">全部開啟</button>
+      </div>
+
+      <!-- 規則勾選列表 -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
+        
+        <!-- 類別 1: 斷行修復 -->
+        <div>
+          <p class="font-semibold text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1">
+            <i class="ph ph-paragraph"></i> 斷行與空格優化
+          </p>
+          <div class="space-y-2 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleFixCjkBreaks" checked class="mt-0.5 rounded text-indigo-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">縫合中文突兀斷行</div>
+                <div class="text-[11px] text-slate-400">修復 PDF 將連續漢字斷行的異常</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleTrimLines" checked class="mt-0.5 rounded text-indigo-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">消除行首與行尾空白</div>
+                <div class="text-[11px] text-slate-400">刪除每行前後無效空格與 Tab</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleCollapseBlankLines" checked class="mt-0.5 rounded text-indigo-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">壓縮連續空行</div>
+                <div class="text-[11px] text-slate-400">將多重空行收斂為單一空行</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleFixHyphens" checked class="mt-0.5 rounded text-indigo-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">英文連字號接合</div>
+                <div class="text-[11px] text-slate-400">如 commu- + nication 拼接</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 類別 2: 符號標準化 -->
+        <div>
+          <p class="font-semibold text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1">
+            <i class="ph ph-text-aa"></i> 字元與標點統一
+          </p>
+          <div class="space-y-2 bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleStripZeroWidth" checked class="mt-0.5 rounded text-indigo-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">清除隱形字元</div>
+                <div class="text-[11px] text-slate-400">移除零寬空格、不可見浮水印</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleFixQuotes" checked class="mt-0.5 rounded text-indigo-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">統一中文引號與括號</div>
+                <div class="text-[11px] text-slate-400">英數與中文標點合理配對</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleNormalizeBullets" checked class="mt-0.5 rounded text-indigo-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">清洗字型亂碼標記</div>
+                <div class="text-[11px] text-slate-400">將 , , , ‧ 轉成標準 -</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 類別 3: 個資脫敏 (台灣常見格式) -->
+        <div>
+          <p class="font-semibold text-rose-600 dark:text-rose-400 mb-2 flex items-center gap-1">
+            <i class="ph-bold ph-shield-check"></i> 本地敏感資訊遮罩
+          </p>
+          <div class="space-y-2 bg-rose-50/50 dark:bg-rose-950/20 p-2.5 rounded-lg border border-rose-100 dark:border-rose-900/40">
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleMaskId" class="mt-0.5 rounded text-rose-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">身分證字號遮罩</div>
+                <div class="text-[11px] text-slate-400">例如 A123***789</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleMaskPhone" class="mt-0.5 rounded text-rose-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">手機與市話遮罩</div>
+                <div class="text-[11px] text-slate-400">0912-***-456 等</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleMaskTaxId" class="mt-0.5 rounded text-rose-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">公司統一編號 (8碼)</div>
+                <div class="text-[11px] text-slate-400">遮罩八碼統編以防檢索關聯</div>
+              </div>
+            </label>
+
+            <label class="flex items-start gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="ruleMaskEmail" class="mt-0.5 rounded text-rose-600 focus:ring-0">
+              <div>
+                <div class="font-medium text-slate-700 dark:text-slate-200">電子郵件脫敏</div>
+                <div class="text-[11px] text-slate-400">如 u***r@domain.com</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- 右側：洗滌後的成果區 -->
+    <section class="flex-1 flex flex-col bg-slate-50/50 dark:bg-slate-900/20 min-h-[300px]">
+      <!-- 區塊標題與統計 -->
+      <div class="px-4 py-2.5 bg-slate-100/70 dark:bg-slate-900/40 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+            <i class="ph-bold ph-sparkle text-emerald-500"></i> 洗滌產出 (Scrubbed Result)
+          </span>
+          <span id="outputStats" class="text-slate-500 font-mono">0 字 / 0 行</span>
+        </div>
+        <!-- 狀態徽章 -->
+        <div class="flex items-center gap-1.5">
+          <span id="changeBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-medium">已優化 0 處</span>
+          <button id="copyBtn" onclick="copyCleanResult()" class="hover:bg-indigo-700 bg-indigo-600 text-white font-medium px-3 py-1 rounded shadow-sm flex items-center gap-1 transition-all active:scale-95">
+            <i class="ph-bold ph-copy"></i> 一鍵複製結果
+          </button>
+        </div>
+      </div>
+
+      <!-- 輸出結果框 -->
+      <div class="flex-1 relative p-3">
+        <textarea id="outputText" readonly
+                  class="w-full h-full p-3 font-mono text-xs sm:text-sm bg-white dark:bg-slate-900/70 rounded-lg border border-slate-200 dark:border-slate-800 resize-none outline-none text-slate-900 dark:text-slate-100 leading-relaxed overflow-y-auto cursor-text shadow-inner"
+                  placeholder="清洗後的乾淨文字將即時呈現於此..."></textarea>
+        <!-- 複製成功 Floating Toast -->
+        <div id="copyToast" class="absolute top-6 right-6 hidden bg-slate-900/90 dark:bg-slate-100/90 text-white dark:text-slate-900 text-xs px-3 py-1.5 rounded-lg shadow-lg backdrop-blur flex items-center gap-1.5 transition-all">
+          <i class="ph-bold ph-check text-emerald-400 dark:text-emerald-600"></i>
+          <span>已複製到剪貼簿！</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 底部清洗稽核列 -->
+  <footer class="border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs flex flex-wrap items-center justify-between gap-2">
+    <div class="flex items-center gap-4 text-slate-500 dark:text-slate-400">
+      <span class="flex items-center gap-1">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+        客戶端沙盒安全運行（無任何文字上傳）
+      </span>
+      <span id="diffSummary" class="text-slate-400 font-mono">省去字數: 0 字</span>
+    </div>
+
+    <!-- 底部輔助提示 -->
+    <div class="text-[11px] text-slate-400">
+      支援按鍵快捷：貼上內容即自動即時清洗
+    </div>
+  </footer>
+
+  <script>
+    // --- 核心變數與元件參考 ---
+    const sourceTextEl = document.getElementById('sourceText');
+    const outputTextEl = document.getElementById('outputText');
+    const sourceStatsEl = document.getElementById('sourceStats');
+    const outputStatsEl = document.getElementById('outputStats');
+    const changeBadgeEl = document.getElementById('changeBadge');
+    const diffSummaryEl = document.getElementById('diffSummary');
+    const copyToastEl = document.getElementById('copyToast');
+
+    // 規則勾選框群
+    const ruleElements = {
+      fixCjkBreaks: document.getElementById('ruleFixCjkBreaks'),
+      trimLines: document.getElementById('ruleTrimLines'),
+      collapseBlankLines: document.getElementById('ruleCollapseBlankLines'),
+      fixHyphens: document.getElementById('ruleFixHyphens'),
+      stripZeroWidth: document.getElementById('ruleStripZeroWidth'),
+      fixQuotes: document.getElementById('ruleFixQuotes'),
+      normalizeBullets: document.getElementById('ruleNormalizeBullets'),
+      maskId: document.getElementById('ruleMaskId'),
+      maskPhone: document.getElementById('ruleMaskPhone'),
+      maskTaxId: document.getElementById('ruleMaskTaxId'),
+      maskEmail: document.getElementById('ruleMaskEmail')
+    };
+
+    // 監聽所有設定勾選事件
+    Object.values(ruleElements).forEach(chk => {
+      chk.addEventListener('change', runScrubber);
+    });
+
+    // 監聽文字輸入即時洗滌
+    sourceTextEl.addEventListener('input', runScrubber);
+
+    // --- 核心文字洗滌處理器 ---
+    function scrubText(input) {
+      if (!input) return { text: '', mods: 0 };
+      let text = input;
+      let totalMods = 0;
+
+      // 1. 清除零寬度隱形字元 (Zero-Width Space, Joiner, Non-Joiner, BOM 等)
+      if (ruleElements.stripZeroWidth.checked) {
+        const zwRegex = /[\u200B-\u200D\uFEFF\u200E\u200F\u00A0]/g;
+        const matches = text.match(zwRegex);
+        if (matches) totalMods += matches.length;
+        text = text.replace(zwRegex, ' ');
+      }
+
+      // 2. 英文連字號斷行拼接 (如：com- \n prehensive -> comprehensive)
+      if (ruleElements.fixHyphens.checked) {
+        const hyphenRegex = /([a-zA-Z]+)-\r?\n([a-zA-Z]+)/g;
+        const matches = text.match(hyphenRegex);
+        if (matches) totalMods += matches.length;
+        text = text.replace(hyphenRegex, '$1$2');
+      }
+
+      // 3. 中文突兀斷行縫合 (CJK 連續字符間被換行截斷，但非句號/問號/驚嘆號結尾)
+      if (ruleElements.fixCjkBreaks.checked) {
+        // 比對：前面是 CJK 字元或逗號等非句末標點，換行後接著 CJK 字元
+        const cjkBreakRegex = /([\u4e00-\u9fa5\u3400-\u4dbf，、；])\r?\n([\u4e00-\u9fa5\u3400-\u4dbf])/g;
+        const matches = text.match(cjkBreakRegex);
+        if (matches) totalMods += matches.length;
+        text = text.replace(cjkBreakRegex, '$1$2');
+      }
+
+      // 4. 清理亂碼清單符號 (如 Word/PDF 的特製符號    ‧ 轉換為 - )
+      if (ruleElements.normalizeBullets.checked) {
+        const bulletRegex = /^[\s\t]*[•●■◆‧][\s\t]*/gm;
+        const matches = text.match(bulletRegex);
+        if (matches) totalMods += matches.length;
+        text = text.replace(bulletRegex, '- ');
+      }
+
+      // 5. 逐行修整 (消除每行前後空白)
+      if (ruleElements.trimLines.checked) {
+        const lines = text.split(/\r?\n/);
+        let trimmedCount = 0;
+        const cleanedLines = lines.map(line => {
+          const trimmed = line.trim();
+          if (trimmed !== line) trimmedCount++;
+          return trimmed;
+        });
+        totalMods += trimmedCount;
+        text = cleanedLines.join('\n');
+      }
+
+      // 6. 壓縮連續多重空行
+      if (ruleElements.collapseBlankLines.checked) {
+        const multiBreakRegex = /\n{3,}/g;
+        const matches = text.match(multiBreakRegex);
+        if (matches) totalMods += matches.length;
+        text = text.replace(multiBreakRegex, '\n\n');
+      }
+
+      // 7. 引號與括號標準化 (針對繁體中文語境替換)
+      if (ruleElements.fixQuotes.checked) {
+        // 將英文彎引號或雜亂全形標點合理化
+        const quoteFix = text.replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
+        if (quoteFix !== text) {
+          totalMods += 1;
+          text = quoteFix;
+        }
+      }
+
+      // 8. 個資遮罩脫敏：身分證字號 (台灣 10 碼英數字)
+      if (ruleElements.maskId.checked) {
+        const idRegex = /[A-Z][1289]\d{8}/gi;
+        const matches = text.match(idRegex);
+        if (matches) totalMods += matches.length;
+        text = text.replace(idRegex, (match) => {
+          return match.substring(0, 3) + '****' + match.substring(7);
+        });
+      }
+
+      // 9. 個資遮罩脫敏：手機 (09xx) 與市話
+      if (ruleElements.maskPhone.checked) {
+        // 台灣手機 09XX-XXX-XXX 或 09XXXXXXXX
+        const mobileRegex = /(09\d{2})[-_\s]?(\d{3})[-_\s]?(\d{3})/g;
+        const matches = text.match(mobileRegex);
+        if (matches) totalMods += matches.length;
+        text = text.replace(mobileRegex, '$1-***-$3');
+
+        // 一般市話如 02-12345678
+        const telRegex = /(0\d{1,2})[-_\s]?(\d{3,4})[-_\s]?(\d{4})/g;
+        text = text.replace(telRegex, '$1-****-$3');
+      }
+
+      // 10. 個資遮罩脫敏：統一編號 (8 碼獨立數字)
+      if (ruleElements.maskTaxId.checked) {
+        const taxRegex = /(?<=\D|^)(\d{8})(?=\D|$)/g;
+        text = text.replace(taxRegex, (match) => {
+          // 排除常見西元年月日例如 20261011 等合理年份
+          if (match.startsWith('19') || match.startsWith('20')) return match;
+          totalMods++;
+          return match.substring(0, 2) + '****' + match.substring(6);
+        });
+      }
+
+      // 11. 個資遮罩脫敏：電子郵件
+      if (ruleElements.maskEmail.checked) {
+        const emailRegex = /([a-zA-Z0-9_.+-]+)@([a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)/g;
+        text = text.replace(emailRegex, (match, user, domain) => {
+          totalMods++;
+          const maskedUser = user.length <= 2 ? user + '*' : user[0] + '***' + user[user.length - 1];
+          return `${maskedUser}@${domain}`;
+        });
+      }
+
+      return { text, mods: totalMods };
+    }
+
+    // --- 執行洗滌與介面更新 ---
+    function runScrubber() {
+      const original = sourceTextEl.value;
+      const { text: cleaned, mods } = scrubText(original);
+
+      outputTextEl.value = cleaned;
+
+      // 更新統計指標
+      const srcChars = original.length;
+      const srcLines = original ? original.split(/\r?\n/).length : 0;
+      const outChars = cleaned.length;
+      const outLines = cleaned ? cleaned.split(/\r?\n/).length : 0;
+
+      sourceStatsEl.innerText = `${srcChars.toLocaleString()} 字 / ${srcLines} 行`;
+      outputStatsEl.innerText = `${outChars.toLocaleString()} 字 / ${outLines} 行`;
+
+      // 徽章與節省字數
+      if (mods > 0 || (srcChars !== outChars && srcChars > 0)) {
+        changeBadgeEl.classList.remove('hidden');
+        changeBadgeEl.innerText = `已修復 ${mods} 處細節`;
+        const diff = srcChars - outChars;
+        diffSummaryEl.innerText = diff >= 0 ? `淨化減少: ${diff} 字元` : `轉換調整: ${Math.abs(diff)} 字元`;
+      } else {
+        changeBadgeEl.classList.add('hidden');
+        diffSummaryEl.innerText = `字元狀態一致`;
+      }
+    }
+
+    // --- 剪貼簿互動 ---
+    function copyCleanResult() {
+      const content = outputTextEl.value;
+      if (!content) return;
+
+      // 執行無相依性的複製機制
+      outputTextEl.select();
+      document.execCommand('copy');
+      window.getSelection()?.removeAllRanges();
+
+      // 顯示 Toast 提示
+      copyToastEl.classList.remove('hidden');
+      setTimeout(() => {
+        copyToastEl.classList.add('hidden');
+      }, 2000);
+    }
+
+    async function pasteClipboard() {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const clip = await navigator.clipboard.readText();
+          sourceTextEl.value = clip;
+          runScrubber();
+        } else {
+          sourceTextEl.focus();
+        }
+      } catch (err) {
+        // 若受限瀏覽器權限，將焦點直接聚焦於輸入框引導手動貼上
+        sourceTextEl.focus();
+      }
+    }
+
+    function clearSource() {
+      sourceTextEl.value = '';
+      runScrubber();
+      sourceTextEl.focus();
+    }
+
+    // --- 情境預設切換 ---
+    function applyPreset(presetName) {
+      // 先全部還原
+      Object.values(ruleElements).forEach(chk => chk.checked = false);
+
+      if (presetName === 'pdf') {
+        ruleElements.fixCjkBreaks.checked = true;
+        ruleElements.fixHyphens.checked = true;
+        ruleElements.trimLines.checked = true;
+        ruleElements.collapseBlankLines.checked = true;
+        ruleElements.stripZeroWidth.checked = true;
+        ruleElements.normalizeBullets.checked = true;
+      } else if (presetName === 'privacy') {
+        ruleElements.maskId.checked = true;
+        ruleElements.maskPhone.checked = true;
+        ruleElements.maskTaxId.checked = true;
+        ruleElements.maskEmail.checked = true;
+        ruleElements.stripZeroWidth.checked = true;
+        ruleElements.trimLines.checked = true;
+      } else if (presetName === 'clean') {
+        ruleElements.trimLines.checked = true;
+        ruleElements.collapseBlankLines.checked = true;
+        ruleElements.stripZeroWidth.checked = true;
+        ruleElements.fixQuotes.checked = true;
+      } else if (presetName === 'markdown') {
+        ruleElements.normalizeBullets.checked = true;
+        ruleElements.trimLines.checked = true;
+        ruleElements.collapseBlankLines.checked = true;
+      }
+      runScrubber();
+    }
+
+    function toggleAllRules(enable) {
+      Object.values(ruleElements).forEach(chk => chk.checked = enable);
+      runScrubber();
+    }
+
+    // --- 載入示範用混亂文字 ---
+    function loadSampleText() {
+      const demo = `【第 42 條 數位資產管理規程】
+ 本規程經董事會審議通
+過後施行，凡涉及跨部會資
+料傳輸均應恪遵之。
+
+ 負責審核人之電子郵件為：\u200Baudit_manager@fintech-corp.com.tw
+ 聯絡電話請洽公務機：0912-345-678，分機市話為 02-23456789。
+ 統編登記號碼為：54881234，主管審查代表身分證號：A123456789。
+
+在資安架構方面，所有通訊協定均採用強固型 encryp-
+tion 加密標準，以確保資料在跨網
+段流通時不被攔截。
+
+
+ 特殊字元驗證符號：\uFEFF包含多重零寬隱形空字符及冗餘換行。`;
+
+      sourceTextEl.value = demo;
+      // 預設開啟個資保護便於展示
+      ruleElements.maskId.checked = true;
+      ruleElements.maskPhone.checked = true;
+      ruleElements.maskTaxId.checked = true;
+      ruleElements.maskEmail.checked = true;
+      runScrubber();
+    }
+
+    // --- 深淺色彩主題切換 ---
+    function toggleTheme() {
+      const html = document.documentElement;
+      const themeIcon = document.getElementById('themeIcon');
+      if (html.classList.contains('dark')) {
+        html.classList.remove('dark');
+        themeIcon.className = 'ph-bold ph-moon';
+      } else {
+        html.classList.add('dark');
+        themeIcon.className = 'ph-bold ph-sun';
+      }
+    }
+
+    // 初始載入樣例
+    window.addEventListener('DOMContentLoaded', () => {
+      loadSampleText();
+    });
+  </script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
