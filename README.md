@@ -1,6 +1,6 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供十一個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、專案排程、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、Markdown 卡片簡報，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；請依需求開啟對應的 HTML 入口。
+本專案提供十二個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、專案排程、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、公文簽／函排版與 Word 匯出、Markdown 卡片簡報，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；請依需求開啟對應的 HTML 入口。
 
 ## 目錄
 
@@ -18,6 +18,7 @@
 - [SQL／TXT 個資掃描與清除](#sqltxt-個資掃描與清除)
 - [SQL Column Lineage Analyzer](#sql-column-lineage-analyzer)
 - [Markdown 卡片簡報工具 (Card Presenter)](#markdown-卡片簡報工具-card-presenter)
+- [公文簽／函排版與 Word 匯出 (DocuFormatter)](#公文簽函排版與-word-匯出-docuformatter)
 - [資料保存、匯出與隱私](#資料保存匯出與隱私)
 - [技術棧與離線範圍](#技術棧與離線範圍)
 - [常見問題](#常見問題)
@@ -38,6 +39,7 @@
    - [`sql-mangage/sql-pii-cleaner.html`](./sql-mangage/sql-pii-cleaner.html)
    - [`sql-mangage/SQL_Column_Lineage_Analyzer.html`](./sql-mangage/SQL_Column_Lineage_Analyzer.html)
    - [`ppt-present/markdown_card_presenter.html`](./ppt-present/markdown_card_presenter.html)
+   - [`word/DocuForm.html`](./word/DocuForm.html)
 3. 使用瀏覽器頁面中的表單、按鈕與分頁完成操作。
 
 本專案沒有建置或打包步驟，也沒有根目錄 `package.json`。若瀏覽器限制 `file://` 頁面的部分功能，可在專案根目錄啟動任一靜態檔案伺服器，例如：
@@ -46,9 +48,9 @@
 python -m http.server 8080
 ```
 
-再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、甘特圖、銀行信用風險模擬器與 Markdown 卡片簡報工具會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR 工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
+再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、甘特圖、銀行信用風險模擬器、Markdown 卡片簡報工具與公文簽／函排版工具會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR 工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
 
-本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化與 SQL／TXT 個資清除工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
+本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS，公文簽／函排版工具需要從 CDN 載入 Tailwind CSS 與 docx.js。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化與 SQL／TXT 個資清除工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
 
 ## 整體使用流程
 
@@ -92,6 +94,7 @@ flowchart TD
 | SQL／TXT 個資掃描與清除 | [`sql-mangage/sql-pii-cleaner.html`](./sql-mangage/sql-pii-cleaner.html) | 掃描常見身分證字號、帳號、統編與擔保品編號，產生清除副本或寫回 | 檔案只在目前頁面記憶體處理，不保存掃描結果 |
 | SQL Column Lineage Analyzer | [`sql-mangage/SQL_Column_Lineage_Analyzer.html`](./sql-mangage/SQL_Column_Lineage_Analyzer.html) | 分析 Oracle SQL 欄位來源、轉換、上下游影響與 CTE 結構，匯出血緣資料 | SQL 與分析結果只在目前頁面記憶體處理，不保存或上傳 |
 | Markdown 卡片簡報工具 | [`ppt-present/markdown_card_presenter.html`](./ppt-present/markdown_card_presenter.html) | 以 Markdown 撰寫卡片式投影片、即時預覽、全螢幕播放，並匯出離線單一 HTML | 瀏覽器 IndexedDB（範本與草稿）；主題偏好使用 `localStorage` |
+| 公文簽／函排版與 Word 匯出 (DocuFormatter) | [`word/DocuForm.html`](./word/DocuForm.html) | 以表單或 Markdown 撰寫簽／函公文、校正標點與中英間距，並匯出 Word 文件 | 只保留在目前頁面記憶體；輸出為剪貼簿或 `.docx` 檔 |
 
 ## Agent YAML Maker
 
@@ -474,6 +477,50 @@ flowchart TD
 
 本工具的編輯介面樣式由 CDN 載入 Tailwind CSS，首次開啟需保持網路連線；但「匯出展示檔」產生的 HTML 不含任何外部依賴，可完全離線使用。
 
+## 公文簽／函排版與 Word 匯出 (DocuFormatter)
+
+DocuFormatter（Word 匯出版）是單檔的公文排版精靈，可依「簽」「函」或自由 Markdown 三種模式撰寫內容，於右側即時產生正式公文版面預覽，並複製純文字、複製 Word 格式或下載 `.docx` 檔。工具不修改或保存任何來源檔，所有內容只在目前頁面記憶體處理。
+
+### 選擇公文類型與填寫內容
+
+1. 開啟 [`DocuForm.html`](./word/DocuForm.html)。
+2. 在最上方「公文類型」選擇要產出的格式：
+   - 「簽（主旨／說明／擬辦）」：填寫承辦單位、日期（民國年）、主旨、說明與擬辦。
+   - 「函（主旨／說明／辦法）」：填寫受文者、發文字號、速別、密等及解密條件、主旨、說明與辦法。
+   - 「自由 Markdown 模式」：直接輸入 Markdown，`#`、`##`、`###` 與 `-` 會分別轉為「壹、」「一、」「（一）」與「1.」等層級。
+3. 按「帶入規範範例」可載入內建示範內容；開啟頁面時也會自動載入範例。
+4. 「說明」與「擬辦／辦法」欄位每換一行會自動分為一項並依序加上「一、」「二、」等編號；單行內容則不加編號。以 `-`、`*` 或 `1.` 開頭時會視為項目符號並移除。
+
+### 校正選項與遮罩
+
+- 「標點全形化」會將半形逗號、冒號、分號、問號與驚嘆號轉為全形；緊鄰數字者不轉換。
+- 「中英間距校正」會在中文與英數字之間自動補上空格。
+- 「遮罩關鍵字」可輸入以逗號分隔的詞彙，預覽與匯出時會以「○○」取代，方便對外分享前去除單位名稱或人名。
+
+### 預覽與輸出
+
+- 右側「正式公文排版預覽」以標楷體即時呈現成品並顯示字數；相同字型與行高也會套用於 Word 匯出。
+- 「複製純文字」將預覽內容複製為純文字；「複製 Word 格式」複製為保留標楷體與固定行高的富文字，可直接貼入 Word。
+- 「下載 .docx」以 docx.js 產生 Word 檔，檔名依公文類型為 `簽呈_日期.docx`、`公文函稿_日期.docx` 或 `公務報告_日期.docx`。
+- 兩顆複製按鈕與下載功能需要瀏覽器剪貼簿／檔案 API 以及 docx.js CDN；建議透過 `python -m http.server 8080` 後從 `http://localhost:8080/word/` 開啟。
+
+```mermaid
+flowchart TD
+    A[選擇公文類型] --> B{類型}
+    B -->|簽| C[填寫承辦單位 日期 主旨 說明 擬辦]
+    B -->|函| D[填寫受文者 發文字號 速別 密等 主旨 說明 辦法]
+    B -->|自由 Markdown| E[輸入 Markdown 標題與項目]
+    C --> F[套用標點全形 中英間距與遮罩關鍵字]
+    D --> F
+    E --> F
+    F --> G[右側即時預覽與字數]
+    G --> H{輸出方式}
+    H -->|複製| I[純文字或 Word 格式]
+    H -->|下載| J[docx 檔]
+```
+
+本工具不使用 IndexedDB 或 `localStorage`，關閉或重新整理頁面後內容需重新輸入；重要公文請先下載 `.docx` 或複製保存。排版僅為格式輔助，正式發文前仍應依機關文書規範覆核用語與簽核流程。
+
 ## 資料保存、匯出與隱私
 
 ```mermaid
@@ -489,6 +536,7 @@ flowchart LR
     B -->|SQL Formatter| N[目前頁面與 localStorage 設定]
     B -->|SQL 欄位血緣| R[目前頁面記憶體]
     B -->|卡片簡報| W[IndexedDB 範本與草稿]
+    B -->|公文排版| Y[目前頁面記憶體]
     C --> F[JSON 備份或 YAML ZIP]
     D --> G[JSON 工作區備份]
     E --> H[重新整理後重新輸入]
@@ -499,6 +547,7 @@ flowchart LR
     N --> P[寫回備份或 ZIP 報告]
     R --> S[CSV JSON Mermaid SVG 或 PNG 匯出]
     W --> X[匯出離線單一 HTML]
+    Y --> Z[複製或下載 docx]
 ```
 
 - Agent YAML Maker 與甘特圖資料保存在目前瀏覽器的 IndexedDB；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得。
@@ -510,12 +559,13 @@ flowchart LR
 - SQL／TXT 個資清除工具只在目前頁面記憶體中處理檔案；關閉或重新整理後需重新選取資料夾。可寫回模式會依設定建立 `_backup_時間` 備份，唯讀模式請使用 ZIP 保存結果。
 - SQL Column Lineage Analyzer 只在目前頁面記憶體中解析 SQL 與建立血緣結果；不使用 IndexedDB 或 `localStorage`，關閉、重新整理或清除頁面後需重新載入。CSV、JSON、Mermaid、SVG 與 PNG 都是由使用者主動下載的輸出檔。
 - Markdown 卡片簡報工具會將範本與編輯草稿保存在目前瀏覽器的 IndexedDB，主題偏好使用 `localStorage`；「匯出展示檔」產生完全離線的單一 HTML，但編輯介面樣式仍由 CDN 載入 Tailwind CSS。
-- 本專案沒有內建後端同步。外部 CDN 只提供部分工具（Agent YAML Maker、甘特圖、銀行信用風險模擬器與 Markdown 卡片簡報工具）所需的樣式、圖示或函式庫，不代表使用者資料會上傳至本專案伺服器。
+- 公文簽／函排版工具不使用 IndexedDB 或 `localStorage`，內容只保留在目前頁面記憶體；輸出為剪貼簿或使用者主動下載的 `.docx` 檔，關閉或重新整理後需重新輸入。
+- 本專案沒有內建後端同步。外部 CDN 只提供部分工具（Agent YAML Maker、甘特圖、銀行信用風險模擬器、Markdown 卡片簡報工具與公文簽／函排版工具）所需的樣式、圖示或函式庫，不代表使用者資料會上傳至本專案伺服器。
 - 需要跨電腦或防止瀏覽器資料遺失時，請優先使用工具提供的 JSON、YAML 或 ZIP 匯出功能。
 
 ## 技術棧與離線範圍
 
-本節依目前各入口頁面的實際程式整理。專案由多個獨立 HTML 頁面組成，使用 HTML5、CSS3、原生 JavaScript 與響應式版面；沒有統一的建置／打包流程、根目錄 `package.json` 或專用後端。實際使用技術棧與 `docs\\使用技術棧.md` 的公版規範不完全一致：部分頁面使用 CDN 載入外部函式庫，且各工具自行決定資料保存方式。
+本節依目前各入口頁面的實際程式整理。專案由多個獨立 HTML 頁面組成，使用 HTML5、CSS3、原生 JavaScript 與響應式版面；沒有統一的建置／打包流程、根目錄 `package.json` 或專用後端。各工具由各自的 HTML 頁面獨立實作：部分頁面使用 CDN 載入外部函式庫，且各工具自行決定資料保存方式。
 
 ### 外部資源與離線需求
 
@@ -523,9 +573,10 @@ flowchart LR
 - 動態甘特圖與專案倒數：從 CDN 載入 Tailwind CSS 與 Lucide 圖示。
 - 銀行信用風險與資本適足模擬器：從 CDN 載入 Tailwind CSS、Chart.js、Lucide 圖示與 Google Fonts。
 - Markdown 卡片簡報工具：編輯介面從 CDN 載入 Tailwind CSS；「匯出展示檔」產生的單一 HTML 不含外部依賴。
+- 公文簽／函排版與 Word 匯出：從 CDN 載入 Tailwind CSS 與 docx.js。
 - 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；SQL Column Lineage Analyzer 也不依賴外部 CDN。
 
-Agent YAML Maker、甘特圖、信用風險模擬器與 Markdown 卡片簡報工具若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
+Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工具與公文簽／函排版工具若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
 
 ### 瀏覽器資料保存
 
@@ -535,6 +586,7 @@ Agent YAML Maker、甘特圖、信用風險模擬器與 Markdown 卡片簡報工
 - SQL Catalog 將目錄說明寫入使用者選定根目錄的 `sql_catalog.json`，並以 IndexedDB 保存瀏覽器快取與設定。
 - SQL Compare、SQL Formatter 與 NSFR 主題等偏好／選項會使用 `localStorage`。
 - LCR 與信用風險模擬器不會自動保存試算資料；其他未列出的臨時分析內容則依各工具說明於目前頁面處理。
+- 公文簽／函排版工具不使用 IndexedDB 或 `localStorage`，內容只在目前頁面處理，重新整理後需重新輸入。
 
 本機處理表示主要計算與檔案操作在瀏覽器端執行，不代表每個入口都能完全離線啟動，也不代表瀏覽器資料會自動同步或備份。重要資料請使用各工具提供的匯出功能另存檔案。
 
@@ -608,12 +660,20 @@ Agent YAML Maker、甘特圖、信用風險模擬器與 Markdown 卡片簡報工
 
 確認使用同一個瀏覽器與一般視窗，且沒有清除網站資料；範本與草稿存放在瀏覽器 IndexedDB。若資料遺失，可重新套用內建範本，或改用「匯出展示檔」保存成品。
 
+### DocuFormatter 無法複製或下載 .docx
+
+確認瀏覽器可連線至 CDN（Tailwind CSS 與 docx.js）。「複製純文字」「複製 Word 格式」使用瀏覽器剪貼簿 API，建議透過 `python -m http.server 8080` 後從 `http://localhost:8080/word/` 開啟；在 `file://` 或未授權剪貼簿時可能失敗，可改用「下載 .docx」。
+
+### DocuFormatter 的排版結果與預期不同
+
+檢查「標點全形化」「中英間距校正」與「遮罩關鍵字」的設定；「說明」與「擬辦／辦法」每個換行都會自成一項並加上「一、」「二、」編號，若不需編號請改為單行。修改左側欄位時右側預覽會即時更新，可據此逐步比對。
+
 ## 維護者驗證
 
-本專案是免建置的靜態 HTML／CSS／JavaScript 專案，沒有統一的 npm 測試指令。實際頁面同時使用原生 HTML／CSS／Vanilla JavaScript；Agent YAML Maker、甘特圖、信用風險模擬器與 Markdown 卡片簡報工具透過 CDN 載入部分資源，這是目前程式現況。`docs\使用技術棧.md` 是目標技術棧規範，若要達成完全離線的共通標準，仍需另行移除或內嵌這些 CDN 依賴。修改文件後可先執行：
+本專案是免建置的靜態 HTML／CSS／JavaScript 專案，沒有統一的 npm 測試指令。實際頁面同時使用原生 HTML／CSS／Vanilla JavaScript；Agent YAML Maker、甘特圖、信用風險模擬器、Markdown 卡片簡報工具與公文簽／函排版工具透過 CDN 載入部分資源，這是目前程式現況。若要達成完全離線的共通標準，仍需另行移除或內嵌這些 CDN 依賴。修改文件後可先執行：
 
 ```powershell
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟十一個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
+若修改網頁程式，請分別在現代瀏覽器開啟十二個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。

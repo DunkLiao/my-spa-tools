@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DocuFormatter - 簽／函公文排版精靈與 Word 匯出</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 引入 docx.js 瀏覽器版本 -->
+  <script src="https://unpkg.com/docx@8.5.0/build/index.umd.js"></script>
+  <style>
+    .preview-doc {
+      font-family: "標楷體", "DFKai-SB", "Noto Serif TC", serif;
+      line-height: 1.85;
+      letter-spacing: 0.05em;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col font-sans">
+
+  <!-- Header -->
+  <header class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shadow-sm">
+    <div class="flex items-center space-x-3">
+      <span class="text-2xl">🏛️</span>
+      <div>
+        <h1 class="text-lg font-bold tracking-tight text-slate-800 leading-tight">DocuFormatter <span class="text-xs font-normal text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded ml-1">Word 匯出版</span></h1>
+      </div>
+    </div>
+    <div class="flex items-center space-x-2">
+      <button id="btnCopyText" class="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-medium rounded transition">複製純文字</button>
+      <button id="btnCopyRich" class="px-3 py-1.5 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-medium rounded transition">複製 Word 格式</button>
+      <button id="btnExportDocx" class="px-3.5 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded shadow transition flex items-center gap-1.5">
+        <span>📄</span> 下載 .docx
+      </button>
+    </div>
+  </header>
+
+  <!-- Controls Panel -->
+  <div class="bg-white border-b border-slate-200 px-6 py-2.5 flex flex-wrap gap-4 text-xs text-slate-600 items-center">
+    <div class="flex items-center space-x-1 border-r border-slate-200 pr-4">
+      <span class="font-semibold text-slate-700 mr-2">公文類型：</span>
+      <label class="flex items-center space-x-1 cursor-pointer">
+        <input type="radio" name="docType" value="qian" checked class="text-blue-600">
+        <span class="font-medium text-slate-800">簽（主旨/說明/擬辦）</span>
+      </label>
+      <label class="flex items-center space-x-1 cursor-pointer ml-3">
+        <input type="radio" name="docType" value="han" class="text-blue-600">
+        <span class="font-medium text-slate-800">函（主旨/說明/辦法）</span>
+      </label>
+      <label class="flex items-center space-x-1 cursor-pointer ml-3">
+        <input type="radio" name="docType" value="free" class="text-blue-600">
+        <span class="font-medium text-slate-800">自由 Markdown 模式</span>
+      </label>
+    </div>
+
+    <div class="flex items-center space-x-3">
+      <label class="flex items-center space-x-1 cursor-pointer">
+        <input type="checkbox" id="optFullPunct" checked class="rounded text-blue-600">
+        <span>標點全形化</span>
+      </label>
+      <label class="flex items-center space-x-1 cursor-pointer">
+        <input type="checkbox" id="optCjkSpace" checked class="rounded text-blue-600">
+        <span>中英間距校正</span>
+      </label>
+    </div>
+
+    <div class="flex items-center space-x-1.5 ml-auto">
+      <span>遮罩關鍵字：</span>
+      <input type="text" id="maskWords" placeholder="單位名稱, 機敏人名" class="border border-slate-300 rounded px-2 py-0.5 w-40 text-xs focus:outline-blue-500">
+    </div>
+  </div>
+
+  <!-- Main Split Layout -->
+  <main class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 p-5 overflow-hidden">
+    
+    <!-- Left: Wizard & Inputs -->
+    <div class="flex flex-col bg-white rounded-lg shadow-sm border border-slate-200 p-4 overflow-y-auto">
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-sm font-bold text-slate-700" id="editorTitle">公文結構填寫表單</span>
+        <button id="btnSample" class="text-xs text-blue-600 hover:underline">帶入規範範例</button>
+      </div>
+
+      <!-- Mode 1 & 2: Wizard Form -->
+      <div id="wizardForm" class="space-y-3.5 text-xs text-slate-700">
+        <!-- 簽專用表頭 -->
+        <div id="qianHeaders" class="grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded border border-slate-200">
+          <div>
+            <label class="block font-semibold mb-1">承辦單位：</label>
+            <input type="text" id="qianUnit" value="風險管理處" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">日期（民國年）：</label>
+            <input type="text" id="qianDate" value="中華民國 115 年 10 月 11 日" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          </div>
+        </div>
+
+        <!-- 函專用表頭 -->
+        <div id="hanHeaders" class="hidden grid grid-cols-2 gap-2 bg-slate-50 p-2.5 rounded border border-slate-200">
+          <div>
+            <label class="block font-semibold mb-1">受文者：</label>
+            <input type="text" id="hanRecipient" value="金融監督管理委員會" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">發文字號：</label>
+            <input type="text" id="hanDocNumber" value="規風字第 1150009876 號" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">速別：</label>
+            <input type="text" id="hanSpeed" value="普通件" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1">密等及解密條件：</label>
+            <input type="text" id="hanSecret" value="普通" class="w-full border border-slate-300 rounded px-2 py-1 text-xs">
+          </div>
+        </div>
+
+        <!-- 主旨 (Subject) -->
+        <div>
+          <label class="block font-bold text-slate-800 mb-1">一、主旨 <span class="text-slate-400 font-normal">（一句為原則，力求具體扼要）</span></label>
+          <textarea id="sectionSubject" rows="2" class="w-full border border-slate-300 rounded p-2 text-xs focus:outline-blue-500 font-sans"></textarea>
+        </div>
+
+        <!-- 說明 (Explanation) -->
+        <div>
+          <label class="block font-bold text-slate-800 mb-1">二、說明 <span class="text-slate-400 font-normal">（依序輸入依據、事實、理由，換行將自動分項）</span></label>
+          <textarea id="sectionDesc" rows="6" class="w-full border border-slate-300 rounded p-2 text-xs focus:outline-blue-500 font-sans leading-relaxed"></textarea>
+        </div>
+
+        <!-- 辦法 / 擬辦 (Action) -->
+        <div>
+          <label class="block font-bold text-slate-800 mb-1" id="labelActionSection">三、擬辦 <span class="text-slate-400 font-normal">（具體處置建議或執行方案）</span></label>
+          <textarea id="sectionAction" rows="4" class="w-full border border-slate-300 rounded p-2 text-xs focus:outline-blue-500 font-sans leading-relaxed"></textarea>
+        </div>
+      </div>
+
+      <!-- Mode 3: Free Markdown Editor -->
+      <div id="freeForm" class="hidden flex-1 flex flex-col">
+        <textarea id="freeMarkdownInput" class="w-full flex-1 p-3 text-xs font-mono border border-slate-300 rounded focus:outline-blue-500 leading-relaxed" placeholder="自由輸入 Markdown 標題或項目..."></textarea>
+      </div>
+    </div>
+
+    <!-- Right: Formal Output Preview -->
+    <div class="flex flex-col bg-white rounded-lg shadow-sm border border-slate-200 p-4 overflow-hidden">
+      <div class="flex justify-between items-center mb-2">
+        <span class="text-sm font-semibold text-slate-700">正式公文排版預覽</span>
+        <span id="charCount" class="text-xs text-slate-400">0 字</span>
+      </div>
+      <div id="outputPreview" class="preview-doc w-full flex-1 p-5 text-base border border-slate-200 rounded bg-slate-50 overflow-y-auto whitespace-pre-wrap select-text"></div>
+    </div>
+
+  </main>
+
+  <script>
+    const defaultData = {
+      qian: {
+        unit: '風險管理處',
+        date: '中華民國 115 年 10 月 11 日',
+        subject: '檢陳「本行流動性覆蓋比率（LCR）合格優質流動資產評價覆核機制改善方案」一案，簽請 核示。',
+        desc: `依據 Basel III 流動性監理架構及內部常態查核結果辦理。\n檢視現行國債與次級市場交易資產之評價流程，發現部分未到期定期存單折價率連動未臻即時。\n為強化流動性風險預警機制，擬建立跨系統每日動態校正機制。`,
+        action: `如蒙核可，擬函請資訊處配合調整系統資料介接排程。\n預計於次季專案會議提報試算成效。`
+      },
+      han: {
+        recipient: '金融監督管理委員會',
+        docNumber: '規風字第 1150009876 號',
+        speed: '普通件',
+        secret: '普通',
+        subject: '檢送本行「115 年度流動性風險模型壓力測試複核報告」乙份，請 鑒核。',
+        desc: `依 貴會 115 年 3 月 15 日金管銀法字第 1150123456 號函辦理。\n旨揭報告業經本行常務董事會審議通過，相關測試指標均符合監理標準。`,
+        action: `隨文檢附複核報告書及試算明細表各乙份。\n後續若有相關查核需求，本行將指派專人配合辦理。`
+      }
+    };
+
+    const docTypeRadios = document.querySelectorAll('input[name="docType"]');
+    const wizardForm = document.getElementById('wizardForm');
+    const freeForm = document.getElementById('freeForm');
+    const qianHeaders = document.getElementById('qianHeaders');
+    const hanHeaders = document.getElementById('hanHeaders');
+    const labelActionSection = document.getElementById('labelActionSection');
+
+    const qianUnit = document.getElementById('qianUnit');
+    const qianDate = document.getElementById('qianDate');
+    const hanRecipient = document.getElementById('hanRecipient');
+    const hanDocNumber = document.getElementById('hanDocNumber');
+    const hanSpeed = document.getElementById('hanSpeed');
+    const hanSecret = document.getElementById('hanSecret');
+
+    const sectionSubject = document.getElementById('sectionSubject');
+    const sectionDesc = document.getElementById('sectionDesc');
+    const sectionAction = document.getElementById('sectionAction');
+    const freeMarkdownInput = document.getElementById('freeMarkdownInput');
+
+    const outputPreview = document.getElementById('outputPreview');
+    const charCount = document.getElementById('charCount');
+    const optFullPunct = document.getElementById('optFullPunct');
+    const optCjkSpace = document.getElementById('optCjkSpace');
+    const maskWordsInput = document.getElementById('maskWords');
+
+    const LEVEL_NUMS = ['一、', '二、', '三、', '四、', '五、', '六、', '七、', '八、', '九、', '十、'];
+
+    function getSelectedType() {
+      for (const r of docTypeRadios) {
+        if (r.checked) return r.value;
+      }
+      return 'qian';
+    }
+
+    function cleanText(text) {
+      if (!text) return '';
+      let res = text;
+
+      // 遮罩處理
+      const masks = maskWordsInput.value.split(',').map(s => s.trim()).filter(Boolean);
+      for (let m of masks) {
+        res = res.replaceAll(m, '○○');
+      }
+
+      // 中英空白
+      if (optCjkSpace.checked) {
+        res = res.replace(/([\u4e00-\u9fa5])([a-zA-Z0-9])/g, '$1 $2');
+        res = res.replace(/([a-zA-Z0-9])([\u4e00-\u9fa5])/g, '$1 $2');
+      }
+
+      // 標點全形化
+      if (optFullPunct.checked) {
+        res = res.replace(/,(?!\d)/g, '，')
+                 .replace(/:(?!\d)/g, '：')
+                 .replace(/;(?!\d)/g, '；')
+                 .replace(/\?/g, '？')
+                 .replace(/!(?!\d)/g, '！');
+      }
+
+      return res;
+    }
+
+    function formatNumberedSection(rawText) {
+      const lines = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length === 0) return '';
+      if (lines.length === 1 && !lines[0].startsWith('-') && !lines[0].match(/^\d+\./)) {
+        return '  ' + cleanText(lines[0]);
+      }
+
+      let result = [];
+      let count = 0;
+      for (let line of lines) {
+        let content = line.replace(/^([-*]|\d+\.)\s*/, '');
+        count++;
+        let prefix = LEVEL_NUMS[(count - 1) % LEVEL_NUMS.length] || `${count}、`;
+        result.push(`  ${prefix}${cleanText(content)}`);
+      }
+      return result.join('\n');
+    }
+
+    function generateDocument() {
+      const type = getSelectedType();
+      let docText = '';
+
+      if (type === 'qian') {
+        const u = cleanText(qianUnit.value);
+        const d = cleanText(qianDate.value);
+        const subj = cleanText(sectionSubject.value.trim());
+        const desc = formatNumberedSection(sectionDesc.value);
+        const act = formatNumberedSection(sectionAction.value);
+
+        docText = `簽 於 ${u}  ${d}\n\n`;
+        docText += `主旨：${subj}\n\n`;
+        docText += `說明：\n${desc}\n\n`;
+        docText += `擬辦：\n${act}\n\n`;
+        docText += `敬陳\n長官`;
+
+      } else if (type === 'han') {
+        const recip = cleanText(hanRecipient.value);
+        const docNo = cleanText(hanDocNumber.value);
+        const spd = cleanText(hanSpeed.value);
+        const sec = cleanText(hanSecret.value);
+        const subj = cleanText(sectionSubject.value.trim());
+        const desc = formatNumberedSection(sectionDesc.value);
+        const act = formatNumberedSection(sectionAction.value);
+
+        docText = `受文者：${recip}\n`;
+        docText += `發文字號：${docNo}\n`;
+        docText += `速別：${spd}\n`;
+        docText += `密等及解密條件或保密期限：${sec}\n\n`;
+        docText += `主旨：${subj}\n\n`;
+        docText += `說明：\n${desc}\n\n`;
+        docText += `辦法：\n${act}`;
+
+      } else {
+        docText = parseFreeMarkdown(freeMarkdownInput.value);
+      }
+
+      outputPreview.textContent = docText;
+      charCount.textContent = `${docText.length} 字`;
+    }
+
+    function parseFreeMarkdown(md) {
+      const lines = md.split('\n');
+      return lines.map(line => {
+        let trimmed = line.trim();
+        if (!trimmed) return '';
+        if (trimmed.startsWith('# ')) return '壹、' + cleanText(trimmed.replace(/^#\s*/, ''));
+        if (trimmed.startsWith('## ')) return '  一、' + cleanText(trimmed.replace(/^##\s*/, ''));
+        if (trimmed.startsWith('### ')) return '    （一）' + cleanText(trimmed.replace(/^###\s*/, ''));
+        if (trimmed.startsWith('- ')) return '      1. ' + cleanText(trimmed.replace(/^- \s*/, ''));
+        return '  ' + cleanText(trimmed);
+      }).join('\n');
+    }
+
+    function updateFormVisibility() {
+      const type = getSelectedType();
+      if (type === 'free') {
+        wizardForm.classList.add('hidden');
+        freeForm.classList.remove('hidden');
+        document.getElementById('editorTitle').textContent = '自由 Markdown 輸入';
+      } else {
+        wizardForm.classList.remove('hidden');
+        freeForm.classList.add('hidden');
+        document.getElementById('editorTitle').textContent = '公文結構填寫表單';
+
+        if (type === 'qian') {
+          qianHeaders.classList.remove('hidden');
+          hanHeaders.classList.add('hidden');
+          labelActionSection.innerHTML = '三、擬辦 <span class="text-slate-400 font-normal">（具體處置建議或執行方案）</span>';
+        } else {
+          qianHeaders.classList.add('hidden');
+          hanHeaders.classList.remove('hidden');
+          labelActionSection.innerHTML = '三、辦法 <span class="text-slate-400 font-normal">（具體執行作法或要求）</span>';
+        }
+      }
+      generateDocument();
+    }
+
+    // 匯出 .docx 功能
+    async function exportToDocx() {
+      if (!window.docx) {
+        alert('docx.js 尚未加載完成，請確認網路連線。');
+        return;
+      }
+
+      const { Document, Packer, Paragraph, TextRun, LineRuleType } = window.docx;
+      const lines = outputPreview.textContent.split('\n');
+      const paragraphs = [];
+
+      for (let rawLine of lines) {
+        // 設定標準公文標楷體、英文字型 Times New Roman、16pt (half-points: 32)
+        const p = new Paragraph({
+          spacing: {
+            line: 560, // 約 28pt 行距 (20 dxa = 1pt)
+            lineRule: LineRuleType.EXACT,
+            before: 60,
+            after: 60,
+          },
+          children: [
+            new TextRun({
+              text: rawLine,
+              font: {
+                name: "DFKai-SB",
+                eastAsia: "標楷體",
+                ascii: "Times New Roman"
+              },
+              size: 32 // 16pt
+            })
+          ]
+        });
+        paragraphs.push(p);
+      }
+
+      const doc = new Document({
+        sections: [{
+          properties: {
+            page: {
+              margin: {
+                top: 1440,    // 1 英吋 (2.54 cm)
+                bottom: 1440,
+                left: 1440,
+                right: 1440,
+              }
+            }
+          },
+          children: paragraphs
+        }]
+      });
+
+      try {
+        const blob = await Packer.toBlob(doc);
+        const type = getSelectedType();
+        const filename = `${type === 'qian' ? '簽呈' : type === 'han' ? '公文函稿' : '公務報告'}_${new Date().toISOString().slice(0, 10)}.docx`;
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      } catch (err) {
+        console.error('匯出 docx 失敗:', err);
+        alert('匯出失敗，請檢查控制台錯誤訊息。');
+      }
+    }
+
+    // 事件監聽
+    docTypeRadios.forEach(r => r.addEventListener('change', updateFormVisibility));
+    [qianUnit, qianDate, hanRecipient, hanDocNumber, hanSpeed, hanSecret, sectionSubject, sectionDesc, sectionAction, freeMarkdownInput, maskWordsInput].forEach(el => {
+      el.addEventListener('input', generateDocument);
+    });
+    [optFullPunct, optCjkSpace].forEach(el => el.addEventListener('change', generateDocument));
+
+    document.getElementById('btnSample').addEventListener('click', () => {
+      const type = getSelectedType();
+      if (type === 'qian') {
+        qianUnit.value = defaultData.qian.unit;
+        qianDate.value = defaultData.qian.date;
+        sectionSubject.value = defaultData.qian.subject;
+        sectionDesc.value = defaultData.qian.desc;
+        sectionAction.value = defaultData.qian.action;
+      } else if (type === 'han') {
+        hanRecipient.value = defaultData.han.recipient;
+        hanDocNumber.value = defaultData.han.docNumber;
+        hanSpeed.value = defaultData.han.speed;
+        hanSecret.value = defaultData.han.secret;
+        sectionSubject.value = defaultData.han.subject;
+        sectionDesc.value = defaultData.han.desc;
+        sectionAction.value = defaultData.han.action;
+      } else {
+        freeMarkdownInput.value = `# 查核整體結論\n## 流動性資產覆核重點\n- 國債折價率連動作業\n- 公司債定價評價`;
+      }
+      generateDocument();
+    });
+
+    document.getElementById('btnCopyText').addEventListener('click', () => {
+      navigator.clipboard.writeText(outputPreview.textContent).then(() => {
+        alert('純文字格式已複製至剪貼簿！');
+      });
+    });
+
+    document.getElementById('btnCopyRich').addEventListener('click', () => {
+      const htmlContent = `<div style="font-family:'DFKai-SB',serif; font-size:16pt; line-height:28pt;">${outputPreview.innerHTML.replace(/\n/g, '<br>')}</div>`;
+      const blob = new Blob([htmlContent], { type: "text/html" });
+      const data = [new ClipboardItem({ "text/html": blob })];
+      navigator.clipboard.write(data).then(() => {
+        alert('Word 富文字格式已複製，貼上後會維持標楷體與固定行高！');
+      });
+    });
+
+    document.getElementById('btnExportDocx').addEventListener('click', exportToDocx);
+
+    // 初始化範例
+    document.getElementById('btnSample').click();
+  </script>
+</body>
+</html>
