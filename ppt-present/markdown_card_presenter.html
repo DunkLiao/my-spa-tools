@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card Presenter - 自適應卡片簡報工具</title>
+
+  <!-- 立即套用主題，避免載入閃爍（主題偏好存於 localStorage） -->
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem('card_presenter_theme') || 'light';
+        if (t === 'dark') document.documentElement.classList.add('dark');
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- Tailwind CSS CDN（與 repo 其他入口一致；匯出檔不含此依賴） -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { darkMode: 'class' };
+  </script>
+
+  <!-- 卡片內文樣式：由 JS 注入，且與匯出檔共用同一份 CARD_CSS 以確保預覽／匯出一致 -->
+  <style id="card-content-styles"></style>
+</head>
+
+<body class="h-screen flex flex-col overflow-hidden antialiased bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+
+  <!-- Top Toolbar -->
+  <header class="h-[60px] shrink-0 z-10 flex items-center justify-between gap-3 px-3 sm:px-4 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 shadow-sm">
+    <div class="flex items-center gap-2 font-bold text-[1.05rem] text-slate-800 dark:text-slate-100 min-w-0">
+      <span aria-hidden="true">📑</span>
+      <span class="truncate">Card Presenter</span>
+      <span class="hidden sm:inline text-[0.72rem] font-semibold bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded-full whitespace-nowrap"
+            title="編輯介面樣式由 CDN 載入 Tailwind；匯出檔為完全離線的單一 HTML">純前端 · 單檔匯出</span>
+    </div>
+
+    <div class="flex items-center gap-2 shrink-0">
+      <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-1">
+        <select id="template-select" title="選擇範本"
+                class="bg-transparent border-none outline-none cursor-pointer text-xs font-semibold text-slate-700 dark:text-slate-200 py-1.5 px-1.5 max-w-[130px] sm:max-w-[220px]"></select>
+        <button id="btn-save-template" type="button" title="將目前內容儲存為自訂範本"
+                class="inline-flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 rounded px-1.5 py-1 transition-colors">➕</button>
+        <button id="btn-reset-template" type="button" title="還原系統預設範本"
+                class="inline-flex items-center justify-center text-sm text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-700 rounded px-1.5 py-1 transition-colors">🔄</button>
+      </div>
+
+      <span id="slide-count-badge" class="hidden md:inline text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1.5 rounded-md font-semibold whitespace-nowrap">共 0 頁</span>
+
+      <button id="btn-theme" type="button" title="切換深色／淺色模式"
+              class="inline-flex items-center justify-center text-base w-9 h-9 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">🌙</button>
+
+      <button id="btn-export" type="button" title="匯出成單一離線 HTML 檔"
+              class="inline-flex items-center gap-1.5 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-[0.84rem] font-semibold px-3 py-2 rounded-lg transition-colors">
+        💾 <span class="hidden lg:inline">匯出展示檔</span>
+      </button>
+
+      <button id="btn-present" type="button" title="全螢幕播放 (快捷鍵 F)"
+              class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[0.84rem] font-semibold px-3 py-2 rounded-lg transition-colors">
+        ▶️ <span class="hidden sm:inline">播放簡報</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace -->
+  <main class="flex-1 flex flex-col md:flex-row overflow-hidden">
+    <!-- Editor Pane -->
+    <section class="w-full md:w-[44%] md:min-w-[340px] h-[45vh] md:h-auto flex flex-col bg-white dark:bg-slate-900 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800">
+      <div class="flex flex-wrap gap-1.5 px-3 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <button type="button" data-syntax="slide"
+                class="text-[0.76rem] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-md px-2 py-1 transition-colors">➕ 分頁 (---)</button>
+        <button type="button" data-syntax="kpi"
+                class="text-[0.76rem] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-md px-2 py-1 transition-colors">📊 KPI 指標</button>
+        <button type="button" data-syntax="columns"
+                class="text-[0.76rem] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-md px-2 py-1 transition-colors">🗂️ 雙欄卡片</button>
+        <button type="button" data-syntax="callout"
+                class="text-[0.76rem] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-blue-600 dark:hover:text-blue-400 rounded-md px-2 py-1 transition-colors">💡 提示框</button>
+      </div>
+      <textarea id="markdown-input" spellcheck="false"
+                class="flex-1 w-full border-0 outline-none resize-none p-4 font-mono text-[0.9rem] leading-relaxed bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-600"
+                placeholder="在此輸入 Markdown 內容..."></textarea>
+    </section>
+
+    <!-- Preview Pane -->
+    <section id="preview-container" class="flex-1 bg-slate-100 dark:bg-slate-950 overflow-y-auto p-4 sm:p-6 flex flex-col items-center gap-6"></section>
+  </main>
+
+  <!-- Presentation Overlay（可捲動，長內容不會被裁切） -->
+  <div id="presentation-overlay" class="hidden fixed inset-0 z-[9999] bg-slate-950 overflow-y-auto">
+    <div class="min-h-full flex items-center justify-center p-4 sm:p-6">
+      <div id="pres-content" class="card-doc w-full max-w-[1100px] bg-white dark:bg-slate-900 rounded-2xl p-8 sm:p-12 shadow-2xl min-h-[520px] relative"></div>
+    </div>
+    <div class="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-slate-900/80 backdrop-blur px-4 py-1.5 rounded-full text-white text-sm shadow-lg z-[100]">
+      <button type="button" id="pres-prev" title="上一頁 (←)" class="px-2 py-1 rounded hover:bg-white/20">◀</button>
+      <span id="pres-page-indicator">1 / 1</span>
+      <button type="button" id="pres-next" title="下一頁 (→ / 空白鍵)" class="px-2 py-1 rounded hover:bg-white/20">▶</button>
+      <button type="button" id="pres-exit" title="離開 (Esc)" class="px-2 py-1 rounded hover:bg-white/20">✖</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" role="status" aria-live="polite"
+       class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-2 rounded-lg text-sm font-medium shadow-lg opacity-0 pointer-events-none transition-opacity z-[100001]"></div>
+
+  <!-- In-App Dialog: Save New Template -->
+  <div id="modal-new-template" data-modal class="hidden fixed inset-0 z-[100000] items-center justify-center p-5 bg-slate-900/55 backdrop-blur-sm">
+    <div class="w-full max-w-[440px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6">
+      <h3 class="text-[1.05rem] font-bold text-slate-900 dark:text-slate-100 mb-2">💾 儲存為自訂範本</h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">將當前編輯器中的 Markdown 卡片架構儲存至瀏覽器本機（IndexedDB），日後可從範本選單快速調用。</p>
+      <input id="new-template-name-input" type="text" maxlength="30" placeholder="例如：月度風險指標報告"
+             class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-slate-100 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-4">
+      <div class="flex justify-end gap-2">
+        <button type="button" data-close="modal-new-template"
+                class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-[0.82rem] font-semibold px-3.5 py-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">取消</button>
+        <button type="button" id="btn-confirm-new-template"
+                class="bg-blue-600 hover:bg-blue-700 text-white text-[0.82rem] font-semibold px-4 py-2 rounded-md transition-colors">儲存範本</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-App Dialog: Reset Built-in Templates -->
+  <div id="modal-reset-template" data-modal class="hidden fixed inset-0 z-[100000] items-center justify-center p-5 bg-slate-900/55 backdrop-blur-sm">
+    <div class="w-full max-w-[440px] bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-6">
+      <h3 class="text-[1.05rem] font-bold text-slate-900 dark:text-slate-100 mb-2">⚠️ 還原原始範本設定</h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed mb-4">確定要還原為系統原廠預設範本嗎？此操作將清除自訂範本清單，但不會覆蓋當前編輯區已有的文字。</p>
+      <div class="flex justify-end gap-2">
+        <button type="button" data-close="modal-reset-template"
+                class="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-[0.82rem] font-semibold px-3.5 py-2 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">取消</button>
+        <button type="button" id="btn-confirm-reset-template"
+                class="bg-red-600 hover:bg-red-700 text-white text-[0.82rem] font-semibold px-4 py-2 rounded-md transition-colors">確認還原</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================
+       卡片內文樣式（單一來源）：
+       在 App 內注入 <style>，匯出檔亦嵌入同一份，確保預覽／輸出一致。
+       淺色 + 深色（.dark 由 <html> 套用）
+       ========================================================= */
+    const CARD_CSS = `
+.card-doc h1{font-size:1.6rem;font-weight:800;color:#0f172a;margin:0 0 14px;padding-bottom:8px;border-bottom:2px solid #e2e8f0;line-height:1.3;}
+.card-doc h2{font-size:1.25rem;font-weight:700;color:#1e293b;margin:18px 0 10px;}
+.card-doc p{margin:8px 0;line-height:1.65;color:#334155;}
+.card-doc blockquote{border-left:4px solid #2563eb;padding:8px 14px;margin:10px 0 16px;color:#475569;background:#eff6ff;border-radius:0 8px 8px 0;font-size:.95rem;}
+.card-doc ul{padding-left:24px;margin:10px 0 16px;color:#334155;line-height:1.7;}
+.card-doc li{margin-bottom:6px;}
+.card-doc strong{color:#0f172a;font-weight:700;}
+.card-doc code{background:#f1f5f9;padding:2px 5px;border-radius:4px;font-size:.88em;color:#0f172a;}
+.kpi-container{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0;}
+.kpi-badge{flex:1 1 calc(33.333% - 12px);min-width:170px;background:#ffffff;border:1px solid #e2e8f0;border-left:5px solid #2563eb;border-radius:8px;padding:12px 14px;box-shadow:0 1px 2px rgba(0,0,0,.05);}
+.kpi-badge.status-success{border-left-color:#10b981;}
+.kpi-badge.status-warning{border-left-color:#f59e0b;}
+.kpi-badge.status-danger{border-left-color:#ef4444;}
+.kpi-badge.status-info{border-left-color:#0ea5e9;}
+.kpi-label{font-size:.74rem;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.kpi-value{font-size:1.3rem;font-weight:800;color:#0f172a;}
+.columns-grid{display:grid;gap:16px;margin:16px 0;width:100%;}
+.columns-grid.cols-2{grid-template-columns:repeat(2,1fr);}
+.columns-grid.cols-3{grid-template-columns:repeat(3,1fr);}
+.sub-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 18px;}
+.sub-card h3{font-size:1rem;font-weight:700;color:#1e293b;margin:0 0 10px;border-bottom:1px solid #e2e8f0;padding-bottom:6px;}
+.sub-card ul{padding-left:18px;margin:0;font-size:.88rem;}
+.callout{border-radius:8px;padding:12px 16px;margin:14px 0;font-size:.9rem;line-height:1.55;display:flex;gap:10px;align-items:flex-start;border:1px solid transparent;}
+.callout.callout-info{background:#eff6ff;border-color:#bfdbfe;color:#1e40af;}
+.callout.callout-success{background:#ecfdf5;border-color:#a7f3d0;color:#065f46;}
+.callout.callout-warning{background:#fffbeb;border-color:#fde68a;color:#92400e;}
+.dark .card-doc h1{color:#f1f5f9;border-bottom-color:#334155;}
+.dark .card-doc h2{color:#e2e8f0;}
+.dark .card-doc p,.dark .card-doc ul{color:#cbd5e1;}
+.dark .card-doc strong{color:#f8fafc;}
+.dark .card-doc code{background:#334155;color:#f1f5f9;}
+.dark .card-doc blockquote{background:#1e293b;color:#cbd5e1;border-left-color:#3b82f6;}
+.dark .kpi-badge{background:#1e293b;border-color:#334155;}
+.dark .kpi-value{color:#f1f5f9;}
+.dark .kpi-label{color:#94a3b8;}
+.dark .sub-card{background:#0f172a;border-color:#1e293b;}
+.dark .sub-card h3{color:#e2e8f0;border-bottom-color:#334155;}
+.dark .callout.callout-info{background:#1e293b;border-color:#1e40af;color:#bfdbfe;}
+.dark .callout.callout-success{background:#0f2e22;border-color:#065f46;color:#a7f3d0;}
+.dark .callout.callout-warning{background:#3a2e12;border-color:#92400e;color:#fde68a;}
+@media (max-width:640px){.columns-grid.cols-2,.columns-grid.cols-3{grid-template-columns:1fr;}}
+`;
+
+    /* 匯出檔專用外框樣式（不含 Tailwind，維持單檔離線） */
+    const EXPORT_BASE_CSS = `
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"Noto Sans TC",sans-serif;background:#0f172a;color:#0f172a;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;}
+.card-wrap{width:100%;max-width:1060px;background:#ffffff;border-radius:16px;padding:46px 54px;min-height:520px;box-shadow:0 25px 50px -12px rgba(0,0,0,.5);position:relative;}
+.page-badge{position:absolute;top:16px;right:20px;font-size:.75rem;color:#94a3b8;font-weight:700;letter-spacing:.5px;}
+.controls{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:12px;background:rgba(15,23,42,.85);backdrop-filter:blur(6px);padding:6px 16px;border-radius:30px;color:#fff;align-items:center;font-size:.85rem;}
+.controls button{background:none;border:none;color:#fff;cursor:pointer;font-size:1.05rem;padding:2px 8px;border-radius:4px;}
+.controls button:hover{background:rgba(255,255,255,.2);}
+`;
+
+    /* ---------------- 原生零依賴 Markdown 解析 ---------------- */
+    function inlineMarkdown(text) {
+      let out = String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      out = out.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      out = out.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      out = out.replace(/`([^`]+)`/g, '<code>$1</code>');
+      return out;
+    }
+
+    // 只允許白名單值，避免屬性注入與樣式錯亂
+    function sanitizeStatus(raw) {
+      const v = String(raw || '').trim().toLowerCase();
+      return ['success', 'warning', 'danger', 'info'].indexOf(v) !== -1 ? v : 'info';
+    }
+    function sanitizeCallout(raw) {
+      const v = String(raw || 'info').trim().toLowerCase();
+      return ['success', 'warning', 'info'].indexOf(v) !== -1 ? v : 'info';
+    }
+
+    function renderSlideContent(rawMd) {
+      const lines = String(rawMd).split('\n');
+      let out = '';
+      let inColumns = false;
+      let inSubCard = false;
+      let inList = false;
+      let inKpi = false;
+
+      const closeList = () => { if (inList) { out += '</ul>'; inList = false; } };
+      const closeKpi = () => { if (inKpi) { out += '</div>'; inKpi = false; } };
+      const closeBlocks = () => { closeList(); closeKpi(); };
+
+      for (let i = 0; i < lines.length; i++) {
+        const trimmed = lines[i].trim();
+
+        // 區塊結束（--- 為分頁，::: 為區塊標記）
+        if (trimmed === ':::') {
+          closeBlocks();
+          if (inSubCard) { out += '</div>'; inSubCard = false; }
+          else if (inColumns) { out += '</div>'; inColumns = false; }
+          continue;
+        }
+
+        // 多欄容器
+        const colMatch = trimmed.match(/^:::\s*columns(?:\s+(\d+))?\s*$/i);
+        if (colMatch) {
+          closeBlocks();
+          inColumns = true;
+          const count = colMatch[1] === '3' ? '3' : '2';
+          out += '<div class="columns-grid cols-' + count + '">';
+          continue;
+        }
+
+        // 欄內子卡片
+        const cardMatch = trimmed.match(/^:::\s*card\s*\[(.*?)\]\s*$/i);
+        if (cardMatch) {
+          closeBlocks();
+          inSubCard = true;
+          out += '<div class="sub-card"><h3>' + inlineMarkdown(cardMatch[1]) + '</h3>';
+          continue;
+        }
+
+        // KPI 指標（連續多行會併入同一個 container 併排）
+        const kpiMatch = trimmed.match(/^:::\s*kpi\s*\[(.*?)\]\s*(.*?)\s*(?:\[status:\s*(.*?)\])?\s*$/i);
+        if (kpiMatch) {
+          closeList();
+          const label = kpiMatch[1];
+          const val = kpiMatch[2];
+          const status = sanitizeStatus(kpiMatch[3]);
+          if (!inKpi) { out += '<div class="kpi-container">'; inKpi = true; }
+          out += '<div class="kpi-badge status-' + status + '">'
+               + '<div class="kpi-label">' + inlineMarkdown(label) + '</div>'
+               + '<div class="kpi-value">' + inlineMarkdown(val) + '</div>'
+               + '</div>';
+          continue;
+        }
+
+        // 提示框
+        const calloutMatch = trimmed.match(/^:::\s*callout(?:\s*\[(.*?)\])?\s*$/i);
+        if (calloutMatch) {
+          closeBlocks();
+          const type = sanitizeCallout(calloutMatch[1]);
+          const icon = type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+          const contentLines = [];
+          i++;
+          while (i < lines.length && lines[i].trim() !== ':::') { contentLines.push(lines[i].trim()); i++; }
+          out += '<div class="callout callout-' + type + '"><span>' + icon + '</span><div>'
+               + inlineMarkdown(contentLines.join(' ').trim()) + '</div></div>';
+          continue;
+        }
+
+        if (trimmed.startsWith('# ')) { closeBlocks(); out += '<h1>' + inlineMarkdown(trimmed.slice(2)) + '</h1>'; continue; }
+        if (trimmed.startsWith('## ')) { closeBlocks(); out += '<h2>' + inlineMarkdown(trimmed.slice(3)) + '</h2>'; continue; }
+        if (trimmed.startsWith('> ')) { closeBlocks(); out += '<blockquote>' + inlineMarkdown(trimmed.slice(2)) + '</blockquote>'; continue; }
+
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+          closeKpi();
+          if (!inList) { out += '<ul>'; inList = true; }
+          out += '<li>' + inlineMarkdown(trimmed.slice(2)) + '</li>';
+          continue;
+        }
+
+        closeBlocks();
+        if (trimmed.length > 0) out += '<p>' + inlineMarkdown(trimmed) + '</p>';
+      }
+
+      closeList();
+      closeKpi();
+      if (inSubCard) out += '</div>';
+      if (inColumns) out += '</div>';
+      return out;
+    }
+
+    /* ---------------- 內建範本 ---------------- */
+    const DEFAULT_TEMPLATES = {
+      template2: {
+        name: "範本：專案架構亮點",
+        isBuiltin: true,
+        content: `# 系統架構重構亮點
+> 本季重點：完成前端 SPA 工具箱整合與零依賴效能調校。
+
+::: kpi [載入速度] 240ms [status: success]
+::: kpi [離線可用率] 100% [status: info]
+::: kpi [第三方依賴] 0 組件 [status: success]
+
+---
+
+# 核心架構與模組設計
+
+::: columns 2
+::: card [前端 SPA 模組化]
+- **零依賴自給自足**：採用 Self-contained 架構。
+- **載入時間最佳化**：降至 240ms，支援本機直接離線執行。
+- **即時響應**：整合自動儲存與單鍵全螢幕展示模式。
+:::
+::: card [安全與合規加固]
+- **內建脫敏**：PII 機敏資訊去識別化遮蔽機制。
+- **本地運算**：所有文字分析與試算全數於 Client 端本機完成。
+- **零外部通訊**：無資料外洩風險，符合高規格內網規範。
+:::
+:::
+
+---
+
+# 部署與驗收結論
+
+::: callout [success]
+已完成跨瀏覽器（Chrome, Edge, Safari）相容性驗證，各模組單一檔案封裝皆正常無誤。
+:::
+`
+      },
+      template1: {
+        name: "範本：Q3 風險監控週報",
+        isBuiltin: true,
+        content: `# 2026 Q3 流動性風險監控週報
+> 核心摘要：本季各項監管指標表現穩健，無流動性缺口警訊。
+
+::: kpi [LCR 達成率] 128.5% [status: success]
+::: kpi [NSFR 穩定資金] 115.2% [status: info]
+::: kpi [HQLA 儲備] 4,820 億 [status: warning]
+
+---
+
+# 壓力測試情境試算
+
+::: columns 2
+::: card [30天嚴重流動性壓力]
+- **零售存款流失率**：假設為 8.5%（符合公報標準）
+- **企金批發存款**：預估流出 180 億元
+- **剩餘資金緩衝**：仍高於警戒水位 20%
+:::
+::: card [應變處置計畫 (CFP)]
+- **啟動門檻**：LCR 連續三日小於 105%
+- **第一動態措施**：執行央行公開市場操作附買回
+- **次級融通**：啟用大型同業拆借備用額度
+:::
+:::
+
+---
+
+# 關鍵工作行動結論
+
+::: callout [info]
+各業務單位請於本週五前完成下季資產負債結構配比確認，並送交風險管理委員會核備。
+:::
+`
+      },
+      template3: {
+        name: "範本：極簡雙欄範例",
+        isBuiltin: true,
+        content: `# 極簡雙欄卡片範例
+> 快速展示雙欄卡片佈局。
+
+::: columns 2
+::: card [卡片 A]
+- 項目一：簡單明瞭
+- 項目二：即打即顯
+:::
+::: card [卡片 B]
+- 項目三：自適應寬度
+- 項目四：手機版自動單欄排列
+:::
+:::
+`
+      }
+    };
+
+    /* ---------------- 儲存層：IndexedDB 優先，localStorage 後援 ---------------- */
+    const DB_NAME = 'markdown-card-presenter';
+    const DB_VERSION = 1;
+    const STORE = 'kv';
+    const LS_TEMPLATES = 'card_presenter_templates_v3';
+    const LS_DRAFT = 'card_presenter_draft_v3';
+    const LS_THEME = 'card_presenter_theme';
+
+    let idb = null;
+    let idbReady = false;
+
+    function openDB() {
+      return new Promise((resolve) => {
+        if (!('indexedDB' in window)) { resolve(false); return; }
+        let req;
+        try { req = indexedDB.open(DB_NAME, DB_VERSION); }
+        catch (e) { resolve(false); return; }
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'key' });
+        };
+        req.onsuccess = () => { idb = req.result; idbReady = true; resolve(true); };
+        req.onerror = () => resolve(false);
+        req.onblocked = () => resolve(false);
+      });
+    }
+
+    function idbGet(key) {
+      return new Promise((resolve) => {
+        if (!idbReady) { resolve(null); return; }
+        try {
+          const r = idb.transaction(STORE, 'readonly').objectStore(STORE).get(key);
+          r.onsuccess = () => resolve(r.result ? r.result.value : null);
+          r.onerror = () => resolve(null);
+        } catch (e) { resolve(null); }
+      });
+    }
+
+    function idbSet(key, value) {
+      return new Promise((resolve) => {
+        if (!idbReady) { resolve(false); return; }
+        try {
+          const tx = idb.transaction(STORE, 'readwrite');
+          tx.objectStore(STORE).put({ key: key, value: value });
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        } catch (e) { resolve(false); }
+      });
+    }
+
+    /* ---------------- 狀態 ---------------- */
+    let templatesState = {};
+    let slidesData = [];
+    let currentSlideIndex = 0;
+    let loadedDraft = null;
+    let draftTimer = null;
+    let toastTimer = null;
+
+    const mdInput = document.getElementById('markdown-input');
+    const previewContainer = document.getElementById('preview-container');
+    const slideCountBadge = document.getElementById('slide-count-badge');
+    const templateSelect = document.getElementById('template-select');
+    const toastEl = document.getElementById('toast');
+    const presOverlay = document.getElementById('presentation-overlay');
+
+    /* ---------------- 主題 ---------------- */
+    function applyThemeIcon() {
+      const isDark = document.documentElement.classList.contains('dark');
+      document.getElementById('btn-theme').textContent = isDark ? '☀️' : '🌙';
+    }
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      try { localStorage.setItem(LS_THEME, isDark ? 'dark' : 'light'); } catch (e) {}
+      applyThemeIcon();
+    }
+
+    /* ---------------- Toast / Modal ---------------- */
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.remove('opacity-0');
+      toastEl.classList.add('opacity-100');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastEl.classList.add('opacity-0');
+        toastEl.classList.remove('opacity-100');
+      }, 2200);
+    }
+    function openModal(id) {
+      const m = document.getElementById(id);
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+    }
+    function closeModal(id) {
+      const m = document.getElementById(id);
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    /* ---------------- 範本 ---------------- */
+    async function persistTemplates() {
+      const ok = await idbSet('templates', templatesState);
+      if (!ok) { try { localStorage.setItem(LS_TEMPLATES, JSON.stringify(templatesState)); } catch (e) {} }
+    }
+
+    function renderTemplateOptions(selectedKey) {
+      const current = selectedKey || templateSelect.value || 'template2';
+      templateSelect.innerHTML = '';
+      Object.entries(templatesState).forEach(([key, item]) => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = item.name + (item.isBuiltin ? '' : ' (自訂)');
+        templateSelect.appendChild(opt);
+      });
+      if (templatesState[current]) templateSelect.value = current;
+      else {
+        const firstKey = Object.keys(templatesState)[0];
+        if (firstKey) templateSelect.value = firstKey;
+      }
+    }
+
+    function confirmSaveNewTemplate() {
+      const input = document.getElementById('new-template-name-input');
+      const name = input.value.trim();
+      if (!name) { showToast('請輸入範本名稱'); input.focus(); return; }
+      const content = mdInput.value;
+      if (!content.trim()) { showToast('編輯區內容為空，無法建立範本'); return; }
+
+      const newKey = 'custom_' + Date.now();
+      templatesState[newKey] = { name: name, isBuiltin: false, content: content };
+      persistTemplates();
+      renderTemplateOptions(newKey);
+      closeModal('modal-new-template');
+      showToast('已建立自訂範本「' + name + '」');
+    }
+
+    function confirmResetTemplates() {
+      templatesState = JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+      persistTemplates();
+      renderTemplateOptions('template2');
+      mdInput.value = templatesState.template2.content;
+      render();
+      closeModal('modal-reset-template');
+      showToast('已還原為原廠預設範本');
+    }
+
+    /* ---------------- 渲染 ---------------- */
+    function scheduleDraftSave(text) {
+      clearTimeout(draftTimer);
+      draftTimer = setTimeout(async () => {
+        const ok = await idbSet('draft', text);
+        if (!ok) { try { localStorage.setItem(LS_DRAFT, text); } catch (e) {} }
+      }, 400);
+    }
+
+    function render() {
+      const rawText = mdInput.value;
+      scheduleDraftSave(rawText);
+
+      // 以獨立一行的 --- 作為分頁分隔
+      const rawSlides = rawText.split(/^[ \t]*---[ \t]*$/m);
+      slidesData = rawSlides.map(s => s.trim()).filter(s => s.length > 0);
+
+      slideCountBadge.textContent = '共 ' + slidesData.length + ' 頁';
+      previewContainer.innerHTML = '';
+
+      slidesData.forEach((slideRaw, idx) => {
+        const cardEl = document.createElement('article');
+        cardEl.className = 'card-doc w-full max-w-[860px] bg-white dark:bg-slate-900 rounded-xl p-6 sm:p-8 shadow-md border border-slate-200 dark:border-slate-800 relative';
+        cardEl.innerHTML =
+          '<span class="absolute top-3.5 right-4 text-[0.74rem] text-slate-400 font-bold tracking-wide">PAGE ' + (idx + 1) + ' / ' + slidesData.length + '</span>'
+          + renderSlideContent(slideRaw);
+        previewContainer.appendChild(cardEl);
+      });
+    }
+
+    function insertSyntax(type) {
+      const textarea = mdInput;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      let textToInsert = '';
+
+      if (type === 'slide') {
+        textToInsert = '\n\n---\n\n# 新卡片頁面標題\n> 頁面引言說明。\n';
+      } else if (type === 'kpi') {
+        textToInsert = '\n::: kpi [指標名稱] 99.8% [status: success]\n';
+      } else if (type === 'columns') {
+        textToInsert = '\n::: columns 2\n::: card [卡片標題 A]\n- 重點說明一\n- 重點說明二\n:::\n::: card [卡片標題 B]\n- 重點說明三\n- 重點說明四\n:::\n:::\n';
+      } else if (type === 'callout') {
+        textToInsert = '\n::: callout [info]\n這是一則重要的提示或結論。\n:::\n';
+      }
+
+      textarea.setRangeText(textToInsert, start, end, 'end');
+      textarea.focus();
+      render();
+    }
+
+    /* ---------------- 播放模式 ---------------- */
+    function startPresentation() {
+      if (slidesData.length === 0) { showToast('尚無頁面可供播放'); return; }
+      currentSlideIndex = 0;
+      updatePresView();
+      presOverlay.classList.remove('hidden');
+    }
+    function exitPresentation() {
+      presOverlay.classList.add('hidden');
+    }
+    function updatePresView() {
+      const container = document.getElementById('pres-content');
+      const indicator = document.getElementById('pres-page-indicator');
+      container.innerHTML =
+        '<span class="absolute top-3.5 right-4 text-[0.74rem] text-slate-400 font-bold tracking-wide">PAGE ' + (currentSlideIndex + 1) + ' / ' + slidesData.length + '</span>'
+        + renderSlideContent(slidesData[currentSlideIndex] || '');
+      indicator.textContent = (currentSlideIndex + 1) + ' / ' + slidesData.length;
+    }
+    function prevSlide() { if (currentSlideIndex > 0) { currentSlideIndex--; updatePresView(); } }
+    function nextSlide() { if (currentSlideIndex < slidesData.length - 1) { currentSlideIndex++; updatePresView(); } }
+
+    /* ---------------- 匯出離線單一 HTML ---------------- */
+    function exportOfflineHtml() {
+      if (slidesData.length === 0) { showToast('尚無內容可供匯出'); return; }
+
+      const slidesHtmlArray = slidesData.map(renderSlideContent);
+      const slidesJson = JSON.stringify(slidesHtmlArray).replace(/<\//g, '<\\/');
+      const css = EXPORT_BASE_CSS + CARD_CSS;
+
+      const standaloneHtml = '<!DOCTYPE html>\n'
+        + '<html lang="zh-TW">\n<head>\n'
+        + '<meta charset="UTF-8">\n'
+        + '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n'
+        + '<title>Card Presentation - Offline</title>\n'
+        + '<style>' + css + '</style>\n'
+        + '</head>\n<body>\n'
+        + '<div class="card-wrap card-doc" id="card"></div>\n'
+        + '<div class="controls">'
+        + '<button onclick="prev()">&#9664;</button>'
+        + '<span id="page">1 / 1</span>'
+        + '<button onclick="next()">&#9654;</button>'
+        + '</div>\n'
+        + '<script>\n'
+        + 'var slides = ' + slidesJson + ';\n'
+        + 'var cur = 0;\n'
+        + 'var cardEl = document.getElementById("card");\n'
+        + 'var pageEl = document.getElementById("page");\n'
+        + 'function update(){ cardEl.innerHTML = \'<span class="page-badge">PAGE \' + (cur + 1) + \' / \' + slides.length + \'</span>\' + slides[cur]; pageEl.textContent = (cur + 1) + \' / \' + slides.length; }\n'
+        + 'function prev(){ if(cur > 0){ cur--; update(); } }\n'
+        + 'function next(){ if(cur < slides.length - 1){ cur++; update(); } }\n'
+        + 'window.addEventListener("keydown", function(e){\n'
+        + '  if(e.key === "ArrowRight" || e.key === " "){ e.preventDefault(); next(); }\n'
+        + '  if(e.key === "ArrowLeft"){ e.preventDefault(); prev(); }\n'
+        + '});\n'
+        + 'update();\n'
+        + '<\/script>\n</body>\n</html>';
+
+      const blob = new Blob([standaloneHtml], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'presentation_card_deck_' + Date.now() + '.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('已成功匯出獨立單一展示檔');
+    }
+
+    /* ---------------- 事件綁定 ---------------- */
+    function isTypingTarget(el) {
+      if (!el) return false;
+      const tag = el.tagName;
+      return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+    }
+    function activeModal() {
+      return document.querySelector('[data-modal]:not(.hidden)');
+    }
+
+    function bindEvents() {
+      document.getElementById('btn-theme').addEventListener('click', toggleTheme);
+      document.getElementById('btn-present').addEventListener('click', startPresentation);
+      document.getElementById('btn-export').addEventListener('click', exportOfflineHtml);
+      document.getElementById('btn-save-template').addEventListener('click', () => {
+        document.getElementById('new-template-name-input').value = '';
+        openModal('modal-new-template');
+        setTimeout(() => document.getElementById('new-template-name-input').focus(), 60);
+      });
+      document.getElementById('btn-reset-template').addEventListener('click', () => openModal('modal-reset-template'));
+      document.getElementById('btn-confirm-new-template').addEventListener('click', confirmSaveNewTemplate);
+      document.getElementById('btn-confirm-reset-template').addEventListener('click', confirmResetTemplates);
+      document.getElementById('pres-prev').addEventListener('click', prevSlide);
+      document.getElementById('pres-next').addEventListener('click', nextSlide);
+      document.getElementById('pres-exit').addEventListener('click', exitPresentation);
+
+      document.querySelectorAll('[data-close]').forEach(btn => {
+        btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close')));
+      });
+      document.querySelectorAll('[data-modal]').forEach(m => {
+        m.addEventListener('click', (e) => { if (e.target === m) closeModal(m.id); });
+      });
+      document.querySelectorAll('[data-syntax]').forEach(btn => {
+        btn.addEventListener('click', () => insertSyntax(btn.getAttribute('data-syntax')));
+      });
+
+      templateSelect.addEventListener('change', (e) => {
+        const selected = templatesState[e.target.value];
+        if (selected && selected.content) {
+          mdInput.value = selected.content;
+          render();
+          showToast('已套用「' + selected.name + '」');
+        }
+      });
+      mdInput.addEventListener('input', render);
+
+      window.addEventListener('keydown', (e) => {
+        // Esc 優先關閉 Modal
+        if (e.key === 'Escape') {
+          const m = activeModal();
+          if (m) { closeModal(m.id); return; }
+        }
+        const isPresActive = !presOverlay.classList.contains('hidden');
+        if (isPresActive) {
+          if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+          else if (e.key === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+          else if (e.key === 'Escape') { exitPresentation(); }
+        } else if (!isTypingTarget(e.target) && !activeModal()) {
+          if (e.key === 'f' || e.key === 'F') { e.preventDefault(); startPresentation(); }
+        }
+      });
+    }
+
+    /* ---------------- 啟動 ---------------- */
+    async function loadState() {
+      await openDB();
+      let templates = null;
+      let draft = null;
+
+      if (idbReady) {
+        templates = await idbGet('templates');
+        draft = await idbGet('draft');
+      }
+      if (!templates) {
+        try { const s = localStorage.getItem(LS_TEMPLATES); if (s) templates = JSON.parse(s); } catch (e) {}
+      }
+      if (draft == null) {
+        try { draft = localStorage.getItem(LS_DRAFT); } catch (e) {}
+      }
+
+      templatesState = (templates && typeof templates === 'object' && Object.keys(templates).length)
+        ? templates
+        : JSON.parse(JSON.stringify(DEFAULT_TEMPLATES));
+      loadedDraft = (typeof draft === 'string') ? draft : null;
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('card-content-styles').textContent = CARD_CSS;
+      bindEvents();
+      applyThemeIcon();
+
+      await loadState();
+      renderTemplateOptions();
+
+      if (loadedDraft && loadedDraft.trim()) {
+        mdInput.value = loadedDraft;
+      } else if (templatesState.template2) {
+        mdInput.value = templatesState.template2.content;
+      }
+      render();
+    });
+  </script>
+</body>
+</html>
