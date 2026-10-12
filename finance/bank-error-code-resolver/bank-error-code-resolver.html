@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>核心系統與電文錯誤碼排查對照台 | Bank Code Resolver</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- SheetJS for Excel Import/Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .badge-fatal { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+    .badge-error { background-color: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+    .badge-warning { background-color: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
+    .badge-info { background-color: #e0f2fe; color: #075985; border: 1px solid #bae6fd; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+
+  <header class="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-indigo-600 rounded-lg shadow-sm">
+          <i class="ph-bold ph-shield-check text-xl text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-base sm:text-lg leading-tight tracking-wide flex items-center gap-2">
+            核心系統與電文錯誤碼排查對照台
+            <span class="text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center gap-1">
+              <i class="ph-fill ph-database text-[10px]"></i>IndexedDB 離線存儲
+            </span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block">Core Banking, FISC, SWIFT & Batch Runbook Resolution</p>
+        </div>
+      </div>
+      
+      <!-- Top Actions Toolbar -->
+      <div class="flex items-center space-x-2">
+        <button id="btnOpenImport" class="flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg transition-all shadow-sm">
+          <i class="ph-bold ph-file-arrow-up text-base"></i>
+          <span>匯入 Excel</span>
+        </button>
+        <button id="btnManageCategories" class="flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium bg-indigo-700 hover:bg-indigo-600 active:scale-95 text-white rounded-lg transition-all shadow-sm">
+          <i class="ph-bold ph-folder-notch text-base"></i>
+          <span>系統類別管理</span>
+        </button>
+        <button id="btnDownloadTemplate" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition-all">
+          <i class="ph-bold ph-download-simple text-base"></i>
+          <span>下載範本</span>
+        </button>
+        <button id="btnOpenNew" class="flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm font-medium bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-lg transition-all shadow-sm">
+          <i class="ph-bold ph-plus-circle text-base"></i>
+          <span class="hidden sm:inline">新增代碼</span>
+        </button>
+        <button id="btnSettingsMenu" title="資料庫維護" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors">
+          <i class="ph-bold ph-gear text-lg"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex flex-col gap-5">
+    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-4">
+      <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+        <!-- Search Input -->
+        <div class="relative flex-1">
+          <i class="ph-bold ph-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-lg"></i>
+          <input 
+            type="text" 
+            id="searchInput" 
+            placeholder="搜尋代碼 (如: 4001, AC01)、電文、錯誤原因、SOP 處置關鍵字..." 
+            class="w-full pl-10 pr-10 py-2.5 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:bg-white outline-none transition"
+          >
+          <button id="btnClearSearch" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <i class="ph-bold ph-x-circle text-base"></i>
+          </button>
+        </div>
+
+        <!-- Filter Dropdowns -->
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Dynamic System Filter -->
+          <div class="relative">
+            <select id="filterCategory" class="appearance-none bg-slate-50 border border-slate-300 text-slate-700 text-xs sm:text-sm rounded-xl py-2.5 pl-3 pr-8 font-medium focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
+              <option value="ALL">全部系統類別 (全部)</option>
+            </select>
+            <i class="ph-bold ph-caret-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+          </div>
+
+          <!-- Severity Filter -->
+          <div class="relative">
+            <select id="filterSeverity" class="appearance-none bg-slate-50 border border-slate-300 text-slate-700 text-xs sm:text-sm rounded-xl py-2.5 pl-3 pr-8 font-medium focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer">
+              <option value="ALL">全部嚴重度</option>
+              <option value="FATAL">阻斷 (FATAL)</option>
+              <option value="ERROR">異常 (ERROR)</option>
+              <option value="WARN">注意 (WARN)</option>
+              <option value="INFO">訊息 (INFO)</option>
+            </select>
+            <i class="ph-bold ph-caret-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Counters -->
+      <div class="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+        <div class="flex items-center gap-4">
+          <span>全部資料：<strong id="statTotalCount" class="text-slate-800 font-semibold font-mono">0</strong> 筆</span>
+          <span>符合篩選：<strong id="statFilteredCount" class="text-indigo-600 font-semibold font-mono">0</strong> 筆</span>
+        </div>
+        <div class="text-[11px] text-slate-400">
+          支援即時關鍵字比對與跨欄位搜尋
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+      <!-- Error Codes Table (Left/Main Column) -->
+      <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col min-h-[500px]">
+        <div class="overflow-x-auto flex-1">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead class="bg-slate-100 text-slate-600 border-b border-slate-200 uppercase font-semibold text-xs tracking-wider">
+              <tr>
+                <th class="py-3 px-4">代碼</th>
+                <th class="py-3 px-3">系統類別</th>
+                <th class="py-3 px-3">等級</th>
+                <th class="py-3 px-4">錯誤說明名稱</th>
+                <th class="py-3 px-3 text-right">查看</th>
+              </tr>
+            </thead>
+            <tbody id="codeTableBody" class="divide-y divide-slate-100 text-slate-700">
+              <!-- Populated dynamically via JS -->
+            </tbody>
+          </table>
+
+          <!-- Empty State Container -->
+          <div id="emptyState" class="hidden flex-col items-center justify-center py-16 px-4 text-center">
+            <div class="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-3">
+              <i class="ph-bold ph-magnifying-glass text-2xl"></i>
+            </div>
+            <p class="text-sm font-semibold text-slate-700">查無符合條件的錯誤碼代碼</p>
+            <p class="text-xs text-slate-400 mt-1">請嘗試變更搜尋關鍵字、調整篩選器或匯入新資料</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail Card (Right Column) -->
+      <div class="lg:col-span-5 sticky top-24">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <!-- Placeholder when none selected -->
+          <div id="detailPlaceholder" class="p-10 flex flex-col items-center justify-center text-center text-slate-400 min-h-[350px]">
+            <i class="ph-bold ph-cursor-click text-4xl mb-3 text-slate-300"></i>
+            <p class="text-sm font-medium">請從左側列表點選錯誤碼</p>
+            <p class="text-xs text-slate-400 mt-1">查看處置SOP、對客應對話術與權責組別</p>
+          </div>
+
+          <!-- Active Detail Content -->
+          <div id="detailContent" class="hidden p-5 flex flex-col gap-4">
+            <!-- Header bar of detail -->
+            <div class="flex items-start justify-between pb-3 border-b border-slate-100">
+              <div>
+                <div class="flex items-center gap-2 mb-1">
+                  <span id="detailBadgeSeverity" class="text-xs font-bold px-2 py-0.5 rounded-full badge-error">異常</span>
+                  <span id="detailCategory" class="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">財金跨行</span>
+                </div>
+                <h2 id="detailCode" class="text-2xl font-mono font-bold text-slate-900 tracking-tight">4001</h2>
+                <p id="detailName" class="text-sm font-bold text-slate-700 mt-0.5">帳戶已結清或銷戶</p>
+              </div>
+
+              <!-- Action buttons for selected item -->
+              <div class="flex items-center gap-1">
+                <button id="btnEditCurrent" title="編輯此筆" class="p-1.5 text-slate-500 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition">
+                  <i class="ph-bold ph-pencil-simple text-base"></i>
+                </button>
+                <button id="btnDeleteCurrent" title="刪除此筆" class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-slate-100 rounded-lg transition">
+                  <i class="ph-bold ph-trash text-base"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Detailed description -->
+            <div>
+              <h4 class="text-xs font-bold uppercase text-slate-400 tracking-wider mb-1 flex items-center gap-1.5">
+                <i class="ph-bold ph-info text-slate-500"></i>詳細原因描述
+              </h4>
+              <p id="detailDesc" class="text-xs text-slate-700 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-100 whitespace-pre-wrap"></p>
+            </div>
+
+            <!-- Standard Operating Procedure (SOP) -->
+            <div>
+              <h4 class="text-xs font-bold uppercase text-amber-600 tracking-wider mb-1 flex items-center gap-1.5">
+                <i class="ph-bold ph-list-checks text-amber-600"></i>維運處置 SOP (Runbook)
+              </h4>
+              <div id="detailSop" class="text-xs text-slate-800 leading-relaxed bg-amber-50/60 border border-amber-200/80 p-3 rounded-xl whitespace-pre-wrap font-sans"></div>
+            </div>
+
+            <!-- Frontline Customer Service Talking Script -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <h4 class="text-xs font-bold uppercase text-indigo-600 tracking-wider flex items-center gap-1.5">
+                  <i class="ph-bold ph-chat-circle-dots text-indigo-600"></i>對客標準回覆話術
+                </h4>
+                <button id="btnCopyScript" class="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1 py-0.5 px-1.5 rounded hover:bg-indigo-50 transition">
+                  <i class="ph-bold ph-copy"></i>複製話術
+                </button>
+              </div>
+              <div id="detailTalkingPoint" class="text-xs text-slate-700 leading-relaxed bg-indigo-50/50 border border-indigo-100 p-3 rounded-xl italic whitespace-pre-wrap"></div>
+            </div>
+
+            <!-- Metadata info footer -->
+            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+              <span class="flex items-center gap-1">
+                <i class="ph-bold ph-buildings"></i>權責窗口：<strong id="detailOwner" class="text-slate-600 font-medium">清算組</strong>
+              </span>
+              <span>最後更新：<span id="detailUpdatedAt">2026-10-12</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Category Management Modal (Full CRUD for System Categories) -->
+  <div id="modalCategories" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden mx-4 flex flex-col max-h-[88vh]">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i class="ph-bold ph-folder-notch text-indigo-400 text-xl"></i>
+          <h3 class="font-bold text-base">系統類別維護管理 (CRUD)</h3>
+        </div>
+        <button id="btnCloseCategories" class="text-slate-400 hover:text-white p-1">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5 flex-1">
+        <!-- Add / Edit Category Input Form -->
+        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+          <h4 id="catFormTitle" class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <i class="ph-bold ph-plus-circle text-indigo-600"></i>新增系統類別
+          </h4>
+          <form id="categoryForm" class="space-y-3">
+            <input type="hidden" id="editCatOriginalKey">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">系統識別代號 (ID/Key) <span class="text-red-500">*</span></label>
+                <input type="text" id="catKeyInput" required placeholder="例: FISC, SWIFT, AML" class="w-full px-3 py-2 text-xs uppercase bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">系統顯示名稱 <span class="text-red-500">*</span></label>
+                <input type="text" id="catNameInput" required placeholder="例: 財金跨行, 防洗錢檢核系統" class="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-indigo-500">
+              </div>
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-1">
+              <button type="button" id="btnCancelCatEdit" class="hidden px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-200 rounded-lg">取消編輯</button>
+              <button type="submit" id="btnSaveCategory" class="px-4 py-1.5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm transition">儲存系統類別</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Categories Table -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">現有系統清單 (<span id="catTotalBadge">0</span>)</span>
+            <span class="text-[11px] text-slate-400">若已有代碼歸屬，系統將限制刪除以保完整</span>
+          </div>
+          <div class="border border-slate-200 rounded-xl overflow-hidden">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-100 text-slate-600 border-b border-slate-200 uppercase font-semibold">
+                <tr>
+                  <th class="py-2.5 px-3">識別 Key</th>
+                  <th class="py-2.5 px-3">顯示名稱</th>
+                  <th class="py-2.5 px-3 text-center">關聯筆數</th>
+                  <th class="py-2.5 px-3 text-right">操作</th>
+                </tr>
+              </thead>
+              <tbody id="categoryTableBody" class="divide-y divide-slate-100 text-slate-700">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Code Add / Edit Modal -->
+  <div id="modalEdit" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
+    <div class="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden mx-4 flex flex-col max-h-[90vh]">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <h3 id="modalEditTitle" class="font-bold text-base flex items-center gap-2">
+          <i class="ph-bold ph-plus-circle text-indigo-400"></i>
+          <span>新增錯誤碼定義</span>
+        </h3>
+        <button id="btnCloseEdit" class="text-slate-400 hover:text-white p-1">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <form id="editForm" class="p-6 overflow-y-auto space-y-4 flex-1">
+        <input type="hidden" id="formId">
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">錯誤代碼 / 回應碼 <span class="text-red-500">*</span></label>
+            <input type="text" id="formCode" required placeholder="例如: 4001, AC01" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">所屬系統 <span class="text-red-500">*</span></label>
+            <div class="flex gap-1.5">
+              <select id="formCategory" class="flex-1 px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+                <!-- Populated dynamically -->
+              </select>
+              <button type="button" id="btnQuickAddCat" class="px-2.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl border border-slate-300 text-xs font-semibold" title="管理/新增系統">
+                <i class="ph-bold ph-plus"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">錯誤名稱簡述 <span class="text-red-500">*</span></label>
+            <input type="text" id="formName" required placeholder="例如: 帳戶已銷戶" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">嚴重等級</label>
+            <select id="formSeverity" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+              <option value="ERROR">異常 (ERROR)</option>
+              <option value="FATAL">阻斷 (FATAL)</option>
+              <option value="WARN">注意 (WARN)</option>
+              <option value="INFO">訊息 (INFO)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">詳細原因說明</label>
+          <textarea id="formDesc" rows="2" placeholder="詳細背景原因、發生情境與交易取消狀況..." class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-amber-700 mb-1">處置 SOP 排查指引 (Runbook)</label>
+          <textarea id="formSop" rows="3" placeholder="1. 查核電文流水號&#10;2. 檢視沖正狀態..." class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-sans"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-indigo-700 mb-1">客服/櫃檯標準應對話術</label>
+          <textarea id="formTalkingPoint" rows="2" placeholder="向客戶說明的標準口徑..." class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">權責維運單位 / 窗口</label>
+          <input type="text" id="formOwner" placeholder="例如: 跨行清算作業科 #3312" class="w-full px-3 py-2 text-sm bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+          <button type="button" id="btnCancelEdit" class="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">取消</button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition">儲存資料</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Excel Import Modal -->
+  <div id="modalImport" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 overflow-hidden mx-4 flex flex-col">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <h3 class="font-bold text-base flex items-center gap-2">
+          <i class="ph-bold ph-file-arrow-up text-emerald-400"></i>
+          <span>匯入 Excel 錯誤碼資料表</span>
+        </h3>
+        <button id="btnCloseImport" class="text-slate-400 hover:text-white p-1">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <!-- Drag & Drop Zone -->
+        <div id="dropZone" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/40 rounded-2xl p-6 text-center cursor-pointer transition flex flex-col items-center justify-center gap-2">
+          <input type="file" id="fileInput" accept=".xlsx, .xls, .csv" class="hidden">
+          <i class="ph-bold ph-cloud-arrow-up text-3xl text-indigo-500"></i>
+          <p class="text-xs font-bold text-slate-700">點擊選擇檔案，或將 Excel 檔案拖曳至此</p>
+          <p class="text-[11px] text-slate-400">支援 .xlsx, .xls 與 .csv 格式 (遇到新系統會自動建立類別)</p>
+        </div>
+
+        <!-- Preview summary box -->
+        <div id="importPreview" class="hidden bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs space-y-1">
+          <div class="font-bold text-slate-800 flex items-center gap-1.5" id="fileNameDisplay"></div>
+          <div class="text-slate-600">已就緒：<span id="recordCountDisplay" class="font-semibold text-emerald-600">0</span></div>
+        </div>
+
+        <div class="flex items-center justify-between text-xs pt-2">
+          <button type="button" id="btnModalDownloadTpl" class="text-indigo-600 hover:underline flex items-center gap-1">
+            <i class="ph-bold ph-download"></i>下載匯入範本檔 (.xlsx)
+          </button>
+          <div class="flex items-center gap-2">
+            <button type="button" id="btnCancelImport" class="px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-100 rounded-xl transition">取消</button>
+            <button type="button" id="btnConfirmImport" disabled class="px-4 py-1.5 font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white rounded-xl shadow-sm transition">確認寫入資料庫</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Database Settings Modal -->
+  <div id="modalSettings" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm hidden">
+    <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl border border-slate-100 overflow-hidden mx-4 flex flex-col">
+      <div class="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <h3 class="font-bold text-base flex items-center gap-2">
+          <i class="ph-bold ph-database text-indigo-400"></i>
+          <span>本機 IndexedDB 資料庫維護</span>
+        </h3>
+        <button id="btnCloseSettings" class="text-slate-400 hover:text-white p-1">
+          <i class="ph-bold ph-x text-lg"></i>
+        </button>
+      </div>
+
+      <div class="p-6 space-y-4 text-xs">
+        <p class="text-slate-600">目前本機儲存空間中共計有 <strong id="settingsCount" class="text-slate-900 font-bold">0</strong> 筆錯誤碼紀錄。</p>
+        
+        <div class="space-y-2">
+          <button id="btnExportAllExcel" class="w-full py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-semibold flex items-center justify-center gap-2 transition">
+            <i class="ph-bold ph-file-arrow-down text-base text-indigo-600"></i>匯出完整資料為 Excel (.xlsx)
+          </button>
+          <button id="btnResetDefault" class="w-full py-2.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl font-semibold flex items-center justify-center gap-2 transition">
+            <i class="ph-bold ph-arrow-counter-clockwise text-base text-amber-600"></i>重設為銀行預設範例庫
+          </button>
+          <button id="btnClearAllDb" class="w-full py-2.5 px-3 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 rounded-xl font-semibold flex items-center justify-center gap-2 transition">
+            <i class="ph-bold ph-trash text-base text-red-600"></i>清空本機所有錯誤碼
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-xs font-medium text-white bg-slate-900">
+    <i id="toastIcon" class="ph-bold ph-info text-base text-indigo-400"></i>
+    <span id="toastMsg">通知內容</span>
+  </div>
+
+  <script>
+    const DB_NAME = 'BankErrorCodesDB';
+    const DB_VERSION = 2;
+    const STORE_CODES = 'error_codes';
+    const STORE_CATEGORIES = 'system_categories';
+
+    let dbInstance = null;
+
+    // Default Seed Categories
+    const DEFAULT_CATEGORIES = [
+      { key: "FISC", name: "財金跨行 (FISC)" },
+      { key: "SWIFT", name: "國際匯款 (SWIFT)" },
+      { key: "CORE_BATCH", name: "核心主機批次 (Batch)" },
+      { key: "ACH", name: "票據交割 (ACH)" },
+      { key: "CREDIT", name: "授信/徵信徵提" },
+      { key: "OTHER", name: "其他/外部介面" }
+    ];
+
+    // Default Seed Data
+    const DEFAULT_SEED_DATA = [
+      {
+        id: "FISC_4001",
+        code: "4001",
+        category: "FISC",
+        name: "帳戶已結清或銷戶",
+        severity: "ERROR",
+        desc: "轉入行主機回應接收帳戶已銷戶，款項無法入帳，交易強制取消。",
+        sop: "1. 透過財金電文即時查核確認退件原因代碼。\n2. 檢視轉帳發動行沖正狀態。\n3. 請客戶向轉入帳號所有人確認最新可用有效帳號重新發動。",
+        talkingPoint: "向您說明，接收行系統回覆該受款帳號目前已結清銷戶，款項已自動退回原發送帳戶，請您向受款人核對最新正確帳號。",
+        owner: "跨行清算作業科 #3312",
+        updatedAt: "2026-10-12"
+      },
+      {
+        id: "FISC_4507",
+        code: "4507",
+        category: "FISC",
+        name: "受款帳戶限制交易 (警示或衍生管制)",
+        severity: "FATAL",
+        desc: "受款帳戶被聯防系統列為警示帳戶、告誡帳號或衍生管制帳戶，無法收受跨行資金。",
+        sop: "1. 嚴禁人工作業強制放行。\n2. 依洗錢防制與聯防警示作業 SOP 記錄財金電文流水號。\n3. 通報風控合規處洗防小組列管。",
+        talkingPoint: "非常抱歉，系統檢核該受款帳戶目前處於限制受款狀態，依相關規定無法完成此筆交易，建議請對方親洽其往來分行查詢。",
+        owner: "洗錢防制兼聯防通報科 #5100",
+        updatedAt: "2026-10-10"
+      },
+      {
+        id: "SWIFT_AC01",
+        code: "AC01",
+        category: "SWIFT",
+        name: "帳號號碼錯誤 (Incorrect Account Number)",
+        severity: "ERROR",
+        desc: "SWIFT MT103 / pacs.008 報文中 59 欄位受款人帳號格式或同位元校驗錯誤。",
+        sop: "1. 比對受款國 IBAN 演算法格式長度。\n2. 發送 MT199 / camt.056 查詢電文 (Amendment / Query) 予通匯行要求修正。\n3. 保留電文軌跡等待中轉行回覆。",
+        talkingPoint: "此筆外幣匯款受款銀行回覆受款帳號格式不合規範，我們已發送海外查詢電文確認，待更正後將儘速為您入帳。",
+        owner: "外匯營運部電匯科 #6220",
+        updatedAt: "2026-09-18"
+      },
+      {
+        id: "SWIFT_MS03",
+        code: "MS03",
+        category: "SWIFT",
+        name: "無法辨識原因拒絕 (Not Specified Reason)",
+        severity: "WARN",
+        desc: "中轉行或收報行未能提供具體拒絕代碼，需調閱完整 MT199/pacs.002 查明理由。",
+        sop: "1. 登入 SWIFT Alliance Gateway 下載原始 Raw Message。\n2. 聯繫通匯銀行（Correspondent Bank）維護窗口請求追蹤單號。\n3. 依中轉扣費情形向客戶回報進度。",
+        talkingPoint: "受款國中轉清算行目前暫未回傳具體拒絕細節，專員正在調閱國際清算電文，預計於一個工作日內向您回報進展。",
+        owner: "國際事務專案科 #6118",
+        updatedAt: "2026-09-01"
+      },
+      {
+        id: "CORE_BATCH_E9920",
+        code: "E9920",
+        category: "CORE_BATCH",
+        name: "日終批次提計息平水不合",
+        severity: "FATAL",
+        desc: "核心系統 EOD 利息提存總帳與放款明細檔試算不符，觸發夜間批次阻斷防護。",
+        sop: "1. 立即暫停下游報表萃取程式。\n2. 調閱 Batch Log 定位差額幣別與產品科目代碼 (GL Code)。\n3. 啟動夜間維運緊急應變小組 (IT On-Call)，執行平水差額沖轉補丁。",
+        talkingPoint: "此為核心內部夜間維運批次代碼，對外櫃檯與網銀請依維護公告話術統一說明系統定期維護中。",
+        owner: "資訊處核心帳務組 #8801",
+        updatedAt: "2026-10-05"
+      },
+      {
+        id: "ACH_0201",
+        code: "0201",
+        category: "ACH",
+        name: "委託扣款餘額不足",
+        severity: "ERROR",
+        desc: "ACH 代收代付批次扣款時，委託人活期性存款帳戶可用餘額小於應扣款金額。",
+        sop: "1. 標記此筆交易為退件。\n2. 匯出 ACH 退件報表通知委託事業機構。\n3. 提示下次重新提出扣款之時程排程。",
+        talkingPoint: "提醒您，本日自動代扣繳因帳戶可用扣款餘額不足導致未成功，事業單位將依約排定再次扣款，請及早補足差額。",
+        owner: "票據清算組 #3208",
+        updatedAt: "2026-08-25"
+      }
+    ];
+
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(STORE_CODES)) {
+            const store = db.createObjectStore(STORE_CODES, { keyPath: 'id' });
+            store.createIndex('code', 'code', { unique: false });
+            store.createIndex('category', 'category', { unique: false });
+            store.createIndex('severity', 'severity', { unique: false });
+          }
+          if (!db.objectStoreNames.contains(STORE_CATEGORIES)) {
+            db.createObjectStore(STORE_CATEGORIES, { keyPath: 'key' });
+          }
+        };
+        request.onsuccess = (event) => {
+          dbInstance = event.target.result;
+          resolve(dbInstance);
+        };
+        request.onerror = (event) => reject(event.target.error);
+      });
+    }
+
+    async function getAllCodes() {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_CODES, 'readonly');
+        const store = tx.objectStore(STORE_CODES);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function saveCodeItem(item) {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_CODES, 'readwrite');
+        const store = tx.objectStore(STORE_CODES);
+        const req = store.put(item);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function batchSaveCodes(items) {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_CODES, 'readwrite');
+        const store = tx.objectStore(STORE_CODES);
+        items.forEach(item => store.put(item));
+        tx.oncomplete = () => resolve(items.length);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function deleteCodeItem(id) {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_CODES, 'readwrite');
+        const store = tx.objectStore(STORE_CODES);
+        const req = store.delete(id);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function clearAllCodes() {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_CODES, 'readwrite');
+        const store = tx.objectStore(STORE_CODES);
+        const req = store.clear();
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function getAllCategories() {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_CATEGORIES, 'readonly');
+        const store = tx.objectStore(STORE_CATEGORIES);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function saveCategoryItem(cat) {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_CATEGORIES, 'readwrite');
+        const store = tx.objectStore(STORE_CATEGORIES);
+        const req = store.put(cat);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function deleteCategoryItem(key) {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_CATEGORIES, 'readwrite');
+        const store = tx.objectStore(STORE_CATEGORIES);
+        const req = store.delete(key);
+        req.onsuccess = () => resolve(true);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function batchSaveCategories(categories) {
+      return new Promise((resolve, reject) => {
+        const tx = dbInstance.transaction(STORE_CATEGORIES, 'readwrite');
+        const store = tx.objectStore(STORE_CATEGORIES);
+        categories.forEach(c => store.put(c));
+        tx.oncomplete = () => resolve(categories.length);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    let allRecords = [];
+    let allCategories = [];
+    let filteredRecords = [];
+    let currentSelectedId = null;
+
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastIcon = document.getElementById('toastIcon');
+
+      toastMsg.textContent = message;
+      if (type === 'success') {
+        toastIcon.className = 'ph-bold ph-check-circle text-base text-emerald-400';
+      } else if (type === 'error') {
+        toastIcon.className = 'ph-bold ph-warning-circle text-base text-red-400';
+      } else {
+        toastIcon.className = 'ph-bold ph-info text-base text-indigo-400';
+      }
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    function getSeverityBadge(severity) {
+      switch ((severity || '').toUpperCase()) {
+        case 'FATAL': return { label: '阻斷 (FATAL)', cls: 'badge-fatal' };
+        case 'ERROR': return { label: '異常 (ERROR)', cls: 'badge-error' };
+        case 'WARN':
+        case 'WARNING': return { label: '注意 (WARN)', cls: 'badge-warning' };
+        default: return { label: '訊息 (INFO)', cls: 'badge-info' };
+      }
+    }
+
+    function getCategoryName(catKey) {
+      if (!catKey) return '其他';
+      const found = allCategories.find(c => c.key.toUpperCase() === String(catKey).toUpperCase());
+      return found ? found.name : catKey;
+    }
+
+    function refreshCategoryDropdowns() {
+      const filterSelect = document.getElementById('filterCategory');
+      const currentFilterVal = filterSelect.value;
+      filterSelect.innerHTML = '<option value="ALL">全部系統類別 (全部)</option>';
+
+      allCategories.forEach(cat => {
+        const count = allRecords.filter(r => r.category === cat.key).length;
+        const opt = document.createElement('option');
+        opt.value = cat.key;
+        opt.textContent = `${cat.name} (${count})`;
+        filterSelect.appendChild(opt);
+      });
+
+      if (currentFilterVal && (currentFilterVal === 'ALL' || allCategories.some(c => c.key === currentFilterVal))) {
+        filterSelect.value = currentFilterVal;
+      } else {
+        filterSelect.value = 'ALL';
+      }
+
+      const formCatSelect = document.getElementById('formCategory');
+      const currentFormVal = formCatSelect.value;
+      formCatSelect.innerHTML = '';
+      allCategories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat.key;
+        opt.textContent = `${cat.name} (${cat.key})`;
+        formCatSelect.appendChild(opt);
+      });
+      if (currentFormVal && allCategories.some(c => c.key === currentFormVal)) {
+        formCatSelect.value = currentFormVal;
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('codeTableBody');
+      const emptyState = document.getElementById('emptyState');
+      if (!tbody) return;
+
+      tbody.innerHTML = '';
+      document.getElementById('statTotalCount').textContent = allRecords.length;
+      document.getElementById('statFilteredCount').textContent = filteredRecords.length;
+
+      if (filteredRecords.length === 0) {
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+        return;
+      } else {
+        emptyState.classList.add('hidden');
+        emptyState.classList.remove('flex');
+      }
+
+      filteredRecords.forEach(item => {
+        const tr = document.createElement('tr');
+        const isSelected = item.id === currentSelectedId;
+        tr.className = `cursor-pointer transition-colors border-b border-slate-100 hover:bg-indigo-50/40 ${isSelected ? 'bg-indigo-50/80 font-medium' : ''}`;
+        
+        const sevInfo = getSeverityBadge(item.severity);
+
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-mono font-bold text-slate-900">${escapeHtml(item.code)}</td>
+          <td class="py-3 px-3 text-xs text-slate-500 font-medium">${escapeHtml(getCategoryName(item.category))}</td>
+          <td class="py-3 px-3">
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${sevInfo.cls}">${sevInfo.label}</span>
+          </td>
+          <td class="py-3 px-4 font-medium text-slate-800 truncate max-w-xs">${escapeHtml(item.name || '-')}</td>
+          <td class="py-3 px-3 text-right">
+            <button class="p-1 text-slate-400 hover:text-indigo-600 rounded" onclick="event.stopPropagation(); selectItem('${item.id}');">
+              <i class="ph-bold ph-caret-right text-base"></i>
+            </button>
+          </td>
+        `;
+
+        tr.onclick = () => selectItem(item.id);
+        tbody.appendChild(tr);
+      });
+    }
+
+    function selectItem(id) {
+      currentSelectedId = id;
+      const item = allRecords.find(x => x.id === id);
+      renderDetail(item);
+      renderTable();
+    }
+
+    function renderDetail(item) {
+      const placeholder = document.getElementById('detailPlaceholder');
+      const content = document.getElementById('detailContent');
+
+      if (!item) {
+        placeholder.classList.remove('hidden');
+        content.classList.add('hidden');
+        return;
+      }
+
+      placeholder.classList.add('hidden');
+      content.classList.remove('hidden');
+
+      const sevInfo = getSeverityBadge(item.severity);
+      const sevBadge = document.getElementById('detailBadgeSeverity');
+      sevBadge.textContent = sevInfo.label;
+      sevBadge.className = `text-xs font-bold px-2 py-0.5 rounded-full ${sevInfo.cls}`;
+
+      document.getElementById('detailCategory').textContent = getCategoryName(item.category);
+      document.getElementById('detailCode').textContent = item.code;
+      document.getElementById('detailName').textContent = item.name;
+      document.getElementById('detailDesc').textContent = item.desc || '(未提供詳細說明)';
+      document.getElementById('detailSop').textContent = item.sop || '(未列出處置 SOP)';
+      document.getElementById('detailTalkingPoint').textContent = item.talkingPoint || '(無特定應對話術)';
+      document.getElementById('detailOwner').textContent = item.owner || '系統維運科';
+      document.getElementById('detailUpdatedAt').textContent = item.updatedAt || '-';
+    }
+
+    function filterRecords() {
+      const keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+      const cat = document.getElementById('filterCategory').value;
+      const sev = document.getElementById('filterSeverity').value;
+
+      filteredRecords = allRecords.filter(item => {
+        if (cat !== 'ALL' && item.category !== cat) return false;
+        
+        if (sev !== 'ALL') {
+          const itemSev = (item.severity || 'INFO').toUpperCase();
+          if (sev === 'WARN' && itemSev !== 'WARN' && itemSev !== 'WARNING') return false;
+          if (sev !== 'WARN' && itemSev !== sev) return false;
+        }
+
+        if (keyword) {
+          const searchHaystack = [
+            item.code,
+            item.name,
+            item.desc,
+            item.sop,
+            item.talkingPoint,
+            item.owner,
+            getCategoryName(item.category)
+          ].filter(Boolean).join(' ').toLowerCase();
+
+          if (!searchHaystack.includes(keyword)) return false;
+        }
+
+        return true;
+      });
+
+      renderTable();
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function parseExcelFile(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const rawJson = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+            if (rawJson.length === 0) {
+              return reject(new Error('Excel 工作表無內容或格式空白'));
+            }
+
+            const discoveredNewCats = new Map();
+
+            const normalized = rawJson.map((row, idx) => {
+              const getVal = (candidates) => {
+                for (const c of candidates) {
+                  for (const key of Object.keys(row)) {
+                    if (key.trim().toLowerCase() === c.toLowerCase()) {
+                      return String(row[key]).trim();
+                    }
+                  }
+                }
+                return '';
+              };
+
+              const code = getVal(['code', '代碼', '錯誤碼', '回應代號', 'error code', '回應碼']) || `CODE_${idx + 1}`;
+              const rawCategory = getVal(['category', '系統', '所屬系統', '系統類別', 'system']) || 'OTHER';
+              const name = getVal(['name', '名稱', '簡稱', '錯誤名稱', '說明名稱']) || '未命名錯誤';
+              const severity = (getVal(['severity', '嚴重度', '等級', 'level']) || 'ERROR').toUpperCase();
+              const desc = getVal(['desc', '說明', '原因', '詳細原因', 'description', '錯誤原因']);
+              const sop = getVal(['sop', '處置sop', '排查指引', '處置指引', '處理SOP', 'resolution']);
+              const talkingPoint = getVal(['talkingPoint', '話術', '客戶話術', '應對話術', '對客話術']);
+              const owner = getVal(['owner', '權責單位', '負責人', '窗口', '權責窗口']) || '主機維護組';
+
+              let catKey = 'OTHER';
+              const catUpper = rawCategory.toUpperCase();
+
+              const existingMatch = allCategories.find(c => 
+                c.key.toUpperCase() === catUpper || 
+                c.name.toUpperCase() === catUpper ||
+                catUpper.includes(c.key.toUpperCase())
+              );
+
+              if (existingMatch) {
+                catKey = existingMatch.key;
+              } else if (catUpper.includes('FISC') || catUpper.includes('財金')) {
+                catKey = 'FISC';
+              } else if (catUpper.includes('SWIFT') || catUpper.includes('國際')) {
+                catKey = 'SWIFT';
+              } else if (catUpper.includes('BATCH') || catUpper.includes('批次') || catUpper.includes('核心')) {
+                catKey = 'CORE_BATCH';
+              } else if (catUpper.includes('ACH') || catUpper.includes('票據')) {
+                catKey = 'ACH';
+              } else if (catUpper.includes('CREDIT') || catUpper.includes('授信')) {
+                catKey = 'CREDIT';
+              } else {
+                catKey = rawCategory.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_').toUpperCase();
+                if (!catKey) catKey = 'CUSTOM_SYS';
+                
+                if (!discoveredNewCats.has(catKey) && !allCategories.some(c => c.key === catKey)) {
+                  discoveredNewCats.set(catKey, {
+                    key: catKey,
+                    name: rawCategory || catKey
+                  });
+                }
+              }
+
+              return {
+                id: `${catKey}_${code}`.replace(/\s+/g, ''),
+                code: code,
+                category: catKey,
+                name: name,
+                severity: severity,
+                desc: desc,
+                sop: sop,
+                talkingPoint: talkingPoint,
+                owner: owner,
+                updatedAt: new Date().toISOString().split('T')[0]
+              };
+            });
+
+            resolve({
+              records: normalized,
+              newCategories: Array.from(discoveredNewCats.values())
+            });
+          } catch (err) {
+            reject(err);
+          }
+        };
+        reader.onerror = () => reject(new Error('讀取檔案失敗'));
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function exportToExcel(records, filename = 'Bank_Error_Codes_Export.xlsx') {
+      const exportRows = records.map(r => ({
+        '錯誤代碼': r.code,
+        '所屬系統': getCategoryName(r.category),
+        '系統代號': r.category,
+        '嚴重等級': r.severity,
+        '說明名稱': r.name,
+        '詳細原因': r.desc,
+        '處置SOP': r.sop,
+        '對客話術': r.talkingPoint,
+        '權責窗口': r.owner,
+        '最後更新日期': r.updatedAt
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportRows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '錯誤代碼排查表');
+      XLSX.writeFile(wb, filename);
+    }
+
+    function generateTemplateExcel() {
+      const templateData = [
+        {
+          '錯誤代碼': '4001',
+          '所屬系統': '財金跨行',
+          '嚴重等級': 'ERROR',
+          '說明名稱': '帳戶已銷戶',
+          '詳細原因': '接收行回報帳號結清，交易強制取消退回。',
+          '處置SOP': '1. 核對財金電文流水號。\n2. 請客戶核對最新受款帳號。',
+          '對客話術': '受款銀行通知該受款帳號已結清，款項已沖回您的帳戶。',
+          '權責窗口': '清算科 #3312'
+        },
+        {
+          '錯誤代碼': 'NET_9021',
+          '所屬系統': '行動網銀系統',
+          '嚴重等級': 'WARN',
+          '說明名稱': '跨機構轉帳憑證驗章逾期',
+          '詳細原因': '客戶手機憑證逾期未更換，簽驗章失敗。',
+          '處置SOP': '引導客戶重新於 App 申請行動憑證重簽。',
+          '對客話術': '您的手機安控憑證已過期，請重新至設定頁更換憑證即可繼續交易。',
+          '權責窗口': '數位通路科 #7802'
+        }
+      ];
+
+      const ws = XLSX.utils.json_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, '代碼匯入範本');
+      XLSX.writeFile(wb, 'Bank_Error_Code_Template.xlsx');
+    }
+
+    function setupCategoriesModal() {
+      const modal = document.getElementById('modalCategories');
+      const btnOpen = document.getElementById('btnManageCategories');
+      const btnClose = document.getElementById('btnCloseCategories');
+      const categoryForm = document.getElementById('categoryForm');
+      const catKeyInput = document.getElementById('catKeyInput');
+      const catNameInput = document.getElementById('catNameInput');
+      const editCatOriginalKey = document.getElementById('editCatOriginalKey');
+      const btnCancelCatEdit = document.getElementById('btnCancelCatEdit');
+      const catFormTitle = document.getElementById('catFormTitle');
+
+      function openModal() {
+        renderCategoryList();
+        resetCatForm();
+        modal.classList.remove('hidden');
+      }
+
+      function closeModal() {
+        modal.classList.add('hidden');
+        resetCatForm();
+      }
+
+      function resetCatForm() {
+        categoryForm.reset();
+        editCatOriginalKey.value = '';
+        catKeyInput.disabled = false;
+        btnCancelCatEdit.classList.add('hidden');
+        catFormTitle.innerHTML = '<i class="ph-bold ph-plus-circle text-indigo-600"></i> 新增系統類別';
+      }
+
+      btnOpen.addEventListener('click', openModal);
+      btnClose.addEventListener('click', closeModal);
+      btnCancelCatEdit.addEventListener('click', resetCatForm);
+
+      document.getElementById('btnQuickAddCat').addEventListener('click', () => {
+        openModal();
+      });
+
+      categoryForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const key = catKeyInput.value.trim().toUpperCase().replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_');
+        const name = catNameInput.value.trim();
+        const originalKey = editCatOriginalKey.value;
+
+        if (!key || !name) return;
+
+        if (originalKey) {
+          const catItem = { key: originalKey, name: name };
+          await saveCategoryItem(catItem);
+          showToast(`已更新系統類別 [${name}]`, 'success');
+        } else {
+          if (allCategories.some(c => c.key === key)) {
+            showToast(`系統代碼 ${key} 已存在！`, 'error');
+            return;
+          }
+          await saveCategoryItem({ key, name });
+          showToast(`已新增系統類別 [${name}]`, 'success');
+        }
+
+        allCategories = await getAllCategories();
+        refreshCategoryDropdowns();
+        renderCategoryList();
+        resetCatForm();
+        renderTable();
+        if (currentSelectedId) renderDetail(allRecords.find(r => r.id === currentSelectedId));
+      });
+
+      window.editCategory = function(key) {
+        const cat = allCategories.find(c => c.key === key);
+        if (!cat) return;
+        editCatOriginalKey.value = cat.key;
+        catKeyInput.value = cat.key;
+        catKeyInput.disabled = true;
+        catNameInput.value = cat.name;
+        btnCancelCatEdit.classList.remove('hidden');
+        catFormTitle.innerHTML = `<i class="ph-bold ph-pencil-simple text-amber-600"></i> 編輯系統名稱 (${cat.key})`;
+        catNameInput.focus();
+      };
+
+      window.deleteCategory = async function(key) {
+        const count = allRecords.filter(r => r.category === key).length;
+        if (count > 0) {
+          showToast(`無法刪除：已有 ${count} 筆錯誤碼歸屬此系統，請先變更或刪除該代碼！`, 'error');
+          return;
+        }
+
+        await deleteCategoryItem(key);
+        allCategories = await getAllCategories();
+        refreshCategoryDropdowns();
+        renderCategoryList();
+        filterRecords();
+        showToast(`已刪除系統類別 [${key}]`, 'info');
+      };
+
+      function renderCategoryList() {
+        const tbody = document.getElementById('categoryTableBody');
+        tbody.innerHTML = '';
+        document.getElementById('catTotalBadge').textContent = allCategories.length;
+
+        allCategories.forEach(cat => {
+          const count = allRecords.filter(r => r.category === cat.key).length;
+          const tr = document.createElement('tr');
+          tr.className = 'border-b border-slate-100 hover:bg-slate-50 transition';
+          tr.innerHTML = `
+            <td class="py-2 px-3 font-mono font-bold text-slate-800">${escapeHtml(cat.key)}</td>
+            <td class="py-2 px-3 font-medium text-slate-700">${escapeHtml(cat.name)}</td>
+            <td class="py-2 px-3 text-center">
+              <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${count > 0 ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-400'}">${count} 筆</span>
+            </td>
+            <td class="py-2 px-3 text-right space-x-1">
+              <button onclick="editCategory('${escapeHtml(cat.key)}')" class="p-1 text-slate-400 hover:text-indigo-600 rounded" title="修改名稱">
+                <i class="ph-bold ph-pencil-simple text-sm"></i>
+              </button>
+              <button onclick="deleteCategory('${escapeHtml(cat.key)}')" class="p-1 text-slate-400 hover:text-red-600 rounded" title="刪除類別">
+                <i class="ph-bold ph-trash text-sm"></i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    }
+
+    function setupImportModal() {
+      const modal = document.getElementById('modalImport');
+      const btnOpen = document.getElementById('btnOpenImport');
+      const btnClose = document.getElementById('btnCloseImport');
+      const btnCancel = document.getElementById('btnCancelImport');
+      const fileInput = document.getElementById('fileInput');
+      const dropZone = document.getElementById('dropZone');
+      const btnConfirm = document.getElementById('btnConfirmImport');
+      const previewArea = document.getElementById('importPreview');
+
+      let parsedImportPayload = { records: [], newCategories: [] };
+
+      const openModal = () => {
+        modal.classList.remove('hidden');
+        resetImportState();
+      };
+      const closeModal = () => modal.classList.add('hidden');
+
+      btnOpen.addEventListener('click', openModal);
+      btnClose.addEventListener('click', closeModal);
+      btnCancel.addEventListener('click', closeModal);
+
+      document.getElementById('btnDownloadTemplate').addEventListener('click', generateTemplateExcel);
+      document.getElementById('btnModalDownloadTpl').addEventListener('click', generateTemplateExcel);
+
+      dropZone.addEventListener('click', () => fileInput.click());
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-indigo-600', 'bg-indigo-50/50');
+      });
+      dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('border-indigo-600', 'bg-indigo-50/50');
+      });
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-indigo-600', 'bg-indigo-50/50');
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) handleFile(e.target.files[0]);
+      });
+
+      async function handleFile(file) {
+        try {
+          parsedImportPayload = await parseExcelFile(file);
+          const { records, newCategories } = parsedImportPayload;
+          
+          document.getElementById('fileNameDisplay').innerHTML = `<i class="ph-bold ph-file text-indigo-600"></i> ${escapeHtml(file.name)}`;
+          
+          let countText = `${records.length} 筆有效代碼`;
+          if (newCategories.length > 0) {
+            countText += ` (包含 ${newCategories.length} 個新系統)`;
+          }
+          document.getElementById('recordCountDisplay').textContent = countText;
+          
+          previewArea.classList.remove('hidden');
+          btnConfirm.disabled = false;
+        } catch (err) {
+          showToast(`解析 Excel 失敗: ${err.message}`, 'error');
+          resetImportState();
+        }
+      }
+
+      function resetImportState() {
+        fileInput.value = '';
+        parsedImportPayload = { records: [], newCategories: [] };
+        previewArea.classList.add('hidden');
+        btnConfirm.disabled = true;
+      }
+
+      btnConfirm.addEventListener('click', async () => {
+        const { records, newCategories } = parsedImportPayload;
+        if (!records.length) return;
+        try {
+          if (newCategories.length > 0) {
+            await batchSaveCategories(newCategories);
+            allCategories = await getAllCategories();
+            refreshCategoryDropdowns();
+          }
+
+          await batchSaveCodes(records);
+          allRecords = await getAllCodes();
+          filterRecords();
+          closeModal();
+          showToast(`成功匯入 ${records.length} 筆代碼與 ${newCategories.length} 個新系統類別！`, 'success');
+          if (records.length > 0) {
+            selectItem(records[0].id);
+          }
+        } catch (err) {
+          showToast(`寫入 IndexedDB 失敗: ${err.message}`, 'error');
+        }
+      });
+    }
+
+    function setupEditModal() {
+      const modal = document.getElementById('modalEdit');
+      const btnOpenNew = document.getElementById('btnOpenNew');
+      const btnClose = document.getElementById('btnCloseEdit');
+      const btnCancel = document.getElementById('btnCancelEdit');
+      const editForm = document.getElementById('editForm');
+      const title = document.getElementById('modalEditTitle');
+
+      const openForNew = () => {
+        editForm.reset();
+        document.getElementById('formId').value = '';
+        title.innerHTML = '<i class="ph-bold ph-plus-circle text-indigo-400"></i><span>新增錯誤碼定義</span>';
+        modal.classList.remove('hidden');
+      };
+
+      const openForEdit = () => {
+        const item = allRecords.find(x => x.id === currentSelectedId);
+        if (!item) return;
+        document.getElementById('formId').value = item.id;
+        document.getElementById('formCode').value = item.code;
+        document.getElementById('formCategory').value = item.category;
+        document.getElementById('formName').value = item.name;
+        document.getElementById('formSeverity').value = item.severity || 'ERROR';
+        document.getElementById('formDesc').value = item.desc || '';
+        document.getElementById('formSop').value = item.sop || '';
+        document.getElementById('formTalkingPoint').value = item.talkingPoint || '';
+        document.getElementById('formOwner').value = item.owner || '';
+        title.innerHTML = '<i class="ph-bold ph-pencil-simple text-indigo-400"></i><span>編輯錯誤碼資料</span>';
+        modal.classList.remove('hidden');
+      };
+
+      btnOpenNew.addEventListener('click', openForNew);
+      document.getElementById('btnEditCurrent').addEventListener('click', openForEdit);
+      btnClose.addEventListener('click', () => modal.classList.add('hidden'));
+      btnCancel.addEventListener('click', () => modal.classList.add('hidden'));
+
+      document.getElementById('btnDeleteCurrent').addEventListener('click', async () => {
+        if (!currentSelectedId) return;
+        const target = allRecords.find(x => x.id === currentSelectedId);
+        if (!target) return;
+        
+        await deleteCodeItem(currentSelectedId);
+        allRecords = await getAllCodes();
+        showToast(`已刪除代碼: ${target.code}`, 'info');
+        currentSelectedId = null;
+        filterRecords();
+        refreshCategoryDropdowns();
+        if (filteredRecords.length > 0) {
+          selectItem(filteredRecords[0].id);
+        } else {
+          renderDetail(null);
+        }
+      });
+
+      editForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rawCode = document.getElementById('formCode').value.trim();
+        const category = document.getElementById('formCategory').value;
+        const existingId = document.getElementById('formId').value;
+        const generatedId = existingId || `${category}_${rawCode}`.replace(/\s+/g, '');
+
+        const item = {
+          id: generatedId,
+          code: rawCode,
+          category: category,
+          name: document.getElementById('formName').value.trim(),
+          severity: document.getElementById('formSeverity').value,
+          desc: document.getElementById('formDesc').value.trim(),
+          sop: document.getElementById('formSop').value.trim(),
+          talkingPoint: document.getElementById('formTalkingPoint').value.trim(),
+          owner: document.getElementById('formOwner').value.trim() || '主機維運科',
+          updatedAt: new Date().toISOString().split('T')[0]
+        };
+
+        await saveCodeItem(item);
+        allRecords = await getAllCodes();
+        modal.classList.add('hidden');
+        refreshCategoryDropdowns();
+        filterRecords();
+        selectItem(item.id);
+        showToast(`已儲存代碼 [${item.code}]！`, 'success');
+      });
+    }
+
+    function setupSettingsModal() {
+      const modal = document.getElementById('modalSettings');
+      const btnOpen = document.getElementById('btnSettingsMenu');
+      const btnClose = document.getElementById('btnCloseSettings');
+
+      btnOpen.addEventListener('click', () => {
+        document.getElementById('settingsCount').textContent = allRecords.length;
+        modal.classList.remove('hidden');
+      });
+      btnClose.addEventListener('click', () => modal.classList.add('hidden'));
+
+      document.getElementById('btnExportAllExcel').addEventListener('click', () => {
+        exportToExcel(allRecords);
+        showToast('已匯出 Excel 檔案！', 'success');
+      });
+
+      document.getElementById('btnResetDefault').addEventListener('click', async () => {
+        await clearAllCodes();
+        await batchSaveCategories(DEFAULT_CATEGORIES);
+        await batchSaveCodes(DEFAULT_SEED_DATA);
+        allCategories = await getAllCategories();
+        allRecords = await getAllCodes();
+        refreshCategoryDropdowns();
+        filterRecords();
+        if (allRecords.length > 0) selectItem(allRecords[0].id);
+        modal.classList.add('hidden');
+        showToast('已恢復預設電文範例庫與系統設定！', 'success');
+      });
+
+      document.getElementById('btnClearAllDb').addEventListener('click', async () => {
+        await clearAllCodes();
+        allRecords = [];
+        filterRecords();
+        refreshCategoryDropdowns();
+        renderDetail(null);
+        modal.classList.add('hidden');
+        showToast('已清空所有錯誤碼資料！', 'info');
+      });
+    }
+
+    async function initApp() {
+      await openDatabase();
+
+      const existingCategories = await getAllCategories();
+      if (existingCategories.length === 0) {
+        await batchSaveCategories(DEFAULT_CATEGORIES);
+        allCategories = await getAllCategories();
+      } else {
+        allCategories = existingCategories;
+      }
+
+      const existingCodes = await getAllCodes();
+      if (existingCodes.length === 0) {
+        await batchSaveCodes(DEFAULT_SEED_DATA);
+        allRecords = await getAllCodes();
+      } else {
+        allRecords = existingCodes;
+      }
+
+      refreshCategoryDropdowns();
+      filteredRecords = [...allRecords];
+      renderTable();
+      if (filteredRecords.length > 0) {
+        selectItem(filteredRecords[0].id);
+      }
+
+      const searchInput = document.getElementById('searchInput');
+      const btnClearSearch = document.getElementById('btnClearSearch');
+      searchInput.addEventListener('input', () => {
+        btnClearSearch.classList.toggle('hidden', !searchInput.value);
+        filterRecords();
+      });
+      btnClearSearch.addEventListener('click', () => {
+        searchInput.value = '';
+        btnClearSearch.classList.add('hidden');
+        filterRecords();
+      });
+
+      document.getElementById('filterCategory').addEventListener('change', filterRecords);
+      document.getElementById('filterSeverity').addEventListener('change', filterRecords);
+
+      document.getElementById('btnCopyScript').addEventListener('click', () => {
+        const text = document.getElementById('detailTalkingPoint').textContent;
+        if (!text) return;
+        const temp = document.createElement('textarea');
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand('copy');
+        document.body.removeChild(temp);
+        showToast('話術已複製到剪貼簿！', 'success');
+      });
+
+      setupImportModal();
+      setupEditModal();
+      setupCategoriesModal();
+      setupSettingsModal();
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

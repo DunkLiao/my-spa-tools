@@ -21,7 +21,8 @@ my-spa-tools/
 │  ├─ nsfr-mapping-calc/
 │  ├─ basel-creditrisk-calc/
 │  ├─ large-exposure-analyzer/
-│  └─ fixed-width-telegram-parser/
+│  ├─ fixed-width-telegram-parser/
+│  └─ bank-error-code-resolver/
 ├─ sql/                          SQL 工具（每個工具一個子資料夾）
 │  ├─ sql-catalog/  sql-compare/  oracle-sql-formatter/
 │  ├─ sql-pii-cleaner/  sql-lineage-analyzer/
@@ -98,7 +99,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 19 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 20 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。
