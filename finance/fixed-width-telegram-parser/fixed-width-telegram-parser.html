@@ -1,0 +1,1638 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>銀行核心系統固定長度電文解析與管理中心</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            bank: {
+              50: '#f0f5fa',
+              100: '#e1ebf4',
+              500: '#1e40af',
+              600: '#1e3a8a',
+              700: '#172554',
+              800: '#0f172a',
+              900: '#020617',
+              accent: '#0284c7',
+              gold: '#d97706'
+            }
+          },
+          fontFamily: {
+            mono: ['SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', '"Courier New"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* 自訂滾動條 */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    .dark ::-webkit-scrollbar-track { background: #0f172a; }
+    .dark ::-webkit-scrollbar-thumb { background: #334155; }
+    
+    .byte-ruler {
+      background-image: repeating-linear-gradient(to right, #94a3b8 0, #94a3b8 1px, transparent 1px, transparent 10px);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
+
+  <header class="bg-bank-700 text-white shadow-md border-b border-bank-800 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <div class="bg-bank-accent text-white p-2 rounded-lg shadow-sm">
+          <i class="fa-solid fa-server text-lg"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight">Core-Host Fixed-Width Parser</h1>
+          <p class="text-xs text-slate-300">銀行核心系統電文解析與規格管理 (IndexedDB 本地儲存)</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center space-x-2">
+        <button id="themeToggleBtn" class="p-2 rounded-lg bg-bank-800 hover:bg-bank-600 text-slate-200 transition-colors" title="切換深色/淺色主題">
+          <i class="fa-solid fa-moon" id="themeIcon"></i>
+        </button>
+        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-800 text-emerald-100 border border-emerald-600">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>
+          純前端資安無外傳
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 flex-1 w-full space-y-6">
+
+    <!-- 頂端控制面板：選取 Schema & 模式分頁 -->
+    <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-4 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+      <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+        <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center">
+          <i class="fa-solid fa-layer-group mr-1.5 text-bank-accent"></i>目前電文規格 (Schema):
+        </label>
+        <div class="relative flex-1 sm:w-64">
+          <select id="schemaSelect" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-sm font-medium focus:ring-2 focus:ring-bank-accent focus:outline-none">
+            <!-- 動態填入 Schemas -->
+          </select>
+        </div>
+        <span id="schemaTotalBytesBadge" class="text-xs px-2.5 py-1 rounded-md bg-bank-100 dark:bg-bank-900 text-bank-700 dark:text-bank-100 font-mono font-semibold">
+          總長度: 0 Bytes
+        </span>
+      </div>
+
+      <!-- 分頁切換鈕 -->
+      <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-lg border border-slate-200 dark:border-slate-700 text-xs sm:text-sm font-medium w-full md:w-auto justify-center">
+        <button id="tabParseBtn" class="tab-btn active px-3.5 py-1.5 rounded-md bg-white dark:bg-slate-700 shadow-sm text-bank-600 dark:text-white transition-all flex items-center">
+          <i class="fa-solid fa-code-compare mr-1.5"></i>電文解析 (Parser)
+        </button>
+        <button id="tabBuilderBtn" class="tab-btn px-3.5 py-1.5 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center">
+          <i class="fa-solid fa-hammer mr-1.5"></i>反向組裝 (Builder)
+        </button>
+        <button id="tabSchemaBtn" class="tab-btn px-3.5 py-1.5 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center">
+          <i class="fa-solid fa-table-list mr-1.5"></i>規格管理 (CRUD & CSV)
+        </button>
+        <button id="tabHistoryBtn" class="tab-btn px-3.5 py-1.5 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center">
+          <i class="fa-solid fa-clock-rotate-left mr-1.5"></i>歷史紀錄
+        </button>
+      </div>
+    </div>
+
+    <div id="sectionParse" class="space-y-6">
+      <!-- 輸入區塊 -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
+        <div class="border-b border-slate-200 dark:border-slate-800 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-850">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-bank-accent"></span>
+            <h2 class="font-bold text-sm sm:text-base">原始電文輸入 (RAW Telegram)</h2>
+            <span class="text-xs text-slate-400 font-mono">(支援單筆或多筆批次換行)</span>
+          </div>
+
+          <!-- 編碼設定 -->
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="text-xs text-slate-500 font-medium">中文編碼計算法:</label>
+            <select id="encodingSelect" class="bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs rounded-md px-2.5 py-1 font-mono focus:ring-1 focus:ring-bank-accent focus:outline-none">
+              <option value="big5" selected>Big5 (繁體中文常用 2 Bytes)</option>
+              <option value="utf-8">UTF-8 (變長度 1-3 Bytes)</option>
+              <option value="ascii">Pure ASCII (1 Char = 1 Byte)</option>
+            </select>
+            <button id="loadSampleTelegramBtn" class="text-xs px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>載入範例
+            </button>
+            <button id="clearRawBtn" class="text-xs px-2.5 py-1 rounded text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
+              <i class="fa-solid fa-trash-can mr-1"></i>清空
+            </button>
+          </div>
+        </div>
+
+        <div class="p-5 space-y-3">
+          <div class="relative">
+            <textarea id="rawTelegramInput" rows="4" placeholder="請在此貼上銀行核心 RAW 電文（每行一筆）或由上方載入範例..." class="w-full bg-slate-50 dark:bg-slate-950 font-mono text-xs sm:text-sm p-3.5 rounded-lg border border-slate-300 dark:border-slate-700 focus:ring-2 focus:ring-bank-accent focus:outline-none transition-all leading-relaxed"></textarea>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between text-xs text-slate-500 gap-2">
+            <div class="flex items-center space-x-4 font-mono">
+              <span>游標字元長度: <strong id="rawCharCount" class="text-slate-700 dark:text-slate-300">0</strong></span>
+              <span>位元組長度 (Bytes): <strong id="rawByteCount" class="text-slate-700 dark:text-slate-300">0</strong></span>
+              <span id="lengthMatchStatus" class="font-bold"></span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button id="btnExecuteParse" class="px-4 py-2 bg-bank-600 hover:bg-bank-700 text-white rounded-lg shadow-sm font-semibold flex items-center transition-all">
+                <i class="fa-solid fa-play mr-2"></i>執行拆解解析
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 解析結果面板 -->
+      <div id="parseResultContainer" class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden hidden">
+        <div class="border-b border-slate-200 dark:border-slate-800 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-850">
+          <div class="flex items-center space-x-3">
+            <i class="fa-solid fa-list-check text-emerald-500"></i>
+            <h2 class="font-bold text-sm sm:text-base">欄位解析明細與檢核結果</h2>
+            <span id="parsedRecordCount" class="text-xs px-2 py-0.5 rounded-full bg-slate-200 dark:bg-slate-700 font-semibold font-mono">1 筆紀錄</span>
+          </div>
+
+          <div class="flex items-center space-x-2">
+            <button id="btnExportJSON" class="text-xs px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center">
+              <i class="fa-solid fa-file-code mr-1.5 text-amber-500"></i>匯出 JSON
+            </button>
+            <button id="btnExportCSV" class="text-xs px-3 py-1.5 rounded-md border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center">
+              <i class="fa-solid fa-file-csv mr-1.5 text-emerald-500"></i>匯出 CSV
+            </button>
+            <button id="btnSaveToHistory" class="text-xs px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 rounded-md transition-colors flex items-center">
+              <i class="fa-solid fa-bookmark mr-1.5 text-bank-accent"></i>儲存至歷史庫
+            </button>
+          </div>
+        </div>
+
+        <!-- 視覺化解析結果表格 -->
+        <div class="overflow-x-auto p-4">
+          <div id="parsedTablesWrapper" class="space-y-6">
+            <!-- 動態生成各筆電文表格 -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sectionBuilder" class="space-y-6 hidden">
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div>
+            <h2 class="font-bold text-base flex items-center">
+              <i class="fa-solid fa-screwdriver-wrench mr-2 text-bank-accent"></i>反向電文組裝器 (Reverse Builder)
+            </h2>
+            <p class="text-xs text-slate-400">依據目前選定的 Schema 欄位設定填寫數值，自動靠左靠右對齊補零/補空白生成標準電文。</p>
+          </div>
+          <button id="btnResetBuilderForm" class="text-xs px-3 py-1.5 rounded border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800">
+            重設表單
+          </button>
+        </div>
+
+        <div id="builderFieldsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- 動態產生欄位輸入框 -->
+        </div>
+
+        <div class="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">組裝結果 (RAW Output)</span>
+            <span id="builderByteMeter" class="text-xs font-mono font-semibold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800">
+              0 / 0 Bytes
+            </span>
+          </div>
+
+          <div class="relative">
+            <pre id="builtRawResult" class="p-3.5 bg-slate-900 text-emerald-400 font-mono text-sm rounded-lg overflow-x-auto border border-slate-800 select-all"></pre>
+            <button id="btnCopyBuiltRaw" class="absolute top-2.5 right-2.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded transition-colors flex items-center">
+              <i class="fa-regular fa-copy mr-1"></i>複製電文
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sectionSchema" class="space-y-6 hidden">
+      <!-- 規格管理頂部工具列 -->
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 space-y-5">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div>
+            <h2 class="font-bold text-base flex items-center">
+              <i class="fa-solid fa-sliders mr-2 text-bank-accent"></i>電文規格 CRUD 總覽與維護
+            </h2>
+            <p class="text-xs text-slate-400">完整支援電文規格的新增、修改、刪除、檢視（CRUD），並提供繁體中文多編碼 CSV 規格書匯入匯出。</p>
+          </div>
+
+          <!-- CRUD 操作按鈕群 -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button id="btnAddNewSchema" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-colors flex items-center shadow-sm">
+              <i class="fa-solid fa-circle-plus mr-1.5"></i>建立新規格 (Create)
+            </button>
+            <button id="btnDuplicateSchema" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-xs font-semibold rounded-lg transition-colors flex items-center">
+              <i class="fa-solid fa-clone mr-1.5"></i>複製當前規格
+            </button>
+            <button id="btnExportSchemaCsv" class="px-3 py-1.5 bg-bank-100 hover:bg-bank-200 text-bank-700 dark:bg-bank-900/60 dark:hover:bg-bank-800 dark:text-bank-200 text-xs font-semibold rounded-lg transition-colors flex items-center">
+              <i class="fa-solid fa-file-export mr-1.5"></i>匯出規格 CSV
+            </button>
+            <button id="btnDeleteSchema" class="px-3 py-1.5 bg-rose-100 hover:bg-rose-200 text-rose-700 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 dark:text-rose-300 text-xs font-semibold rounded-lg transition-colors flex items-center">
+              <i class="fa-solid fa-trash mr-1.5"></i>刪除此規格 (Delete)
+            </button>
+          </div>
+        </div>
+
+        <!-- 規格清單總覽與切換卡片 (Read & Quick Select) -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center">
+              <i class="fa-solid fa-folder-tree mr-1.5 text-bank-accent"></i>已儲存之規格清單庫 (IndexedDB 儲存)
+            </span>
+            <span id="schemaCountBadge" class="text-xs text-slate-400 font-mono">共 0 組規格</span>
+          </div>
+          <div id="schemasCardsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-48 overflow-y-auto p-1">
+            <!-- 動態產生規格快速選取卡片 -->
+          </div>
+        </div>
+
+        <!-- CSV 匯入核心區塊 (強調多編碼繁體中文) -->
+        <div class="bg-bank-50 dark:bg-slate-950/60 p-4 rounded-xl border border-bank-100 dark:border-slate-800 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i class="fa-solid fa-file-import text-bank-accent"></i>
+              <span class="text-sm font-bold">匯入 CSV 規格書 (繁體中文全編碼相容)</span>
+            </div>
+            <a href="javascript:void(0)" id="downloadCsvTemplateBtn" class="text-xs text-bank-accent hover:underline flex items-center font-medium">
+              <i class="fa-solid fa-circle-question mr-1"></i>下載標準 CSV 範本
+            </a>
+          </div>
+
+          <p class="text-xs text-slate-500">
+            支援銀行內部系統產出的各類規格 CSV。可自動或強制指定 <strong>Big5 / CP950</strong>、<strong>Big5-HKSCS</strong>、<strong>UTF-8</strong>、<strong>UTF-16LE</strong>、<strong>GBK</strong> 雙位元組編碼，解決 Excel / 主機匯出中文亂碼問題。
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            <div class="sm:col-span-4">
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">CSV 來源編碼 (Encoding):</label>
+              <select id="csvEncodingSelect" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-xs rounded-lg p-2 font-mono focus:ring-1 focus:ring-bank-accent">
+                <option value="auto">自動偵測 (Auto-Detect / UTF-8 fallback)</option>
+                <option value="big5" selected>Big5 / CP950 (台灣金融主機標準)</option>
+                <option value="big5-hkscs">Big5-HKSCS (含香港增補字符集)</option>
+                <option value="utf-8">UTF-8 (Unicode 標準)</option>
+                <option value="utf-16le">UTF-16LE (Excel 繁體 Unicode 匯出)</option>
+                <option value="gbk">GBK / CP936 (大中華區/特定主機)</option>
+              </select>
+            </div>
+
+            <div class="sm:col-span-5">
+              <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">選擇 CSV 檔案:</label>
+              <input type="file" id="csvFileInput" accept=".csv, .txt" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-bank-600 file:text-white hover:file:bg-bank-700 cursor-pointer">
+            </div>
+
+            <div class="sm:col-span-3 flex space-x-2">
+              <button id="btnProcessCsvImport" class="w-full px-3 py-2 bg-bank-600 hover:bg-bank-700 text-white rounded-lg text-xs font-semibold shadow-sm flex items-center justify-center transition-all">
+                <i class="fa-solid fa-file-arrow-up mr-1.5"></i>解析並匯入新規格
+              </button>
+            </div>
+          </div>
+          
+          <div id="csvPreviewNotice" class="hidden p-2 text-xs bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 rounded border border-amber-200 dark:border-amber-900 font-mono"></div>
+        </div>
+
+        <!-- 規格名稱與基本資料編輯 (Update) -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">規格代號 (ID):</label>
+            <input type="text" id="schemaEditId" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono" readonly>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">規格名稱:</label>
+            <input type="text" id="schemaEditName" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium focus:ring-1 focus:ring-bank-accent">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">預設字元編碼 (Default Encoding):</label>
+            <select id="schemaEditEncoding" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-mono focus:ring-1 focus:ring-bank-accent">
+              <option value="big5">Big5 (繁體中文 2B)</option>
+              <option value="utf-8">UTF-8</option>
+              <option value="ascii">Pure ASCII</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-500 mb-1">電文類型/備註說明:</label>
+            <input type="text" id="schemaEditDesc" class="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs font-medium focus:ring-1 focus:ring-bank-accent">
+          </div>
+        </div>
+
+        <!-- 欄位定義編輯清單 (Fields CRUD) -->
+        <div class="space-y-3 pt-2">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">欄位清單定義 (Fields Definition)</span>
+              <span id="schemaEditTotalBytes" class="text-xs font-mono font-semibold text-bank-600 dark:text-bank-accent bg-bank-50 dark:bg-bank-950 px-2 py-0.5 rounded border border-bank-200 dark:border-bank-900">累計: 0 Bytes</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button id="btnAddFieldRow" class="text-xs px-2.5 py-1 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-700 dark:text-slate-200 transition-colors flex items-center">
+                <i class="fa-solid fa-plus mr-1"></i>插入新欄位
+              </button>
+              <button id="btnSaveSchemaChanges" class="text-xs px-3.5 py-1 bg-bank-600 hover:bg-bank-700 text-white rounded font-medium shadow-sm transition-colors flex items-center">
+                <i class="fa-solid fa-floppy-disk mr-1.5"></i>儲存規格變更 (Update)
+              </button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="py-2.5 px-3 w-12 text-center">#</th>
+                  <th class="py-2.5 px-3">欄位代碼 (Field Key)</th>
+                  <th class="py-2.5 px-3">欄位中文名稱 (Name)</th>
+                  <th class="py-2.5 px-3 w-24">長度 (Bytes)</th>
+                  <th class="py-2.5 px-3 w-32">型別 (Type)</th>
+                  <th class="py-2.5 px-3 w-28">對齊方式 (Align)</th>
+                  <th class="py-2.5 px-3 w-24">填補字元 (Pad)</th>
+                  <th class="py-2.5 px-3">備註 (Notes)</th>
+                  <th class="py-2.5 px-3 w-24 text-center">排序/刪除</th>
+                </tr>
+              </thead>
+              <tbody id="schemaFieldsTableBody" class="divide-y divide-slate-200 dark:divide-slate-800">
+                <!-- 動態產出欄位列 -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="sectionHistory" class="space-y-6 hidden">
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div>
+            <h2 class="font-bold text-base flex items-center">
+              <i class="fa-solid fa-database mr-2 text-bank-accent"></i>IndexedDB 歷程記錄與快照
+            </h2>
+            <p class="text-xs text-slate-400">儲存於瀏覽器本地 IndexedDB，即便關閉瀏覽器或離線，資料皆妥善保留。</p>
+          </div>
+          <button id="btnClearAllHistoryBtn" class="text-xs px-3 py-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded border border-rose-200 dark:border-rose-900 transition-colors">
+            <i class="fa-solid fa-trash-can mr-1"></i>清空歷史儲存
+          </button>
+        </div>
+
+        <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800">
+              <tr>
+                <th class="py-2.5 px-3 w-36">儲存時間</th>
+                <th class="py-2.5 px-3 w-40">所屬規格 (Schema)</th>
+                <th class="py-2.5 px-3">原始電文摘錄</th>
+                <th class="py-2.5 px-3 w-28">筆數 / 長度</th>
+                <th class="py-2.5 px-3 w-28 text-center">操作</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody" class="divide-y divide-slate-200 dark:divide-slate-800">
+              <!-- 動態產出歷史資料列 -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 浮動訊息 Toast -->
+  <div id="toastMessage" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none bg-slate-900 text-white text-xs px-4 py-3 rounded-lg shadow-xl border border-slate-700 flex items-center space-x-2.5">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toastText">訊息提示</span>
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * 1. 預設銀行規格 (Standard Banking Schemas)
+     * =========================================================================
+     */
+    const DEFAULT_SCHEMAS = [
+      {
+        id: "FISC_0100_INTERBANK_TRANSFER",
+        name: "財金跨行轉帳電文 (FISC 0100)",
+        description: "台灣跨行通匯與轉帳之交易要求固定長度電文範本",
+        encoding: "big5",
+        fields: [
+          { key: "MSG_TYPE", name: "訊息類別代碼", length: 4, type: "AN", align: "left", pad: " ", note: "例如 0100" },
+          { key: "STAN", name: "交易追蹤序號(STAN)", length: 7, type: "N", align: "right", pad: "0", note: "系統流水號" },
+          { key: "TXN_DATE", name: "傳送日期時間(MMDDhhmmss)", length: 10, type: "N", align: "right", pad: "0", note: "月日時分秒" },
+          { key: "ACQ_BANK", name: "發動行行庫代碼", length: 3, type: "N", align: "right", pad: "0", note: "總行代碼 (如 004 臺灣銀行)" },
+          { key: "ISS_BANK", name: "接收行行庫代碼", length: 3, type: "N", align: "right", pad: "0", note: "解款行代碼 (如 013 國泰世華)" },
+          { key: "TXN_CODE", name: "交易代號", length: 5, type: "AN", align: "left", pad: " ", note: "如 25211 (轉帳)" },
+          { key: "FROM_ACC", name: "扣款帳號", length: 16, type: "AN", align: "left", pad: " ", note: "轉出帳號" },
+          { key: "TO_ACC", name: "入款帳號", length: 16, type: "AN", align: "left", pad: " ", note: "轉入帳號" },
+          { key: "TXN_AMT", name: "交易金額(分)", length: 12, type: "N", align: "right", pad: "0", note: "包含兩位小數或整數元" },
+          { key: "FEE_AMT", name: "手續費", length: 4, type: "N", align: "right", pad: "0", note: "跨行手續費 (如 0015)" },
+          { key: "REMARK", name: "中文附言備註", length: 20, type: "CH", align: "left", pad: " ", note: "Big5 繁體中文備註 (雙位元組)" },
+          { key: "RESP_CODE", name: "回應代碼", length: 4, type: "AN", align: "left", pad: " ", note: "0000 為成功" }
+        ]
+      },
+      {
+        id: "CBS_DEP_TXN_LOG",
+        name: "核心活存存提交易日誌 (CBS TXN)",
+        description: "核心帳務主機活存扣帳與貸記流水電文",
+        encoding: "big5",
+        fields: [
+          { key: "BRANCH_ID", name: "分行代號", length: 4, type: "AN", align: "left", pad: " ", note: "四碼分行代號" },
+          { key: "TELLER_ID", name: "櫃員代號", length: 6, type: "AN", align: "left", pad: " ", note: "操作櫃員" },
+          { key: "ACCT_NO", name: "活存主帳號", length: 14, type: "N", align: "right", pad: "0", note: "14碼科目與帳號" },
+          { key: "CURRENCY", name: "幣別", length: 3, type: "AN", align: "left", pad: " ", note: "TWD, USD 等" },
+          { key: "DR_CR_IND", name: "借貸別", length: 1, type: "AN", align: "left", pad: " ", note: "D:借(扣款) C:貸(存入)" },
+          { key: "TX_AMOUNT", name: "交易金額", length: 14, type: "N", align: "right", pad: "0", note: "整數金額靠右補零" },
+          { key: "SUMMARY_DESC", name: "交易中文摘要", length: 16, type: "CH", align: "left", pad: " ", note: "存簿列印摘要 (Big5 中文)" }
+        ]
+      }
+    ];
+
+    /**
+     * =========================================================================
+     * 2. IndexedDB 資料庫模組
+     * =========================================================================
+     */
+    const DB_NAME = "BankTelegramParserDB";
+    const DB_VERSION = 1;
+    let dbInstance = null;
+
+    function initIndexedDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          // Store 1: Schemas 規格定義
+          if (!db.objectStoreNames.contains("schemas")) {
+            const schemaStore = db.createObjectStore("schemas", { keyPath: "id" });
+            schemaStore.createIndex("name", "name", { unique: false });
+          }
+          // Store 2: History 歷史解析與暫存
+          if (!db.objectStoreNames.contains("history")) {
+            const historyStore = db.createObjectStore("history", { keyPath: "id", autoIncrement: true });
+            historyStore.createIndex("timestamp", "timestamp", { unique: false });
+            historyStore.createIndex("schemaId", "schemaId", { unique: false });
+          }
+        };
+
+        request.onsuccess = async (event) => {
+          dbInstance = event.target.result;
+          await seedDefaultSchemasIfEmpty();
+          resolve(dbInstance);
+        };
+
+        request.onerror = (event) => {
+          console.error("IndexedDB 初始化失敗:", event.target.error);
+          reject(event.target.error);
+        };
+      });
+    }
+
+    async function seedDefaultSchemasIfEmpty() {
+      const all = await getAllFromStore("schemas");
+      if (all.length === 0) {
+        for (const s of DEFAULT_SCHEMAS) {
+          await putToStore("schemas", s);
+        }
+      }
+    }
+
+    function getStore(storeName, mode = "readonly") {
+      const tx = dbInstance.transaction(storeName, mode);
+      return tx.objectStore(storeName);
+    }
+
+    function getAllFromStore(storeName) {
+      return new Promise((resolve, reject) => {
+        const store = getStore(storeName, "readonly");
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function getFromStore(storeName, key) {
+      return new Promise((resolve, reject) => {
+        const store = getStore(storeName, "readonly");
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function putToStore(storeName, item) {
+      return new Promise((resolve, reject) => {
+        const store = getStore(storeName, "readwrite");
+        const req = store.put(item);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function deleteFromStore(storeName, key) {
+      return new Promise((resolve, reject) => {
+        const store = getStore(storeName, "readwrite");
+        const req = store.delete(key);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    function clearStore(storeName) {
+      return new Promise((resolve, reject) => {
+        const store = getStore(storeName, "readwrite");
+        const req = store.clear();
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    /**
+     * =========================================================================
+     * 3. 繁體中文與多編碼 Byte 計算與轉換核心模組
+     * =========================================================================
+     */
+    // 透過 TextEncoder / TextDecoder 與 Big5 查核進行位元組模擬
+    function getByteLength(str, encoding = "big5") {
+      if (!str) return 0;
+      if (encoding === "ascii") {
+        return str.length;
+      }
+      if (encoding === "utf-8") {
+        return new TextEncoder().encode(str).length;
+      }
+      // Big5 常用計算法：ASCII 字元佔 1 byte，其餘雙位元字元佔 2 bytes
+      if (encoding.toLowerCase().includes("big5") || encoding === "gbk") {
+        let len = 0;
+        for (let i = 0; i < str.length; i++) {
+          const code = str.charCodeAt(i);
+          if (code <= 0x007f) {
+            len += 1;
+          } else {
+            len += 2; // 中文、全形字佔 2 bytes
+          }
+        }
+        return len;
+      }
+      return new TextEncoder().encode(str).length;
+    }
+
+    // 依指定位元組長度切割字串 (考慮 Big5 中文字元邊界)
+    function sliceByBytes(str, startByte, lengthInBytes, encoding = "big5") {
+      if (!str) return "";
+      let currentByte = 0;
+      let startIndex = 0;
+      let endIndex = str.length;
+
+      // 找到起始字元 index
+      for (let i = 0; i < str.length; i++) {
+        const char = str[i];
+        const charBytes = getByteLength(char, encoding);
+        if (currentByte + charBytes > startByte) {
+          startIndex = i;
+          break;
+        }
+        currentByte += charBytes;
+        if (i === str.length - 1) return "";
+      }
+
+      // 找到結束字元 index
+      let accumulatedLength = 0;
+      let result = "";
+      for (let i = startIndex; i < str.length; i++) {
+        const char = str[i];
+        const charBytes = getByteLength(char, encoding);
+        if (accumulatedLength + charBytes > lengthInBytes) {
+          break;
+        }
+        result += char;
+        accumulatedLength += charBytes;
+      }
+
+      return result;
+    }
+
+    // 依設定對齊與補字元
+    function formatField(value, targetLength, type, align = "left", padChar = " ", encoding = "big5") {
+      let str = (value === null || value === undefined) ? "" : String(value);
+      let currentBytes = getByteLength(str, encoding);
+
+      // 若超出則截斷
+      if (currentBytes > targetLength) {
+        str = sliceByBytes(str, 0, targetLength, encoding);
+        currentBytes = getByteLength(str, encoding);
+      }
+
+      const diff = targetLength - currentBytes;
+      if (diff <= 0) return str;
+
+      const padString = padChar.repeat(diff);
+      if (align === "right") {
+        return padString + str;
+      } else {
+        return str + padString;
+      }
+    }
+
+    /**
+     * =========================================================================
+     * 4. UI 狀態與應用程式管理器
+     * =========================================================================
+     */
+    let currentSchema = null;
+    let allSchemas = [];
+    let currentParsedResults = [];
+
+    // 初始化應用程式
+    window.addEventListener("DOMContentLoaded", async () => {
+      await initIndexedDB();
+      initTheme();
+      bindTabEvents();
+      bindParsingEvents();
+      bindBuilderEvents();
+      bindSchemaConfigEvents();
+      bindCsvImportEvents();
+      bindHistoryEvents();
+
+      await reloadSchemas();
+      selectSchemaByIndex(0);
+      showToast("系統已就緒，IndexedDB 連線正常", "info");
+    });
+
+    // 主題切換 (Light / Dark)
+    function initTheme() {
+      const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        document.getElementById('themeIcon').className = 'fa-solid fa-sun';
+      }
+      document.getElementById('themeToggleBtn').addEventListener('click', () => {
+        const isCurrentlyDark = document.documentElement.classList.toggle('dark');
+        document.getElementById('themeIcon').className = isCurrentlyDark ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
+      });
+    }
+
+    function showToast(text, type = "success") {
+      const toast = document.getElementById("toastMessage");
+      const toastText = document.getElementById("toastText");
+      const toastIcon = document.getElementById("toastIcon");
+
+      toastText.textContent = text;
+      if (type === "success") {
+        toastIcon.className = "fa-solid fa-circle-check text-emerald-400";
+      } else if (type === "error") {
+        toastIcon.className = "fa-solid fa-circle-xmark text-rose-400";
+      } else {
+        toastIcon.className = "fa-solid fa-circle-info text-sky-400";
+      }
+
+      toast.classList.remove("translate-y-20", "opacity-0");
+      setTimeout(() => {
+        toast.classList.add("translate-y-20", "opacity-0");
+      }, 3000);
+    }
+
+    /**
+     * =========================================================================
+     * 5. Schema 下拉選單與切換
+     * =========================================================================
+     */
+    async function reloadSchemas() {
+      allSchemas = await getAllFromStore("schemas");
+      const select = document.getElementById("schemaSelect");
+      select.innerHTML = "";
+      allSchemas.forEach((s) => {
+        const opt = document.createElement("option");
+        opt.value = s.id;
+        opt.textContent = `${s.name} (${s.id})`;
+        select.appendChild(opt);
+      });
+
+      renderSchemaCards();
+    }
+
+    // 渲染規格清單卡片 (提供 Read 與快速點選)
+    function renderSchemaCards() {
+      const container = document.getElementById("schemasCardsContainer");
+      const badge = document.getElementById("schemaCountBadge");
+      if (!container) return;
+
+      badge.textContent = `共 ${allSchemas.length} 組規格`;
+      container.innerHTML = "";
+
+      allSchemas.forEach((s) => {
+        const isCurrent = currentSchema && currentSchema.id === s.id;
+        const totalB = s.fields.reduce((acc, f) => acc + Number(f.length || 0), 0);
+        const card = document.createElement("div");
+        card.className = `p-2.5 rounded-lg border text-xs cursor-pointer transition-all ${
+          isCurrent
+            ? "border-bank-accent bg-bank-50 dark:bg-bank-950/70 shadow-sm ring-1 ring-bank-accent"
+            : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 hover:border-slate-400"
+        }`;
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-1">
+            <span class="font-bold text-slate-800 dark:text-slate-100 truncate pr-1" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
+            <span class="font-mono text-[10px] px-1 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">${totalB}B</span>
+          </div>
+          <div class="text-[10px] text-slate-400 font-mono truncate">${s.id}</div>
+          <div class="text-[11px] text-slate-500 mt-1 truncate">${s.fields.length} 個欄位 | ${s.encoding || 'big5'}</div>
+        `;
+
+        card.addEventListener("click", () => {
+          document.getElementById("schemaSelect").value = s.id;
+          onSchemaChanged();
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    function selectSchemaByIndex(index) {
+      if (allSchemas.length > 0 && allSchemas[index]) {
+        currentSchema = allSchemas[index];
+        document.getElementById("schemaSelect").value = currentSchema.id;
+        onSchemaChanged();
+      }
+    }
+
+    function onSchemaChanged() {
+      const selectedId = document.getElementById("schemaSelect").value;
+      currentSchema = allSchemas.find((s) => s.id === selectedId) || allSchemas[0];
+      if (!currentSchema) return;
+
+      const totalBytes = currentSchema.fields.reduce((acc, cur) => acc + Number(cur.length || 0), 0);
+      document.getElementById("schemaTotalBytesBadge").textContent = `總長度: ${totalBytes} Bytes`;
+
+      // 同步至編碼下拉選單
+      if (currentSchema.encoding) {
+        document.getElementById("encodingSelect").value = currentSchema.encoding;
+      }
+
+      // 更新各子頁面
+      updateBuilderFields();
+      updateSchemaEditForm();
+      checkRawInputStatus();
+      renderSchemaCards();
+    }
+
+    // 綁定 Schema 切換事件
+    document.getElementById("schemaSelect").addEventListener("change", onSchemaChanged);
+
+    /**
+     * =========================================================================
+     * 6. 分頁切換模組 (Tab Switcher)
+     * =========================================================================
+     */
+    function bindTabEvents() {
+      const tabs = [
+        { btn: "tabParseBtn", sec: "sectionParse" },
+        { btn: "tabBuilderBtn", sec: "sectionBuilder" },
+        { btn: "tabSchemaBtn", sec: "sectionSchema" },
+        { btn: "tabHistoryBtn", sec: "sectionHistory" }
+      ];
+
+      tabs.forEach((t) => {
+        const btnEl = document.getElementById(t.btn);
+        if (!btnEl) return;
+
+        btnEl.addEventListener("click", () => {
+          tabs.forEach((item) => {
+            const b = document.getElementById(item.btn);
+            const s = document.getElementById(item.sec);
+            if (b) {
+              b.classList.remove("active", "bg-white", "dark:bg-slate-700", "shadow-sm", "text-bank-600", "dark:text-white");
+              b.classList.add("text-slate-600", "dark:text-slate-400");
+            }
+            if (s) {
+              s.classList.add("hidden");
+            }
+          });
+
+          btnEl.classList.add("active", "bg-white", "dark:bg-slate-700", "shadow-sm", "text-bank-600", "dark:text-white");
+          btnEl.classList.remove("text-slate-600", "dark:text-slate-400");
+
+          const targetSec = document.getElementById(t.sec);
+          if (targetSec) targetSec.classList.remove("hidden");
+
+          if (t.btn === "tabHistoryBtn") {
+            loadHistoryTable();
+          } else if (t.btn === "tabSchemaBtn") {
+            updateSchemaEditForm();
+            renderSchemaCards();
+          } else if (t.btn === "tabBuilderBtn") {
+            updateBuilderFields();
+          }
+        });
+      });
+    }
+
+    /**
+     * =========================================================================
+     * 7. 電文解析功能 (Telegram Parser)
+     * =========================================================================
+     */
+    function bindParsingEvents() {
+      const rawInput = document.getElementById("rawTelegramInput");
+      const encodingSelect = document.getElementById("encodingSelect");
+
+      rawInput.addEventListener("input", checkRawInputStatus);
+      encodingSelect.addEventListener("change", checkRawInputStatus);
+
+      document.getElementById("clearRawBtn").addEventListener("click", () => {
+        rawInput.value = "";
+        checkRawInputStatus();
+      });
+
+      document.getElementById("loadSampleTelegramBtn").addEventListener("click", loadSampleData);
+      document.getElementById("btnExecuteParse").addEventListener("click", executeParse);
+
+      document.getElementById("btnExportJSON").addEventListener("click", exportParsedJSON);
+      document.getElementById("btnExportCSV").addEventListener("click", exportParsedCSV);
+      document.getElementById("btnSaveToHistory").addEventListener("click", saveCurrentParseToHistory);
+    }
+
+    function checkRawInputStatus() {
+      if (!currentSchema) return;
+      const raw = document.getElementById("rawTelegramInput").value;
+      const encoding = document.getElementById("encodingSelect").value;
+      const firstLine = raw.split("\n")[0] || "";
+
+      const charLen = firstLine.length;
+      const byteLen = getByteLength(firstLine, encoding);
+      const expectedTotalBytes = currentSchema.fields.reduce((acc, cur) => acc + Number(cur.length || 0), 0);
+
+      document.getElementById("rawCharCount").textContent = charLen;
+      document.getElementById("rawByteCount").textContent = byteLen;
+
+      const statusEl = document.getElementById("lengthMatchStatus");
+      if (raw.trim() === "") {
+        statusEl.innerHTML = "";
+        return;
+      }
+
+      if (byteLen === expectedTotalBytes) {
+        statusEl.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400"><i class="fa-solid fa-check mr-1"></i>第 1 行長度相符 (${byteLen}B)</span>`;
+      } else {
+        const diff = byteLen - expectedTotalBytes;
+        const diffText = diff > 0 ? `多出 ${diff} Bytes` : `不足 ${Math.abs(diff)} Bytes`;
+        statusEl.innerHTML = `<span class="text-amber-600 dark:text-amber-400"><i class="fa-solid fa-triangle-exclamation mr-1"></i>目標 ${expectedTotalBytes}B, 當前 ${byteLen}B (${diffText})</span>`;
+      }
+    }
+
+    function loadSampleData() {
+      if (!currentSchema) return;
+      if (currentSchema.id === "FISC_0100_INTERBANK_TRANSFER") {
+        const sample1 = "01000001234101214300000401325211123456789012345698765432109876540000001500000015十月份貨款付訖      0000";
+        const sample2 = "01000001235101214321500401725211000011223344556699887766554433220000000350000015臨櫃繳納學雜費    0000";
+        document.getElementById("rawTelegramInput").value = sample1 + "\n" + sample2;
+      } else if (currentSchema.id === "CBS_DEP_TXN_LOG") {
+        const sample1 = "0012T0000100012345678900TWDDR0000000050000自動櫃員機提款  ";
+        const sample2 = "0012T0000200012345678900TWDCR0000000200000薪資轉帳存入    ";
+        document.getElementById("rawTelegramInput").value = sample1 + "\n" + sample2;
+      } else {
+        let row = "";
+        currentSchema.fields.forEach((f) => {
+          const padChar = f.pad || " ";
+          row += f.key.padEnd(f.length, padChar).substring(0, f.length);
+        });
+        document.getElementById("rawTelegramInput").value = row;
+      }
+      checkRawInputStatus();
+      showToast("已載入範例電文", "info");
+    }
+
+    function executeParse() {
+      const rawText = document.getElementById("rawTelegramInput").value.trim();
+      if (!rawText) {
+        showToast("請輸入電文字串", "error");
+        return;
+      }
+      if (!currentSchema || !currentSchema.fields || currentSchema.fields.length === 0) {
+        showToast("目前 Schema 尚未設定任何欄位", "error");
+        return;
+      }
+
+      const encoding = document.getElementById("encodingSelect").value;
+      const lines = rawText.split(/\r?\n/).filter((line) => line.trim().length > 0);
+      currentParsedResults = [];
+
+      lines.forEach((line, lineIndex) => {
+        let currentByteOffset = 0;
+        const parsedFields = [];
+
+        currentSchema.fields.forEach((field, fIdx) => {
+          const fLen = Number(field.length);
+          const rawVal = sliceByBytes(line, currentByteOffset, fLen, encoding);
+          const trimmedVal = field.type === "N" ? rawVal.replace(/^0+/, "") || "0" : rawVal.trim();
+
+          parsedFields.push({
+            order: fIdx + 1,
+            key: field.key,
+            name: field.name,
+            length: fLen,
+            type: field.type,
+            offsetStart: currentByteOffset,
+            offsetEnd: currentByteOffset + fLen,
+            rawSubstring: rawVal,
+            cleanedValue: trimmedVal,
+            note: field.note || ""
+          });
+
+          currentByteOffset += fLen;
+        });
+
+        currentParsedResults.push({
+          lineIndex: lineIndex + 1,
+          rawLine: line,
+          actualBytes: getByteLength(line, encoding),
+          expectedBytes: currentByteOffset,
+          fields: parsedFields
+        });
+      });
+
+      renderParsedResultsUI();
+      document.getElementById("parseResultContainer").classList.remove("hidden");
+      document.getElementById("parseResultContainer").scrollIntoView({ behavior: "smooth" });
+      showToast(`成功解析 ${currentParsedResults.length} 筆電文紀錄`, "success");
+    }
+
+    function renderParsedResultsUI() {
+      const wrapper = document.getElementById("parsedTablesWrapper");
+      wrapper.innerHTML = "";
+      document.getElementById("parsedRecordCount").textContent = `${currentParsedResults.length} 筆紀錄`;
+
+      currentParsedResults.forEach((rec) => {
+        const isLengthMatched = rec.actualBytes === rec.expectedBytes;
+        const block = document.createElement("div");
+        block.className = "border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden";
+
+        block.innerHTML = `
+          <div class="bg-slate-100 dark:bg-slate-800 px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-700">
+            <div class="flex items-center space-x-2">
+              <span class="text-xs font-bold px-2 py-0.5 rounded bg-bank-600 text-white font-mono">Row #${rec.lineIndex}</span>
+              <span class="text-xs font-mono text-slate-500">實際長度: ${rec.actualBytes} B / 預期: ${rec.expectedBytes} B</span>
+              ${!isLengthMatched ? '<span class="text-xs text-amber-500 font-semibold"><i class="fa-solid fa-triangle-exclamation"></i> 長度不吻合</span>' : '<span class="text-xs text-emerald-500 font-semibold"><i class="fa-solid fa-circle-check"></i> 長度吻合</span>'}
+            </div>
+            <div class="text-xs font-mono text-slate-400 truncate max-w-md" title="${rec.rawLine}">
+              RAW: ${rec.rawLine}
+            </div>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-slate-50 dark:bg-slate-850 text-slate-500 font-semibold border-b border-slate-200 dark:border-slate-800">
+                <tr>
+                  <th class="py-2 px-3 w-12 text-center">序</th>
+                  <th class="py-2 px-3 w-32">欄位名稱</th>
+                  <th class="py-2 px-3 w-32 font-mono">代碼 (Key)</th>
+                  <th class="py-2 px-3 w-28">區間 (Bytes)</th>
+                  <th class="py-2 px-3">原始內容 (Raw Content)</th>
+                  <th class="py-2 px-3 font-semibold text-slate-700 dark:text-slate-200">格式化值 (Cleaned)</th>
+                  <th class="py-2 px-3 text-slate-400">說明備註</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono">
+                ${rec.fields.map((f) => `
+                  <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors">
+                    <td class="py-2 px-3 text-center text-slate-400">${f.order}</td>
+                    <td class="py-2 px-3 font-sans font-medium text-slate-800 dark:text-slate-200">${f.name}</td>
+                    <td class="py-2 px-3 text-bank-600 dark:text-bank-accent font-semibold">${f.key}</td>
+                    <td class="py-2 px-3 text-slate-500 text-xs">[${f.offsetStart} ~ ${f.offsetEnd}) <span class="text-slate-400">(${f.length}B)</span></td>
+                    <td class="py-2 px-3 bg-slate-50 dark:bg-slate-900/60 text-slate-700 dark:text-slate-300 whitespace-pre">"${escapeHtml(f.rawSubstring)}"</td>
+                    <td class="py-2 px-3 text-emerald-600 dark:text-emerald-400 font-bold font-sans">${escapeHtml(f.cleanedValue)}</td>
+                    <td class="py-2 px-3 text-slate-400 font-sans text-xs">${escapeHtml(f.note)}</td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        `;
+        wrapper.appendChild(block);
+      });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    function exportParsedJSON() {
+      if (currentParsedResults.length === 0) return;
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentParsedResults, null, 2));
+      downloadFile(dataStr, `Telegram_Parsed_${currentSchema.id}_${Date.now()}.json`);
+    }
+
+    function exportParsedCSV() {
+      if (currentParsedResults.length === 0) return;
+      const headers = ["RowIndex", ...currentSchema.fields.map((f) => `${f.name}(${f.key})`)];
+      const rows = currentParsedResults.map((r) => {
+        const fieldVals = r.fields.map((f) => `"${f.cleanedValue.replace(/"/g, '""')}"`);
+        return [r.lineIndex, ...fieldVals].join(",");
+      });
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      downloadFile(url, `Telegram_Export_${currentSchema.id}_${Date.now()}.csv`);
+    }
+
+    function downloadFile(url, filename) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
+    async function saveCurrentParseToHistory() {
+      if (currentParsedResults.length === 0) return;
+      const historyItem = {
+        timestamp: new Date().toISOString(),
+        schemaId: currentSchema.id,
+        schemaName: currentSchema.name,
+        recordCount: currentParsedResults.length,
+        rawSnippet: currentParsedResults[0].rawLine.substring(0, 60),
+        data: currentParsedResults
+      };
+
+      await putToStore("history", historyItem);
+      showToast("已成功將解析結果封存至 IndexedDB 本地庫", "success");
+    }
+
+    /**
+     * =========================================================================
+     * 8. 反向組裝器 (Reverse Builder)
+     * =========================================================================
+     */
+    function bindBuilderEvents() {
+      document.getElementById("btnResetBuilderForm").addEventListener("click", () => {
+        updateBuilderFields();
+        computeBuiltRawTelegram();
+      });
+
+      document.getElementById("btnCopyBuiltRaw").addEventListener("click", () => {
+        const text = document.getElementById("builtRawResult").textContent;
+        if (!text) return;
+        const temp = document.createElement("textarea");
+        temp.value = text;
+        document.body.appendChild(temp);
+        temp.select();
+        document.execCommand("copy");
+        document.body.removeChild(temp);
+        showToast("已複製組裝電文至剪貼簿", "success");
+      });
+    }
+
+    function updateBuilderFields() {
+      const container = document.getElementById("builderFieldsContainer");
+      container.innerHTML = "";
+      if (!currentSchema) return;
+
+      currentSchema.fields.forEach((field) => {
+        const div = document.createElement("div");
+        div.className = "bg-slate-50 dark:bg-slate-800/60 p-3 rounded-lg border border-slate-200 dark:border-slate-700/60 space-y-1.5";
+
+        const alignLabel = field.align === "right" ? "靠右補" : "靠左補";
+        const padDisplay = field.pad === " " ? "空白" : `"${field.pad}"`;
+
+        div.innerHTML = `
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold text-slate-700 dark:text-slate-300 truncate" title="${field.name}">
+              ${field.name}
+            </label>
+            <span class="text-[10px] font-mono text-slate-400 bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+              ${field.length}B | ${field.type}
+            </span>
+          </div>
+          <div class="text-[11px] text-slate-400 font-mono truncate">${field.key} (${alignLabel}${padDisplay})</div>
+          <input type="text" data-key="${field.key}" data-len="${field.length}" data-type="${field.type}" data-align="${field.align}" data-pad="${field.pad}" 
+            class="builder-input w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded px-2.5 py-1 text-xs font-mono focus:ring-1 focus:ring-bank-accent focus:outline-none" 
+            placeholder="長度限制 ${field.length} Bytes">
+        `;
+        container.appendChild(div);
+      });
+
+      container.querySelectorAll(".builder-input").forEach((inp) => {
+        inp.addEventListener("input", computeBuiltRawTelegram);
+      });
+
+      computeBuiltRawTelegram();
+    }
+
+    function computeBuiltRawTelegram() {
+      if (!currentSchema) return;
+      const inputs = document.querySelectorAll(".builder-input");
+      const encoding = currentSchema.encoding || "big5";
+      let builtTelegram = "";
+
+      currentSchema.fields.forEach((field) => {
+        const input = Array.from(inputs).find((i) => i.dataset.key === field.key);
+        const val = input ? input.value : "";
+        const formatted = formatField(val, field.length, field.type, field.align, field.pad || " ", encoding);
+        builtTelegram += formatted;
+      });
+
+      document.getElementById("builtRawResult").textContent = builtTelegram;
+      const totalBytes = getByteLength(builtTelegram, encoding);
+      const targetBytes = currentSchema.fields.reduce((acc, c) => acc + Number(c.length || 0), 0);
+      document.getElementById("builderByteMeter").textContent = `${totalBytes} / ${targetBytes} Bytes`;
+    }
+
+    /**
+     * =========================================================================
+     * 9. 規格配置維護 (Schema Config & CRUD Editor)
+     * =========================================================================
+     */
+    function bindSchemaConfigEvents() {
+      document.getElementById("btnAddNewSchema").addEventListener("click", addNewBlankSchema);
+      document.getElementById("btnDuplicateSchema").addEventListener("click", duplicateCurrentSchema);
+      document.getElementById("btnDeleteSchema").addEventListener("click", deleteCurrentSchema);
+      document.getElementById("btnAddFieldRow").addEventListener("click", addBlankFieldRow);
+      document.getElementById("btnSaveSchemaChanges").addEventListener("click", saveSchemaChanges);
+      document.getElementById("btnExportSchemaCsv").addEventListener("click", exportCurrentSchemaToCsv);
+    }
+
+    function updateSchemaEditForm() {
+      if (!currentSchema) return;
+      document.getElementById("schemaEditId").value = currentSchema.id;
+      document.getElementById("schemaEditName").value = currentSchema.name;
+      document.getElementById("schemaEditDesc").value = currentSchema.description || "";
+      document.getElementById("schemaEditEncoding").value = currentSchema.encoding || "big5";
+
+      const tbody = document.getElementById("schemaFieldsTableBody");
+      tbody.innerHTML = "";
+
+      currentSchema.fields.forEach((f, idx) => {
+        appendFieldRowToTable(f, idx);
+      });
+
+      calculateEditFormTotalBytes();
+    }
+
+    function calculateEditFormTotalBytes() {
+      const rows = document.querySelectorAll("#schemaFieldsTableBody tr");
+      let total = 0;
+      rows.forEach(r => {
+        const len = parseInt(r.querySelector(".f-len").value) || 0;
+        total += len;
+      });
+      document.getElementById("schemaEditTotalBytes").textContent = `累計: ${total} Bytes`;
+    }
+
+    function appendFieldRowToTable(f, idx) {
+      const tbody = document.getElementById("schemaFieldsTableBody");
+      const tr = document.createElement("tr");
+      tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800/50 field-row";
+
+      tr.innerHTML = `
+        <td class="py-2 px-3 text-center text-slate-400 font-mono row-index">${idx + 1}</td>
+        <td class="py-2 px-3">
+          <input type="text" class="f-key w-full bg-transparent border-b border-slate-300 dark:border-slate-700 px-1 py-0.5 font-mono text-xs focus:border-bank-accent focus:outline-none" value="${escapeHtml(f.key)}">
+        </td>
+        <td class="py-2 px-3">
+          <input type="text" class="f-name w-full bg-transparent border-b border-slate-300 dark:border-slate-700 px-1 py-0.5 font-sans text-xs focus:border-bank-accent focus:outline-none" value="${escapeHtml(f.name)}">
+        </td>
+        <td class="py-2 px-3">
+          <input type="number" min="1" max="9999" class="f-len w-16 bg-transparent border-b border-slate-300 dark:border-slate-700 px-1 py-0.5 font-mono text-xs focus:border-bank-accent focus:outline-none" value="${f.length}">
+        </td>
+        <td class="py-2 px-3">
+          <select class="f-type bg-transparent border-b border-slate-300 dark:border-slate-700 text-xs focus:outline-none">
+            <option value="AN" ${f.type === "AN" ? "selected" : ""}>文字/英數(AN)</option>
+            <option value="N" ${f.type === "N" ? "selected" : ""}>純數值(N)</option>
+            <option value="CH" ${f.type === "CH" ? "selected" : ""}>中文/全形(CH)</option>
+          </select>
+        </td>
+        <td class="py-2 px-3">
+          <select class="f-align bg-transparent border-b border-slate-300 dark:border-slate-700 text-xs focus:outline-none">
+            <option value="left" ${f.align === "left" ? "selected" : ""}>靠左 (Left)</option>
+            <option value="right" ${f.align === "right" ? "selected" : ""}>靠右 (Right)</option>
+          </select>
+        </td>
+        <td class="py-2 px-3">
+          <input type="text" maxlength="1" class="f-pad w-12 bg-transparent border-b border-slate-300 dark:border-slate-700 px-1 py-0.5 text-center font-mono text-xs focus:border-bank-accent focus:outline-none" value="${escapeHtml(f.pad)}">
+        </td>
+        <td class="py-2 px-3">
+          <input type="text" class="f-note w-full bg-transparent border-b border-slate-300 dark:border-slate-700 px-1 py-0.5 text-xs text-slate-500 focus:outline-none" value="${escapeHtml(f.note || "")}">
+        </td>
+        <td class="py-2 px-3 text-center space-x-1">
+          <button type="button" class="btn-move-up text-slate-400 hover:text-slate-600 p-0.5" title="上移">
+            <i class="fa-solid fa-arrow-up text-[10px]"></i>
+          </button>
+          <button type="button" class="btn-move-down text-slate-400 hover:text-slate-600 p-0.5" title="下移">
+            <i class="fa-solid fa-arrow-down text-[10px]"></i>
+          </button>
+          <button type="button" class="btn-del-field text-rose-500 hover:text-rose-700 p-0.5 ml-1" title="刪除欄位">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </td>
+      `;
+
+      tr.querySelector(".f-len").addEventListener("input", calculateEditFormTotalBytes);
+
+      tr.querySelector(".btn-move-up").addEventListener("click", () => {
+        if (tr.previousElementSibling) {
+          tbody.insertBefore(tr, tr.previousElementSibling);
+          reindexFieldRows();
+        }
+      });
+
+      tr.querySelector(".btn-move-down").addEventListener("click", () => {
+        if (tr.nextElementSibling) {
+          tbody.insertBefore(tr.nextElementSibling, tr);
+          reindexFieldRows();
+        }
+      });
+
+      tr.querySelector(".btn-del-field").addEventListener("click", () => {
+        tr.remove();
+        reindexFieldRows();
+        calculateEditFormTotalBytes();
+      });
+
+      tbody.appendChild(tr);
+    }
+
+    function reindexFieldRows() {
+      const rows = document.querySelectorAll("#schemaFieldsTableBody tr");
+      rows.forEach((r, i) => {
+        r.querySelector(".row-index").textContent = i + 1;
+      });
+    }
+
+    function addBlankFieldRow() {
+      const newField = {
+        key: "FIELD_" + (document.querySelectorAll("#schemaFieldsTableBody tr").length + 1),
+        name: "新欄位",
+        length: 10,
+        type: "AN",
+        align: "left",
+        pad: " ",
+        note: ""
+      };
+      appendFieldRowToTable(newField, document.querySelectorAll("#schemaFieldsTableBody tr").length);
+      calculateEditFormTotalBytes();
+    }
+
+    async function addNewBlankSchema() {
+      const now = Date.now();
+      const id = "CUSTOM_" + now;
+      const newSchema = {
+        id: id,
+        name: "自訂電文規格 " + new Date().toLocaleDateString("zh-TW"),
+        description: "由使用者建立之全新電文規格",
+        encoding: "big5",
+        fields: [
+          { key: "MSG_ID", name: "電文代碼", length: 4, type: "AN", align: "left", pad: " ", note: "例如 0100" },
+          { key: "TXN_SEQ", name: "交易序號", length: 10, type: "N", align: "right", pad: "0", note: "流水號" },
+          { key: "CUST_NAME", name: "客戶名稱", length: 20, type: "CH", align: "left", pad: " ", note: "中文全形" }
+        ]
+      };
+      await putToStore("schemas", newSchema);
+      await reloadSchemas();
+      document.getElementById("schemaSelect").value = id;
+      onSchemaChanged();
+      showToast("已成功建立新電文規格！", "success");
+    }
+
+    async function duplicateCurrentSchema() {
+      if (!currentSchema) return;
+      const dup = JSON.parse(JSON.stringify(currentSchema));
+      dup.id = currentSchema.id + "_COPY_" + Math.floor(Math.random() * 1000);
+      dup.name = currentSchema.name + " (複製)";
+      await putToStore("schemas", dup);
+      await reloadSchemas();
+      document.getElementById("schemaSelect").value = dup.id;
+      onSchemaChanged();
+      showToast("已複製電文規格", "success");
+    }
+
+    async function deleteCurrentSchema() {
+      if (!currentSchema) return;
+      if (allSchemas.length <= 1) {
+        showToast("系統內至少需保留一組規格，無法刪除最後一項", "error");
+        return;
+      }
+      
+      const confirmDelete = window.confirm ? confirm(`確定要刪除規格「${currentSchema.name} (${currentSchema.id})」嗎？此操作將永久自 IndexedDB 移除。`) : true;
+      if (!confirmDelete) return;
+
+      await deleteFromStore("schemas", currentSchema.id);
+      await reloadSchemas();
+      selectSchemaByIndex(0);
+      showToast("已刪除該規格", "info");
+    }
+
+    async function saveSchemaChanges() {
+      if (!currentSchema) return;
+      const name = document.getElementById("schemaEditName").value.trim();
+      const desc = document.getElementById("schemaEditDesc").value.trim();
+      const encoding = document.getElementById("schemaEditEncoding").value;
+
+      if (!name) {
+        showToast("規格名稱不可為空", "error");
+        return;
+      }
+
+      const rows = document.querySelectorAll("#schemaFieldsTableBody tr");
+      if (rows.length === 0) {
+        showToast("規格至少需具備一個欄位定義", "error");
+        return;
+      }
+
+      const fields = [];
+      rows.forEach((r) => {
+        fields.push({
+          key: r.querySelector(".f-key").value.trim() || "FIELD",
+          name: r.querySelector(".f-name").value.trim() || "未命名",
+          length: parseInt(r.querySelector(".f-len").value) || 1,
+          type: r.querySelector(".f-type").value,
+          align: r.querySelector(".f-align").value,
+          pad: r.querySelector(".f-pad").value || " ",
+          note: r.querySelector(".f-note").value.trim()
+        });
+      });
+
+      currentSchema.name = name;
+      currentSchema.description = desc;
+      currentSchema.encoding = encoding;
+      currentSchema.fields = fields;
+
+      await putToStore("schemas", currentSchema);
+      await reloadSchemas();
+      document.getElementById("schemaSelect").value = currentSchema.id;
+      onSchemaChanged();
+      showToast("規格設定已成功儲存至 IndexedDB！", "success");
+    }
+
+    function exportCurrentSchemaToCsv() {
+      if (!currentSchema) return;
+      const headers = ["欄位代碼", "欄位名稱", "長度", "型態", "對齊方式", "填補字元", "備註"];
+      const rows = currentSchema.fields.map(f => [
+        `"${f.key.replace(/"/g, '""')}"`,
+        `"${f.name.replace(/"/g, '""')}"`,
+        f.length,
+        f.type,
+        f.align,
+        `"${(f.pad || " ").replace(/"/g, '""')}"`,
+        `"${(f.note || "").replace(/"/g, '""')}"`
+      ].join(","));
+
+      const csvContent = "\uFEFF" + [headers.join(","), ...rows].join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      downloadFile(URL.createObjectURL(blob), `Schema_${currentSchema.id}.csv`);
+      showToast("已匯出規格書 CSV", "info");
+    }
+
+    /**
+     * =========================================================================
+     * 10. 繁體中文多編碼 CSV 規格書匯入處理模組
+     * =========================================================================
+     */
+    function bindCsvImportEvents() {
+      document.getElementById("btnProcessCsvImport").addEventListener("click", processCsvFileImport);
+      document.getElementById("downloadCsvTemplateBtn").addEventListener("click", downloadStandardCsvTemplate);
+    }
+
+    function downloadStandardCsvTemplate() {
+      const csv = "\uFEFF欄位代碼,欄位名稱,長度,型態,對齊方式,填補字元,備註\r\n" +
+                  "TXN_ID,交易序號,8,N,right,0,流水號\r\n" +
+                  "CUST_NAME,客戶繁體姓名,12,CH,left, ,中文姓名雙位元\r\n" +
+                  "ACC_NO,帳號,14,AN,left, ,存匯帳號\r\n" +
+                  "TXN_AMT,交易金額,10,N,right,0,整數金額";
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      downloadFile(URL.createObjectURL(blob), "電文規格匯入標準範本.csv");
+    }
+
+    async function processCsvFileImport() {
+      const fileInput = document.getElementById("csvFileInput");
+      if (!fileInput.files || fileInput.files.length === 0) {
+        showToast("請先選擇 CSV 檔案", "error");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const selectedEncoding = document.getElementById("csvEncodingSelect").value;
+      const noticeBox = document.getElementById("csvPreviewNotice");
+
+      try {
+        const buffer = await file.arrayBuffer();
+        let decodedText = "";
+        let usedEncoding = selectedEncoding;
+
+        // 若為自動偵測，先比對 UTF-8 BOM 或進行試算
+        if (selectedEncoding === "auto") {
+          const uint8 = new Uint8Array(buffer);
+          if (uint8[0] === 0xef && uint8[1] === 0xbb && uint8[2] === 0xbf) {
+            usedEncoding = "utf-8";
+            decodedText = new TextDecoder("utf-8").decode(buffer);
+          } else {
+            // 嘗試 Big5 解析
+            try {
+              const testBig5 = new TextDecoder("big5").decode(buffer);
+              // 若含中文字且無明顯亂碼字元
+              usedEncoding = "big5";
+              decodedText = testBig5;
+            } catch (e) {
+              usedEncoding = "utf-8";
+              decodedText = new TextDecoder("utf-8").decode(buffer);
+            }
+          }
+        } else {
+          // 強制指定編碼
+          const decoder = new TextDecoder(selectedEncoding);
+          decodedText = decoder.decode(buffer);
+        }
+
+        noticeBox.classList.remove("hidden");
+        noticeBox.textContent = `檔案「${file.name}」已使用 [${usedEncoding.toUpperCase()}] 成功解碼，準備分析欄位...`;
+
+        const parsedFields = parseCsvSpecificationText(decodedText);
+        if (parsedFields.length === 0) {
+          showToast("CSV 解析失敗：未找到符合的欄位定義行", "error");
+          return;
+        }
+
+        // 產生新規格存入 IndexedDB
+        const baseName = file.name.replace(/\.[^/.]+$/, "");
+        const newSchemaId = "CSV_IMPORT_" + Date.now();
+        const importedSchema = {
+          id: newSchemaId,
+          name: `匯入: ${baseName}`,
+          description: `自 CSV 匯入 (${usedEncoding})，共 ${parsedFields.length} 個欄位`,
+          encoding: usedEncoding.includes("big5") ? "big5" : "utf-8",
+          fields: parsedFields
+        };
+
+        await putToStore("schemas", importedSchema);
+        await reloadSchemas();
+        document.getElementById("schemaSelect").value = newSchemaId;
+        onSchemaChanged();
+
+        fileInput.value = "";
+        showToast(`已成功由 CSV 匯入 ${parsedFields.length} 個欄位至新規格！`, "success");
+      } catch (err) {
+        console.error("CSV Import Error:", err);
+        showToast("CSV 讀取失敗: " + err.message, "error");
+      }
+    }
+
+    // 解析 CSV 結構字串 (相容引號與逗號)
+    function parseCsvSpecificationText(csvText) {
+      const lines = csvText.split(/\r?\n/).filter((l) => l.trim().length > 0);
+      if (lines.length < 2) return [];
+
+      const fields = [];
+      // 判斷第 0 行是否為標題欄位
+      let startIdx = 1;
+      const headerLine = lines[0].toLowerCase();
+      if (!headerLine.includes("key") && !headerLine.includes("欄位") && !headerLine.includes("name") && !headerLine.includes("長度")) {
+        startIdx = 0; // 若第一行無標題字樣則從第 0 行當資料
+      }
+
+      for (let i = startIdx; i < lines.length; i++) {
+        const rawRow = lines[i];
+        // 簡易 CSV 正則切割
+        const cols = rawRow.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map((v) => v.replace(/^"|"$/g, "").trim());
+        if (cols.length >= 3) {
+          // 支援兩種常見排列：
+          // 格式 A: 代碼, 名稱, 長度, 型別, 對齊, 補字, 備註
+          // 格式 B: 序號, 代碼, 名稱, 長度...
+          let key = cols[0];
+          let name = cols[1];
+          let len = parseInt(cols[2]);
+          let type = cols[3] || "AN";
+          let align = cols[4] || "left";
+          let pad = cols[5] || " ";
+          let note = cols[6] || "";
+
+          // 若 cols[0] 是純數字序號，往後平移
+          if (/^\d+$/.test(cols[0]) && cols.length >= 4) {
+            key = cols[1];
+            name = cols[2];
+            len = parseInt(cols[3]);
+            type = cols[4] || "AN";
+            align = cols[5] || "left";
+            pad = cols[6] || " ";
+            note = cols[7] || "";
+          }
+
+          if (key && !isNaN(len) && len > 0) {
+            // 正規化型態
+            let normalizedType = "AN";
+            if (/N|數|NUM/i.test(type)) normalizedType = "N";
+            if (/CH|中|全/i.test(type)) normalizedType = "CH";
+
+            let normalizedAlign = /R|右/i.test(align) ? "right" : "left";
+            let normalizedPad = pad.length > 0 ? pad[0] : (normalizedType === "N" ? "0" : " ");
+
+            fields.push({
+              key: key,
+              name: name || key,
+              length: len,
+              type: normalizedType,
+              align: normalizedAlign,
+              pad: normalizedPad,
+              note: note
+            });
+          }
+        }
+      }
+
+      return fields;
+    }
+
+    /**
+     * =========================================================================
+     * 11. IndexedDB 歷程管理模組 (History Management)
+     * =========================================================================
+     */
+    function bindHistoryEvents() {
+      document.getElementById("btnClearAllHistoryBtn").addEventListener("click", async () => {
+        await clearStore("history");
+        await loadHistoryTable();
+        showToast("已清空歷史紀錄", "info");
+      });
+    }
+
+    async function loadHistoryTable() {
+      const historyList = await getAllFromStore("history");
+      const tbody = document.getElementById("historyTableBody");
+      tbody.innerHTML = "";
+
+      if (historyList.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-400">目前尚無歷史儲存紀錄</td></tr>`;
+        return;
+      }
+
+      // 依時間倒序排列
+      historyList.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+      historyList.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.className = "hover:bg-slate-50 dark:hover:bg-slate-800/50";
+        const timeFormatted = new Date(item.timestamp).toLocaleString("zh-TW");
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 text-slate-500 font-mono">${timeFormatted}</td>
+          <td class="py-2.5 px-3 font-semibold text-bank-600 dark:text-bank-accent">${item.schemaName || item.schemaId}</td>
+          <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300 font-mono truncate max-w-xs" title="${item.rawSnippet}">${item.rawSnippet}...</td>
+          <td class="py-2.5 px-3 font-mono">${item.recordCount} 筆</td>
+          <td class="py-2.5 px-3 text-center space-x-2">
+            <button class="btn-restore-history text-xs px-2 py-1 bg-bank-100 hover:bg-bank-200 dark:bg-bank-900 dark:hover:bg-bank-800 text-bank-700 dark:text-bank-200 rounded">
+              載入
+            </button>
+            <button class="btn-del-history text-xs px-2 py-1 text-rose-500 hover:text-rose-700">
+              刪除
+            </button>
+          </td>
+        `;
+
+        tr.querySelector(".btn-restore-history").addEventListener("click", () => {
+          currentParsedResults = item.data;
+          renderParsedResultsUI();
+          document.getElementById("tabParseBtn").click();
+          document.getElementById("parseResultContainer").classList.remove("hidden");
+          showToast("已由歷史庫復原解析結果", "info");
+        });
+
+        tr.querySelector(".btn-del-history").addEventListener("click", async () => {
+          await deleteFromStore("history", item.id);
+          await loadHistoryTable();
+          showToast("已刪除該筆紀錄", "info");
+        });
+
+        tbody.appendChild(tr);
+      });
+    }
+  </script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

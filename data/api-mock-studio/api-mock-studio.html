@@ -1,0 +1,2299 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Mock Studio · API Mock 與 cURL 格式轉換工作室</title>
+  <meta name="description" content="免後端純前台 API 測試、Mock 回應模擬、cURL 雙向轉換、Dummy 假資料生成與 OpenAPI 規格匯出工具。">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', '"Noto Sans TC"', '"Microsoft JhengHei"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eef6ff',
+              100: '#d9ebfe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            },
+            method: {
+              get: '#10b981',
+              post: '#3b82f6',
+              put: '#f59e0b',
+              patch: '#8b5cf6',
+              delete: '#ef4444',
+              options: '#6b7280',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.04); }
+    .dark ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.04); }
+    ::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(107, 114, 128, 0.8); }
+
+    /* Code editor line wrapping & feel */
+    .code-editor {
+      font-family: 'JetBrains Mono', monospace;
+      tab-size: 2;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col font-sans antialiased transition-colors duration-150">
+
+  <!-- Top Header Navigation -->
+  <header class="border-b border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur sticky top-0 z-30">
+    <div class="px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 max-w-[1720px] mx-auto">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl p-1.5 rounded-xl bg-blue-500/10 text-blue-500 border border-blue-500/20 flex items-center justify-center">⚡</span>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base font-bold tracking-tight text-slate-900 dark:text-white">API Mock Studio</h1>
+            <span class="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">SPA 工具</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">cURL 雙向轉換 · 純前台 Mock 模擬 · 臺灣/金融 Dummy 資料 · OpenAPI 規範</p>
+        </div>
+      </div>
+
+      <div class="flex items-center flex-wrap gap-2 text-xs">
+        <!-- Preset selector -->
+        <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+          <span class="text-slate-500 dark:text-slate-400">範例集合：</span>
+          <select id="preset-selector" class="bg-transparent font-medium text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer">
+            <option value="finance">臺灣銀行轉帳與 KYC 驗證</option>
+            <option value="ecommerce">電子商務購物車與商品分頁</option>
+            <option value="auth">JWT 身分驗證與使用者個人資料</option>
+          </select>
+          <button id="btn-load-preset" title="載入選擇的範例集合" class="px-2 py-0.5 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 transition">載入</button>
+        </div>
+
+        <button id="btn-export-collection" class="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1 text-slate-700 dark:text-slate-300">
+          <span>💾 匯出集合</span>
+        </button>
+
+        <label class="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition flex items-center gap-1 text-slate-700 dark:text-slate-300 cursor-pointer">
+          <span>📥 匯入 JSON</span>
+          <input type="file" id="input-import-collection" accept=".json" class="hidden">
+        </label>
+
+        <!-- Dark mode toggle -->
+        <button id="btn-theme-toggle" class="p-1.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-slate-700 dark:text-slate-300 text-sm" title="切換深淺模式">
+          🌓
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 flex overflow-hidden max-w-[1720px] w-full mx-auto" style="min-height: calc(100vh - 58px);">
+    
+    <!-- Left Sidebar: Endpoint Collection (Collapsible / Resizable) -->
+    <aside class="w-72 sm:w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 flex flex-col flex-shrink-0">
+      <div class="p-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">端點清冊</span>
+          <span id="endpoint-count" class="text-[11px] px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono">0</span>
+        </div>
+        <button id="btn-new-endpoint" class="text-xs px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium transition flex items-center gap-1">
+          <span>＋ 新增端點</span>
+        </button>
+      </div>
+
+      <!-- Search in collection -->
+      <div class="p-2 border-b border-slate-200 dark:border-slate-800">
+        <input type="text" id="endpoint-search" placeholder="搜尋端點名稱或路徑..." class="w-full text-xs px-2.5 py-1.5 rounded-md bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500">
+      </div>
+
+      <!-- Endpoint List -->
+      <div id="endpoint-list" class="flex-1 overflow-y-auto p-2 space-y-1">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Quick actions in sidebar footer -->
+      <div class="p-2.5 border-t border-slate-200 dark:border-slate-800 text-xs flex justify-between items-center text-slate-500 dark:text-slate-400">
+        <button id="btn-import-curl-modal" class="text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+          <span>📋 貼上 cURL 解析</span>
+        </button>
+        <button id="btn-reset-defaults" class="hover:text-red-500 transition">重設所有端點</button>
+      </div>
+    </aside>
+
+    <!-- Main Workspace (Center & Right Split) -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden bg-slate-100/60 dark:bg-slate-950">
+
+      <!-- Center Pane: Request Builder & Executor -->
+      <section class="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-800 overflow-y-auto bg-white dark:bg-slate-900 min-w-[340px]">
+        
+        <!-- Endpoint Title & URL Bar -->
+        <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <input type="text" id="endpoint-name-input" placeholder="端點名稱（例：查詢帳戶餘額）" class="font-semibold text-sm bg-transparent border-b border-transparent hover:border-slate-300 dark:hover:border-slate-700 focus:border-blue-500 focus:outline-none text-slate-900 dark:text-white px-1 py-0.5 flex-1">
+            <div class="flex items-center gap-1">
+              <button id="btn-clone-endpoint" title="複製此端點" class="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 text-xs">📋 複製</button>
+              <button id="btn-delete-endpoint" title="刪除此端點" class="p-1 rounded hover:bg-red-50 dark:hover:bg-red-950 text-red-600 dark:text-red-400 text-xs">🗑️ 刪除</button>
+            </div>
+          </div>
+
+          <!-- URL Input Group -->
+          <div class="flex items-center gap-1.5">
+            <select id="req-method" class="text-xs font-bold font-mono px-2.5 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-blue-600 dark:text-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-500">
+              <option value="GET">GET</option>
+              <option value="POST">POST</option>
+              <option value="PUT">PUT</option>
+              <option value="PATCH">PATCH</option>
+              <option value="DELETE">DELETE</option>
+              <option value="OPTIONS">OPTIONS</option>
+              <option value="HEAD">HEAD</option>
+            </select>
+            <div class="flex-1 relative">
+              <input type="text" id="req-url" placeholder="https://api.example.com/v1/resource" class="w-full text-xs font-mono px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            </div>
+
+            <!-- Execution mode switch & Run button -->
+            <div class="flex items-center bg-slate-200 dark:bg-slate-800 p-0.5 rounded-lg text-[11px] font-medium">
+              <button id="mode-mock" class="px-2 py-1 rounded-md bg-blue-600 text-white shadow-sm transition">Mock 模擬</button>
+              <button id="mode-fetch" class="px-2 py-1 rounded-md text-slate-600 dark:text-slate-300 hover:text-slate-900 transition">真實請求</button>
+            </div>
+
+            <button id="btn-execute" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition active:scale-95 flex-shrink-0">
+              <span id="btn-execute-icon">🚀</span>
+              <span id="btn-execute-text">模擬回應</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Request Sub-Tabs -->
+        <div class="border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 px-3 flex items-center justify-between">
+          <div class="flex gap-1 text-xs">
+            <button class="req-tab-btn px-3 py-2.5 font-medium border-b-2 border-blue-600 text-blue-600 dark:text-blue-400" data-tab="params">Params <span id="badge-params-count" class="text-[10px] ml-0.5 opacity-70"></span></button>
+            <button class="req-tab-btn px-3 py-2.5 font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200" data-tab="headers">Headers <span id="badge-headers-count" class="text-[10px] ml-0.5 opacity-70"></span></button>
+            <button class="req-tab-btn px-3 py-2.5 font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200" data-tab="body">Body</button>
+            <button class="req-tab-btn px-3 py-2.5 font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200" data-tab="auth">Auth</button>
+            <button class="req-tab-btn px-3 py-2.5 font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200" data-tab="snippets">程式碼 (Code)</button>
+            <button class="req-tab-btn px-3 py-2.5 font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200" data-tab="openapi">OpenAPI 規範</button>
+          </div>
+
+          <div class="flex items-center gap-1.5 py-1">
+            <button id="btn-quick-curl" title="取得當前 Request 的 cURL 指令" class="text-[11px] px-2 py-1 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 transition">📋 複製 cURL</button>
+          </div>
+        </div>
+
+        <!-- Request Tab Contents -->
+        <div class="p-3.5 flex-1 overflow-y-auto">
+
+          <!-- 1. Params Tab -->
+          <div id="tab-content-params" class="req-tab-panel space-y-2">
+            <div class="flex items-center justify-between text-xs text-slate-500">
+              <span>Query Parameters (會自動與 URL 網址同調)</span>
+              <button id="btn-add-param" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">＋ 新增參數</button>
+            </div>
+            <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
+              <table class="w-full text-xs text-left">
+                <thead class="bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th class="p-2 w-8 text-center">✓</th>
+                    <th class="p-2 w-1/3">Key (鍵名)</th>
+                    <th class="p-2">Value (數值)</th>
+                    <th class="p-2 w-10 text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="params-table-body" class="divide-y divide-slate-200 dark:divide-slate-800 font-mono">
+                  <!-- Dynamic Rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 2. Headers Tab -->
+          <div id="tab-content-headers" class="req-tab-panel hidden space-y-2">
+            <div class="flex items-center justify-between text-xs text-slate-500">
+              <div class="flex items-center gap-2">
+                <span>Request Headers</span>
+                <span class="text-[11px] text-slate-400">快速加入：</span>
+                <button class="quick-header-preset px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] hover:text-blue-500" data-k="Content-Type" data-v="application/json">JSON</button>
+                <button class="quick-header-preset px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] hover:text-blue-500" data-k="Accept" data-v="application/json">Accept</button>
+                <button class="quick-header-preset px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[10px] hover:text-blue-500" data-k="X-Request-ID" data-v="req-{{uuid}}">X-Request-ID</button>
+              </div>
+              <button id="btn-add-header" class="text-blue-600 dark:text-blue-400 hover:underline font-medium">＋ 新增 Header</button>
+            </div>
+            <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-lg">
+              <table class="w-full text-xs text-left">
+                <thead class="bg-slate-100 dark:bg-slate-800/60 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+                  <tr>
+                    <th class="p-2 w-8 text-center">✓</th>
+                    <th class="p-2 w-1/3">Header Name</th>
+                    <th class="p-2">Header Value</th>
+                    <th class="p-2 w-10 text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="headers-table-body" class="divide-y divide-slate-200 dark:divide-slate-800 font-mono">
+                  <!-- Dynamic Rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 3. Body Tab -->
+          <div id="tab-content-body" class="req-tab-panel hidden space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <div class="flex items-center gap-3">
+                <label class="flex items-center gap-1 cursor-pointer">
+                  <input type="radio" name="body-type" value="none" class="text-blue-600">
+                  <span>None</span>
+                </label>
+                <label class="flex items-center gap-1 cursor-pointer">
+                  <input type="radio" name="body-type" value="json" checked class="text-blue-600">
+                  <span class="font-semibold text-blue-600 dark:text-blue-400">application/json</span>
+                </label>
+                <label class="flex items-center gap-1 cursor-pointer">
+                  <input type="radio" name="body-type" value="form" class="text-blue-600">
+                  <span>x-www-form-urlencoded</span>
+                </label>
+                <label class="flex items-center gap-1 cursor-pointer">
+                  <input type="radio" name="body-type" value="raw" class="text-blue-600">
+                  <span>Raw Text</span>
+                </label>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <button id="btn-format-req-body" class="px-2 py-1 rounded bg-slate-200 dark:bg-slate-800 text-[11px] hover:bg-slate-300 font-medium">✨ 格式化 JSON</button>
+              </div>
+            </div>
+            <div id="req-body-container" class="relative">
+              <textarea id="req-body-text" rows="11" class="code-editor w-full text-xs p-3 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 leading-relaxed font-mono" placeholder="{\n  &quot;accountNumber&quot;: &quot;987-123-456&quot;\n}"></textarea>
+              <div id="req-body-error" class="hidden text-[11px] text-red-500 font-mono mt-1"></div>
+            </div>
+          </div>
+
+          <!-- 4. Auth Tab -->
+          <div id="tab-content-auth" class="req-tab-panel hidden space-y-3 text-xs">
+            <div class="flex items-center gap-2">
+              <span class="font-medium text-slate-700 dark:text-slate-300">認證類型 (Auth Type)：</span>
+              <select id="auth-type" class="px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-medium">
+                <option value="none">No Auth (無認證)</option>
+                <option value="bearer">Bearer Token</option>
+                <option value="basic">Basic Auth (帳號密碼)</option>
+                <option value="apikey">API Key (Header / Query)</option>
+              </select>
+            </div>
+
+            <!-- Bearer inputs -->
+            <div id="auth-bearer-pane" class="space-y-1.5 hidden">
+              <label class="text-slate-500">Token 字串：</label>
+              <input type="text" id="auth-bearer-token" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." class="w-full font-mono text-xs p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+              <p class="text-[11px] text-slate-400">發送時將自動加入 `Authorization: Bearer <Token>` Header。</p>
+            </div>
+
+            <!-- Basic Auth inputs -->
+            <div id="auth-basic-pane" class="space-y-2 hidden">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-slate-500">Username (帳號)：</label>
+                  <input type="text" id="auth-basic-user" placeholder="admin" class="w-full font-mono text-xs p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                </div>
+                <div>
+                  <label class="text-slate-500">Password (密碼)：</label>
+                  <input type="password" id="auth-basic-pass" placeholder="••••••••" class="w-full font-mono text-xs p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-400">發送時自動編譯成 Base64 並加入 `Authorization: Basic ...` Header。</p>
+            </div>
+
+            <!-- API Key inputs -->
+            <div id="auth-apikey-pane" class="space-y-2 hidden">
+              <div class="grid grid-cols-3 gap-2">
+                <div>
+                  <label class="text-slate-500">Key Name：</label>
+                  <input type="text" id="auth-apikey-name" placeholder="X-API-Key" class="w-full font-mono text-xs p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                </div>
+                <div class="col-span-2">
+                  <label class="text-slate-500">Value：</label>
+                  <input type="text" id="auth-apikey-val" placeholder="sec_live_98124..." class="w-full font-mono text-xs p-2 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 5. Code Snippets Tab -->
+          <div id="tab-content-snippets" class="req-tab-panel hidden space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <div class="flex gap-1">
+                <button class="snippet-lang-btn px-2.5 py-1 rounded bg-blue-600 text-white font-medium" data-lang="curl">cURL</button>
+                <button class="snippet-lang-btn px-2.5 py-1 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300" data-lang="fetch">JavaScript (fetch)</button>
+                <button class="snippet-lang-btn px-2.5 py-1 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300" data-lang="axios">Node.js (axios)</button>
+                <button class="snippet-lang-btn px-2.5 py-1 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300" data-lang="python">Python (requests)</button>
+                <button class="snippet-lang-btn px-2.5 py-1 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300" data-lang="msw">MSW (Mock Service Worker)</button>
+              </div>
+              <button id="btn-copy-snippet" class="px-2.5 py-1 rounded bg-slate-200 dark:bg-slate-800 hover:bg-blue-600 hover:text-white transition font-medium">📋 複製代碼</button>
+            </div>
+            <pre id="snippet-display" class="code-editor p-3 rounded-lg bg-slate-900 text-blue-200 text-xs overflow-x-auto border border-slate-800 min-h-[220px] max-h-[360px]"></pre>
+          </div>
+
+          <!-- 6. OpenAPI 3.0 Tab -->
+          <div id="tab-content-openapi" class="req-tab-panel hidden space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-500">依據當前設計自動產出 OpenAPI 3.0 (YAML/JSON) 規格</span>
+              <div class="flex items-center gap-1.5">
+                <button id="btn-openapi-format-yaml" class="px-2 py-0.5 rounded bg-blue-600 text-white font-medium">YAML</button>
+                <button id="btn-openapi-format-json" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium">JSON</button>
+                <button id="btn-copy-openapi" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 font-medium">📋 複製規格</button>
+                <button id="btn-download-postman" class="px-2 py-0.5 rounded bg-amber-600 text-white font-medium hover:bg-amber-700">📦 匯出 Postman Collection</button>
+              </div>
+            </div>
+            <pre id="openapi-display" class="code-editor p-3 rounded-lg bg-slate-900 text-emerald-300 text-xs overflow-x-auto border border-slate-800 min-h-[240px] max-h-[380px]"></pre>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Right Pane: Response & Mock Studio -->
+      <section class="flex-1 flex flex-col overflow-y-auto bg-slate-50/70 dark:bg-slate-950 min-w-[340px]">
+        
+        <!-- Mock Response Configuration Panel -->
+        <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Mock 回應規則設定</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-medium">純前端模擬</span>
+            </div>
+            <!-- Dummy Generators Shortcut Dropdown -->
+            <div class="flex items-center gap-1 text-xs">
+              <span class="text-slate-400">插入假資料標籤：</span>
+              <select id="dummy-tag-selector" class="px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-mono text-[11px]">
+                <option value="">選擇假資料標籤...</option>
+                <option value="@uuid">@uuid (UUID v4)</option>
+                <option value="@taiwan_gui">@taiwan_gui (臺灣統編8碼)</option>
+                <option value="@taiwan_phone">@taiwan_phone (臺灣手機)</option>
+                <option value="@taiwan_id">@taiwan_id (身分證字號)</option>
+                <option value="@name">@name (中文姓名)</option>
+                <option value="@email">@email (隨機電子郵件)</option>
+                <option value="@amount">@amount (隨機金額)</option>
+                <option value="@timestamp">@timestamp (ISO 時間戳)</option>
+                <option value="@boolean">@boolean (布林值)</option>
+              </select>
+              <button id="btn-insert-dummy-tag" class="px-2 py-1 rounded bg-blue-600 text-white font-medium hover:bg-blue-700 transition">插入</button>
+            </div>
+          </div>
+
+          <!-- Status Code, Delay & Quick Templates -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div>
+              <label class="block text-slate-500 mb-1">HTTP 狀態碼：</label>
+              <select id="mock-status-code" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono font-semibold text-slate-800 dark:text-slate-200">
+                <option value="200" selected>200 OK (成功)</option>
+                <option value="201">201 Created (已建立)</option>
+                <option value="204">204 No Content (無內容)</option>
+                <option value="400">400 Bad Request (請求錯誤)</option>
+                <option value="401">401 Unauthorized (未授權)</option>
+                <option value="403">403 Forbidden (權限不足)</option>
+                <option value="404">404 Not Found (資源不存在)</option>
+                <option value="422">422 Unprocessable (參數驗證失敗)</option>
+                <option value="500">500 Internal Server Error (伺服器錯誤)</option>
+                <option value="503">503 Service Unavailable (服務維護中)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-slate-500 mb-1">網路延遲模擬：</label>
+              <select id="mock-delay" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 font-mono text-slate-800 dark:text-slate-200">
+                <option value="0">0 ms (即時回應)</option>
+                <option value="150" selected>150 ms (正常 LAN)</option>
+                <option value="400">400 ms (一般 Internet)</option>
+                <option value="1000">1000 ms (慢速網路)</option>
+                <option value="2500">2500 ms (高延遲 / 逾時測試)</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="block text-slate-500 mb-1">套用範本範本：</label>
+              <select id="mock-template-preset" class="w-full px-2.5 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200">
+                <option value="">選擇內建回應範本...</option>
+                <option value="taiwan_bank">臺灣跨行轉帳明細 (含統編/序號)</option>
+                <option value="user_profile">使用者個人資料 (含身分證/姓名)</option>
+                <option value="paginated_list">分頁列表結構 (Items, Total, Page)</option>
+                <option value="rfc7807_error">RFC 7807 錯誤規範結構</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Mock Body Editor -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between text-xs">
+              <span class="text-slate-500 font-medium">Mock 回傳 Body (支援佔位符即時計算)：</span>
+              <div class="flex items-center gap-1.5">
+                <button id="btn-format-mock-body" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[11px] hover:bg-slate-300 font-medium">✨ 格式化 JSON</button>
+                <button id="btn-generate-dummy-now" class="px-2 py-0.5 rounded bg-emerald-600 text-white text-[11px] hover:bg-emerald-700 font-medium flex items-center gap-1">🎲 產生假資料實體</button>
+              </div>
+            </div>
+            <textarea id="mock-body-editor" rows="9" class="code-editor w-full text-xs p-3 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 leading-relaxed font-mono"></textarea>
+          </div>
+        </div>
+
+        <!-- Latest Execution Response View -->
+        <div class="flex-1 flex flex-col p-3.5 space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">最新回應結果 (Response)</span>
+              <span id="res-status-badge" class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400">尚未執行</span>
+              <span id="res-time-badge" class="text-[11px] font-mono text-slate-400 hidden">0 ms</span>
+              <span id="res-size-badge" class="text-[11px] font-mono text-slate-400 hidden">0 B</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button id="btn-copy-res-body" class="text-xs px-2.5 py-1 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 transition font-medium">📋 複製回應</button>
+            </div>
+          </div>
+
+          <!-- CORS Notice Banner (Shown when real fetch fails) -->
+          <div id="cors-notice-banner" class="hidden p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs space-y-1">
+            <div class="font-bold flex items-center gap-1">
+              <span>⚠️ 跨來源存取 (CORS) 警告或網路連線失敗</span>
+            </div>
+            <p>瀏覽器安全同源政策（Same-Origin Policy）會阻擋未設定 <code>Access-Control-Allow-Origin</code> 的跨域請求。若目標伺服器未開放跨域，建議切換回右上角的 <strong>【Mock 模擬模式】</strong> 進行介面與資料測試！</p>
+          </div>
+
+          <!-- Response Tabs (Body vs Headers) -->
+          <div class="flex gap-2 text-xs border-b border-slate-200 dark:border-slate-800 pb-1">
+            <button class="res-tab-btn font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 pb-1" data-tab="res-body">Response Body</button>
+            <button class="res-tab-btn text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 pb-1" data-tab="res-headers">Response Headers</button>
+          </div>
+
+          <!-- Response Output Displays -->
+          <div class="flex-1 relative min-h-[220px]">
+            <pre id="res-body-display" class="code-editor w-full h-full p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs overflow-auto font-mono min-h-[220px]">點擊上方「模擬回應」或「發送請求」開始測試。</pre>
+            <pre id="res-headers-display" class="code-editor w-full h-full p-3 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 text-xs overflow-auto font-mono hidden min-h-[220px]"></pre>
+          </div>
+        </div>
+
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Modal: Import cURL Command -->
+  <div id="modal-import-curl" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-xl">📋</span>
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white">匯入 cURL 指令</h3>
+        </div>
+        <button id="btn-close-curl-modal" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-lg leading-none">&times;</button>
+      </div>
+
+      <div class="p-4 space-y-3">
+        <p class="text-xs text-slate-500 dark:text-slate-400">貼上任意 cURL 指令（支援換行 <code>\</code>、<code>-X</code>、<code>-H</code>、<code>-d</code> / <code>--data-raw</code> 等），系統將自動解析為 Method、URL、Headers 與 Body：</p>
+        <textarea id="curl-input-area" rows="8" class="code-editor w-full text-xs p-3 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-mono focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="curl 'https://api.example.com/v1/transfer' \
+  -X POST \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer my-secret-token' \
+  --data-raw '{&quot;amount&quot;: 5000, &quot;targetBank&quot;: &quot;004&quot;}'"></textarea>
+      </div>
+
+      <div class="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2 bg-slate-50 dark:bg-slate-950/50">
+        <button id="btn-cancel-curl" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 text-xs font-medium hover:bg-slate-100 dark:hover:bg-slate-800">取消</button>
+        <button id="btn-confirm-curl" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">解析並帶入端點</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed top-4 right-4 z-50 px-3.5 py-2 rounded-lg bg-slate-900 text-white text-xs font-medium shadow-xl transform transition-all duration-200 translate-y-[-20px] opacity-0 pointer-events-none flex items-center gap-2 border border-slate-700">
+    <span id="toast-icon">✓</span>
+    <span id="toast-msg">通知訊息</span>
+  </div>
+
+  <!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+  <a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+  <style>
+    #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+      font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+      background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+      padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+      box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+    #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+    #hf-home-entry:active{transform:translateY(0)}
+    @media print{#hf-home-entry{display:none}}
+  </style>
+
+  <!-- Application Logic -->
+  <script>
+    (function() {
+      'use strict';
+
+      // --- 1. Preset Collections ---
+      const PRESETS = {
+        finance: [
+          {
+            id: 'fin-1',
+            name: '查詢帳戶餘額與額度',
+            method: 'GET',
+            url: 'https://api.bank.tw/v1/accounts/ACC-981244/balance?currency=TWD&includeReserved=true',
+            params: [
+              { key: 'currency', value: 'TWD', enabled: true },
+              { key: 'includeReserved', value: 'true', enabled: true }
+            ],
+            headers: [
+              { key: 'Accept', value: 'application/json', enabled: true },
+              { key: 'Authorization', value: 'Bearer sec_token_fin_demo', enabled: true },
+              { key: 'X-Request-ID', value: 'req-@uuid', enabled: true }
+            ],
+            bodyType: 'none',
+            body: '',
+            auth: { type: 'bearer', token: 'sec_token_fin_demo' },
+            mock: {
+              status: 200,
+              delay: 150,
+              body: JSON.stringify({
+                status: 'SUCCESS',
+                accountNumber: 'ACC-981244',
+                currency: 'TWD',
+                ledgerBalance: 3500000,
+                availableBalance: 3200000,
+                companyTaxId: '@taiwan_gui',
+                accountHolder: '@name',
+                lastUpdated: '@timestamp'
+              }, null, 2)
+            }
+          },
+          {
+            id: 'fin-2',
+            name: '跨行轉帳交易扣款',
+            method: 'POST',
+            url: 'https://api.bank.tw/v1/transfers',
+            params: [],
+            headers: [
+              { key: 'Content-Type', value: 'application/json', enabled: true },
+              { key: 'X-Idempotency-Key', value: '@uuid', enabled: true }
+            ],
+            bodyType: 'json',
+            body: JSON.stringify({
+              fromAccount: 'ACC-981244',
+              toBankCode: '004',
+              toAccount: '004123456789',
+              amount: 50000,
+              memo: '廠商貨款結算'
+            }, null, 2),
+            auth: { type: 'none' },
+            mock: {
+              status: 201,
+              delay: 400,
+              body: JSON.stringify({
+                transactionId: 'TX-@uuid',
+                status: 'SETTLED',
+                fee: 15,
+                amount: 50000,
+                completedAt: '@timestamp',
+                senderTaxId: '@taiwan_gui',
+                recipientPhone: '@taiwan_phone',
+                authCode: 'AUTH-99214'
+              }, null, 2)
+            }
+          },
+          {
+            id: 'fin-3',
+            name: '客戶身分證與 KYC 檢核 (404 範例)',
+            method: 'GET',
+            url: 'https://api.bank.tw/v1/kyc/verify?idNo=A123456789',
+            params: [
+              { key: 'idNo', value: 'A123456789', enabled: true }
+            ],
+            headers: [
+              { key: 'Accept', value: 'application/json', enabled: true }
+            ],
+            bodyType: 'none',
+            body: '',
+            auth: { type: 'none' },
+            mock: {
+              status: 404,
+              delay: 200,
+              body: JSON.stringify({
+                type: 'https://api.bank.tw/errors/customer-not-found',
+                title: 'Customer KYC Record Not Found',
+                status: 404,
+                detail: '查無身分證 A123456789 之有效 KYC 歷史檔案。',
+                instance: '/kyc/verify/A123456789',
+                timestamp: '@timestamp'
+              }, null, 2)
+            }
+          }
+        ],
+        ecommerce: [
+          {
+            id: 'ecom-1',
+            name: '查詢商品分頁清單',
+            method: 'GET',
+            url: 'https://api.shop.com/v2/products?page=1&limit=10&category=electronics',
+            params: [
+              { key: 'page', value: '1', enabled: true },
+              { key: 'limit', value: '10', enabled: true },
+              { key: 'category', value: 'electronics', enabled: true }
+            ],
+            headers: [
+              { key: 'Accept', value: 'application/json', enabled: true }
+            ],
+            bodyType: 'none',
+            body: '',
+            auth: { type: 'none' },
+            mock: {
+              status: 200,
+              delay: 200,
+              body: JSON.stringify({
+                page: 1,
+                limit: 10,
+                total: 48,
+                items: [
+                  { id: '@uuid', name: '4K 旗艦高解析顯示器', price: 14800, inStock: true },
+                  { id: '@uuid', name: '無線機械降噪鍵盤', price: 3200, inStock: true },
+                  { id: '@uuid', name: '人體工學垂直電競滑鼠', price: 1890, inStock: false }
+                ]
+              }, null, 2)
+            }
+          },
+          {
+            id: 'ecom-2',
+            name: '加入購物車',
+            method: 'POST',
+            url: 'https://api.shop.com/v2/cart/items',
+            params: [],
+            headers: [
+              { key: 'Content-Type', value: 'application/json', enabled: true }
+            ],
+            bodyType: 'json',
+            body: JSON.stringify({
+              productId: 'prod-4819',
+              quantity: 2,
+              couponCode: 'SUMMER2026'
+            }, null, 2),
+            auth: { type: 'none' },
+            mock: {
+              status: 200,
+              delay: 300,
+              body: JSON.stringify({
+                cartId: 'CART-@uuid',
+                totalItems: 2,
+                subtotal: 5800,
+                discount: 500,
+                finalTotal: 5300,
+                updatedAt: '@timestamp'
+              }, null, 2)
+            }
+          }
+        ],
+        auth: [
+          {
+            id: 'auth-1',
+            name: '使用者登入取得 Token',
+            method: 'POST',
+            url: 'https://api.system.local/v1/auth/login',
+            params: [],
+            headers: [
+              { key: 'Content-Type', value: 'application/json', enabled: true }
+            ],
+            bodyType: 'json',
+            body: JSON.stringify({
+              username: 'admin@corp.tw',
+              password: 'SuperSecretPassword!'
+            }, null, 2),
+            auth: { type: 'none' },
+            mock: {
+              status: 200,
+              delay: 250,
+              body: JSON.stringify({
+                tokenType: 'Bearer',
+                accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.demo-jwt-payload',
+                expiresIn: 3600,
+                user: {
+                  id: '@uuid',
+                  name: '@name',
+                  email: '@email',
+                  phone: '@taiwan_phone',
+                  taxId: '@taiwan_gui'
+                }
+              }, null, 2)
+            }
+          }
+        ]
+      };
+
+      // --- 2. State & Persistence ---
+      const STORAGE_KEY = 'api_mock_studio_state_v1';
+      let state = {
+        endpoints: [],
+        currentId: null,
+        mode: 'mock', // 'mock' or 'fetch'
+        activeReqTab: 'params',
+        activeResTab: 'res-body',
+        currentSnippetLang: 'curl',
+        openApiFormat: 'yaml'
+      };
+
+      function loadState() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed.endpoints && parsed.endpoints.length > 0) {
+              state = { ...state, ...parsed };
+              return;
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to load state from localStorage', e);
+        }
+        // Fallback default
+        state.endpoints = JSON.parse(JSON.stringify(PRESETS.finance));
+        state.currentId = state.endpoints[0].id;
+      }
+
+      function saveState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            endpoints: state.endpoints,
+            currentId: state.currentId,
+            mode: state.mode
+          }));
+        } catch (e) {
+          console.warn('Failed to save state to localStorage', e);
+        }
+      }
+
+      function getCurrentEndpoint() {
+        return state.endpoints.find(ep => ep.id === state.currentId) || state.endpoints[0];
+      }
+
+      // --- 3. Dummy Data Generator Engines ---
+      // Valid Taiwan GUI generator
+      function generateTaiwanGUI() {
+        const weights = [1, 2, 1, 2, 1, 2, 4, 1];
+        while (true) {
+          const digits = [];
+          for (let i = 0; i < 8; i++) {
+            digits.push(Math.floor(Math.random() * 10));
+          }
+          if (digits[0] === 0) continue; // First digit cannot be 0
+          
+          let sum = 0;
+          for (let i = 0; i < 8; i++) {
+            const prod = digits[i] * weights[i];
+            sum += Math.floor(prod / 10) + (prod % 10);
+          }
+          if (sum % 10 === 0) return digits.join('');
+          if (digits[6] === 7 && (sum + 1) % 10 === 0) return digits.join('');
+        }
+      }
+
+      // Valid Taiwan ID generator
+      function generateTaiwanID() {
+        const letterCodes = {
+          A:10, B:11, C:12, D:13, E:14, F:15, G:16, H:17, I:34, J:18, K:19, L:20, M:21,
+          N:22, O:35, P:23, Q:24, R:25, S:26, T:27, U:28, V:29, W:32, X:30, Y:31, Z:33
+        };
+        const letters = Object.keys(letterCodes);
+        const letter = letters[Math.floor(Math.random() * letters.length)];
+        const gender = Math.random() > 0.5 ? 1 : 2; // 1: male, 2: female
+        const d = [gender];
+        for (let i = 0; i < 7; i++) d.push(Math.floor(Math.random() * 10));
+        
+        const code = letterCodes[letter];
+        const n1 = Math.floor(code / 10);
+        const n2 = code % 10;
+        
+        let sum = n1 * 1 + n2 * 9;
+        const weights = [8, 7, 6, 5, 4, 3, 2, 1];
+        for (let i = 0; i < 8; i++) {
+          sum += d[i] * weights[i];
+        }
+        const check = (10 - (sum % 10)) % 10;
+        return `${letter}${gender}${d.slice(1).join('')}${check}`;
+      }
+
+      const COMMON_NAMES = ['陳冠宇', '林志明', '黃美玲', '張家豪', '李怡萱', '王宗翰', '吳佩君', '劉建宏', '蔡雅婷', '楊舒涵'];
+      const COMMON_DOMAINS = ['example.tw', 'corp.com', 'gov.tw', 'mail.com', 'bank.tw'];
+
+      function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+      }
+
+      function evaluateDummyPlaceholders(templateStr) {
+        if (!templateStr || typeof templateStr !== 'string') return templateStr;
+        return templateStr
+          .replace(/@uuid/g, () => generateUUID())
+          .replace(/@taiwan_gui/g, () => generateTaiwanGUI())
+          .replace(/@taiwan_id/g, () => generateTaiwanID())
+          .replace(/@taiwan_phone/g, () => '09' + Math.floor(10000000 + Math.random() * 90000000).toString())
+          .replace(/@name/g, () => COMMON_NAMES[Math.floor(Math.random() * COMMON_NAMES.length)])
+          .replace(/@email/g, () => `user_${Math.floor(100 + Math.random() * 900)}@${COMMON_DOMAINS[Math.floor(Math.random() * COMMON_DOMAINS.length)]}`)
+          .replace(/@amount/g, () => (Math.floor(10 + Math.random() * 990) * 100).toString())
+          .replace(/@timestamp/g, () => new Date().toISOString())
+          .replace(/@boolean/g, () => Math.random() > 0.5 ? 'true' : 'false');
+      }
+
+      // --- 4. cURL Parser ---
+      function parseCurlCommand(raw) {
+        if (!raw) return null;
+        let str = raw.replace(/\\\r?\n/g, ' ').trim();
+        if (str.startsWith('curl ')) str = str.substring(5).trim();
+
+        let method = 'GET';
+        let url = '';
+        const headers = [];
+        let body = '';
+
+        // Tokenizer supporting single/double quotes
+        const tokens = [];
+        let cur = '';
+        let inSingle = false;
+        let inDouble = false;
+        let escape = false;
+
+        for (let i = 0; i < str.length; i++) {
+          const ch = str[i];
+          if (escape) {
+            cur += ch;
+            escape = false;
+          } else if (ch === '\\') {
+            escape = true;
+          } else if (ch === "'" && !inDouble) {
+            inSingle = !inSingle;
+          } else if (ch === '"' && !inSingle) {
+            inDouble = !inDouble;
+          } else if (/\s/.test(ch) && !inSingle && !inDouble) {
+            if (cur) {
+              tokens.push(cur);
+              cur = '';
+            }
+          } else {
+            cur += ch;
+          }
+        }
+        if (cur) tokens.push(cur);
+
+        for (let i = 0; i < tokens.length; i++) {
+          const t = tokens[i];
+          if (t === '-X' || t === '--request') {
+            if (i + 1 < tokens.length) {
+              method = tokens[++i].toUpperCase();
+            }
+          } else if (t === '-H' || t === '--header') {
+            if (i + 1 < tokens.length) {
+              const hStr = tokens[++i];
+              const colonIdx = hStr.indexOf(':');
+              if (colonIdx > -1) {
+                headers.push({
+                  key: hStr.substring(0, colonIdx).trim(),
+                  value: hStr.substring(colonIdx + 1).trim(),
+                  enabled: true
+                });
+              }
+            }
+          } else if (t === '-d' || t === '--data' || t === '--data-raw' || t === '--data-binary') {
+            if (i + 1 < tokens.length) {
+              body = tokens[++i];
+              if (method === 'GET') method = 'POST';
+            }
+          } else if (t === '-u' || t === '--user') {
+            if (i + 1 < tokens.length) {
+              const userPass = tokens[++i];
+              try {
+                headers.push({
+                  key: 'Authorization',
+                  value: 'Basic ' + btoa(userPass),
+                  enabled: true
+                });
+              } catch(e) {}
+            }
+          } else if (t.startsWith('http://') || t.startsWith('https://')) {
+            url = t;
+          } else if (!t.startsWith('-') && !url) {
+            url = t;
+          }
+        }
+
+        // Extract query params from URL
+        const params = [];
+        if (url && url.includes('?')) {
+          try {
+            const urlObj = new URL(url);
+            urlObj.searchParams.forEach((v, k) => {
+              params.push({ key: k, value: v, enabled: true });
+            });
+          } catch(e) {
+            const qStr = url.split('?')[1];
+            if (qStr) {
+              qStr.split('&').forEach(pair => {
+                const parts = pair.split('=');
+                params.push({ key: decodeURIComponent(parts[0] || ''), value: decodeURIComponent(parts[1] || ''), enabled: true });
+              });
+            }
+          }
+        }
+
+        return { method, url, headers, params, body };
+      }
+
+      // --- 5. Code Generators ---
+      function generateCurlCommand(ep) {
+        let cmd = `curl '${ep.url}' \\\n  -X ${ep.method}`;
+        const activeHeaders = (ep.headers || []).filter(h => h.enabled && h.key);
+        activeHeaders.forEach(h => {
+          cmd += ` \\\n  -H '${h.key}: ${h.value.replace(/'/g, "'\\''")}'`;
+        });
+        if (ep.method !== 'GET' && ep.method !== 'HEAD' && ep.body) {
+          cmd += ` \\\n  --data-raw '${ep.body.replace(/'/g, "'\\''")}'`;
+        }
+        return cmd;
+      }
+
+      function generateFetchCode(ep) {
+        const activeHeaders = (ep.headers || []).filter(h => h.enabled && h.key);
+        const headersObj = {};
+        activeHeaders.forEach(h => { headersObj[h.key] = h.value; });
+
+        let bodyCode = '';
+        if (ep.method !== 'GET' && ep.method !== 'HEAD' && ep.body) {
+          if (ep.bodyType === 'json') {
+            bodyCode = `,\n    body: JSON.stringify(${ep.body})`;
+          } else {
+            bodyCode = `,\n    body: ${JSON.stringify(ep.body)}`;
+          }
+        }
+
+        return `// JavaScript Fetch 呼叫\nasync function sendRequest() {\n  const response = await fetch('${ep.url}', {\n    method: '${ep.method}',\n    headers: ${JSON.stringify(headersObj, null, 6).replace(/\n\s{4}/g, '\n    ')}${bodyCode}\n  });\n\n  const data = await response.json();\n  console.log('Response:', data);\n  return data;\n}\n\nsendRequest();`;
+      }
+
+      function generateAxiosCode(ep) {
+        const activeHeaders = (ep.headers || []).filter(h => h.enabled && h.key);
+        const headersObj = {};
+        activeHeaders.forEach(h => { headersObj[h.key] = h.value; });
+
+        let dataPart = '';
+        if (ep.method !== 'GET' && ep.method !== 'HEAD' && ep.body) {
+          dataPart = `,\n    data: ${ep.bodyType === 'json' ? ep.body : JSON.stringify(ep.body)}`;
+        }
+
+        return `const axios = require('axios');\n\naxios({\n  method: '${ep.method.toLowerCase()}',\n  url: '${ep.url}',\n  headers: ${JSON.stringify(headersObj, null, 4)}${dataPart}\n})\n.then(response => {\n  console.log(response.status, response.data);\n})\n.catch(error => {\n  console.error('Request failed:', error);\n});`;
+      }
+
+      function generatePythonCode(ep) {
+        const activeHeaders = (ep.headers || []).filter(h => h.enabled && h.key);
+        const headersObj = {};
+        activeHeaders.forEach(h => { headersObj[h.key] = h.value; });
+
+        let bodyPart = '';
+        if (ep.method !== 'GET' && ep.method !== 'HEAD' && ep.body) {
+          if (ep.bodyType === 'json') {
+            bodyPart = `,\n    json=${ep.body}`;
+          } else {
+            bodyPart = `,\n    data=${JSON.stringify(ep.body)}`;
+          }
+        }
+
+        return `import requests\n\nurl = "${ep.url}"\nheaders = ${JSON.stringify(headersObj, null, 4)}\n\nresponse = requests.${ep.method.toLowerCase()}(\n    url,\n    headers=headers${bodyPart}\n)\n\nprint("Status Code:", response.status_code)\nprint("Response JSON:", response.json() if "application/json" in response.headers.get("Content-Type", "") else response.text)`;
+      }
+
+      function generateMswCode(ep) {
+        let pathname = '/';
+        try {
+          const u = new URL(ep.url);
+          pathname = u.pathname;
+        } catch(e) {
+          pathname = ep.url.replace(/^https?:\/\/[^\/]+/, '') || '/';
+        }
+
+        const methodLower = ep.method.toLowerCase();
+        const status = ep.mock?.status || 200;
+        const mockBody = ep.mock?.body || '{}';
+
+        return `import { http, HttpResponse, delay } from 'msw';\n\nexport const handlers = [\n  http.${methodLower}('${pathname}', async () => {\n    await delay(${ep.mock?.delay || 0});\n    return HttpResponse.json(\n${mockBody.split('\n').map(l => '      ' + l).join('\n')},\n      { status: ${status} }\n    );\n  })\n];`;
+      }
+
+      function generateOpenApi(ep, format = 'yaml') {
+        let path = '/';
+        let serverUrl = 'https://api.example.com';
+        try {
+          const u = new URL(ep.url);
+          path = u.pathname || '/';
+          serverUrl = `${u.protocol}//${u.host}`;
+        } catch(e) {
+          path = ep.url;
+        }
+
+        const methodLower = ep.method.toLowerCase();
+        let parsedMockBody = {};
+        try {
+          parsedMockBody = JSON.parse(ep.mock?.body || '{}');
+        } catch(e) {
+          parsedMockBody = { example: ep.mock?.body || '' };
+        }
+
+        const openApiObj = {
+          openapi: '3.0.3',
+          info: {
+            title: 'API Mock Studio Generated Specification',
+            version: '1.0.0',
+            description: `Generated for endpoint: ${ep.name || ep.url}`
+          },
+          servers: [
+            { url: serverUrl }
+          ],
+          paths: {
+            [path]: {
+              [methodLower]: {
+                summary: ep.name || `${ep.method} ${path}`,
+                parameters: (ep.params || []).filter(p => p.enabled && p.key).map(p => ({
+                  name: p.key,
+                  in: 'query',
+                  required: false,
+                  schema: { type: 'string' },
+                  example: p.value
+                })),
+                responses: {
+                  [String(ep.mock?.status || 200)]: {
+                    description: `Status ${ep.mock?.status || 200} Mock Response`,
+                    content: {
+                      'application/json': {
+                        example: parsedMockBody
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        };
+
+        if (format === 'json') {
+          return JSON.stringify(openApiObj, null, 2);
+        }
+
+        // Lightweight YAML serializer
+        function toYaml(obj, indent = 0) {
+          const spaces = ' '.repeat(indent);
+          let y = '';
+          if (Array.isArray(obj)) {
+            obj.forEach(item => {
+              if (typeof item === 'object' && item !== null) {
+                y += `${spaces}- \n` + toYaml(item, indent + 2);
+              } else {
+                y += `${spaces}- ${item}\n`;
+              }
+            });
+          } else if (typeof obj === 'object' && obj !== null) {
+            Object.entries(obj).forEach(([k, v]) => {
+              if (typeof v === 'object' && v !== null && Object.keys(v).length > 0) {
+                y += `${spaces}${k}:\n` + toYaml(v, indent + 2);
+              } else if (typeof v === 'object' && v !== null && Object.keys(v).length === 0) {
+                y += `${spaces}${k}: {}\n`;
+              } else {
+                const valStr = typeof v === 'string' && (v.includes(':') || v.includes('\n')) ? JSON.stringify(v) : v;
+                y += `${spaces}${k}: ${valStr}\n`;
+              }
+            });
+          }
+          return y;
+        }
+
+        return toYaml(openApiObj);
+      }
+
+      function generatePostmanCollection() {
+        const ep = getCurrentEndpoint();
+        const collection = {
+          info: {
+            name: 'API Mock Studio Collection',
+            _postman_id: generateUUID(),
+            schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json'
+          },
+          item: state.endpoints.map(item => {
+            return {
+              name: item.name || item.url,
+              request: {
+                method: item.method,
+                header: (item.headers || []).filter(h => h.enabled).map(h => ({
+                  key: h.key,
+                  value: h.value,
+                  type: 'text'
+                })),
+                url: {
+                  raw: item.url,
+                  query: (item.params || []).filter(p => p.enabled).map(p => ({
+                    key: p.key,
+                    value: p.value
+                  }))
+                },
+                body: item.body ? {
+                  mode: item.bodyType === 'json' ? 'raw' : 'raw',
+                  raw: item.body,
+                  options: { raw: { language: 'json' } }
+                } : undefined
+              },
+              response: [
+                {
+                  name: `Mock ${item.mock?.status || 200} Response`,
+                  status: String(item.mock?.status || 200),
+                  code: Number(item.mock?.status || 200),
+                  _postman_previewlanguage: 'json',
+                  header: [{ key: 'Content-Type', value: 'application/json' }],
+                  body: item.mock?.body || ''
+                }
+              ]
+            };
+          })
+        };
+        return JSON.stringify(collection, null, 2);
+      }
+
+      // --- 6. DOM Elements ---
+      const els = {
+        endpointCount: document.getElementById('endpoint-count'),
+        endpointList: document.getElementById('endpoint-list'),
+        endpointSearch: document.getElementById('endpoint-search'),
+        btnNewEndpoint: document.getElementById('btn-new-endpoint'),
+        btnResetDefaults: document.getElementById('btn-reset-defaults'),
+        btnExportCollection: document.getElementById('btn-export-collection'),
+        inputImportCollection: document.getElementById('input-import-collection'),
+        presetSelector: document.getElementById('preset-selector'),
+        btnLoadPreset: document.getElementById('btn-load-preset'),
+        btnThemeToggle: document.getElementById('btn-theme-toggle'),
+
+        // Endpoint editor fields
+        endpointNameInput: document.getElementById('endpoint-name-input'),
+        btnCloneEndpoint: document.getElementById('btn-clone-endpoint'),
+        btnDeleteEndpoint: document.getElementById('btn-delete-endpoint'),
+        reqMethod: document.getElementById('req-method'),
+        reqUrl: document.getElementById('req-url'),
+        modeMock: document.getElementById('mode-mock'),
+        modeFetch: document.getElementById('mode-fetch'),
+        btnExecute: document.getElementById('btn-execute'),
+        btnExecuteIcon: document.getElementById('btn-execute-icon'),
+        btnExecuteText: document.getElementById('btn-execute-text'),
+        btnQuickCurl: document.getElementById('btn-quick-curl'),
+
+        // Request tabs
+        reqTabBtns: document.querySelectorAll('.req-tab-btn'),
+        paramsTableBody: document.getElementById('params-table-body'),
+        btnAddParam: document.getElementById('btn-add-param'),
+        badgeParamsCount: document.getElementById('badge-params-count'),
+        headersTableBody: document.getElementById('headers-table-body'),
+        btnAddHeader: document.getElementById('btn-add-header'),
+        badgeHeadersCount: document.getElementById('badge-headers-count'),
+        reqBodyText: document.getElementById('req-body-text'),
+        reqBodyError: document.getElementById('req-body-error'),
+        btnFormatReqBody: document.getElementById('btn-format-req-body'),
+
+        // Auth
+        authType: document.getElementById('auth-type'),
+        authBearerPane: document.getElementById('auth-bearer-pane'),
+        authBearerToken: document.getElementById('auth-bearer-token'),
+        authBasicPane: document.getElementById('auth-basic-pane'),
+        authBasicUser: document.getElementById('auth-basic-user'),
+        authBasicPass: document.getElementById('auth-basic-pass'),
+        authApikeyPane: document.getElementById('auth-apikey-pane'),
+        authApikeyName: document.getElementById('auth-apikey-name'),
+        authApikeyVal: document.getElementById('auth-apikey-val'),
+
+        // Snippets
+        snippetLangBtns: document.querySelectorAll('.snippet-lang-btn'),
+        snippetDisplay: document.getElementById('snippet-display'),
+        btnCopySnippet: document.getElementById('btn-copy-snippet'),
+
+        // OpenAPI & Postman
+        openapiDisplay: document.getElementById('openapi-display'),
+        btnOpenapiFormatYaml: document.getElementById('btn-openapi-format-yaml'),
+        btnOpenapiFormatJson: document.getElementById('btn-openapi-format-json'),
+        btnCopyOpenapi: document.getElementById('btn-copy-openapi'),
+        btnDownloadPostman: document.getElementById('btn-download-postman'),
+
+        // Mock settings
+        dummyTagSelector: document.getElementById('dummy-tag-selector'),
+        btnInsertDummyTag: document.getElementById('btn-insert-dummy-tag'),
+        mockStatusCode: document.getElementById('mock-status-code'),
+        mockDelay: document.getElementById('mock-delay'),
+        mockTemplatePreset: document.getElementById('mock-template-preset'),
+        mockBodyEditor: document.getElementById('mock-body-editor'),
+        btnFormatMockBody: document.getElementById('btn-format-mock-body'),
+        btnGenerateDummyNow: document.getElementById('btn-generate-dummy-now'),
+
+        // Response outputs
+        resStatusBadge: document.getElementById('res-status-badge'),
+        resTimeBadge: document.getElementById('res-time-badge'),
+        resSizeBadge: document.getElementById('res-size-badge'),
+        btnCopyResBody: document.getElementById('btn-copy-res-body'),
+        corsNoticeBanner: document.getElementById('cors-notice-banner'),
+        resTabBtns: document.querySelectorAll('.res-tab-btn'),
+        resBodyDisplay: document.getElementById('res-body-display'),
+        resHeadersDisplay: document.getElementById('res-headers-display'),
+
+        // cURL Modal
+        btnImportCurlModal: document.getElementById('btn-import-curl-modal'),
+        modalImportCurl: document.getElementById('modal-import-curl'),
+        curlInputArea: document.getElementById('curl-input-area'),
+        btnCloseCurlModal: document.getElementById('btn-close-curl-modal'),
+        btnCancelCurl: document.getElementById('btn-cancel-curl'),
+        btnConfirmCurl: document.getElementById('btn-confirm-curl'),
+
+        // Toast
+        toast: document.getElementById('toast'),
+        toastIcon: document.getElementById('toast-icon'),
+        toastMsg: document.getElementById('toast-msg')
+      };
+
+      // Toast Helper
+      let toastTimer = null;
+      function showToast(msg, icon = '✓') {
+        els.toastMsg.textContent = msg;
+        els.toastIcon.textContent = icon;
+        els.toast.classList.remove('translate-y-[-20px]', 'opacity-0');
+        els.toast.classList.add('translate-y-0', 'opacity-100');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          els.toast.classList.remove('translate-y-0', 'opacity-100');
+          els.toast.classList.add('translate-y-[-20px]', 'opacity-0');
+        }, 2200);
+      }
+
+      // --- 7. Rendering Functions ---
+      function getMethodColor(method) {
+        switch (method.toUpperCase()) {
+          case 'GET': return 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20';
+          case 'POST': return 'text-blue-500 bg-blue-500/10 border-blue-500/20';
+          case 'PUT': return 'text-amber-500 bg-amber-500/10 border-amber-500/20';
+          case 'PATCH': return 'text-purple-500 bg-purple-500/10 border-purple-500/20';
+          case 'DELETE': return 'text-red-500 bg-red-500/10 border-red-500/20';
+          default: return 'text-slate-500 bg-slate-500/10 border-slate-500/20';
+        }
+      }
+
+      function renderEndpointList() {
+        const query = (els.endpointSearch.value || '').trim().toLowerCase();
+        els.endpointList.innerHTML = '';
+        els.endpointCount.textContent = state.endpoints.length;
+
+        state.endpoints.forEach((ep) => {
+          if (query && !ep.name.toLowerCase().includes(query) && !ep.url.toLowerCase().includes(query)) {
+            return;
+          }
+
+          const isActive = ep.id === state.currentId;
+          const div = document.createElement('div');
+          div.className = `p-2.5 rounded-xl cursor-pointer border transition flex flex-col gap-1 ${
+            isActive
+              ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-400 dark:border-blue-700/60 shadow-sm'
+              : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60'
+          }`;
+
+          const colorClass = getMethodColor(ep.method);
+          div.innerHTML = `
+            <div class="flex items-center justify-between gap-1.5">
+              <span class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate flex-1">${ep.name || '未命名端點'}</span>
+              <span class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${colorClass}">${ep.method}</span>
+            </div>
+            <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400 truncate">${ep.url || '/'}</div>
+          `;
+
+          div.addEventListener('click', () => {
+            if (state.currentId !== ep.id) {
+              state.currentId = ep.id;
+              renderAll();
+              saveState();
+            }
+          });
+
+          els.endpointList.appendChild(div);
+        });
+      }
+
+      function renderEndpointForm() {
+        const ep = getCurrentEndpoint();
+        if (!ep) return;
+
+        els.endpointNameInput.value = ep.name || '';
+        els.reqMethod.value = ep.method || 'GET';
+        els.reqUrl.value = ep.url || '';
+
+        // Mode UI
+        if (state.mode === 'mock') {
+          els.modeMock.className = 'px-2 py-1 rounded-md bg-blue-600 text-white shadow-sm transition';
+          els.modeFetch.className = 'px-2 py-1 rounded-md text-slate-600 dark:text-slate-300 hover:text-slate-900 transition';
+          els.btnExecuteIcon.textContent = '🚀';
+          els.btnExecuteText.textContent = '模擬回應';
+        } else {
+          els.modeFetch.className = 'px-2 py-1 rounded-md bg-blue-600 text-white shadow-sm transition';
+          els.modeMock.className = 'px-2 py-1 rounded-md text-slate-600 dark:text-slate-300 hover:text-slate-900 transition';
+          els.btnExecuteIcon.textContent = '🌐';
+          els.btnExecuteText.textContent = '發送請求';
+        }
+
+        // Params
+        renderParamsTable(ep);
+        // Headers
+        renderHeadersTable(ep);
+        // Body
+        renderBodySection(ep);
+        // Auth
+        renderAuthSection(ep);
+        // Mock Config
+        renderMockSection(ep);
+        // Snippets & OpenAPI
+        renderCodeSnippets();
+        renderOpenApiPreview();
+      }
+
+      function renderParamsTable(ep) {
+        els.paramsTableBody.innerHTML = '';
+        const params = ep.params || [];
+        const activeCount = params.filter(p => p.enabled).length;
+        els.badgeParamsCount.textContent = activeCount > 0 ? `(${activeCount})` : '';
+
+        params.forEach((param, idx) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/30';
+          tr.innerHTML = `
+            <td class="p-2 text-center">
+              <input type="checkbox" class="param-chk rounded text-blue-600" ${param.enabled ? 'checked' : ''} data-idx="${idx}">
+            </td>
+            <td class="p-1">
+              <input type="text" class="param-k w-full p-1.5 rounded bg-transparent border-0 focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-200" placeholder="參數名" value="${param.key}" data-idx="${idx}">
+            </td>
+            <td class="p-1">
+              <input type="text" class="param-v w-full p-1.5 rounded bg-transparent border-0 focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-200" placeholder="參數值" value="${param.value}" data-idx="${idx}">
+            </td>
+            <td class="p-2 text-center">
+              <button class="param-del text-slate-400 hover:text-red-500" data-idx="${idx}">✕</button>
+            </td>
+          `;
+          els.paramsTableBody.appendChild(tr);
+        });
+      }
+
+      function renderHeadersTable(ep) {
+        els.headersTableBody.innerHTML = '';
+        const headers = ep.headers || [];
+        const activeCount = headers.filter(h => h.enabled).length;
+        els.badgeHeadersCount.textContent = activeCount > 0 ? `(${activeCount})` : '';
+
+        headers.forEach((header, idx) => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/30';
+          tr.innerHTML = `
+            <td class="p-2 text-center">
+              <input type="checkbox" class="header-chk rounded text-blue-600" ${header.enabled ? 'checked' : ''} data-idx="${idx}">
+            </td>
+            <td class="p-1">
+              <input type="text" class="header-k w-full p-1.5 rounded bg-transparent border-0 focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-200" placeholder="Header Name" value="${header.key}" data-idx="${idx}">
+            </td>
+            <td class="p-1">
+              <input type="text" class="header-v w-full p-1.5 rounded bg-transparent border-0 focus:ring-1 focus:ring-blue-500 text-slate-800 dark:text-slate-200" placeholder="Header Value" value="${header.value}" data-idx="${idx}">
+            </td>
+            <td class="p-2 text-center">
+              <button class="header-del text-slate-400 hover:text-red-500" data-idx="${idx}">✕</button>
+            </td>
+          `;
+          els.headersTableBody.appendChild(tr);
+        });
+      }
+
+      function renderBodySection(ep) {
+        const bodyTypeRadios = document.querySelectorAll('input[name="body-type"]');
+        bodyTypeRadios.forEach(radio => {
+          radio.checked = radio.value === (ep.bodyType || 'json');
+        });
+        els.reqBodyText.value = ep.body || '';
+      }
+
+      function renderAuthSection(ep) {
+        const auth = ep.auth || { type: 'none' };
+        els.authType.value = auth.type || 'none';
+        els.authBearerPane.classList.toggle('hidden', auth.type !== 'bearer');
+        els.authBasicPane.classList.toggle('hidden', auth.type !== 'basic');
+        els.authApikeyPane.classList.toggle('hidden', auth.type !== 'apikey');
+
+        if (auth.type === 'bearer') els.authBearerToken.value = auth.token || '';
+        if (auth.type === 'basic') {
+          els.authBasicUser.value = auth.user || '';
+          els.authBasicPass.value = auth.pass || '';
+        }
+        if (auth.type === 'apikey') {
+          els.authApikeyName.value = auth.key || '';
+          els.authApikeyVal.value = auth.value || '';
+        }
+      }
+
+      function renderMockSection(ep) {
+        const mock = ep.mock || { status: 200, delay: 150, body: '{}' };
+        els.mockStatusCode.value = String(mock.status || 200);
+        els.mockDelay.value = String(mock.delay ?? 150);
+        els.mockBodyEditor.value = mock.body || '{}';
+      }
+
+      function renderCodeSnippets() {
+        const ep = getCurrentEndpoint();
+        if (!ep) return;
+
+        let code = '';
+        switch (state.currentSnippetLang) {
+          case 'curl': code = generateCurlCommand(ep); break;
+          case 'fetch': code = generateFetchCode(ep); break;
+          case 'axios': code = generateAxiosCode(ep); break;
+          case 'python': code = generatePythonCode(ep); break;
+          case 'msw': code = generateMswCode(ep); break;
+          default: code = generateCurlCommand(ep);
+        }
+        els.snippetDisplay.textContent = code;
+      }
+
+      function renderOpenApiPreview() {
+        const ep = getCurrentEndpoint();
+        if (!ep) return;
+        els.openapiDisplay.textContent = generateOpenApi(ep, state.openApiFormat);
+      }
+
+      function renderAll() {
+        renderEndpointList();
+        renderEndpointForm();
+      }
+
+      // --- 8. Event Handlers & Sync Logic ---
+
+      // URL Query Sync with Params Table
+      function syncParamsToUrl(ep) {
+        try {
+          const parts = ep.url.split('?');
+          const baseUrl = parts[0];
+          const enabledParams = (ep.params || []).filter(p => p.enabled && p.key);
+          if (enabledParams.length > 0) {
+            const qs = enabledParams.map(p => `${encodeURIComponent(p.key)}=${encodeURIComponent(p.value)}`).join('&');
+            ep.url = `${baseUrl}?${qs}`;
+          } else {
+            ep.url = baseUrl;
+          }
+          els.reqUrl.value = ep.url;
+        } catch(e) {}
+      }
+
+      function syncUrlToParams(ep, newUrl) {
+        ep.url = newUrl;
+        if (newUrl.includes('?')) {
+          const qStr = newUrl.split('?')[1];
+          const newParams = [];
+          qStr.split('&').forEach(pair => {
+            if (!pair) return;
+            const eqIdx = pair.indexOf('=');
+            if (eqIdx > -1) {
+              newParams.push({
+                key: decodeURIComponent(pair.substring(0, eqIdx)),
+                value: decodeURIComponent(pair.substring(eqIdx + 1)),
+                enabled: true
+              });
+            } else {
+              newParams.push({ key: decodeURIComponent(pair), value: '', enabled: true });
+            }
+          });
+          ep.params = newParams;
+          renderParamsTable(ep);
+        }
+      }
+
+      // Endpoint field listeners
+      els.endpointNameInput.addEventListener('input', (e) => {
+        const ep = getCurrentEndpoint();
+        ep.name = e.target.value;
+        renderEndpointList();
+        saveState();
+      });
+
+      els.reqMethod.addEventListener('change', (e) => {
+        const ep = getCurrentEndpoint();
+        ep.method = e.target.value;
+        renderEndpointList();
+        renderCodeSnippets();
+        renderOpenApiPreview();
+        saveState();
+      });
+
+      els.reqUrl.addEventListener('input', (e) => {
+        const ep = getCurrentEndpoint();
+        syncUrlToParams(ep, e.target.value);
+        renderEndpointList();
+        renderCodeSnippets();
+        renderOpenApiPreview();
+        saveState();
+      });
+
+      // Mode switch
+      els.modeMock.addEventListener('click', () => {
+        state.mode = 'mock';
+        renderEndpointForm();
+        saveState();
+      });
+      els.modeFetch.addEventListener('click', () => {
+        state.mode = 'fetch';
+        renderEndpointForm();
+        saveState();
+      });
+
+      // Tab switcher for request builder
+      els.reqTabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tab = btn.dataset.tab;
+          state.activeReqTab = tab;
+          els.reqTabBtns.forEach(b => {
+            b.className = 'req-tab-btn px-3 py-2.5 font-medium border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200';
+          });
+          btn.className = 'req-tab-btn px-3 py-2.5 font-medium border-b-2 border-blue-600 text-blue-600 dark:text-blue-400';
+
+          document.querySelectorAll('.req-tab-panel').forEach(p => p.classList.add('hidden'));
+          const target = document.getElementById(`tab-content-${tab}`);
+          if (target) target.classList.remove('hidden');
+
+          if (tab === 'snippets') renderCodeSnippets();
+          if (tab === 'openapi') renderOpenApiPreview();
+        });
+      });
+
+      // Params Table Events
+      els.btnAddParam.addEventListener('click', () => {
+        const ep = getCurrentEndpoint();
+        if (!ep.params) ep.params = [];
+        ep.params.push({ key: '', value: '', enabled: true });
+        renderParamsTable(ep);
+        saveState();
+      });
+
+      els.paramsTableBody.addEventListener('input', (e) => {
+        const ep = getCurrentEndpoint();
+        const idx = Number(e.target.dataset.idx);
+        if (e.target.classList.contains('param-k')) {
+          ep.params[idx].key = e.target.value;
+        } else if (e.target.classList.contains('param-v')) {
+          ep.params[idx].value = e.target.value;
+        }
+        syncParamsToUrl(ep);
+        renderCodeSnippets();
+        saveState();
+      });
+
+      els.paramsTableBody.addEventListener('change', (e) => {
+        const ep = getCurrentEndpoint();
+        const idx = Number(e.target.dataset.idx);
+        if (e.target.classList.contains('param-chk')) {
+          ep.params[idx].enabled = e.target.checked;
+          syncParamsToUrl(ep);
+          renderCodeSnippets();
+          saveState();
+        }
+      });
+
+      els.paramsTableBody.addEventListener('click', (e) => {
+        if (e.target.classList.contains('param-del')) {
+          const ep = getCurrentEndpoint();
+          const idx = Number(e.target.dataset.idx);
+          ep.params.splice(idx, 1);
+          syncParamsToUrl(ep);
+          renderParamsTable(ep);
+          renderCodeSnippets();
+          saveState();
+        }
+      });
+
+      // Headers Table Events
+      els.btnAddHeader.addEventListener('click', () => {
+        const ep = getCurrentEndpoint();
+        if (!ep.headers) ep.headers = [];
+        ep.headers.push({ key: '', value: '', enabled: true });
+        renderHeadersTable(ep);
+        saveState();
+      });
+
+      els.headersTableBody.addEventListener('input', (e) => {
+        const ep = getCurrentEndpoint();
+        const idx = Number(e.target.dataset.idx);
+        if (e.target.classList.contains('header-k')) {
+          ep.headers[idx].key = e.target.value;
+        } else if (e.target.classList.contains('header-v')) {
+          ep.headers[idx].value = e.target.value;
+        }
+        renderCodeSnippets();
+        saveState();
+      });
+
+      els.headersTableBody.addEventListener('change', (e) => {
+        const ep = getCurrentEndpoint();
+        const idx = Number(e.target.dataset.idx);
+        if (e.target.classList.contains('header-chk')) {
+          ep.headers[idx].enabled = e.target.checked;
+          renderCodeSnippets();
+          saveState();
+        }
+      });
+
+      els.headersTableBody.addEventListener('click', (e) => {
+        if (e.target.classList.contains('header-del')) {
+          const ep = getCurrentEndpoint();
+          const idx = Number(e.target.dataset.idx);
+          ep.headers.splice(idx, 1);
+          renderHeadersTable(ep);
+          renderCodeSnippets();
+          saveState();
+        }
+      });
+
+      // Quick header presets
+      document.querySelectorAll('.quick-header-preset').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const ep = getCurrentEndpoint();
+          if (!ep.headers) ep.headers = [];
+          const k = btn.dataset.k;
+          let v = btn.dataset.v;
+          if (v === 'req-{{uuid}}') v = 'req-' + generateUUID().substring(0, 8);
+          ep.headers.push({ key: k, value: v, enabled: true });
+          renderHeadersTable(ep);
+          saveState();
+          showToast(`已加入 ${k} Header`);
+        });
+      });
+
+      // Body editor events
+      document.querySelectorAll('input[name="body-type"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          const ep = getCurrentEndpoint();
+          ep.bodyType = e.target.value;
+          saveState();
+          renderCodeSnippets();
+        });
+      });
+
+      els.reqBodyText.addEventListener('input', (e) => {
+        const ep = getCurrentEndpoint();
+        ep.body = e.target.value;
+        saveState();
+        renderCodeSnippets();
+      });
+
+      els.btnFormatReqBody.addEventListener('click', () => {
+        const ep = getCurrentEndpoint();
+        try {
+          const parsed = JSON.parse(els.reqBodyText.value);
+          els.reqBodyText.value = JSON.stringify(parsed, null, 2);
+          ep.body = els.reqBodyText.value;
+          els.reqBodyError.classList.add('hidden');
+          showToast('JSON 格式化完成');
+          saveState();
+        } catch(e) {
+          els.reqBodyError.textContent = 'JSON 語法錯誤：' + e.message;
+          els.reqBodyError.classList.remove('hidden');
+        }
+      });
+
+      // Auth Handlers
+      els.authType.addEventListener('change', (e) => {
+        const ep = getCurrentEndpoint();
+        if (!ep.auth) ep.auth = {};
+        ep.auth.type = e.target.value;
+        renderAuthSection(ep);
+        syncAuthToHeaders(ep);
+        saveState();
+      });
+
+      function syncAuthToHeaders(ep) {
+        if (!ep.headers) ep.headers = [];
+        // remove existing Authorization header
+        ep.headers = ep.headers.filter(h => h.key.toLowerCase() !== 'authorization');
+
+        if (ep.auth.type === 'bearer' && ep.auth.token) {
+          ep.headers.push({ key: 'Authorization', value: `Bearer ${ep.auth.token}`, enabled: true });
+        } else if (ep.auth.type === 'basic' && ep.auth.user) {
+          try {
+            const token = btoa(`${ep.auth.user}:${ep.auth.pass || ''}`);
+            ep.headers.push({ key: 'Authorization', value: `Basic ${token}`, enabled: true });
+          } catch(e) {}
+        }
+        renderHeadersTable(ep);
+        renderCodeSnippets();
+      }
+
+      els.authBearerToken.addEventListener('input', (e) => {
+        const ep = getCurrentEndpoint();
+        if (!ep.auth) ep.auth = { type: 'bearer' };
+        ep.auth.token = e.target.value;
+        syncAuthToHeaders(ep);
+        saveState();
+      });
+
+      els.authBasicUser.addEventListener('input', (e) => {
+        const ep = getCurrentEndpoint();
+        if (!ep.auth) ep.auth = { type: 'basic' };
+        ep.auth.user = e.target.value;
+        syncAuthToHeaders(ep);
+        saveState();
+      });
+
+      els.authBasicPass.addEventListener('input', (e) => {
+        const ep = getCurrentEndpoint();
+        if (!ep.auth) ep.auth = { type: 'basic' };
+        ep.auth.pass = e.target.value;
+        syncAuthToHeaders(ep);
+        saveState();
+      });
+
+      // Mock Config Listeners
+      els.mockStatusCode.addEventListener('change', (e) => {
+        const ep = getCurrentEndpoint();
+        if (!ep.mock) ep.mock = {};
+        ep.mock.status = Number(e.target.value);
+        saveState();
+        renderCodeSnippets();
+        renderOpenApiPreview();
+      });
+
+      els.mockDelay.addEventListener('change', (e) => {
+        const ep = getCurrentEndpoint();
+        if (!ep.mock) ep.mock = {};
+        ep.mock.delay = Number(e.target.value);
+        saveState();
+      });
+
+      els.mockBodyEditor.addEventListener('input', (e) => {
+        const ep = getCurrentEndpoint();
+        if (!ep.mock) ep.mock = {};
+        ep.mock.body = e.target.value;
+        saveState();
+        renderCodeSnippets();
+        renderOpenApiPreview();
+      });
+
+      els.btnFormatMockBody.addEventListener('click', () => {
+        const ep = getCurrentEndpoint();
+        try {
+          const parsed = JSON.parse(els.mockBodyEditor.value);
+          els.mockBodyEditor.value = JSON.stringify(parsed, null, 2);
+          if (!ep.mock) ep.mock = {};
+          ep.mock.body = els.mockBodyEditor.value;
+          showToast('Mock JSON 格式化完成');
+          saveState();
+        } catch(e) {
+          showToast('Mock Body JSON 格式有誤', '⚠️');
+        }
+      });
+
+      els.btnGenerateDummyNow.addEventListener('click', () => {
+        const ep = getCurrentEndpoint();
+        const evaluated = evaluateDummyPlaceholders(els.mockBodyEditor.value);
+        els.mockBodyEditor.value = evaluated;
+        if (!ep.mock) ep.mock = {};
+        ep.mock.body = evaluated;
+        saveState();
+        showToast('已將假資料佔位符評估為實際數值');
+      });
+
+      // Insert dummy tag
+      els.btnInsertDummyTag.addEventListener('click', () => {
+        const tag = els.dummyTagSelector.value;
+        if (!tag) return;
+        const textarea = els.mockBodyEditor;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        textarea.value = text.substring(0, start) + tag + text.substring(end);
+        textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+        textarea.focus();
+        const ep = getCurrentEndpoint();
+        if (!ep.mock) ep.mock = {};
+        ep.mock.body = textarea.value;
+        saveState();
+        showToast(`已插入 ${tag}`);
+      });
+
+      // Mock template presets
+      els.mockTemplatePreset.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (!val) return;
+        let templateObj = {};
+        if (val === 'taiwan_bank') {
+          templateObj = {
+            txnId: 'TX-@uuid',
+            code: '0000',
+            message: '跨行轉帳處理完成',
+            sender: {
+              account: 'ACC-883921',
+              taxId: '@taiwan_gui',
+              name: '@name'
+            },
+            recipient: {
+              bankCode: '004',
+              account: '004882199341',
+              phone: '@taiwan_phone'
+            },
+            amount: '@amount',
+            fee: 15,
+            settledAt: '@timestamp'
+          };
+        } else if (val === 'user_profile') {
+          templateObj = {
+            userId: 'USR-@uuid',
+            name: '@name',
+            idCard: '@taiwan_id',
+            companyTaxId: '@taiwan_gui',
+            phone: '@taiwan_phone',
+            email: '@email',
+            registeredAt: '@timestamp',
+            status: 'ACTIVE'
+          };
+        } else if (val === 'paginated_list') {
+          templateObj = {
+            page: 1,
+            pageSize: 10,
+            totalCount: 150,
+            totalPages: 15,
+            items: [
+              { id: '@uuid', title: '業務授信專案 A', owner: '@name', amount: '@amount', isApproved: '@boolean' },
+              { id: '@uuid', title: '國際聯貸專案 B', owner: '@name', amount: '@amount', isApproved: '@boolean' }
+            ]
+          };
+        } else if (val === 'rfc7807_error') {
+          templateObj = {
+            type: 'https://api.example.com/errors/invalid-parameters',
+            title: 'Unprocessable Entity',
+            status: 422,
+            detail: '傳入之統一編號檢查碼驗證失敗。',
+            invalidParams: [
+              { name: 'taxId', reason: 'Checksum verification failed for input' }
+            ],
+            traceId: 'trace-@uuid',
+            timestamp: '@timestamp'
+          };
+        }
+
+        els.mockBodyEditor.value = JSON.stringify(templateObj, null, 2);
+        const ep = getCurrentEndpoint();
+        if (!ep.mock) ep.mock = {};
+        ep.mock.body = els.mockBodyEditor.value;
+        saveState();
+        showToast('已套用回應範本');
+      });
+
+      // Snippet Language Switching
+      els.snippetLangBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.currentSnippetLang = btn.dataset.lang;
+          els.snippetLangBtns.forEach(b => {
+            b.className = 'snippet-lang-btn px-2.5 py-1 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300';
+          });
+          btn.className = 'snippet-lang-btn px-2.5 py-1 rounded bg-blue-600 text-white font-medium';
+          renderCodeSnippets();
+        });
+      });
+
+      els.btnCopySnippet.addEventListener('click', () => {
+        navigator.clipboard.writeText(els.snippetDisplay.textContent).then(() => {
+          showToast('代碼已複製至剪貼簿');
+        });
+      });
+
+      // Quick cURL copy
+      els.btnQuickCurl.addEventListener('click', () => {
+        const ep = getCurrentEndpoint();
+        const cmd = generateCurlCommand(ep);
+        navigator.clipboard.writeText(cmd).then(() => {
+          showToast('cURL 指令已複製');
+        });
+      });
+
+      // OpenAPI / Postman format buttons
+      els.btnOpenapiFormatYaml.addEventListener('click', () => {
+        state.openApiFormat = 'yaml';
+        els.btnOpenapiFormatYaml.className = 'px-2 py-0.5 rounded bg-blue-600 text-white font-medium';
+        els.btnOpenapiFormatJson.className = 'px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium';
+        renderOpenApiPreview();
+      });
+      els.btnOpenapiFormatJson.addEventListener('click', () => {
+        state.openApiFormat = 'json';
+        els.btnOpenapiFormatJson.className = 'px-2 py-0.5 rounded bg-blue-600 text-white font-medium';
+        els.btnOpenapiFormatYaml.className = 'px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-medium';
+        renderOpenApiPreview();
+      });
+
+      els.btnCopyOpenapi.addEventListener('click', () => {
+        navigator.clipboard.writeText(els.openapiDisplay.textContent).then(() => {
+          showToast('OpenAPI 規格已複製');
+        });
+      });
+
+      els.btnDownloadPostman.addEventListener('click', () => {
+        const jsonStr = generatePostmanCollection();
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'api-mock-studio-collection.postman_collection.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('已匯出 Postman Collection JSON');
+      });
+
+      // Response Tabs Switcher
+      els.resTabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tab = btn.dataset.tab;
+          state.activeResTab = tab;
+          els.resTabBtns.forEach(b => {
+            b.className = 'res-tab-btn text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 pb-1';
+          });
+          btn.className = 'res-tab-btn font-semibold text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 pb-1';
+
+          if (tab === 'res-body') {
+            els.resBodyDisplay.classList.remove('hidden');
+            els.resHeadersDisplay.classList.add('hidden');
+          } else {
+            els.resBodyDisplay.classList.add('hidden');
+            els.resHeadersDisplay.classList.remove('hidden');
+          }
+        });
+      });
+
+      els.btnCopyResBody.addEventListener('click', () => {
+        const content = state.activeResTab === 'res-body' ? els.resBodyDisplay.textContent : els.resHeadersDisplay.textContent;
+        navigator.clipboard.writeText(content).then(() => {
+          showToast('已複製回應內容');
+        });
+      });
+
+      // --- 9. Execution Engine (Mock vs Real Fetch) ---
+      function executeRequest() {
+        const ep = getCurrentEndpoint();
+        els.corsNoticeBanner.classList.add('hidden');
+
+        if (state.mode === 'mock') {
+          // Mock Simulation Mode
+          const status = ep.mock?.status || 200;
+          const delay = ep.mock?.delay ?? 150;
+          els.btnExecute.disabled = true;
+          els.btnExecuteText.textContent = `模擬中 (${delay}ms)...`;
+
+          setTimeout(() => {
+            els.btnExecute.disabled = false;
+            els.btnExecuteText.textContent = '模擬回應';
+
+            const rawMock = ep.mock?.body || '{}';
+            const evaluatedMock = evaluateDummyPlaceholders(rawMock);
+
+            // Format JSON if valid
+            let prettyBody = evaluatedMock;
+            try {
+              prettyBody = JSON.stringify(JSON.parse(evaluatedMock), null, 2);
+            } catch(e) {}
+
+            const byteLength = new Blob([prettyBody]).size;
+            renderResponseResult({
+              status,
+              statusText: getStatusText(status),
+              time: delay + Math.floor(Math.random() * 20),
+              size: formatBytes(byteLength),
+              headers: {
+                'content-type': 'application/json; charset=utf-8',
+                'x-powered-by': 'API Mock Studio (In-Browser Simulation)',
+                'date': new Date().toUTCString()
+              },
+              body: prettyBody
+            });
+            showToast(`已完成 Mock 模擬 (Status ${status})`);
+          }, delay);
+
+        } else {
+          // Real Fetch Mode
+          els.btnExecute.disabled = true;
+          els.btnExecuteText.textContent = '發送中...';
+          const startTime = performance.now();
+
+          const activeHeaders = {};
+          (ep.headers || []).filter(h => h.enabled && h.key).forEach(h => {
+            activeHeaders[h.key] = h.value;
+          });
+
+          const fetchOptions = {
+            method: ep.method,
+            headers: activeHeaders
+          };
+          if (ep.method !== 'GET' && ep.method !== 'HEAD' && ep.body) {
+            fetchOptions.body = ep.body;
+          }
+
+          fetch(ep.url, fetchOptions)
+            .then(async (res) => {
+              const endTime = performance.now();
+              const time = Math.round(endTime - startTime);
+              const text = await res.text();
+              const headersObj = {};
+              res.headers.forEach((v, k) => { headersObj[k] = v; });
+
+              let pretty = text;
+              try {
+                pretty = JSON.stringify(JSON.parse(text), null, 2);
+              } catch(e) {}
+
+              renderResponseResult({
+                status: res.status,
+                statusText: res.statusText || getStatusText(res.status),
+                time,
+                size: formatBytes(new Blob([text]).size),
+                headers: headersObj,
+                body: pretty
+              });
+              showToast(`真實請求完成 (Status ${res.status})`);
+            })
+            .catch((err) => {
+              const endTime = performance.now();
+              renderResponseResult({
+                status: 0,
+                statusText: 'Network / CORS Error',
+                time: Math.round(endTime - startTime),
+                size: '0 B',
+                headers: {},
+                body: `請求失敗: ${err.message}\n\n可能原因：\n1. 目標伺服器未開放跨域 (CORS) 存取標頭\n2. 網址無效或無法解析\n3. 網路斷線或受防火牆限制\n\n建議：可切換至【Mock 模擬模式】直接在瀏覽器內進行回應與結構測試。`
+              });
+              els.corsNoticeBanner.classList.remove('hidden');
+            })
+            .finally(() => {
+              els.btnExecute.disabled = false;
+              els.btnExecuteText.textContent = '發送請求';
+            });
+        }
+      }
+
+      function getStatusText(status) {
+        const map = {
+          200: 'OK', 201: 'Created', 204: 'No Content',
+          400: 'Bad Request', 401: 'Unauthorized', 403: 'Forbidden',
+          404: 'Not Found', 422: 'Unprocessable Entity',
+          500: 'Internal Server Error', 503: 'Service Unavailable'
+        };
+        return map[status] || 'Response';
+      }
+
+      function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        return (bytes / 1024).toFixed(1) + ' KB';
+      }
+
+      function renderResponseResult(res) {
+        // Status Badge
+        els.resStatusBadge.textContent = `${res.status} ${res.statusText}`;
+        if (res.status >= 200 && res.status < 300) {
+          els.resStatusBadge.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800';
+        } else if (res.status >= 400 && res.status < 500) {
+          els.resStatusBadge.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border border-amber-300 dark:border-amber-800';
+        } else if (res.status >= 500 || res.status === 0) {
+          els.resStatusBadge.className = 'px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 border border-red-300 dark:border-red-800';
+        }
+
+        // Time & Size
+        els.resTimeBadge.textContent = `${res.time} ms`;
+        els.resTimeBadge.classList.remove('hidden');
+        els.resSizeBadge.textContent = res.size;
+        els.resSizeBadge.classList.remove('hidden');
+
+        // Body & Headers
+        els.resBodyDisplay.textContent = res.body;
+        els.resHeadersDisplay.textContent = Object.entries(res.headers).map(([k, v]) => `${k}: ${v}`).join('\n') || '(No headers recorded)';
+      }
+
+      els.btnExecute.addEventListener('click', executeRequest);
+
+      // --- 10. Endpoint Lifecycle (New, Clone, Delete) ---
+      els.btnNewEndpoint.addEventListener('click', () => {
+        const newEp = {
+          id: 'ep-' + generateUUID().substring(0, 8),
+          name: '全新 API 端點',
+          method: 'GET',
+          url: 'https://api.example.com/v1/resource',
+          params: [],
+          headers: [
+            { key: 'Accept', value: 'application/json', enabled: true }
+          ],
+          bodyType: 'none',
+          body: '',
+          auth: { type: 'none' },
+          mock: {
+            status: 200,
+            delay: 150,
+            body: JSON.stringify({ message: 'Success', id: '@uuid', timestamp: '@timestamp' }, null, 2)
+          }
+        };
+        state.endpoints.push(newEp);
+        state.currentId = newEp.id;
+        renderAll();
+        saveState();
+        showToast('已建立新端點');
+      });
+
+      els.btnCloneEndpoint.addEventListener('click', () => {
+        const ep = getCurrentEndpoint();
+        const cloned = JSON.parse(JSON.stringify(ep));
+        cloned.id = 'ep-' + generateUUID().substring(0, 8);
+        cloned.name = (cloned.name || '端點') + ' (複本)';
+        state.endpoints.push(cloned);
+        state.currentId = cloned.id;
+        renderAll();
+        saveState();
+        showToast('已複製此端點');
+      });
+
+      els.btnDeleteEndpoint.addEventListener('click', () => {
+        if (state.endpoints.length <= 1) {
+          showToast('至少需保留一個端點', '⚠️');
+          return;
+        }
+        if (!confirm(`確定要刪除「${getCurrentEndpoint().name}」嗎？`)) return;
+
+        state.endpoints = state.endpoints.filter(ep => ep.id !== state.currentId);
+        state.currentId = state.endpoints[0].id;
+        renderAll();
+        saveState();
+        showToast('端點已刪除');
+      });
+
+      els.endpointSearch.addEventListener('input', renderEndpointList);
+
+      // --- 11. Presets & Import/Export Collections ---
+      els.btnLoadPreset.addEventListener('click', () => {
+        const presetKey = els.presetSelector.value;
+        if (PRESETS[presetKey]) {
+          state.endpoints = JSON.parse(JSON.stringify(PRESETS[presetKey]));
+          state.currentId = state.endpoints[0].id;
+          renderAll();
+          saveState();
+          showToast(`已載入「${els.presetSelector.selectedOptions[0].text}」範本`);
+        }
+      });
+
+      els.btnResetDefaults.addEventListener('click', () => {
+        if (confirm('確定要清除所有自訂修改，並恢復預設金融範本嗎？')) {
+          state.endpoints = JSON.parse(JSON.stringify(PRESETS.finance));
+          state.currentId = state.endpoints[0].id;
+          renderAll();
+          saveState();
+          showToast('已恢復預設範本');
+        }
+      });
+
+      els.btnExportCollection.addEventListener('click', () => {
+        const jsonStr = JSON.stringify({
+          version: '1.0.0',
+          exportedAt: new Date().toISOString(),
+          endpoints: state.endpoints
+        }, null, 2);
+
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `api-mock-collection-${new Date().toISOString().substring(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('集合已匯出為 JSON 檔');
+      });
+
+      els.inputImportCollection.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          try {
+            const data = JSON.parse(evt.target.result);
+            if (Array.isArray(data.endpoints) && data.endpoints.length > 0) {
+              state.endpoints = data.endpoints;
+              state.currentId = state.endpoints[0].id;
+              renderAll();
+              saveState();
+              showToast(`成功匯入 ${data.endpoints.length} 個端點`);
+            } else {
+              showToast('JSON 格式不符：未包含 endpoints 陣列', '⚠️');
+            }
+          } catch(err) {
+            showToast('JSON 檔案解析失敗', '⚠️');
+          }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+      });
+
+      // --- 12. cURL Import Modal ---
+      els.btnImportCurlModal.addEventListener('click', () => {
+        els.modalImportCurl.classList.remove('hidden');
+        els.curlInputArea.focus();
+      });
+
+      function closeCurlModal() {
+        els.modalImportCurl.classList.add('hidden');
+        els.curlInputArea.value = '';
+      }
+
+      els.btnCloseCurlModal.addEventListener('click', closeCurlModal);
+      els.btnCancelCurl.addEventListener('click', closeCurlModal);
+
+      els.btnConfirmCurl.addEventListener('click', () => {
+        const raw = els.curlInputArea.value.trim();
+        if (!raw) {
+          showToast('請輸入 cURL 指令', '⚠️');
+          return;
+        }
+
+        const parsed = parseCurlCommand(raw);
+        if (!parsed || !parsed.url) {
+          showToast('無法解析有效 URL，請確認 cURL 語法', '⚠️');
+          return;
+        }
+
+        const ep = getCurrentEndpoint();
+        ep.method = parsed.method;
+        ep.url = parsed.url;
+        ep.headers = parsed.headers;
+        ep.params = parsed.params;
+        if (parsed.body) {
+          ep.body = parsed.body;
+          ep.bodyType = parsed.body.startsWith('{') || parsed.body.startsWith('[') ? 'json' : 'raw';
+        }
+        closeCurlModal();
+        renderAll();
+        saveState();
+        showToast('cURL 解析並帶入端點成功！');
+      });
+
+      // Theme toggle
+      els.btnThemeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('api_mock_studio_theme', isDark ? 'dark' : 'light');
+      });
+      const savedTheme = localStorage.getItem('api_mock_studio_theme');
+      if (savedTheme === 'light') {
+        document.documentElement.classList.remove('dark');
+      }
+
+      // Initialize
+      loadState();
+      renderAll();
+
+    })();
+  </script>
+</body>
+</html>
