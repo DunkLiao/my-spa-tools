@@ -1,0 +1,2223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>大額曝險與關聯戶圖譜速算器 | Banking Exposure Analyzer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    .dark ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.5);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.8);
+    }
+    .badge-pulse {
+      animation: pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    canvas {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
+
+  <header class="border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/90 backdrop-blur sticky top-0 z-40 px-4 lg:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+    <div class="flex items-center gap-3">
+      <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-400 p-0.5 shadow-md shadow-blue-500/20 flex items-center justify-center">
+        <div class="w-full h-full bg-white dark:bg-slate-950 rounded-[10px] flex items-center justify-center">
+          <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="font-bold text-base lg:text-lg text-slate-900 dark:text-white tracking-tight">大額曝險與關聯戶圖譜速算器</h1>
+          <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700">Art. 33-3</span>
+          <span id="badge-active-group" class="hidden sm:inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+            集團: 宏晶科技集團
+          </span>
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">集團授信集中度即時檢核・關係人股權穿透分析・What-If 壓力試算沙盒</p>
+      </div>
+    </div>
+
+    <!-- Quick Actions, Preset, CSV, Group Settings & Theme Switcher -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <!-- Group Settings Button -->
+      <button onclick="openGroupSettingsModal()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium border border-slate-200 dark:border-slate-700 transition-colors" title="設定集團名稱、產業與內部預警上限">
+        <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+        </svg>
+        集團設定
+      </button>
+
+      <!-- CSV Import Button -->
+      <button onclick="openCsvImportModal()" class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-medium border border-slate-200 dark:border-slate-700 transition-colors" title="支援 Big5 / CP950 / UTF-8 等繁體中文編碼">
+        <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+        </svg>
+        匯入 CSV
+      </button>
+
+      <!-- Presets -->
+      <div class="flex items-center bg-slate-100 dark:bg-slate-800/80 rounded-lg p-1 border border-slate-200 dark:border-slate-700 text-xs">
+        <span class="text-slate-500 dark:text-slate-400 px-1.5 font-medium hidden md:inline">案例:</span>
+        <button onclick="loadScenario('techGroup')" class="px-2 py-1 rounded hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors">半導體</button>
+        <button onclick="loadScenario('familyConglomerate')" class="px-2 py-1 rounded hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors">傳產家族</button>
+        <button onclick="loadScenario('overlimitAlert')" class="px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-colors">超額警戒</button>
+      </div>
+
+      <!-- Export Memo -->
+      <button onclick="exportAuditReport()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium transition-all shadow-sm shadow-blue-500/30">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" />
+        </svg>
+        審查底稿
+      </button>
+
+      <!-- Theme Switcher Toggle -->
+      <button id="themeToggleBtn" onclick="toggleTheme()" class="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors" title="切換淺色 / 深色模式">
+        <svg id="themeIconSun" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <svg id="themeIconMoon" class="w-4 h-4 block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 flex flex-col p-3 lg:p-5 gap-4 max-w-[1700px] w-full mx-auto">
+    <!-- Bank Capital & Regulatory Ratios Parameter Deck -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm dark:shadow-xl">
+      <div class="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+        
+        <div class="flex flex-wrap items-center gap-4 lg:gap-6 w-full xl:w-auto">
+          <!-- Bank Equity Input -->
+          <div class="flex flex-col gap-1 min-w-[220px]">
+            <label class="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <span>本行前一會計年度決算淨值 (Capital / Equity)</span>
+              <span class="text-slate-400 cursor-pointer" title="銀行法第33條之3規定之計算基準">ⓘ</span>
+            </label>
+            <div class="relative flex items-center">
+              <input type="number" id="bankEquity" value="2500" step="100" min="100" oninput="handleEquityChange(this.value)"
+                class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl px-3 py-1.5 text-base font-mono font-semibold text-slate-900 dark:text-white outline-none">
+              <span class="absolute right-3 text-xs font-bold text-slate-400">億元 (NT$ 100M)</span>
+            </div>
+          </div>
+
+          <!-- Regulatory Ceiling Formula Pills -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
+            <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">同一人無擔保 (5%)</div>
+              <div class="text-sm font-mono font-bold text-sky-600 dark:text-sky-400 mt-0.5" id="limit-single-unsecured">NT$ 125.0 億</div>
+              <div class="text-[10px] text-slate-400">法定上限：淨值 5%</div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">同一人總授信 (15%)</div>
+              <div class="text-sm font-mono font-bold text-blue-600 dark:text-blue-400 mt-0.5" id="limit-single-total">NT$ 375.0 億</div>
+              <div class="text-[10px] text-slate-400">法定上限：淨值 15%</div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">行內內部預警 (<span id="limit-internal-rate-label">35%</span>)</div>
+              <div class="text-sm font-mono font-bold text-amber-600 dark:text-amber-400 mt-0.5" id="limit-internal-warning">NT$ 875.0 億</div>
+              <div class="text-[10px] text-slate-400">行內風控自訂指標</div>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5">
+              <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">同一關係人/企業 (40%)</div>
+              <div class="text-sm font-mono font-bold text-purple-600 dark:text-purple-400 mt-0.5" id="limit-group-total">NT$ 1000.0 億</div>
+              <div class="text-[10px] text-slate-400">法定上限：淨值 40%</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Overall Group Status Pill -->
+        <div class="w-full xl:w-auto flex items-center justify-between xl:justify-end gap-3 pt-2 xl:pt-0 border-t xl:border-t-0 border-slate-200 dark:border-slate-800">
+          <div class="text-right">
+            <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium">集團整體曝險總額 / 佔淨值比率</div>
+            <div class="flex items-baseline justify-end gap-2">
+              <span class="text-xl font-bold font-mono text-slate-900 dark:text-white" id="stat-group-total">NT$ 0 億</span>
+              <span class="text-sm font-mono font-bold text-blue-600 dark:text-blue-400" id="stat-group-ratio">0.00%</span>
+            </div>
+          </div>
+          <div id="stat-group-status-badge" class="px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-400">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            合規安全
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 flex-1">
+      
+      <!-- Left Panel: Entities & Relationships Management (3.5 cols) -->
+      <div class="lg:col-span-4 xl:col-span-3.5 flex flex-col gap-4">
+        
+        <!-- Entity Editor Card -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col shadow-sm dark:shadow-lg overflow-hidden">
+          <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-blue-500"></span>
+              <h2 class="font-semibold text-sm text-slate-800 dark:text-slate-200">關聯戶成員清單 (<span id="entity-count">0</span>)</h2>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button onclick="resetToEmpty()" class="text-xs px-2 py-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors">
+                清空
+              </button>
+              <button onclick="openAddEntityModal()" class="text-xs px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1 font-medium transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                新增戶別
+              </button>
+            </div>
+          </div>
+
+          <div class="p-2 border-b border-slate-200 dark:border-slate-800">
+            <input type="text" id="entitySearch" oninput="renderEntitiesList()" placeholder="搜尋統編或公司名稱..." 
+              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5 text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-blue-500">
+          </div>
+
+          <!-- Entities List Container -->
+          <div class="p-2 space-y-1.5 max-h-72 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/40" id="entities-container">
+            <!-- Dynamically populated -->
+          </div>
+
+          <div class="p-3 bg-slate-50 dark:bg-slate-950/40 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 flex justify-between items-center">
+            <span>點擊任一戶可載入右側沙盒試算</span>
+            <span class="font-mono text-slate-400">Ctrl + 滾輪縮放</span>
+          </div>
+        </div>
+
+        <!-- Relationship Links Card -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex flex-col shadow-sm dark:shadow-lg overflow-hidden">
+          <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
+              <h2 class="font-semibold text-sm text-slate-800 dark:text-slate-200">實質控制與股權關聯</h2>
+            </div>
+            <button onclick="openAddLinkModal()" class="text-xs px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium flex items-center gap-1 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.102-1.101" />
+              </svg>
+              建立連結
+            </button>
+          </div>
+
+          <div class="p-2 space-y-1.5 max-h-48 overflow-y-auto" id="links-container">
+            <!-- Links dynamic rows -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Middle: Canvas Topology View (5.5 cols) -->
+      <div class="lg:col-span-8 xl:col-span-5.5 flex flex-col gap-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl flex-1 flex flex-col min-h-[540px] shadow-sm dark:shadow-lg overflow-hidden relative">
+          
+          <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 flex items-center justify-between z-10">
+            <div class="flex items-center gap-2">
+              <div class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
+              <h2 class="font-semibold text-sm text-slate-800 dark:text-slate-200">集團授信關聯圖譜 (Force-Directed Graph)</h2>
+            </div>
+            <div class="flex items-center gap-2">
+              <button id="btn-physics" onclick="togglePhysics()" class="px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 text-xs transition-colors">
+                動力排版: 啟用
+              </button>
+              <button onclick="resetGraphView()" class="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs transition-colors border border-slate-200 dark:border-slate-700">
+                視野重設
+              </button>
+            </div>
+          </div>
+
+          <!-- Canvas Container -->
+          <div class="relative flex-1 w-full bg-slate-50 dark:bg-slate-950 overflow-hidden" id="canvas-wrapper">
+            <canvas id="topologyCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+
+            <!-- Floating Selected Entity Mini Card -->
+            <div id="canvas-tooltip" class="absolute hidden bottom-4 left-4 right-4 sm:right-auto sm:w-80 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-slate-700 rounded-xl p-3 shadow-2xl backdrop-blur pointer-events-none transition-all duration-150">
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <div class="text-[11px] font-mono text-slate-500 dark:text-slate-400" id="tip-id">ID: --</div>
+                  <div class="text-sm font-bold text-slate-900 dark:text-white" id="tip-name">公司名稱</div>
+                </div>
+                <span id="tip-badge" class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">法人</span>
+              </div>
+              <div class="mt-2.5 pt-2 border-t border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span class="text-slate-500 dark:text-slate-400 block text-[10px]">無擔保授信</span>
+                  <span class="font-mono font-semibold text-amber-600 dark:text-amber-400" id="tip-unsecured">NT$ 0 億</span>
+                </div>
+                <div>
+                  <span class="text-slate-500 dark:text-slate-400 block text-[10px]">有擔保授信</span>
+                  <span class="font-mono font-semibold text-emerald-600 dark:text-emerald-400" id="tip-secured">NT$ 0 億</span>
+                </div>
+              </div>
+              <div class="mt-2 text-[11px] flex justify-between items-center text-slate-700 dark:text-slate-300">
+                <span>個別合計曝險:</span>
+                <span class="font-mono font-bold text-sky-600 dark:text-sky-400" id="tip-total">NT$ 0 億</span>
+              </div>
+            </div>
+
+            <!-- Canvas Zoom Controls Overlay -->
+            <div class="absolute top-4 right-4 flex flex-col gap-1 bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-lg p-1 backdrop-blur shadow-md">
+              <button onclick="zoomCanvas(1.2)" class="w-7 h-7 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded font-bold text-sm">+</button>
+              <button onclick="zoomCanvas(0.8)" class="w-7 h-7 flex items-center justify-center text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded font-bold text-sm">-</button>
+            </div>
+          </div>
+
+          <!-- Bottom Warning Banner (Triggered when limits exceed) -->
+          <div id="compliance-alert-strip" class="p-2.5 px-4 bg-red-50 dark:bg-red-950/80 border-t border-red-200 dark:border-red-500/40 text-red-700 dark:text-red-300 text-xs hidden flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-red-600 dark:text-red-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+              </svg>
+              <span id="alert-strip-text">警告：偵測到法規曝險超額情形，請檢核單一關係人上限！</span>
+            </div>
+            <button onclick="scrollToAuditTable()" class="underline hover:text-red-900 dark:hover:text-white font-medium ml-2">檢視超標明細</button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Right Panel: What-If Simulation Sandbox (3 cols) -->
+      <div class="lg:col-span-12 xl:col-span-3 flex flex-col gap-4">
+        
+        <!-- What-If Simulation Sandbox -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm dark:shadow-lg flex flex-col gap-3">
+          <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2.5">
+            <div class="flex items-center gap-2">
+              <span class="flex h-2 w-2 rounded-full bg-amber-500"></span>
+              <h2 class="text-sm font-semibold text-slate-900 dark:text-white">What-If 壓力試算沙盒</h2>
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-400/10 text-amber-700 dark:text-amber-300 font-mono">即時衝擊分析</span>
+          </div>
+
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            選取特定戶別，模擬追加或調降授信額度，評估全集團之曝險邊際增額與法規衝擊。
+          </p>
+
+          <!-- Target Entity Selector -->
+          <div class="space-y-1">
+            <label class="text-[11px] font-semibold text-slate-600 dark:text-slate-400">試算對象戶：</label>
+            <select id="sandboxTarget" onchange="loadSandboxTargetValues()" 
+              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-200 outline-none focus:border-blue-500">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <!-- Sliders for Adjustment -->
+          <div class="space-y-3 pt-2">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-500 dark:text-slate-400">追加/調整無擔保額度:</span>
+                <span class="font-mono font-bold text-amber-600 dark:text-amber-400" id="sandbox-unsecured-val">+0 億</span>
+              </div>
+              <input type="range" id="sandboxUnsecuredDelta" min="-50" max="100" value="0" step="5" 
+                oninput="updateSandboxImpact()" class="w-full accent-amber-500 cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-400">
+                <span>-50 億</span>
+                <span>0 (原額度)</span>
+                <span>+100 億</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-500 dark:text-slate-400">追加/調整擔保額度:</span>
+                <span class="font-mono font-bold text-emerald-600 dark:text-emerald-400" id="sandbox-secured-val">+0 億</span>
+              </div>
+              <input type="range" id="sandboxSecuredDelta" min="-50" max="150" value="0" step="5" 
+                oninput="updateSandboxImpact()" class="w-full accent-emerald-500 cursor-pointer">
+              <div class="flex justify-between text-[10px] text-slate-400">
+                <span>-50 億</span>
+                <span>0 (原額度)</span>
+                <span>+150 億</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Impact Metrics Feedback Box -->
+          <div class="mt-2 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-2 text-xs">
+            <div class="flex justify-between">
+              <span class="text-slate-500 dark:text-slate-400">該戶模擬後總額:</span>
+              <span class="font-mono font-bold text-slate-800 dark:text-slate-200" id="sandbox-res-entity-total">NT$ 0 億</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500 dark:text-slate-400">集團整體新曝險:</span>
+              <span class="font-mono font-bold text-blue-600 dark:text-blue-400" id="sandbox-res-group-total">NT$ 0 億</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-slate-500 dark:text-slate-400">集團佔淨值新比率:</span>
+              <span class="font-mono font-bold" id="sandbox-res-ratio">0.00%</span>
+            </div>
+            <div id="sandbox-legal-verdict" class="mt-2 pt-2 border-t border-slate-200 dark:border-slate-800 font-medium text-center text-[11px] text-emerald-600 dark:text-emerald-400">
+              ✓ 試算結果合規可承作
+            </div>
+          </div>
+
+          <!-- Apply or Reset Buttons -->
+          <div class="flex gap-2">
+            <button onclick="applySandboxChanges()" class="flex-1 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs transition-colors">
+              套用至正式圖譜
+            </button>
+            <button onclick="resetSandboxSliders()" class="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs transition-colors">
+              重設
+            </button>
+          </div>
+        </div>
+
+        <!-- Compliance Check Gauge Deck -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm dark:shadow-lg flex flex-col gap-3">
+          <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">法定門檻檢核計量錶</h3>
+          <div class="space-y-3" id="gauge-bars-container">
+            <!-- Dynamic Gauge Bars -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Bottom Audit Section -->
+    <section id="audit-section" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 lg:p-5 shadow-sm dark:shadow-xl mt-2 flex flex-col gap-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span>授信個案大額曝險審查稽核底稿 (Audit Sheet)</span>
+            <span class="text-xs px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-mono font-normal">Internal Review Copy</span>
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">自動依據本行淨值即時核算每筆戶別之法定集中度，提供稽核備忘錄一鍵複製</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="copyAuditMarkdown()" class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 text-xs font-medium transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+            複製審查備忘錄 (Markdown)
+          </button>
+          <button onclick="exportDataJSON()" class="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium border border-slate-200 dark:border-slate-700 transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            匯出案卷 JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Audit Detail Table -->
+      <div class="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th class="py-2.5 px-3">統一編號</th>
+              <th class="py-2.5 px-3">授信戶名稱</th>
+              <th class="py-2.5 px-3">關係身分</th>
+              <th class="py-2.5 px-3 text-right">無擔保授信 (億)</th>
+              <th class="py-2.5 px-3 text-right">有擔保授信 (億)</th>
+              <th class="py-2.5 px-3 text-right">個別合計 (億)</th>
+              <th class="py-2.5 px-3 text-right">佔本行淨值比率</th>
+              <th class="py-2.5 px-3">法規檢核狀態</th>
+              <th class="py-2.5 px-3 text-center">操作</th>
+            </tr>
+          </thead>
+          <tbody id="audit-table-body" class="divide-y divide-slate-100 dark:divide-slate-800 font-mono text-slate-700 dark:text-slate-300">
+            <!-- Dynamic rows -->
+          </tbody>
+          <tfoot class="bg-slate-50 dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800 font-semibold text-slate-900 dark:text-white">
+            <tr>
+              <td colspan="3" class="py-2.5 px-3 text-left font-sans text-xs">集團全體合計 (Total Group Exposure)</td>
+              <td class="py-2.5 px-3 text-right font-mono text-amber-600 dark:text-amber-400" id="foot-unsecured-total">0.0</td>
+              <td class="py-2.5 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400" id="foot-secured-total">0.0</td>
+              <td class="py-2.5 px-3 text-right font-mono text-sky-600 dark:text-sky-400 font-bold" id="foot-grand-total">0.0 億</td>
+              <td class="py-2.5 px-3 text-right font-mono" id="foot-ratio-total">0.00%</td>
+              <td colspan="2" class="py-2.5 px-3 text-xs" id="foot-compliance-status">
+                <span class="text-emerald-600 dark:text-emerald-400 font-semibold">✓ 符合規範</span>
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Group Settings Modal -->
+  <div id="groupSettingsModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col gap-4 text-slate-800 dark:text-slate-100">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base">集團背景與內部限額設定</h3>
+        </div>
+        <button onclick="closeModal('groupSettingsModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-xl">✕</button>
+      </div>
+
+      <form id="groupSettingsForm" onsubmit="handleGroupSettingsSubmit(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">集團名稱 (Group Name)</label>
+          <input type="text" id="form-group-name" required placeholder="如：宏晶半導體集團" 
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">集團代號 / 風控案號 (Group Identifier)</label>
+          <input type="text" id="form-group-code" required placeholder="如：GRP-2026-088" 
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500 font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">所屬主要產業別 (Industry Sector)</label>
+          <select id="form-group-industry" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500">
+            <option value="半導體及電子零組件業">半導體及電子零組件業</option>
+            <option value="光電與關鍵材料製造業">光電與關鍵材料製造業</option>
+            <option value="建材營造與不動產開發">建材營造與不動產開發</option>
+            <option value="航空海運及物聯倉儲業">航空海運及物聯倉儲業</option>
+            <option value="金融控股與綜合投資業">金融控股與綜合投資業</option>
+            <option value="傳統民生石化與紡織業">傳統民生石化與紡織業</option>
+            <option value="其他綜合多元集團">其他綜合多元集團</option>
+          </select>
+        </div>
+        <div>
+          <div class="flex justify-between items-center mb-1">
+            <label class="font-semibold text-amber-600 dark:text-amber-400">行內自主內部預警上限比率 (%)</label>
+            <span class="text-slate-400 text-[10px]">法定上限為 40%</span>
+          </div>
+          <div class="relative flex items-center">
+            <input type="number" id="form-group-internalLimit" min="10" max="40" step="1" value="35" required
+              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-amber-500 font-mono font-bold">
+            <span class="absolute right-3 text-xs text-slate-400 font-semibold">% 淨值</span>
+          </div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+            當集團整體曝險超過此比率時，系統將提早亮起橘黃色警示，提醒客戶經理（RM）保留信用緩衝額度。
+          </p>
+        </div>
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('groupSettingsModal')" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300">取消</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium">儲存集團設定</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- CSV Import Modal -->
+  <div id="csvImportModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl p-5 shadow-2xl flex flex-col gap-4 text-slate-800 dark:text-slate-100">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <div>
+          <h3 class="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
+            <span>批次匯入關聯戶 CSV 檔案</span>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 font-mono">繁體中文編碼自適配</span>
+          </h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">原生支援銀行常見之 Big5 (CP950)、UTF-8 (含BOM) 及 UTF-16LE 匯入。</p>
+        </div>
+        <button onclick="closeModal('csvImportModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-xl">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800">
+          <div class="flex items-center gap-2">
+            <label class="font-semibold text-slate-600 dark:text-slate-400">文字編碼：</label>
+            <select id="csvEncodingSelect" class="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-2.5 py-1 text-xs text-slate-800 dark:text-white outline-none">
+              <option value="auto">自動偵測 (Auto-Detect)</option>
+              <option value="big5">Big5 / CP950 (Windows 繁中預設)</option>
+              <option value="utf-8">UTF-8 (標準萬國碼)</option>
+              <option value="utf-16le">UTF-16LE (含 Unicode 標頭)</option>
+            </select>
+          </div>
+          <button onclick="downloadSampleCsv()" class="text-blue-600 dark:text-blue-400 hover:underline font-medium text-[11px] flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            下載標準範本 CSV
+          </button>
+        </div>
+
+        <div id="dropZone" class="border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-slate-50 dark:bg-slate-950/40"
+             onclick="document.getElementById('csvFileInput').click()">
+          <input type="file" id="csvFileInput" accept=".csv, .txt" class="hidden" onchange="handleCsvFileSelected(event)">
+          <svg class="w-8 h-8 mx-auto text-slate-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <div class="text-slate-700 dark:text-slate-200 font-semibold text-xs">點擊選取或拖曳 CSV 檔案至此處</div>
+          <div class="text-slate-400 text-[11px] mt-1">支援欄位：統編, 戶名, 關係身分(母公司/關係企業/董監事), 無擔保(億), 有擔保(億), 擔保品備註</div>
+        </div>
+
+        <div class="flex items-center justify-between pt-1">
+          <div class="flex items-center gap-3">
+            <label class="text-slate-600 dark:text-slate-400 font-semibold">匯入方式：</label>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="csvImportMode" value="replace" checked class="text-blue-600">
+              <span class="text-slate-800 dark:text-slate-200">覆蓋現有名單</span>
+            </label>
+            <label class="inline-flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="csvImportMode" value="append" class="text-blue-600">
+              <span class="text-slate-800 dark:text-slate-200">追加加入名單</span>
+            </label>
+          </div>
+          <span id="csvParsedStatus" class="font-mono text-emerald-600 dark:text-emerald-400 font-semibold"></span>
+        </div>
+
+        <div id="csvPreviewContainer" class="hidden max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl">
+          <table class="w-full text-left text-[11px] text-slate-700 dark:text-slate-300">
+            <thead class="bg-slate-100 dark:bg-slate-950 sticky top-0 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+              <tr>
+                <th class="p-2">統編</th>
+                <th class="p-2">戶名</th>
+                <th class="p-2">關係</th>
+                <th class="p-2 text-right">無擔保(億)</th>
+                <th class="p-2 text-right">擔保(億)</th>
+                <th class="p-2">備註</th>
+              </tr>
+            </thead>
+            <tbody id="csvPreviewTableBody" class="divide-y divide-slate-100 dark:divide-slate-800 font-mono"></tbody>
+          </table>
+        </div>
+
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('csvImportModal')" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300">關閉</button>
+          <button type="button" id="btnConfirmCsvImport" disabled onclick="executeCsvImport()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:pointer-events-none text-white font-medium">
+            確認匯入圖譜
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit Entity Modal -->
+  <div id="entityModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col gap-4 text-slate-800 dark:text-slate-100">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <h3 class="font-bold text-slate-900 dark:text-white text-base" id="entityModalTitle">新增戶別資料</h3>
+        <button onclick="closeModal('entityModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-xl">✕</button>
+      </div>
+
+      <form id="entityForm" onsubmit="handleEntityFormSubmit(event)" class="space-y-3 text-xs">
+        <input type="hidden" id="form-entity-edit-id" value="">
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">統一編號 / 身分證字號</label>
+          <input type="text" id="form-entity-taxId" required placeholder="如：23308901 或 身分證號"
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500 font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">戶名 / 公司行號名稱</label>
+          <input type="text" id="form-entity-name" required placeholder="如：宏晶先進科技"
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">集團關係屬性類別</label>
+          <select id="form-entity-category" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500">
+            <option value="parent">核心母公司 / 集團旗艦</option>
+            <option value="affiliate" selected>關係企業 / 子公司</option>
+            <option value="keyPerson">董監事 / 主要實質負責人</option>
+            <option value="otherRelated">其他實質利害關係人</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-amber-600 dark:text-amber-400 mb-1">無擔保授信 (億元)</label>
+            <input type="number" id="form-entity-unsecured" step="0.5" min="0" value="0" required
+              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500 font-mono">
+          </div>
+          <div>
+            <label class="block font-semibold text-emerald-600 dark:text-emerald-400 mb-1">有擔保授信 (億元)</label>
+            <input type="number" id="form-entity-secured" step="0.5" min="0" value="0" required
+              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500 font-mono">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">擔保品 / 審查備註說明</label>
+          <input type="text" id="form-entity-collateralNote" placeholder="如：竹科廠房一順位抵押、定存質押"
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500">
+        </div>
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('entityModal')" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300">取消</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium">儲存確認</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Relationship Link Modal -->
+  <div id="linkModal" class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col gap-4 text-slate-800 dark:text-slate-100">
+      <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+        <h3 class="font-bold text-slate-900 dark:text-white text-base">建立股權穿透或控制關係</h3>
+        <button onclick="closeModal('linkModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white text-xl">✕</button>
+      </div>
+
+      <form id="linkForm" onsubmit="handleLinkFormSubmit(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">控制方 (Source Investor)</label>
+          <select id="form-link-source" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500"></select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">受控方 (Target Entity)</label>
+          <select id="form-link-target" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500"></select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">持股比率或表決權比例 (%)</label>
+          <input type="number" id="form-link-percentage" min="1" max="100" value="50" required
+            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500 font-mono">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 dark:text-slate-400 mb-1">控制型態說明</label>
+          <select id="form-link-type" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white outline-none focus:border-blue-500">
+            <option value="ownership">股權直接投資 (Direct Ownership)</option>
+            <option value="control">實質經營權控制 (De Facto Control)</option>
+            <option value="director">董監事指派兼任 (Board Representation)</option>
+            <option value="guarantee">連帶保證承諾 (Joint Guarantee)</option>
+          </select>
+        </div>
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2">
+          <button type="button" onclick="closeModal('linkModal')" class="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300">取消</button>
+          <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium">建立關聯線</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none text-xs">
+    <div id="toast-icon">✓</div>
+    <div id="toast-msg">操作成功</div>
+  </div>
+
+  <script>
+    /* State Data Structure */
+    let bankEquity = 2500; // in NT$ 100M (2500 億)
+    let entities = [];
+    let links = [];
+
+    // Group Background Settings
+    let groupSettings = {
+      name: '宏晶半導體集團',
+      code: 'GRP-2026-001',
+      industry: '半導體及電子零組件業',
+      internalLimit: 35 // 35% 行內自主內部預警限額 (法定為 40%)
+    };
+
+    // Theme Mode: Default 'light'
+    let currentTheme = localStorage.getItem('bae_theme') || 'light';
+
+    // Canvas & Graph Interaction State
+    let canvas, ctx;
+    let canvasWidth, canvasHeight;
+    let camera = { x: 0, y: 0, zoom: 1 };
+    let isDragging = false;
+    let dragStart = { x: 0, y: 0 };
+    let draggedNode = null;
+    let hoveredNode = null;
+    let physicsActive = true;
+    let animationFrameId = null;
+
+    // Parsed CSV temporary storage
+    let parsedCsvRows = [];
+
+    // What-If Sandbox State
+    let sandboxState = {
+      targetId: null,
+      deltaUnsecured: 0,
+      deltaSecured: 0
+    };
+
+    /* Banking Act Art 33-3 Legal Ratios */
+    const RATIOS = {
+      SINGLE_PERSON_UNSECURED: 0.05, // 5%
+      SINGLE_PERSON_TOTAL: 0.15,     // 15%
+      RELATED_PARTY_UNSECURED: 0.10, // 10%
+      RELATED_GROUP_TOTAL: 0.40      // 40%
+    };
+
+    /* Preset Scenarios */
+    const PRESETS = {
+      techGroup: {
+        bankEquity: 2500,
+        groupSettings: {
+          name: '宏晶半導體集團',
+          code: 'GRP-2026-001',
+          industry: '半導體及電子零組件業',
+          internalLimit: 35
+        },
+        entities: [
+          { id: 'E1', taxId: '23308901', name: '宏晶半導體母公司', category: 'parent', unsecured: 70.0, secured: 120.0, note: '主板掛牌/廠房擔保' },
+          { id: 'E2', taxId: '54201192', name: '晶越先進微電子(子公司)', category: 'affiliate', unsecured: 45.0, secured: 60.0, note: '持股65%/機器設備抵押' },
+          { id: 'E3', taxId: '89104432', name: '宏芯光電材料(轉投資)', category: 'affiliate', unsecured: 30.0, secured: 40.0, note: '持股40%' },
+          { id: 'E4', taxId: '12903348', name: '晶茂投資控股', category: 'affiliate', unsecured: 15.0, secured: 25.0, note: '集團投資公司' },
+          { id: 'E5', taxId: 'A123456789', name: '張振興 (董事長暨大股東)', category: 'keyPerson', unsecured: 8.0, secured: 15.0, note: '個人綜合所得稅擔保借款' }
+        ],
+        links: [
+          { source: 'E1', target: 'E2', percentage: 65, type: 'ownership' },
+          { source: 'E1', target: 'E3', percentage: 40, type: 'ownership' },
+          { source: 'E4', target: 'E1', percentage: 22, type: 'ownership' },
+          { source: 'E5', target: 'E4', percentage: 80, type: 'control' },
+          { source: 'E5', target: 'E1', percentage: 12, type: 'director' }
+        ]
+      },
+      familyConglomerate: {
+        bankEquity: 2000,
+        groupSettings: {
+          name: '富霖家族控股集團',
+          code: 'GRP-2026-042',
+          industry: '建材營造與不動產開發',
+          internalLimit: 32
+        },
+        entities: [
+          { id: 'F1', taxId: '11223344', name: '富霖實業控股 (家族旗艦)', category: 'parent', unsecured: 60.0, secured: 140.0, note: '總部大樓設定抵押' },
+          { id: 'F2', taxId: '22334455', name: '富霖營造工程', category: 'affiliate', unsecured: 50.0, secured: 90.0, note: '在建工程設定' },
+          { id: 'F3', taxId: '33445566', name: '富霖資產管理', category: 'affiliate', unsecured: 35.0, secured: 70.0, note: '商業不動產擔保' },
+          { id: 'F4', taxId: '44556677', name: '富邦物流國際', category: 'affiliate', unsecured: 20.0, secured: 30.0, note: '自用倉儲抵押' },
+          { id: 'F5', taxId: 'B198765432', name: '林董事長 (家族實質負責人)', category: 'keyPerson', unsecured: 12.0, secured: 20.0, note: '股票質押放款' }
+        ],
+        links: [
+          { source: 'F1', target: 'F2', percentage: 70, type: 'ownership' },
+          { source: 'F1', target: 'F3', percentage: 100, type: 'ownership' },
+          { source: 'F1', target: 'F4', percentage: 45, type: 'ownership' },
+          { source: 'F5', target: 'F1', percentage: 48, type: 'control' }
+        ]
+      },
+      overlimitAlert: {
+        bankEquity: 1800,
+        groupSettings: {
+          name: '天際航空母集團',
+          code: 'GRP-2026-099',
+          industry: '航空海運及物聯倉儲業',
+          internalLimit: 30
+        },
+        entities: [
+          { id: 'O1', taxId: '99887766', name: '天際航空母集團', category: 'parent', unsecured: 110.0, secured: 240.0, note: '單一法人總額接近違規' },
+          { id: 'O2', taxId: '88776655', name: '天際飛機租賃公司', category: 'affiliate', unsecured: 95.0, secured: 210.0, note: '客機設備動產抵押' },
+          { id: 'O3', taxId: '77665544', name: '天翔航太科技', category: 'affiliate', unsecured: 60.0, secured: 80.0, note: '高階維修廠房擔保' },
+          { id: 'O4', taxId: 'C100293847', name: '高創辦人 (集團總裁)', category: 'keyPerson', unsecured: 25.0, secured: 35.0, note: '無擔保放款已嚴重超額' }
+        ],
+        links: [
+          { source: 'O1', target: 'O2', percentage: 90, type: 'ownership' },
+          { source: 'O1', target: 'O3', percentage: 55, type: 'ownership' },
+          { source: 'O4', target: 'O1', percentage: 60, type: 'control' }
+        ]
+      }
+    };
+
+    window.onload = function() {
+      applyTheme(currentTheme);
+      initCanvas();
+      loadScenario('techGroup');
+      setupDragDrop();
+      window.addEventListener('resize', handleResize);
+    };
+
+    /* Theme Management */
+    function applyTheme(theme) {
+      currentTheme = theme;
+      localStorage.setItem('bae_theme', theme);
+      const root = document.documentElement;
+      const sunIcon = document.getElementById('themeIconSun');
+      const moonIcon = document.getElementById('themeIconMoon');
+
+      if (theme === 'dark') {
+        root.classList.add('dark');
+        if (sunIcon) sunIcon.classList.remove('hidden');
+        if (moonIcon) moonIcon.classList.add('hidden');
+      } else {
+        root.classList.remove('dark');
+        if (sunIcon) sunIcon.classList.add('hidden');
+        if (moonIcon) moonIcon.classList.remove('hidden');
+      }
+    }
+
+    function toggleTheme() {
+      applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+      showToast(`已切換為${currentTheme === 'dark' ? '深色' : '淺色'}模式`);
+    }
+
+    /* Group Settings Operations */
+    function openGroupSettingsModal() {
+      document.getElementById('form-group-name').value = groupSettings.name;
+      document.getElementById('form-group-code').value = groupSettings.code;
+      document.getElementById('form-group-industry').value = groupSettings.industry;
+      document.getElementById('form-group-internalLimit').value = groupSettings.internalLimit;
+      openModal('groupSettingsModal');
+    }
+
+    function handleGroupSettingsSubmit(e) {
+      e.preventDefault();
+      groupSettings.name = document.getElementById('form-group-name').value.trim();
+      groupSettings.code = document.getElementById('form-group-code').value.trim();
+      groupSettings.industry = document.getElementById('form-group-industry').value;
+      groupSettings.internalLimit = parseFloat(document.getElementById('form-group-internalLimit').value) || 35;
+
+      closeModal('groupSettingsModal');
+      recalculateAll();
+      showToast(`已更新「${groupSettings.name}」之集團設定`);
+    }
+
+    function initCanvas() {
+      const container = document.getElementById('canvas-wrapper');
+      canvas = document.getElementById('topologyCanvas');
+      ctx = canvas.getContext('2d');
+      handleResize();
+
+      // Mouse & Wheel Interaction
+      canvas.addEventListener('mousedown', onMouseDown);
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+      canvas.addEventListener('wheel', onWheel, { passive: false });
+
+      // Touch events
+      canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+      window.addEventListener('touchmove', onTouchMove, { passive: false });
+      window.addEventListener('touchend', onTouchEnd);
+
+      startAnimation();
+    }
+
+    function handleResize() {
+      const container = document.getElementById('canvas-wrapper');
+      if (!container || !canvas) return;
+      canvasWidth = container.clientWidth;
+      canvasHeight = container.clientHeight;
+      canvas.width = canvasWidth * window.devicePixelRatio;
+      canvas.height = canvasHeight * window.devicePixelRatio;
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+
+    function loadScenario(presetKey) {
+      const data = PRESETS[presetKey];
+      if (!data) return;
+
+      bankEquity = data.bankEquity;
+      document.getElementById('bankEquity').value = bankEquity;
+
+      if (data.groupSettings) {
+        groupSettings = { ...data.groupSettings };
+      }
+
+      entities = JSON.parse(JSON.stringify(data.entities)).map((e, index) => {
+        const angle = (index / data.entities.length) * Math.PI * 2;
+        const radius = 160 + (index % 2) * 40;
+        return {
+          ...e,
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius,
+          vx: 0,
+          vy: 0,
+          radius: getEntityRadius(e.unsecured + e.secured)
+        };
+      });
+
+      links = JSON.parse(JSON.stringify(data.links));
+
+      resetGraphView();
+      recalculateAll();
+      showToast(`已載入案例：${groupSettings.name}`);
+    }
+
+    function getEntityRadius(totalExposure) {
+      return Math.max(26, Math.min(50, 24 + Math.sqrt(totalExposure) * 2));
+    }
+
+    function handleEquityChange(val) {
+      const num = parseFloat(val);
+      if (!isNaN(num) && num > 0) {
+        bankEquity = num;
+        recalculateAll();
+      }
+    }
+
+    function recalculateAll() {
+      updateRegulatoryPills();
+      updateEntitiesSummary();
+      renderEntitiesList();
+      renderLinksList();
+      updateSandboxSelectors();
+      updateGaugeBars();
+      renderAuditTable();
+
+      const grpBadge = document.getElementById('badge-active-group');
+      if (grpBadge) {
+        grpBadge.innerText = `集團: ${groupSettings.name} (${groupSettings.code})`;
+      }
+    }
+
+    function updateRegulatoryPills() {
+      const limitSingleUnsec = bankEquity * RATIOS.SINGLE_PERSON_UNSECURED;
+      const limitSingleTot = bankEquity * RATIOS.SINGLE_PERSON_TOTAL;
+      const limitInternalRate = (groupSettings.internalLimit || 35) / 100;
+      const limitInternalVal = bankEquity * limitInternalRate;
+      const limitGroupTot = bankEquity * RATIOS.RELATED_GROUP_TOTAL;
+
+      document.getElementById('limit-single-unsecured').innerText = `NT$ ${limitSingleUnsec.toFixed(1)} 億`;
+      document.getElementById('limit-single-total').innerText = `NT$ ${limitSingleTot.toFixed(1)} 億`;
+      
+      const labelElem = document.getElementById('limit-internal-rate-label');
+      if (labelElem) labelElem.innerText = `${groupSettings.internalLimit}%`;
+      
+      const warnElem = document.getElementById('limit-internal-warning');
+      if (warnElem) warnElem.innerText = `NT$ ${limitInternalVal.toFixed(1)} 億`;
+
+      document.getElementById('limit-group-total').innerText = `NT$ ${limitGroupTot.toFixed(1)} 億`;
+    }
+
+    function getGroupTotals() {
+      let totalUnsecured = 0;
+      let totalSecured = 0;
+
+      entities.forEach(e => {
+        totalUnsecured += Number(e.unsecured) || 0;
+        totalSecured += Number(e.secured) || 0;
+      });
+
+      const grandTotal = totalUnsecured + totalSecured;
+      const ratio = (grandTotal / bankEquity) * 100;
+      return { totalUnsecured, totalSecured, grandTotal, ratio };
+    }
+
+    function updateEntitiesSummary() {
+      const { grandTotal, ratio } = getGroupTotals();
+      document.getElementById('entity-count').innerText = entities.length;
+      document.getElementById('stat-group-total').innerText = `NT$ ${grandTotal.toFixed(1)} 億`;
+      document.getElementById('stat-group-ratio').innerText = `${ratio.toFixed(2)}%`;
+
+      const badge = document.getElementById('stat-group-status-badge');
+      const alertStrip = document.getElementById('compliance-alert-strip');
+      const alertStripText = document.getElementById('alert-strip-text');
+
+      let hasViolation = false;
+      let isInternalWarning = false;
+      let violationReason = '';
+
+      if (ratio > (RATIOS.RELATED_GROUP_TOTAL * 100)) {
+        hasViolation = true;
+        violationReason = `集團整體授信比率 (${ratio.toFixed(1)}%) 超逾銀行法第33-3條上限 40%！`;
+      } else if (ratio > groupSettings.internalLimit) {
+        isInternalWarning = true;
+        violationReason = `集團授信比率 (${ratio.toFixed(1)}%) 已突破行內自主預警線 (${groupSettings.internalLimit}%)！`;
+      }
+
+      entities.forEach(e => {
+        const tot = Number(e.unsecured) + Number(e.secured);
+        const unsec = Number(e.unsecured);
+        const totRatio = (tot / bankEquity) * 100;
+        const unsecRatio = (unsec / bankEquity) * 100;
+
+        if (unsecRatio > (RATIOS.SINGLE_PERSON_UNSECURED * 100)) {
+          hasViolation = true;
+          violationReason = `${e.name} 無擔保授信 (${unsec.toFixed(1)}億) 超出單一戶 5% 限制！`;
+        }
+        if (totRatio > (RATIOS.SINGLE_PERSON_TOTAL * 100)) {
+          hasViolation = true;
+          violationReason = `${e.name} 授信總額 (${tot.toFixed(1)}億) 超出單一人 15% 限制！`;
+        }
+      });
+
+      if (hasViolation) {
+        badge.className = "px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 bg-red-100 dark:bg-red-950/80 border-red-300 dark:border-red-500/50 text-red-600 dark:text-red-400 badge-pulse";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> 違反法定限額`;
+        alertStrip.classList.remove('hidden');
+        alertStripText.innerText = `法規警戒：${violationReason}`;
+      } else if (isInternalWarning) {
+        badge.className = "px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 bg-amber-100 dark:bg-amber-950/60 border-amber-300 dark:border-amber-500/50 text-amber-600 dark:text-amber-400";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500"></span> 達行內內部預警 (${groupSettings.internalLimit}%)`;
+        alertStrip.classList.remove('hidden');
+        alertStripText.innerText = `風控提示：${violationReason}`;
+      } else {
+        badge.className = "px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-500/40 text-emerald-700 dark:text-emerald-400";
+        badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500"></span> 合規安全`;
+        alertStrip.classList.add('hidden');
+      }
+    }
+
+    function renderEntitiesList() {
+      const container = document.getElementById('entities-container');
+      const search = (document.getElementById('entitySearch').value || '').toLowerCase();
+      container.innerHTML = '';
+
+      const filtered = entities.filter(e => 
+        e.name.toLowerCase().includes(search) || 
+        e.taxId.toLowerCase().includes(search)
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">無符合之關聯戶資料</div>`;
+        return;
+      }
+
+      filtered.forEach(e => {
+        const total = (Number(e.unsecured) + Number(e.secured)).toFixed(1);
+        const ratio = ((total / bankEquity) * 100).toFixed(1);
+        const isSelected = sandboxState.targetId === e.id;
+
+        const div = document.createElement('div');
+        div.className = `p-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-between gap-2 ${isSelected ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-400 dark:border-blue-500/50' : 'hover:bg-slate-100 dark:hover:bg-slate-800/60'}`;
+        div.onclick = () => selectEntityForInspection(e.id);
+
+        const categoryTag = getCategoryMeta(e.category);
+
+        div.innerHTML = `
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-2 h-2 rounded-full ${categoryTag.dotClass} flex-shrink-0"></span>
+            <div class="truncate">
+              <div class="flex items-center gap-1.5">
+                <span class="text-xs font-medium text-slate-800 dark:text-slate-200 truncate">${e.name}</span>
+                <span class="text-[9px] px-1.5 py-0.2 rounded font-mono ${categoryTag.badgeClass}">${categoryTag.label}</span>
+              </div>
+              <div class="text-[10px] text-slate-400 font-mono mt-0.5">統編: ${e.taxId}</div>
+            </div>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <div class="text-xs font-mono font-bold text-sky-600 dark:text-sky-400">${total} 億</div>
+            <div class="text-[10px] text-slate-400 font-mono">${ratio}% 淨值</div>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function getCategoryMeta(category) {
+      switch(category) {
+        case 'parent':
+          return { label: '母公司', dotClass: 'bg-blue-500', badgeClass: 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800' };
+        case 'affiliate':
+          return { label: '關係企業', dotClass: 'bg-emerald-500', badgeClass: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' };
+        case 'keyPerson':
+          return { label: '董監大股東', dotClass: 'bg-amber-500', badgeClass: 'bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800' };
+        default:
+          return { label: '關係人', dotClass: 'bg-purple-500', badgeClass: 'bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800' };
+      }
+    }
+
+    function renderLinksList() {
+      const container = document.getElementById('links-container');
+      container.innerHTML = '';
+
+      if (links.length === 0) {
+        container.innerHTML = `<div class="text-[11px] text-slate-400 py-2">尚未建立關係連結線</div>`;
+        return;
+      }
+
+      links.forEach((l, idx) => {
+        const src = entities.find(e => e.id === l.source);
+        const tgt = entities.find(e => e.id === l.target);
+        if (!src || !tgt) return;
+
+        const row = document.createElement('div');
+        row.className = 'flex items-center justify-between text-[11px] p-1.5 bg-slate-50 dark:bg-slate-950/60 rounded-lg border border-slate-200 dark:border-slate-800/80';
+        row.innerHTML = `
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="text-slate-700 dark:text-slate-300 truncate max-w-[85px]">${src.name}</span>
+            <span class="text-blue-600 dark:text-blue-400 font-mono">─(${l.percentage}%)─▶</span>
+            <span class="text-slate-700 dark:text-slate-300 truncate max-w-[85px]">${tgt.name}</span>
+          </div>
+          <button onclick="removeLink(${idx})" class="text-slate-400 hover:text-red-500 px-1 text-xs" title="刪除連結">✕</button>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function updateGaugeBars() {
+      const container = document.getElementById('gauge-bars-container');
+      container.innerHTML = '';
+
+      const { totalUnsecured, grandTotal, ratio } = getGroupTotals();
+
+      const metrics = [
+        {
+          title: '同一關係人總授信 (法定 40%)',
+          currentVal: grandTotal,
+          limitVal: bankEquity * RATIOS.RELATED_GROUP_TOTAL,
+          percentage: ratio,
+          limitPerc: 40
+        },
+        {
+          title: `行內自主內部預警 (限額 ${groupSettings.internalLimit}%)`,
+          currentVal: grandTotal,
+          limitVal: bankEquity * (groupSettings.internalLimit / 100),
+          percentage: ratio,
+          limitPerc: groupSettings.internalLimit
+        },
+        {
+          title: '同一關係人無擔保授信 (法定 10%)',
+          currentVal: totalUnsecured,
+          limitVal: bankEquity * RATIOS.RELATED_PARTY_UNSECURED,
+          percentage: (totalUnsecured / bankEquity) * 100,
+          limitPerc: 10
+        }
+      ];
+
+      let maxSingleTotEntity = null;
+      let maxSingleTotVal = 0;
+      entities.forEach(e => {
+        const val = Number(e.unsecured) + Number(e.secured);
+        if (val > maxSingleTotVal) {
+          maxSingleTotVal = val;
+          maxSingleTotEntity = e;
+        }
+      });
+
+      if (maxSingleTotEntity) {
+        metrics.push({
+          title: `最大單一戶 [${maxSingleTotEntity.name.slice(0, 7)}...] (法定 15%)`,
+          currentVal: maxSingleTotVal,
+          limitVal: bankEquity * RATIOS.SINGLE_PERSON_TOTAL,
+          percentage: (maxSingleTotVal / bankEquity) * 100,
+          limitPerc: 15
+        });
+      }
+
+      metrics.forEach(m => {
+        const isOver = m.percentage > m.limitPerc;
+        const isNear = m.percentage > (m.limitPerc * 0.85);
+        const barColor = isOver ? 'bg-red-500' : isNear ? 'bg-amber-500' : 'bg-blue-600';
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'space-y-1';
+        wrapper.innerHTML = `
+          <div class="flex justify-between text-xs">
+            <span class="text-slate-700 dark:text-slate-300 font-medium">${m.title}</span>
+            <span class="font-mono ${isOver ? 'text-red-500 font-bold' : 'text-slate-500 dark:text-slate-400'}">${m.currentVal.toFixed(1)} / ${m.limitVal.toFixed(1)} 億 (${m.percentage.toFixed(1)}%)</span>
+          </div>
+          <div class="w-full bg-slate-200 dark:bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-300 dark:border-slate-800">
+            <div class="${barColor} h-full transition-all duration-300" style="width: ${Math.min(100, (m.percentage / m.limitPerc) * 100)}%"></div>
+          </div>
+        `;
+        container.appendChild(wrapper);
+      });
+    }
+
+    function startAnimation() {
+      if (animationFrameId) cancelAnimationFrame(animationFrameId);
+
+      function loop() {
+        if (physicsActive) {
+          updatePhysics();
+        }
+        drawGraph();
+        animationFrameId = requestAnimationFrame(loop);
+      }
+      loop();
+    }
+
+    function togglePhysics() {
+      physicsActive = !physicsActive;
+      const btn = document.getElementById('btn-physics');
+      if (physicsActive) {
+        btn.innerText = "動力排版: 啟用";
+        btn.className = "px-2 py-1 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 text-xs transition-colors";
+      } else {
+        btn.innerText = "動力排版: 凍結";
+        btn.className = "px-2 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 text-xs transition-colors";
+      }
+    }
+
+    function updatePhysics() {
+      const kRepel = 2400;
+      const kLink = 0.04;
+      const linkRestLength = 140;
+      const centerDamp = 0.015;
+
+      for (let i = 0; i < entities.length; i++) {
+        for (let j = i + 1; j < entities.length; j++) {
+          const a = entities[i];
+          const b = entities[j];
+          let dx = b.x - a.x;
+          let dy = b.y - a.y;
+          let dist = Math.hypot(dx, dy) || 1;
+          if (dist < 350) {
+            let force = (kRepel / (dist * dist));
+            let fx = (dx / dist) * force;
+            let fy = (dy / dist) * force;
+            if (a !== draggedNode) { a.vx -= fx; a.vy -= fy; }
+            if (b !== draggedNode) { b.vx += fx; b.vy += fy; }
+          }
+        }
+      }
+
+      links.forEach(l => {
+        const src = entities.find(e => e.id === l.source);
+        const tgt = entities.find(e => e.id === l.target);
+        if (!src || !tgt) return;
+
+        let dx = tgt.x - src.x;
+        let dy = tgt.y - src.y;
+        let dist = Math.hypot(dx, dy) || 1;
+        let displacement = dist - linkRestLength;
+        let force = displacement * kLink;
+        let fx = (dx / dist) * force;
+        let fy = (dy / dist) * force;
+
+        if (src !== draggedNode) { src.vx += fx; src.vy += fy; }
+        if (tgt !== draggedNode) { tgt.vx -= fx; tgt.vy -= fy; }
+      });
+
+      entities.forEach(node => {
+        if (node === draggedNode) return;
+        node.vx -= node.x * centerDamp;
+        node.vy -= node.y * centerDamp;
+
+        node.vx *= 0.85;
+        node.vy *= 0.85;
+
+        node.x += node.vx;
+        node.y += node.vy;
+      });
+    }
+
+    function drawGraph() {
+      if (!ctx) return;
+      ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+      ctx.save();
+      ctx.translate(canvasWidth / 2 + camera.x, canvasHeight / 2 + camera.y);
+      ctx.scale(camera.zoom, camera.zoom);
+
+      drawGrid();
+
+      links.forEach(l => {
+        const src = entities.find(e => e.id === l.source);
+        const tgt = entities.find(e => e.id === l.target);
+        if (src && tgt) {
+          drawDirectedLink(src, tgt, l);
+        }
+      });
+
+      entities.forEach(node => {
+        drawNode(node);
+      });
+
+      ctx.restore();
+    }
+
+    function drawGrid() {
+      const step = 80;
+      const extent = 2000;
+      ctx.beginPath();
+      ctx.strokeStyle = currentTheme === 'dark' ? 'rgba(51, 65, 85, 0.2)' : 'rgba(203, 213, 225, 0.45)';
+      ctx.lineWidth = 1;
+
+      for (let x = -extent; x <= extent; x += step) {
+        ctx.moveTo(x, -extent);
+        ctx.lineTo(x, extent);
+      }
+      for (let y = -extent; y <= extent; y += step) {
+        ctx.moveTo(-extent, y);
+        ctx.lineTo(extent, y);
+      }
+      ctx.stroke();
+    }
+
+    function drawDirectedLink(src, tgt, link) {
+      const dx = tgt.x - src.x;
+      const dy = tgt.y - src.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist === 0) return;
+
+      const ux = dx / dist;
+      const uy = dy / dist;
+
+      const startX = src.x + ux * src.radius;
+      const startY = src.y + uy * src.radius;
+      const endX = tgt.x - ux * (tgt.radius + 6);
+      const endY = tgt.y - uy * (tgt.radius + 6);
+
+      ctx.save();
+      ctx.strokeStyle = currentTheme === 'dark' ? 'rgba(148, 163, 184, 0.45)' : 'rgba(100, 116, 139, 0.55)';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      ctx.lineTo(endX, endY);
+      ctx.stroke();
+
+      const arrowSize = 7;
+      const angle = Math.atan2(dy, dx);
+      ctx.fillStyle = currentTheme === 'dark' ? '#94a3b8' : '#475569';
+      ctx.beginPath();
+      ctx.moveTo(tgt.x - ux * tgt.radius, tgt.y - uy * tgt.radius);
+      ctx.lineTo(
+        tgt.x - ux * tgt.radius - arrowSize * Math.cos(angle - Math.PI / 6),
+        tgt.y - uy * tgt.radius - arrowSize * Math.sin(angle - Math.PI / 6)
+      );
+      ctx.lineTo(
+        tgt.x - ux * tgt.radius - arrowSize * Math.cos(angle + Math.PI / 6),
+        tgt.y - uy * tgt.radius - arrowSize * Math.sin(angle + Math.PI / 6)
+      );
+      ctx.closePath();
+      ctx.fill();
+
+      const midX = (startX + endX) / 2;
+      const midY = (startY + endY) / 2;
+      const label = `${link.percentage}%`;
+
+      ctx.font = '600 10px JetBrains Mono, monospace';
+      const textWidth = ctx.measureText(label).width;
+
+      ctx.fillStyle = currentTheme === 'dark' ? '#0f172a' : '#ffffff';
+      ctx.strokeStyle = currentTheme === 'dark' ? '#334155' : '#cbd5e1';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(midX - textWidth / 2 - 4, midY - 7, textWidth + 8, 14, 4);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = currentTheme === 'dark' ? '#38bdf8' : '#0284c7';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, midX, midY);
+
+      ctx.restore();
+    }
+
+    function drawNode(node) {
+      const isHovered = hoveredNode === node;
+      const isSelected = sandboxState.targetId === node.id;
+      const total = Number(node.unsecured) + Number(node.secured);
+      const isExceeded = (total / bankEquity) > RATIOS.SINGLE_PERSON_TOTAL;
+
+      if (isExceeded || isSelected || isHovered) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.radius + 8, 0, Math.PI * 2);
+        ctx.fillStyle = isExceeded ? 'rgba(239, 68, 68, 0.25)' : isSelected ? 'rgba(59, 130, 246, 0.35)' : 'rgba(100, 116, 139, 0.2)';
+        ctx.fill();
+        ctx.restore();
+      }
+
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.radius, 0, Math.PI * 2);
+
+      let gradient = ctx.createRadialGradient(node.x - 5, node.y - 5, 2, node.x, node.y, node.radius);
+      if (node.category === 'parent') {
+        gradient.addColorStop(0, '#3b82f6');
+        gradient.addColorStop(1, '#1e3a8a');
+      } else if (node.category === 'affiliate') {
+        gradient.addColorStop(0, '#10b981');
+        gradient.addColorStop(1, '#064e3b');
+      } else if (node.category === 'keyPerson') {
+        gradient.addColorStop(0, '#f59e0b');
+        gradient.addColorStop(1, '#78350f');
+      } else {
+        gradient.addColorStop(0, '#8b5cf6');
+        gradient.addColorStop(1, '#4c1d95');
+      }
+
+      ctx.fillStyle = gradient;
+      ctx.fill();
+      ctx.lineWidth = isExceeded ? 3 : isSelected ? 2.5 : 1.5;
+      ctx.strokeStyle = isExceeded ? '#ef4444' : isSelected ? '#60a5fa' : 'rgba(255, 255, 255, 0.8)';
+      ctx.stroke();
+
+      ctx.save();
+      ctx.font = '500 11px Inter, sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      let displayName = node.name.length > 5 ? node.name.substring(0, 4) + '..' : node.name;
+      ctx.fillText(displayName, node.x, node.y - 4);
+
+      ctx.font = '600 9px JetBrains Mono, monospace';
+      ctx.fillStyle = '#bfdbfe';
+      ctx.fillText(`${total.toFixed(0)}億`, node.x, node.y + 8);
+
+      ctx.restore();
+    }
+
+    function getCanvasCoordinates(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const screenX = clientX - rect.left;
+      const screenY = clientY - rect.top;
+
+      const worldX = (screenX - (canvasWidth / 2 + camera.x)) / camera.zoom;
+      const worldY = (screenY - (canvasHeight / 2 + camera.y)) / camera.zoom;
+
+      return { screenX, screenY, worldX, worldY };
+    }
+
+    function findNodeAt(worldX, worldY) {
+      for (let i = entities.length - 1; i >= 0; i--) {
+        const node = entities[i];
+        const dist = Math.hypot(node.x - worldX, node.y - worldY);
+        if (dist <= node.radius + 4) return node;
+      }
+      return null;
+    }
+
+    function onMouseDown(e) {
+      const { screenX, screenY, worldX, worldY } = getCanvasCoordinates(e);
+      const clicked = findNodeAt(worldX, worldY);
+
+      if (clicked) {
+        draggedNode = clicked;
+        selectEntityForInspection(clicked.id);
+      } else {
+        isDragging = true;
+        dragStart = { x: screenX - camera.x, y: screenY - camera.y };
+      }
+    }
+
+    function onMouseMove(e) {
+      const { screenX, screenY, worldX, worldY } = getCanvasCoordinates(e);
+
+      if (draggedNode) {
+        draggedNode.x = worldX;
+        draggedNode.y = worldY;
+        draggedNode.vx = 0;
+        draggedNode.vy = 0;
+      } else if (isDragging) {
+        camera.x = screenX - dragStart.x;
+        camera.y = screenY - dragStart.y;
+      } else {
+        const node = findNodeAt(worldX, worldY);
+        if (node !== hoveredNode) {
+          hoveredNode = node;
+          updateCanvasTooltip(hoveredNode, screenX, screenY);
+        }
+      }
+    }
+
+    function onMouseUp() {
+      draggedNode = null;
+      isDragging = false;
+    }
+
+    function onWheel(e) {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+      zoomCanvas(zoomFactor);
+    }
+
+    function zoomCanvas(factor) {
+      const newZoom = Math.max(0.4, Math.min(2.5, camera.zoom * factor));
+      camera.zoom = newZoom;
+    }
+
+    function resetGraphView() {
+      camera = { x: 0, y: 0, zoom: 1 };
+    }
+
+    function onTouchStart(e) {
+      if (e.touches.length === 1) onMouseDown(e);
+    }
+
+    function onTouchMove(e) {
+      if (e.touches.length === 1) {
+        e.preventDefault();
+        onMouseMove(e);
+      }
+    }
+
+    function onTouchEnd() {
+      onMouseUp();
+    }
+
+    function updateCanvasTooltip(node, screenX, screenY) {
+      const tip = document.getElementById('canvas-tooltip');
+      if (!node) {
+        tip.classList.add('hidden');
+        return;
+      }
+
+      tip.classList.remove('hidden');
+      document.getElementById('tip-id').innerText = `統編: ${node.taxId}`;
+      document.getElementById('tip-name').innerText = node.name;
+      document.getElementById('tip-unsecured').innerText = `NT$ ${Number(node.unsecured).toFixed(1)} 億`;
+      document.getElementById('tip-secured').innerText = `NT$ ${Number(node.secured).toFixed(1)} 億`;
+      
+      const tot = Number(node.unsecured) + Number(node.secured);
+      document.getElementById('tip-total').innerText = `NT$ ${tot.toFixed(1)} 億 (${((tot / bankEquity) * 100).toFixed(1)}%)`;
+
+      const badge = document.getElementById('tip-badge');
+      const cat = getCategoryMeta(node.category);
+      badge.innerText = cat.label;
+      badge.className = `px-1.5 py-0.5 rounded text-[10px] font-semibold ${cat.badgeClass}`;
+    }
+
+    function openCsvImportModal() {
+      parsedCsvRows = [];
+      document.getElementById('csvFileInput').value = '';
+      document.getElementById('csvParsedStatus').innerText = '';
+      document.getElementById('csvPreviewContainer').classList.add('hidden');
+      document.getElementById('btnConfirmCsvImport').disabled = true;
+      openModal('csvImportModal');
+    }
+
+    function setupDragDrop() {
+      const dropZone = document.getElementById('dropZone');
+      if (!dropZone) return;
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.add('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/10');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropZone.classList.remove('border-blue-500', 'bg-blue-50', 'dark:bg-blue-900/10');
+        }, false);
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+          processCsvFile(files[0]);
+        }
+      });
+    }
+
+    function handleCsvFileSelected(e) {
+      if (e.target.files && e.target.files.length > 0) {
+        processCsvFile(e.target.files[0]);
+      }
+    }
+
+    function processCsvFile(file) {
+      const selectedEncoding = document.getElementById('csvEncodingSelect').value;
+      const reader = new FileReader();
+
+      reader.onload = function(evt) {
+        const buffer = evt.target.result;
+        let text = decodeTextWithEncoding(buffer, selectedEncoding);
+        parseCsvText(text);
+      };
+
+      reader.readAsArrayBuffer(file);
+    }
+
+    function decodeTextWithEncoding(buffer, targetEncoding) {
+      const bytes = new Uint8Array(buffer);
+
+      if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+        return new TextDecoder('utf-8').decode(bytes.slice(3));
+      }
+      if (bytes.length >= 2 && bytes[0] === 0xFF && bytes[1] === 0xFE) {
+        return new TextDecoder('utf-16le').decode(bytes.slice(2));
+      }
+
+      if (targetEncoding === 'auto') {
+        try {
+          const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+          return utf8Decoder.decode(bytes);
+        } catch (e) {
+          try {
+            const big5Decoder = new TextDecoder('big5');
+            return big5Decoder.decode(bytes);
+          } catch (err) {
+            return new TextDecoder('utf-8').decode(bytes);
+          }
+        }
+      } else {
+        try {
+          return new TextDecoder(targetEncoding).decode(bytes);
+        } catch (e) {
+          showToast(`無法以 ${targetEncoding} 解析，改用自動解析`, 'error');
+          return new TextDecoder('utf-8').decode(bytes);
+        }
+      }
+    }
+
+    function parseCsvText(csvText) {
+      const lines = csvText.split(/\r\n|\n|\r/).filter(l => l.trim().length > 0);
+      if (lines.length < 2) {
+        showToast('CSV 檔案無有效資料列或格式為空', 'error');
+        return;
+      }
+
+      const parsed = [];
+      const startIndex = lines[0].includes('統編') || lines[0].includes('ID') || lines[0].includes('戶名') ? 1 : 0;
+
+      for (let i = startIndex; i < lines.length; i++) {
+        const rawLine = lines[i];
+        const cols = splitCsvLine(rawLine);
+        if (cols.length < 2) continue;
+
+        const taxId = (cols[0] || '').trim();
+        const name = (cols[1] || '').trim();
+        if (!name && !taxId) continue;
+
+        let category = parseCategoryKeyword(cols[2] || '');
+        let unsecured = parseFloat(cols[3]) || 0;
+        let secured = parseFloat(cols[4]) || 0;
+        let note = (cols[5] || '').trim();
+
+        parsed.push({
+          id: 'CSV_' + Date.now() + '_' + i,
+          taxId: taxId || `ID_${i}`,
+          name: name || `關聯實體_${i}`,
+          category,
+          unsecured,
+          secured,
+          note
+        });
+      }
+
+      parsedCsvRows = parsed;
+
+      if (parsed.length === 0) {
+        showToast('無法識別任何有效戶別資料，請確認 CSV 格式', 'error');
+        return;
+      }
+
+      const tbody = document.getElementById('csvPreviewTableBody');
+      tbody.innerHTML = '';
+      parsed.forEach(row => {
+        const catMeta = getCategoryMeta(row.category);
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="p-2 font-mono text-slate-500">${row.taxId}</td>
+          <td class="p-2 font-medium text-slate-900 dark:text-white">${row.name}</td>
+          <td class="p-2"><span class="px-1.5 py-0.2 rounded ${catMeta.badgeClass}">${catMeta.label}</span></td>
+          <td class="p-2 text-right font-mono text-amber-600 dark:text-amber-400">${row.unsecured.toFixed(1)}</td>
+          <td class="p-2 text-right font-mono text-emerald-600 dark:text-emerald-400">${row.secured.toFixed(1)}</td>
+          <td class="p-2 text-slate-400 truncate max-w-[120px]">${row.note || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('csvParsedStatus').innerText = `已解析 ${parsed.length} 筆關聯戶`;
+      document.getElementById('csvPreviewContainer').classList.remove('hidden');
+      document.getElementById('btnConfirmCsvImport').disabled = false;
+    }
+
+    function splitCsvLine(line) {
+      let result = [];
+      let current = '';
+      let insideQuotes = false;
+      for (let i = 0; i < line.length; i++) {
+        let char = line[i];
+        if (char === '"' || char === "'") {
+          insideQuotes = !insideQuotes;
+        } else if (char === ',' && !insideQuotes) {
+          result.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      result.push(current);
+      return result;
+    }
+
+    function parseCategoryKeyword(str) {
+      str = str.toLowerCase();
+      if (str.includes('母公司') || str.includes('parent') || str.includes('旗艦')) return 'parent';
+      if (str.includes('董監') || str.includes('股東') || str.includes('自然人') || str.includes('keyperson')) return 'keyPerson';
+      if (str.includes('其他') || str.includes('關係人') || str.includes('other')) return 'otherRelated';
+      return 'affiliate';
+    }
+
+    function executeCsvImport() {
+      if (parsedCsvRows.length === 0) return;
+
+      const mode = document.querySelector('input[name="csvImportMode"]:checked').value;
+
+      const formattedNewEntities = parsedCsvRows.map((e, index) => {
+        const angle = (index / parsedCsvRows.length) * Math.PI * 2;
+        const radius = 150 + (index % 3) * 35;
+        return {
+          ...e,
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius,
+          vx: 0,
+          vy: 0,
+          radius: getEntityRadius(e.unsecured + e.secured)
+        };
+      });
+
+      if (mode === 'replace') {
+        entities = formattedNewEntities;
+        links = [];
+      } else {
+        entities = [...entities, ...formattedNewEntities];
+      }
+
+      closeModal('csvImportModal');
+      recalculateAll();
+      showToast(`成功匯入 ${formattedNewEntities.length} 筆資料！`);
+    }
+
+    function downloadSampleCsv() {
+      const csvHeader = "\uFEFF統編/身分證,戶名,關係身分(母公司/關係企業/董監事/關係人),無擔保授信(億),有擔保授信(億),擔保品備註\r\n";
+      const sampleRows = [
+        "23308901,聯盛半導體控股,母公司,60.0,150.0,竹科總部抵押",
+        "54201192,聯越封測科技,關係企業,35.0,75.0,廠房設備動保",
+        "89104432,晶茂微系統,關係企業,20.0,40.0,股票質押放款",
+        "A123456789,王創辦人董事長,董監事,10.0,15.0,個人擔保抵押",
+        "12903348,聯盛創投基金,關係人,5.0,20.0,定存十足擔保"
+      ].join("\r\n");
+
+      const blob = new Blob([csvHeader + sampleRows], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `授信關聯戶匯入範本_Big5相容.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    function updateSandboxSelectors() {
+      const sel = document.getElementById('sandboxTarget');
+      const cur = sel.value;
+      sel.innerHTML = '';
+
+      entities.forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.id;
+        opt.innerText = `${e.name} (${Number(e.unsecured) + Number(e.secured)} 億)`;
+        sel.appendChild(opt);
+      });
+
+      if (cur && entities.some(e => e.id === cur)) {
+        sel.value = cur;
+      } else if (entities.length > 0) {
+        sel.value = entities[0].id;
+      }
+
+      loadSandboxTargetValues();
+    }
+
+    function selectEntityForInspection(id) {
+      sandboxState.targetId = id;
+      const sel = document.getElementById('sandboxTarget');
+      if (sel) sel.value = id;
+      renderEntitiesList();
+      loadSandboxTargetValues();
+    }
+
+    function loadSandboxTargetValues() {
+      const targetId = document.getElementById('sandboxTarget').value;
+      sandboxState.targetId = targetId;
+      resetSandboxSliders();
+    }
+
+    function resetSandboxSliders() {
+      document.getElementById('sandboxUnsecuredDelta').value = 0;
+      document.getElementById('sandboxSecuredDelta').value = 0;
+      updateSandboxImpact();
+    }
+
+    function updateSandboxImpact() {
+      const deltaUnsec = parseFloat(document.getElementById('sandboxUnsecuredDelta').value) || 0;
+      const deltaSec = parseFloat(document.getElementById('sandboxSecuredDelta').value) || 0;
+
+      sandboxState.deltaUnsecured = deltaUnsec;
+      sandboxState.deltaSecured = deltaSec;
+
+      document.getElementById('sandbox-unsecured-val').innerText = `${deltaUnsec >= 0 ? '+' : ''}${deltaUnsec} 億`;
+      document.getElementById('sandbox-secured-val').innerText = `${deltaSec >= 0 ? '+' : ''}${deltaSec} 億`;
+
+      const target = entities.find(e => e.id === sandboxState.targetId);
+      if (!target) return;
+
+      const newEntityUnsec = Math.max(0, Number(target.unsecured) + deltaUnsec);
+      const newEntitySec = Math.max(0, Number(target.secured) + deltaSec);
+      const newEntityTot = newEntityUnsec + newEntitySec;
+
+      document.getElementById('sandbox-res-entity-total').innerText = `NT$ ${newEntityTot.toFixed(1)} 億`;
+
+      const currentTotals = getGroupTotals();
+      const simulatedGroupTot = currentTotals.grandTotal + (newEntityTot - (Number(target.unsecured) + Number(target.secured)));
+      const simulatedRatio = (simulatedGroupTot / bankEquity) * 100;
+
+      document.getElementById('sandbox-res-group-total').innerText = `NT$ ${simulatedGroupTot.toFixed(1)} 億`;
+      
+      const ratioElem = document.getElementById('sandbox-res-ratio');
+      ratioElem.innerText = `${simulatedRatio.toFixed(2)}%`;
+
+      const verdictElem = document.getElementById('sandbox-legal-verdict');
+      
+      let violationMsg = null;
+      if (simulatedRatio > 40) {
+        violationMsg = `❌ 超額：集團比率達 ${simulatedRatio.toFixed(1)}% (法規上限 40%)`;
+      } else if ((newEntityUnsec / bankEquity) > 0.05) {
+        violationMsg = `❌ 超額：該戶無擔保比率達 ${((newEntityUnsec / bankEquity) * 100).toFixed(1)}% (法規上限 5%)`;
+      } else if ((newEntityTot / bankEquity) > 0.15) {
+        violationMsg = `❌ 超額：該戶單一總授信達 ${((newEntityTot / bankEquity) * 100).toFixed(1)}% (法規上限 15%)`;
+      }
+
+      if (violationMsg) {
+        ratioElem.className = "font-mono font-bold text-red-500";
+        verdictElem.className = "mt-2 pt-2 border-t border-slate-200 dark:border-slate-800 font-medium text-center text-[11px] text-red-500";
+        verdictElem.innerText = violationMsg;
+      } else {
+        ratioElem.className = "font-mono font-bold text-emerald-600 dark:text-emerald-400";
+        verdictElem.className = "mt-2 pt-2 border-t border-slate-200 dark:border-slate-800 font-medium text-center text-[11px] text-emerald-600 dark:text-emerald-400";
+        verdictElem.innerText = "✓ 試算結果合規可承作";
+      }
+    }
+
+    function applySandboxChanges() {
+      const target = entities.find(e => e.id === sandboxState.targetId);
+      if (!target) return;
+
+      const newUnsec = Math.max(0, Number(target.unsecured) + sandboxState.deltaUnsecured);
+      const newSec = Math.max(0, Number(target.secured) + sandboxState.deltaSecured);
+
+      target.unsecured = newUnsec;
+      target.secured = newSec;
+      target.radius = getEntityRadius(newUnsec + newSec);
+
+      resetSandboxSliders();
+      recalculateAll();
+      showToast(`已成功套用調整至「${target.name}」`);
+    }
+
+    function renderAuditTable() {
+      const tbody = document.getElementById('audit-table-body');
+      tbody.innerHTML = '';
+
+      let totalUnsec = 0;
+      let totalSec = 0;
+
+      entities.forEach(e => {
+        const unsec = Number(e.unsecured) || 0;
+        const sec = Number(e.secured) || 0;
+        const tot = unsec + sec;
+        const ratio = (tot / bankEquity) * 100;
+        const unsecRatio = (unsec / bankEquity) * 100;
+
+        totalUnsec += unsec;
+        totalSec += sec;
+
+        let statusBadge = '';
+        if (unsecRatio > 5.0) {
+          statusBadge = `<span class="px-2 py-0.5 rounded bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-800 font-medium">無擔保超限 (>5%)</span>`;
+        } else if (ratio > 15.0) {
+          statusBadge = `<span class="px-2 py-0.5 rounded bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-400 border border-red-300 dark:border-red-800 font-medium">總授信超限 (>15%)</span>`;
+        } else if (ratio > 12.0) {
+          statusBadge = `<span class="px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800">接近預警水位</span>`;
+        } else {
+          statusBadge = `<span class="px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">合規</span>`;
+        }
+
+        const cat = getCategoryMeta(e.category);
+
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors';
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-mono text-slate-500">${e.taxId}</td>
+          <td class="py-2.5 px-3 font-medium text-slate-900 dark:text-white font-sans">${e.name}</td>
+          <td class="py-2.5 px-3 font-sans"><span class="px-1.5 py-0.5 rounded text-[10px] ${cat.badgeClass}">${cat.label}</span></td>
+          <td class="py-2.5 px-3 text-right font-mono text-amber-600 dark:text-amber-400">${unsec.toFixed(1)}</td>
+          <td class="py-2.5 px-3 text-right font-mono text-emerald-600 dark:text-emerald-400">${sec.toFixed(1)}</td>
+          <td class="py-2.5 px-3 text-right font-mono font-bold text-sky-600 dark:text-sky-400">${tot.toFixed(1)}</td>
+          <td class="py-2.5 px-3 text-right font-mono">${ratio.toFixed(2)}%</td>
+          <td class="py-2.5 px-3 font-sans">${statusBadge}</td>
+          <td class="py-2.5 px-3 text-center font-sans">
+            <button onclick="openEditEntityModal('${e.id}')" class="text-blue-600 dark:text-blue-400 hover:underline mr-2 text-[11px]">編輯</button>
+            <button onclick="deleteEntity('${e.id}')" class="text-slate-400 hover:text-red-500 text-[11px]">刪除</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      const grandTotal = totalUnsec + totalSec;
+      const groupRatio = (grandTotal / bankEquity) * 100;
+
+      document.getElementById('foot-unsecured-total').innerText = totalUnsec.toFixed(1);
+      document.getElementById('foot-secured-total').innerText = totalSec.toFixed(1);
+      document.getElementById('foot-grand-total').innerText = `${grandTotal.toFixed(1)} 億`;
+      document.getElementById('foot-ratio-total').innerText = `${groupRatio.toFixed(2)}%`;
+
+      const footStatus = document.getElementById('foot-compliance-status');
+      if (groupRatio > 40.0) {
+        footStatus.innerHTML = `<span class="text-red-500 font-bold">⚠️ 集團總額違規超標 (${groupRatio.toFixed(1)}% > 40%)</span>`;
+      } else {
+        footStatus.innerHTML = `<span class="text-emerald-600 dark:text-emerald-400 font-semibold">✓ 集團法定上限 40% (符合規範)</span>`;
+      }
+    }
+
+    /* Modal Form Operations */
+    function openAddEntityModal() {
+      document.getElementById('entityModalTitle').innerText = '新增戶別資料';
+      document.getElementById('form-entity-edit-id').value = '';
+      document.getElementById('form-entity-taxId').value = '';
+      document.getElementById('form-entity-name').value = '';
+      document.getElementById('form-entity-category').value = 'affiliate';
+      document.getElementById('form-entity-unsecured').value = 0;
+      document.getElementById('form-entity-secured').value = 0;
+      document.getElementById('form-entity-collateralNote').value = '';
+      openModal('entityModal');
+    }
+
+    function openEditEntityModal(id) {
+      const e = entities.find(x => x.id === id);
+      if (!e) return;
+      document.getElementById('entityModalTitle').innerText = '編輯戶別資料';
+      document.getElementById('form-entity-edit-id').value = e.id;
+      document.getElementById('form-entity-taxId').value = e.taxId;
+      document.getElementById('form-entity-name').value = e.name;
+      document.getElementById('form-entity-category').value = e.category;
+      document.getElementById('form-entity-unsecured').value = e.unsecured;
+      document.getElementById('form-entity-secured').value = e.secured;
+      document.getElementById('form-entity-collateralNote').value = e.note || '';
+      openModal('entityModal');
+    }
+
+    function handleEntityFormSubmit(event) {
+      event.preventDefault();
+      const editId = document.getElementById('form-entity-edit-id').value;
+      const taxId = document.getElementById('form-entity-taxId').value.trim();
+      const name = document.getElementById('form-entity-name').value.trim();
+      const category = document.getElementById('form-entity-category').value;
+      const unsecured = parseFloat(document.getElementById('form-entity-unsecured').value) || 0;
+      const secured = parseFloat(document.getElementById('form-entity-secured').value) || 0;
+      const note = document.getElementById('form-entity-collateralNote').value.trim();
+
+      if (editId) {
+        const target = entities.find(e => e.id === editId);
+        if (target) {
+          target.taxId = taxId;
+          target.name = name;
+          target.category = category;
+          target.unsecured = unsecured;
+          target.secured = secured;
+          target.note = note;
+          target.radius = getEntityRadius(unsecured + secured);
+        }
+      } else {
+        const newId = 'E_' + Date.now();
+        entities.push({
+          id: newId,
+          taxId,
+          name,
+          category,
+          unsecured,
+          secured,
+          note,
+          x: (Math.random() - 0.5) * 150,
+          y: (Math.random() - 0.5) * 150,
+          vx: 0,
+          vy: 0,
+          radius: getEntityRadius(unsecured + secured)
+        });
+      }
+
+      closeModal('entityModal');
+      recalculateAll();
+      showToast('戶別資料已儲存更新');
+    }
+
+    function deleteEntity(id) {
+      entities = entities.filter(e => e.id !== id);
+      links = links.filter(l => l.source !== id && l.target !== id);
+      recalculateAll();
+      showToast('已移除戶別及相關聯線');
+    }
+
+    function openAddLinkModal() {
+      const srcSel = document.getElementById('form-link-source');
+      const tgtSel = document.getElementById('form-link-target');
+      srcSel.innerHTML = '';
+      tgtSel.innerHTML = '';
+
+      entities.forEach(e => {
+        const o1 = document.createElement('option');
+        o1.value = e.id;
+        o1.innerText = e.name;
+        srcSel.appendChild(o1);
+
+        const o2 = document.createElement('option');
+        o2.value = e.id;
+        o2.innerText = e.name;
+        tgtSel.appendChild(o2);
+      });
+
+      if (entities.length > 1) {
+        tgtSel.selectedIndex = 1;
+      }
+
+      openModal('linkModal');
+    }
+
+    function handleLinkFormSubmit(event) {
+      event.preventDefault();
+      const source = document.getElementById('form-link-source').value;
+      const target = document.getElementById('form-link-target').value;
+      const percentage = parseFloat(document.getElementById('form-link-percentage').value) || 0;
+      const type = document.getElementById('form-link-type').value;
+
+      if (source === target) {
+        showToast('控制方與受控方不可為同一實體', 'error');
+        return;
+      }
+
+      links = links.filter(l => !(l.source === source && l.target === target));
+      links.push({ source, target, percentage, type });
+
+      closeModal('linkModal');
+      recalculateAll();
+      showToast('關聯連結已建立');
+    }
+
+    function removeLink(index) {
+      links.splice(index, 1);
+      recalculateAll();
+      showToast('已解除關係連結');
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function resetToEmpty() {
+      entities = [];
+      links = [];
+      recalculateAll();
+      showToast('已重設為空白工作區');
+    }
+
+    function scrollToAuditTable() {
+      document.getElementById('audit-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function exportAuditReport() {
+      scrollToAuditTable();
+      showToast('已定位至審查備忘錄，可點擊「複製審查備忘錄」產出底稿');
+    }
+
+    function copyAuditMarkdown() {
+      const { totalUnsecured, grandTotal, ratio } = getGroupTotals();
+
+      let md = `# 授信審查備忘錄：大額曝險與關聯戶法定限額檢核底稿\n`;
+      md += `> 產出時間: ${new Date().toLocaleString()} | 依據法規: 銀行法第33條之3\n\n`;
+      md += `### 一、 集團背景與本行資本限額基準\n`;
+      md += `- 所屬集團名稱: **${groupSettings.name}** (代碼: ${groupSettings.code})\n`;
+      md += `- 集團所屬產業: ${groupSettings.industry}\n`;
+      md += `- 本行核算基準淨值: NT$ ${bankEquity.toFixed(1)} 億元\n`;
+      md += `- 同一人無擔保授信上限 (5%): NT$ ${(bankEquity * 0.05).toFixed(1)} 億元\n`;
+      md += `- 同一人總授信上限 (15%): NT$ ${(bankEquity * 0.15).toFixed(1)} 億元\n`;
+      md += `- 行內自主內部預警上限 (${groupSettings.internalLimit}%): NT$ ${(bankEquity * (groupSettings.internalLimit / 100)).toFixed(1)} 億元\n`;
+      md += `- 同一關係人/企業總額法定上限 (40%): NT$ ${(bankEquity * 0.40).toFixed(1)} 億元\n\n`;
+      md += `### 二、 關聯戶明細與曝險檢核表\n\n`;
+      md += `| 統一編號 | 戶名 | 關係身分 | 無擔保 (億) | 有擔保 (億) | 總額 (億) | 佔淨值比率 | 法規檢核 |\n`;
+      md += `|---|---|---|---|---|---|---|---|\n`;
+
+      entities.forEach(e => {
+        const unsec = Number(e.unsecured);
+        const sec = Number(e.secured);
+        const tot = unsec + sec;
+        const r = ((tot / bankEquity) * 100).toFixed(2);
+        const check = (unsec / bankEquity) > 0.05 ? '無擔保超限' : (tot / bankEquity) > 0.15 ? '總額超限' : '符合法定上限';
+        md += `| ${e.taxId} | ${e.name} | ${e.category} | ${unsec.toFixed(1)} | ${sec.toFixed(1)} | ${tot.toFixed(1)} | ${r}% | ${check} |\n`;
+      });
+
+      const isInternalExceeded = ratio > groupSettings.internalLimit;
+      const isLegalExceeded = ratio > 40;
+
+      md += `\n### 三、 集團全體彙總審查結論\n`;
+      md += `- 集團總曝險額度: NT$ ${grandTotal.toFixed(1)} 億元 (佔本行淨值 ${ratio.toFixed(2)}%)\n`;
+      md += `- 行內內部預警門檻 (${groupSettings.internalLimit}%): ${isInternalExceeded ? `⚠️ 已達警戒門檻 (${ratio.toFixed(1)}% > ${groupSettings.internalLimit}%)` : '✓ 符合行內風控政策'}\n`;
+      md += `- 法定門檻審查結論 (40%): ${isLegalExceeded ? '❌ 超逾銀行法第33條之3同一關係企業 40% 限額，不得核准授信增額' : '✓ 符合銀行法法定限額規範'}\n`;
+
+      const dummy = document.createElement("textarea");
+      document.body.appendChild(dummy);
+      dummy.value = md;
+      dummy.select();
+      document.execCommand("copy");
+      document.body.removeChild(dummy);
+
+      showToast('已複製含集團背景之審查備忘錄 Markdown 底稿！');
+    }
+
+    function exportDataJSON() {
+      const exportObject = {
+        exportedAt: new Date().toISOString(),
+        bankEquity,
+        groupSettings,
+        entities,
+        links
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObject, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `bank_exposure_${groupSettings.code}_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+
+      showToast('已匯出完整集團案卷 JSON 備份檔案');
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const msg = document.getElementById('toast-msg');
+      const icon = document.getElementById('toast-icon');
+
+      msg.innerText = message;
+      icon.innerHTML = type === 'error' ? '⚠️' : '✓';
+      icon.className = type === 'error' ? 'text-red-500 font-bold' : 'text-emerald-500 font-bold';
+
+      toast.classList.remove('translate-y-24', 'opacity-0');
+      toast.classList.add('translate-y-0', 'opacity-100');
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-24', 'opacity-0');
+      }, 2600);
+    }
+  </script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
