@@ -1,6 +1,6 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供二十三個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、大額曝險與關聯戶圖譜速算、金融金額中文大寫轉換、核心主機固定長度電文解析與規格管理、核心系統與電文錯誤碼排查對照、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、文件字數與閱讀時間統計、色彩故事盤、表格矩陣轉置與格式轉換、CSV 格式清理（支援 Big5／CP950 讀寫）、API Mock 與 cURL 雙向轉換，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
+本專案提供二十五個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程（動態甘特圖與 WBS 甘特排程器）、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、大額曝險與關聯戶圖譜速算、金融金額中文大寫轉換、核心主機固定長度電文解析與規格管理、核心系統與電文錯誤碼排查對照、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、文件字數與閱讀時間統計、離線速記便箋、色彩故事盤、表格矩陣轉置與格式轉換、CSV 格式清理（支援 Big5／CP950 讀寫）、API Mock 與 cURL 雙向轉換，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
 
 ## 目錄
 
@@ -11,6 +11,8 @@
 - [Agent YAML Maker](#agent-yaml-maker)
 - [Prompt Studio 結構化提示詞工作台](#prompt-studio-結構化提示詞工作台)
 - [動態甘特圖與專案倒數看板](#動態甘特圖與專案倒數看板)
+- [WBS 甘特排程器](#wbs-甘特排程器)
+- [離線速記便箋](#離線速記便箋)
 - [臺灣 LCR Mapping 與試算](#臺灣-lcr-mapping-與試算)
 - [臺灣 NSFR 淨穩定資金比率與試算](#臺灣-nsfr-淨穩定資金比率與試算)
 - [銀行信用風險與資本適足模擬器](#銀行信用風險與資本適足模擬器)
@@ -43,6 +45,8 @@
    - [`agent/agent-yaml-maker/index.html`](./agent/agent-yaml-maker/index.html)
    - [`agent/prompt-studio/prompt-studio.html`](./agent/prompt-studio/prompt-studio.html)
    - [`docs/project-gantt/dynamic_gantt_project_countdown.html`](./docs/project-gantt/dynamic_gantt_project_countdown.html)
+   - [`docs/wbs-gantt/wbs-gantt.html`](./docs/wbs-gantt/wbs-gantt.html)
+   - [`docs/scratchpad/scratchpad.html`](./docs/scratchpad/scratchpad.html)
    - [`finance/lcr-mapping-calc/LCR_Mapping_SPA.html`](./finance/lcr-mapping-calc/LCR_Mapping_SPA.html)
    - [`finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html)
    - [`finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html`](./finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html)
@@ -71,7 +75,7 @@
 python -m http.server 8080
 ```
 
-再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、Prompt Studio、甘特圖、銀行信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器、API Mock Studio 與色彩故事盤會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR、金融金額中文大寫轉換器、文件字數與閱讀時間統計工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
+再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、Prompt Studio、甘特圖、銀行信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器、API Mock Studio 與色彩故事盤會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR、金融金額中文大寫轉換器、WBS 甘特排程器、離線速記便箋、文件字數與閱讀時間統計工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
 
 本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，Prompt Studio 需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS，公文簽／函排版工具需要從 CDN 載入 Tailwind CSS 與 docx.js，大額曝險與關聯戶圖譜速算器需要從 CDN 載入 Tailwind CSS 與 Google Fonts，銀行核心系統固定長度電文解析與管理中心需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，核心系統與電文錯誤碼排查對照台需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 SheetJS，剪貼簿洗滌器需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 Google Fonts，MatrixPivot 表格矩陣轉置器需要從 CDN 載入 Tailwind CSS 與 Google Fonts，CSV 格式清理器需要從 CDN 載入 iconv-lite（僅 Big5／CP950 功能需要），API Mock Studio 需要從 CDN 載入 Tailwind CSS 與 Google Fonts，色彩故事盤需要從 CDN 載入 Tailwind CSS 與 Google Fonts。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化、SQL／TXT 個資清除與文件字數與閱讀時間統計工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
 
@@ -107,7 +111,9 @@ my-spa-tools/
 │  ├─ card-presenter/
 │  ├─ docuformatter/
 │  ├─ text-scrubber/
-│  └─ word-counter/              文件字數與閱讀時間統計
+│  ├─ word-counter/              文件字數與閱讀時間統計
+│  ├─ wbs-gantt/                 WBS 甘特排程器（WBS 相依、假日／補班日）
+│  └─ scratchpad/                離線速記便箋（Markdown 便箋、標籤與回收筒）
 └─ design/                       設計工具
    └─ palette-lore/
 ```
@@ -122,6 +128,7 @@ flowchart TD
     B -->|Agent 狀態與交接| C[填寫 YAML 表單]
     B -->|提示詞工程| AE[選擇框架並填寫結構區塊]
     B -->|專案排程| D[建立專案與任務]
+    B -->|WBS 排程| WG[設定 WBS 任務 工期與前置相依]
     B -->|LCR 試算| E[輸入 HQLA 與業務明細]
     B -->|NSFR 試算| K[輸入 ASF 與 RSF 明細]
     B -->|信用風險壓力試算| U[設定資本 資產與壓力情境]
@@ -138,11 +145,13 @@ flowchart TD
     B -->|CSV 格式清理| CC[匯入 CSV 或貼上 Excel 內容並勾選清理規則]
     B -->|API 測試與 Mock 模擬| AR[貼上 cURL 或手動編輯端點]
     B -->|文字洗滌與個資脫敏| Y[貼上雜亂文字並勾選洗滌規則]
+    B -->|便箋速記| SP[新增便箋 標籤與 Markdown 內容]
     B -->|字數統計與閱讀時間| WC[貼上或匯入純文字檔並選擇編碼]
     B -->|配色設計| W[輸入意境文字生成色盤]
     C --> F[預覽並下載 YAML 或 ZIP]
     AE --> AF[填入變數並複製組裝結果]
     D --> G[查看甘特圖與里程碑倒數]
+    WG --> WH[檢視工作天排程與甘特圖 並匯出 CSV JSON]
     E --> H[查看流出 流入與 LCR]
     K --> L[查看 ASF RSF 與 NSFR]
     U --> V[查看預期損失 RWA 與 CAR]
@@ -160,6 +169,7 @@ flowchart TD
     AR --> AS[模擬延遲 回應狀態 產生 Dummy 與匯出代碼 OpenAPI]
     W --> X[檢視 WCAG 對比並匯出色碼或收藏]
     Y --> Z[複製洗滌後的乾淨文字]
+    SP --> SQ[全文搜尋 標籤篩選 預覽並匯出 JSON]
     WC --> WD[檢視中英字數 段落句數 閱讀時間與高頻詞]
 ```
 
@@ -170,6 +180,8 @@ flowchart TD
 | Agent YAML Maker | [`agent/agent-yaml-maker/index.html`](./agent/agent-yaml-maker/index.html) | 建立 `progress.yaml`、`handoff.yaml`、範本與快照 | 瀏覽器 IndexedDB；主題偏好使用 `localStorage` |
 | Prompt Studio 結構化提示詞工作台 | [`agent/prompt-studio/prompt-studio.html`](./agent/prompt-studio/prompt-studio.html) | 以 10 種經典框架模組化組裝提示詞，抽取 `{{變數}}`、估算 Token 並保存版本快照 | 瀏覽器 IndexedDB（`PromptStudioDB`：`prompts` 專案與 `versions` 版本快照） |
 | 動態甘特圖與專案倒數 | [`docs/project-gantt/dynamic_gantt_project_countdown.html`](./docs/project-gantt/dynamic_gantt_project_countdown.html) | 管理多個專案、任務、進度與重大里程碑 | 瀏覽器 IndexedDB |
+| WBS 甘特排程器 | [`docs/wbs-gantt/wbs-gantt.html`](./docs/wbs-gantt/wbs-gantt.html) | 以 WBS 與前置任務相依推算工作天排程，自動跳過假日／補班日並繪製甘特圖，支援多專案與 CSV／JSON 匯出入 | 瀏覽器 IndexedDB（`wbsGanttDB`：`kv`）；支援匯出 CSV／JSON 備份 |
+| 離線速記便箋 | [`docs/scratchpad/scratchpad.html`](./docs/scratchpad/scratchpad.html) | 以卡片管理便箋、標籤與全文搜尋，內建 Markdown 編輯／雙欄即時預覽、置頂、卡片配色、回收筒、圖片貼上與 JSON 備份 | 瀏覽器 IndexedDB（`OfflineScratchpadDB`）；支援匯出／匯入 JSON 與批次匯出 Markdown |
 | 臺灣 LCR Mapping 與試算 | [`finance/lcr-mapping-calc/LCR_Mapping_SPA.html`](./finance/lcr-mapping-calc/LCR_Mapping_SPA.html) | 查詢業務係數並計算現金流與 LCR | 僅保留在目前頁面，重新整理會清除 |
 | 臺灣 NSFR 淨穩定資金比率與試算 | [`finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html) | 查詢 ASF／RSF 係數並計算 NSFR | IndexedDB 優先，必要時退回 `localStorage` 或僅保留於目前頁面 |
 | 銀行信用風險與資本適足模擬器 | [`finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html`](./finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html) | 編輯信貸資產組合，觀察壓力情境下預期損失、RWA 與 CAR 敏感度 | 只保留在目前頁面；可匯出／匯入 JSON 模型 |
@@ -380,6 +392,93 @@ flowchart TD
     G --> H[查看倒數與甘特圖]
     H --> I[匯出 JSON 備份]
 ```
+
+## WBS 甘特排程器
+
+WBS 甘特排程器（離線版）是單檔、純離線的專案排程工具，以工作分解結構（WBS）搭配任務清單、工期與前置相依，推算每個任務的開始與結束日，並自動跳過週末與假日、計入補班日，最後繪製出逐日甘特圖。支援多專案管理與回收區，所有資料都存放在瀏覽器的 IndexedDB，不會上傳。
+
+### 建立專案與任務
+
+1. 開啟 [`wbs-gantt.html`](./docs/wbs-gantt/wbs-gantt.html)；首次載入會建立一個「範例專案」。
+2. 上方工具列可切換「專案」、以「＋ 新增專案」建立新專案，並設定「專案起日」作為排程的最早起點。
+3. 按「＋ 新增任務」逐列填寫 WBS 編號、任務名稱、工期（工作天）、前置ID、指定起日與負責人；工期 `0` 代表里程碑，畫面上以橙色 ◆ 標示。
+4. 有前置任務時，會從前置任務結束日的「次一工作天」開始；「指定起日」為「不早於」（not earlier than）限制，不會早於該日。
+5. 「更多 → 專案管理」可重新命名專案、刪除專案（移至回收區）或開啟「回收區」還原與永久刪除。
+
+### 假日、補班日與行事曆
+
+- 右側「假日」清單每行一個日期（`yyyy-mm-dd`）；「補班日」代表週末需上班的日期；「週六日休息」勾選與否決定週末是否計為工作日。
+- 日期格式支援 `2026-10-26`、`2026/10/26`、`20261026` 等；檔案的 UTF-8／Big5 會自動判斷。
+- 「📂 匯入假日檔」支援政府行政機關辦公日曆表 CSV（含「是否放假」欄）、純文字／CSV（每行含日期即視為假日，含「補班」則視為補班日）與 JSON（`{"hol":[...],"work":[...]}` 或日期陣列）；匯入時可選擇合併或取代現有清單。
+
+### 排程計算與甘特圖
+
+- 任務表右側的「開始」「結束」欄會即時計算；下方摘要顯示整體起始、結束日期與工作天數，並標示循環相依或前置ID錯誤的筆數。
+- 甘特圖以逐日格線呈現，藍色為任務、橙色為里程碑、綠色為補班日、紅色為假日、灰色為週末，並以紅色外框標示「今天」。
+- 若出現「循環相依」或「前置ID錯誤」，請檢查前置ID是否指向不存在的任務或形成迴圈。
+
+### 匯出與備份
+
+- 「匯出 Excel(CSV)」下載含 ID、WBS、任務名稱、工期、前置ID、負責人、開始與結束的 CSV（含 BOM，Excel 可直接開啟）。
+- 「匯出目前專案 JSON」下載單一專案內容；「備份全部專案」下載所有專案的備份檔（`wbs_projects_backup.json`）。
+- 「匯入 JSON」可還原單一專案或全部專案備份；「匯入 Excel(CSV)」依標準欄位新增一個專案。
+- 「重設目前專案」會將目前專案的任務與排程設定還原為預設值；「回收區」的永久刪除無法復原。
+
+```mermaid
+flowchart TD
+    A[新增或切換專案並設定專案起日] --> B[新增 WBS 任務與工期]
+    B --> C[設定前置ID 與指定起日]
+    C --> D[設定假日 補班日與週末規則]
+    D --> E[即時推算開始 結束與工作天]
+    E --> F[檢視逐日甘特圖與里程碑]
+    F --> G{輸出方式}
+    G -->|報表| H[匯出 Excel CSV]
+    G -->|備份| I[匯出單一或全部專案 JSON]
+    G -->|還原| J[匯入 JSON 或 CSV]
+```
+
+本工具完全離線，不使用任何 CDN 或外部函式庫；資料保存在目前瀏覽器的 IndexedDB（資料庫名稱 `wbsGanttDB`，object store `kv`），並以 CSV／JSON 匯出備份。排程結果為工作天推算輔助，正式專案時程仍應依團隊行事曆與資源配置人工確認。
+
+## 離線速記便箋
+
+離線速記便箋（Offline Scratchpad）是單檔、100% 離線的便箋與筆記工具，以卡片牆管理便箋，支援標籤、全文搜尋、置頂與卡片配色，內建 Markdown 編輯、雙欄即時預覽與字數統計；可將內容備份為 JSON 或匯出 Markdown。所有資料都存放在瀏覽器的 IndexedDB，不會上傳。
+
+### 新增與管理便箋
+
+1. 開啟 [`scratchpad.html`](./docs/scratchpad/scratchpad.html)。
+2. 按右上「新增便箋」（或 `Ctrl+N`）開啟編輯視窗，輸入標題、標籤與內容。
+3. 在編輯視窗可切換「編輯模式」、「雙欄即時預覽」與「Markdown 預覽」三種檢視；底部顯示字元、詞數與預估閱讀時間。
+4. 編輯視窗上方可選擇卡片顏色（預設／琥珀／翠綠／天藍／紫／玫瑰）、置頂便箋，或將便箋「移至回收筒」。
+5. 便箋卡片可置頂顯示於最前方；標籤列可點選篩選，搜尋框（或按 `/` 聚焦）可對標題、內文與標籤做全文搜尋。
+
+### Markdown 與圖片
+
+- 內容支援 Markdown 語法，雙欄模式會即時渲染預覽。
+- 可直接拖曳或 `Ctrl+V` 貼上截圖，圖片會嵌入便箋內容。
+
+### 匯出、備份與還原
+
+- 右上選單「匯出備份 (JSON)」下載全部便箋的 JSON 備份；「匯入備份 (JSON)」可還原先前備份。
+- 「批次匯出全部 Markdown」將所有便箋匯出為 Markdown；單一便箋也可在編輯視窗匯出 Markdown。
+- 「清空資源回收筒」會永久刪除回收筒中的便箋，執行前請先確認。
+
+```mermaid
+flowchart TD
+    A[新增便箋並輸入標題 標籤與內容] --> B{檢視模式}
+    B -->|編輯| C[純文字編輯]
+    B -->|雙欄| D[Markdown 即時預覽]
+    B -->|預覽| E[渲染結果]
+    C --> F[設定顏色 置頂或移至回收筒]
+    D --> F
+    E --> F
+    F --> G[以標籤或全文搜尋篩選]
+    G --> H{輸出方式}
+    H -->|備份| I[匯出 JSON 備份]
+    H -->|文件| J[匯出 Markdown]
+    I --> K[匯入 JSON 還原]
+```
+
+本工具完全離線，不使用任何 CDN 或外部函式庫。便箋與介面設定（含深／淺色主題）保存在目前瀏覽器的 IndexedDB（資料庫名稱 `OfflineScratchpadDB`，object stores：`notes`、`settings`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得，重要內容請使用「匯出備份 (JSON)」或匯出 Markdown 保存。
 
 ## 臺灣 LCR Mapping 與試算
 
@@ -1181,6 +1280,7 @@ flowchart LR
     B -->|Agent YAML| C[IndexedDB 草稿 快照 範本]
     B -->|提示詞工作台| AE[IndexedDB 專案與版本快照]
     B -->|甘特圖| D[IndexedDB 專案與任務]
+    B -->|WBS 甘特排程器| WG[IndexedDB 專案與任務]
     B -->|LCR| E[目前頁面記憶體]
     B -->|NSFR| K[IndexedDB 情境 草稿 參數]
     B -->|信用風險模擬器| U[目前頁面記憶體]
@@ -1197,9 +1297,11 @@ flowchart LR
     B -->|公文排版| Y[目前頁面記憶體]
     B -->|文字洗滌| AC[目前頁面記憶體]
     B -->|字數統計| WB[目前頁面記憶體與 localStorage 偏好]
+    B -->|便箋速記| SP[IndexedDB 便箋與設定]
     B -->|色彩故事盤| AA[IndexedDB 典藏與工作階段]
     C --> F[JSON 備份或 YAML ZIP]
     D --> G[JSON 工作區備份]
+    WG --> WJ[匯出 CSV 或 JSON 備份]
     E --> H[重新整理後重新輸入]
     K --> L[JSON 備份與情境還原]
     U --> V[JSON 模型匯出與匯入]
@@ -1216,11 +1318,13 @@ flowchart LR
     Y --> Z[複製或下載 docx]
     AC --> AD[複製洗滌後純文字]
     WB --> WE[複製統計摘要]
+    SP --> SR[匯出 JSON 備份或 Markdown]
     AA --> AB[複製 CSS Tailwind JSON 或收藏]
     AE --> AF[複製提示詞]
 ```
 
 - Agent YAML Maker 與甘特圖資料保存在目前瀏覽器的 IndexedDB；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得。
+- WBS 甘特排程器會將所有專案與回收區資料保存在目前瀏覽器的 IndexedDB（`wbsGanttDB`）；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得，請使用「備份全部專案」或「匯出 Excel(CSV)」保留副本。
 - Prompt Studio 會將提示詞專案、自訂變數與歷史版本快照保存在目前瀏覽器的 IndexedDB（`PromptStudioDB`）；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得，重要提示詞請先複製保存。
 - LCR 工具不自動保存、不上傳資料，也沒有內建匯出功能；重要結果請自行複製或列印保存。
 - NSFR 工具會將情境、編輯草稿與參數保存在目前瀏覽器的 IndexedDB，並提供 JSON 匯出／匯入備份；主題偏好使用 `localStorage`。若瀏覽器不支援持久化（例如部分 `file://` 環境），資料僅保留於目前頁面，請使用「匯出備份」保存。
@@ -1237,6 +1341,7 @@ flowchart LR
 - 公文簽／函排版工具不使用 IndexedDB 或 `localStorage`，內容只保留在目前頁面記憶體；輸出為剪貼簿或使用者主動下載的 `.docx` 檔，關閉或重新整理後需重新輸入。
 - 剪貼簿洗滌器也不使用 IndexedDB 或 `localStorage`，文字與勾選規則只在目前頁面記憶體處理；輸出為複製到剪貼簿的純文字，關閉或重新整理後需重新貼上。
 - 文件字數與閱讀時間統計不使用 IndexedDB，文字與匯入檔案只在目前頁面記憶體處理，閱讀速度、編碼偏好與目標設定以 `localStorage`（鍵值 `word_counter_prefs_v1`）記憶；輸出為複製到剪貼簿的統計摘要，關閉或重新整理後需重新貼上或匯入。
+- 離線速記便箋會將所有便箋與介面設定（含深／淺色主題）保存在目前瀏覽器的 IndexedDB（`OfflineScratchpadDB`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得，重要內容請以「匯出備份 (JSON)」或匯出 Markdown 保存。
 - CSV 格式清理器不使用 IndexedDB 或 `localStorage`，讀入的內容與清理結果只在目前頁面記憶體處理，輸出為使用者主動下載的 CSV 檔。
 - MatrixPivot 表格矩陣轉置器不使用 IndexedDB 或 `localStorage`，貼上的表格、轉置結果與格式輸出只在目前頁面記憶體處理；輸出為複製到剪貼簿的代碼或使用者主動下載的 CSV 檔，重新整理或關閉頁面後需重新輸入。
 - API Mock & cURL 格式轉換工作室 (API Mock Studio) 使用瀏覽器 `localStorage`（鍵值 `api_mock_studio_state_v1`）保存端點清冊、作用中端點與執行偏好；提供「匯出集合」下載 JSON 檔，可備份或跨裝置匯入還原。
@@ -1253,6 +1358,8 @@ flowchart LR
 - Agent YAML Maker：從 CDN 載入 Tailwind CSS、js-yaml、JSZip 與 Google Fonts。
 - Prompt Studio 結構化提示詞工作台：從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示。
 - 動態甘特圖與專案倒數：從 CDN 載入 Tailwind CSS 與 Lucide 圖示。
+- WBS 甘特排程器：純離線，不使用任何外部資源。
+- 離線速記便箋：純離線，不使用任何外部資源。
 - 銀行信用風險與資本適足模擬器：從 CDN 載入 Tailwind CSS、Chart.js、Lucide 圖示與 Google Fonts。
 - 大額曝險與關聯戶圖譜速算器：從 CDN 載入 Tailwind CSS 與 Google Fonts。
 - 銀行核心系統固定長度電文解析與管理中心：從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示。
@@ -1266,13 +1373,15 @@ flowchart LR
 - CSV 格式清理器：從 CDN 載入 iconv-lite 0.6.3，僅 Big5／CP950 的編碼與解碼需要。
 - API Mock & cURL 格式轉換工作室：從 CDN 載入 Tailwind CSS 與 Google Fonts。
 - Palette Lore 色彩故事盤：從 CDN 載入 Tailwind CSS 與 Google Fonts。
-- 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；金融金額中文大寫轉換器、SQL Column Lineage Analyzer 與文件字數與閱讀時間統計也不依賴外部 CDN。
+- 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；金融金額中文大寫轉換器、SQL Column Lineage Analyzer、WBS 甘特排程器、離線速記便箋與文件字數與閱讀時間統計也不依賴外部 CDN。
 
 Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器（Big5／CP950 功能）、API Mock Studio 與色彩故事盤若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
 
 ### 瀏覽器資料保存
 
 - Agent YAML Maker 使用 IndexedDB（資料庫名稱 `AgentYamlMakerDB`，版本 2）保存草稿、快照與範本，並以 `localStorage` 記憶主題；甘特圖使用 IndexedDB 保存專案與任務。
+- WBS 甘特排程器使用 IndexedDB（資料庫名稱 `wbsGanttDB`，object store `kv`）保存專案、回收區與目前作用中專案，並提供 CSV／JSON 匯出備份。
+- 離線速記便箋使用 IndexedDB（資料庫名稱 `OfflineScratchpadDB`，object stores：`notes`、`settings`）保存便箋與介面設定（含深／淺色主題），並提供 JSON 匯出／匯入與 Markdown 匯出。
 - Prompt Studio 使用 IndexedDB（資料庫名稱 `PromptStudioDB`，object stores：`prompts`、`versions`）保存提示詞專案與歷史版本快照。
 - Markdown 卡片簡報工具使用 IndexedDB 保存範本與編輯草稿，並以 `localStorage` 記憶主題偏好。
 - NSFR 優先使用 IndexedDB，無法使用時退回 `localStorage`，再退回目前頁面記憶體。
@@ -1306,6 +1415,14 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 ### 看不到甘特圖倒數卡片
 
 只有勾選「設為重大里程碑」的任務才會顯示在上方倒數區；請編輯任務並確認勾選狀態與截止日期。
+
+### WBS 甘特排程器的排程結果與預期不同
+
+先確認「專案起日」「週六日休息」與假日／補班日清單是否正確。有前置任務時，排程會從前置任務結束的次一工作天開始，「指定起日」僅為「不早於」限制；若出現「循環相依」或「前置ID錯誤」，請檢查前置ID是否指向不存在的任務或形成迴圈。匯入假日檔時可於對話框選擇合併或取代現有清單。
+
+### 離線速記便箋的便箋不見了
+
+確認使用同一個瀏覽器與一般視窗，且沒有清除網站資料；便箋與介面設定存放在瀏覽器 IndexedDB（`OfflineScratchpadDB`），不會同步到其他裝置。「移至回收筒」的便箋可在回收筒還原，但「清空資源回收筒」後無法復原。建議定期用「匯出備份 (JSON)」保存，或匯出 Markdown。
 
 ### YAML 匯入或 JSON 還原失敗
 
@@ -1411,4 +1528,4 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟二十三個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、大額曝險與關聯戶圖譜速算器可設定淨值與集團／新增關聯戶與股權連結／檢視圖譜與法定門檻檢核／執行 What-If 壓力試算並複製底稿或匯出案卷 JSON、金融金額中文大寫轉換器可切換幣別抬頭與「結尾加整」／「顯示英文金額」選項／輸入金額檢視中文大寫、純中文大寫與英文大寫輸出並複製、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、MatrixPivot 表格矩陣轉置器可貼上或匯入表格／執行行列轉置／切換 Markdown、JSON、SQL、HTML 與 CSV 輸出並複製或下載 CSV、API Mock Studio 可切換端點／貼上 cURL 解析／執行 Mock 模擬與延遲測試／產生 Dummy 假資料／匯出 OpenAPI 3.0 與 Postman Collection、CSV 格式清理器可讀入 UTF-8 與 Big5 檔案／切換清理規則並檢視預覽／匯出 CP950 時確認無法對應字元的提示，Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、文件字數與閱讀時間統計可貼上文字或匯入 UTF-8／Big5 等多編碼檔案／檢視中英字數、段落句數與閱讀時間／設定目標字數並複製統計摘要、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏、銀行核心系統固定長度電文解析與管理中心可選擇電文規格／貼上多筆電文解析並匯出 JSON 與 CSV／切換反向組裝產生固定長度電文／新增或匯入多編碼 CSV 規格並保存解析歷程、核心系統與電文錯誤碼排查對照台可搜尋與篩選錯誤碼／新增編輯與刪除代碼／維護系統類別／匯入 Excel 並匯出完整資料。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
+若修改網頁程式，請分別在現代瀏覽器開啟二十五個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、WBS 甘特排程器可設定專案起日與 WBS 任務／前置相依並檢視工作天與甘特圖／匯出 CSV 與 JSON、離線速記便箋可新增便箋與標籤／切換 Markdown 預覽與雙欄模式／搜尋與置頂／匯出與匯入 JSON 並匯出 Markdown、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、大額曝險與關聯戶圖譜速算器可設定淨值與集團／新增關聯戶與股權連結／檢視圖譜與法定門檻檢核／執行 What-If 壓力試算並複製底稿或匯出案卷 JSON、金融金額中文大寫轉換器可切換幣別抬頭與「結尾加整」／「顯示英文金額」選項／輸入金額檢視中文大寫、純中文大寫與英文大寫輸出並複製、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、MatrixPivot 表格矩陣轉置器可貼上或匯入表格／執行行列轉置／切換 Markdown、JSON、SQL、HTML 與 CSV 輸出並複製或下載 CSV、API Mock Studio 可切換端點／貼上 cURL 解析／執行 Mock 模擬與延遲測試／產生 Dummy 假資料／匯出 OpenAPI 3.0 與 Postman Collection、CSV 格式清理器可讀入 UTF-8 與 Big5 檔案／切換清理規則並檢視預覽／匯出 CP950 時確認無法對應字元的提示，Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、文件字數與閱讀時間統計可貼上文字或匯入 UTF-8／Big5 等多編碼檔案／檢視中英字數、段落句數與閱讀時間／設定目標字數並複製統計摘要、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏、銀行核心系統固定長度電文解析與管理中心可選擇電文規格／貼上多筆電文解析並匯出 JSON 與 CSV／切換反向組裝產生固定長度電文／新增或匯入多編碼 CSV 規格並保存解析歷程、核心系統與電文錯誤碼排查對照台可搜尋與篩選錯誤碼／新增編輯與刪除代碼／維護系統類別／匯入 Excel 並匯出完整資料。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。

@@ -33,7 +33,9 @@ my-spa-tools/
 │  └─ api-mock-studio/           API Mock 與 cURL 格式轉換工作室
 ├─ docs/                         文書與簡報
 │  ├─ project-gantt/  card-presenter/  docuformatter/  text-scrubber/
-│  └─ word-counter/              文件字數與閱讀時間統計
+│  ├─ word-counter/              文件字數與閱讀時間統計
+│  ├─ wbs-gantt/                 WBS 甘特排程器
+│  └─ scratchpad/                離線速記便箋
 └─ design/                       設計工具
    └─ palette-lore/
 ```
@@ -102,7 +104,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 23 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 25 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

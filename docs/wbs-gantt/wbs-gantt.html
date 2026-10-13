@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-Hant"><head><meta charset="UTF-8"><title>WBS 甘特排程器（離線版 v2）</title>
+<style>
+body{font-family:"Microsoft JhengHei",sans-serif;margin:0;background:#f4f6f9;color:#222;font-size:14px}
+header{background:#1f4e79;color:#fff;padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.toolbar-main{display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;width:100%;min-width:0}
+header h1{font-size:18px;margin:0;font-weight:600;white-space:nowrap}
+.toolbar-group{display:flex;align-items:center;gap:8px;min-width:0}
+.toolbar-label{white-space:nowrap;font-size:13px;opacity:.9}
+.toolbar-project select{min-width:140px}
+.toolbar-date input{height:34px;box-sizing:border-box;padding:4px 8px;border:1px solid #c7d4e0;border-radius:4px;font:inherit}
+.toolbar-status{display:flex;align-items:center;gap:10px;margin-left:auto;min-width:0;flex-wrap:wrap}
+#sum{white-space:nowrap}
+button{background:#2e75b6;color:#fff;border:0;border-radius:4px;padding:6px 10px;cursor:pointer}
+button.sec{background:#e8eff5;color:#35516b;border:1px solid #d3dfe9}button.del{background:#c0392b;color:#fff;padding:2px 6px}button.sm{padding:3px 8px;font-size:12px}
+button:hover{filter:brightness(.96)}button.sec:hover{background:#dce7f0}button.del:hover{background:#a93226}button:focus-visible,summary:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid #ffcf66;outline-offset:2px}
+.more-menu{position:relative;margin-left:auto}
+.more-menu>summary{list-style:none;cursor:pointer;background:#163c5e;border:1px solid #6f91ae;border-radius:5px;padding:8px 12px;white-space:nowrap;user-select:none}
+.more-menu>summary::-webkit-details-marker{display:none}
+.more-menu>summary::after{content:' ▾';font-size:12px}
+.more-panel{position:absolute;z-index:20;right:0;top:calc(100% + 8px);width:min(760px,calc(100vw - 32px));box-sizing:border-box;padding:14px;background:#fff;color:#222;border:1px solid #d7e0e8;border-radius:8px;box-shadow:0 12px 30px #102a4333;display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:14px}
+.more-panel section{display:flex;flex-direction:column;align-items:stretch;gap:7px;min-width:0}
+.more-panel section+section{border-left:1px solid #e3e8ed;padding-left:12px}
+.more-panel b{font-size:12px;color:#526577;margin-bottom:2px}
+.more-panel button{min-height:34px;text-align:left;white-space:normal}
+.more-panel .del{padding:6px 10px}
+.more-panel input[type=file]{display:none}
+.more-panel .danger-group{border-left-color:#f0d4d0}
+select{padding:5px;border:1px solid #aaa;border-radius:4px;font:inherit;max-width:220px}
+dialog{border:0;border-radius:8px;box-shadow:0 8px 32px #0005;min-width:min(420px,85vw)}dialog::backdrop{background:#0006}
+.trashrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid #ddd}
+.wrap{display:flex;gap:12px;padding:12px}
+.panel{background:#fff;border-radius:6px;padding:10px;box-shadow:0 1px 3px #0002}
+#left{flex:1;overflow:auto}#right{width:240px}
+table{border-collapse:collapse;width:100%}
+th,td{border:1px solid #ddd;padding:3px 4px;white-space:nowrap}
+th{background:#deebf7}
+td input{border:0;width:100%;background:transparent;font:inherit}
+td.c{text-align:center}.err{color:#c0392b;font-weight:bold}
+textarea{width:100%;box-sizing:border-box;height:240px;font-family:monospace}
+#gantt{overflow:auto;margin:0 12px 12px}
+.g{border-collapse:collapse}
+.g td{border:1px solid #eee;width:18px;height:20px;padding:0;font-size:10px;text-align:center}
+.g td.nm{width:auto;min-width:180px;text-align:left;padding:0 4px;white-space:nowrap;font-size:12px}
+.g .off{background:#eee}.g .hol{background:#f8d7da}.g .wk{background:#d4edda}.g .bar{background:#2e75b6}.g .ms{background:#e67e22}
+.g .today{outline:2px solid #e74c3c}
+.lv1{font-weight:bold}
+#st{font-size:12px;opacity:.85}
+.hint{font-size:12px;color:#666;line-height:1.5}
+@media(max-width:760px){
+ header{padding:12px;gap:10px}
+ .toolbar-main{align-items:stretch;flex-direction:column;gap:10px}
+ header h1{font-size:17px}
+ .toolbar-group{flex-wrap:wrap}
+ .toolbar-project select{flex:1;min-width:0}
+ .toolbar-date input{flex:1;min-width:150px}
+ .toolbar-status{margin-left:0;gap:6px 12px}
+ .more-menu{width:100%;margin-left:0}
+ .more-menu>summary{text-align:center}
+ .more-panel{position:static;width:100%;margin-top:8px;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .more-panel section+section{border-left:0;padding-left:0}
+ .more-panel section:nth-child(even){border-left:1px solid #e3e8ed;padding-left:12px}
+}
+@media(max-width:420px){
+ .toolbar-project{align-items:flex-start;flex-direction:column}
+ .toolbar-project select{width:100%;box-sizing:border-box}
+ .toolbar-date{align-items:flex-start;flex-direction:column}
+ .toolbar-date input{width:100%}
+ .more-panel{grid-template-columns:1fr}
+ .more-panel section:nth-child(even){border-left:0;padding-left:0}
+}
+</style></head><body>
+<header>
+<div class="toolbar-main">
+ <h1>📅 WBS 甘特排程器</h1>
+ <div class="toolbar-group toolbar-project"><label class="toolbar-label" for="projectSelect">專案</label><select id="projectSelect" onchange="switchProject(this.value)"></select><button onclick="createProject()">＋ 新增專案</button></div>
+ <div class="toolbar-group toolbar-date"><label class="toolbar-label" for="pStart">專案起日</label><input type="date" id="pStart"></div>
+ <div class="toolbar-group"><button onclick="addTask()">＋ 新增任務</button></div>
+ <div class="toolbar-status"><span id="sum"></span><span id="st"></span></div>
+ <details class="more-menu">
+  <summary>更多</summary>
+  <div class="more-panel">
+   <section><b>專案管理</b><button class="sec" onclick="renameProject()">重新命名專案</button><button class="del" onclick="deleteProject()">刪除專案</button><button class="sec" onclick="openTrash()">回收區</button></section>
+   <section><b>匯入</b><button class="sec" onclick="$('jf').click()">匯入 JSON</button><input type="file" id="jf" accept=".json" hidden onchange="importJSON(this)"><button class="sec" onclick="$('cf').click()">匯入 Excel(CSV)</button><input type="file" id="cf" accept=".csv,text/csv" hidden onchange="importCSV(this)"></section>
+   <section><b>匯出與備份</b><button onclick="exportCSV()">匯出 Excel(CSV)</button><button class="sec" onclick="exportJSON()">匯出目前專案 JSON</button><button class="sec" onclick="exportAllJSON()">備份全部專案</button></section>
+   <section class="danger-group"><b>重設</b><button class="del" onclick="resetCurrent()">重設目前專案</button></section>
+  </div>
+ </details>
+</div>
+</header>
+<div class="wrap">
+<div id="left" class="panel"><table><thead><tr>
+<th>ID</th><th>WBS</th><th>任務名稱</th><th>工期(工作天)</th><th>前置ID(逗號)</th><th>指定起日</th><th>負責人</th><th>開始</th><th>結束</th><th></th>
+</tr></thead><tbody id="tb"></tbody></table>
+<small>工期 0 = 里程碑；有前置任務時從前置最晚結束的次一工作天開始；指定起日為「不早於」限制。</small></div>
+<div id="right" class="panel">
+<b>假日（一行一個 yyyy-mm-dd）</b>
+<div style="margin:4px 0">
+<button class="sm" onclick="$('hf').click()">📂 匯入假日檔</button>
+<button class="sm sec" onclick="exportHol()">匯出</button>
+<button class="sm sec" onclick="if(confirm('清空假日與補班日？')){$('hol').value='';$('work').value='';changed()}">清空</button>
+<input type="file" id="hf" accept=".csv,.txt,.json" hidden onchange="importHol(this)">
+</div>
+<textarea id="hol" onchange="changed()"></textarea>
+<label><input type="checkbox" id="wkend" checked onchange="changed()">週六日休息</label><br>
+<b>補班日（週末上班）</b><textarea id="work" style="height:80px" onchange="changed()"></textarea>
+<div class="hint">假日檔支援：<br>
+• 政府行政機關辦公日曆表 CSV（含「是否放假」欄，2=放假、週末 0=補班）<br>
+• 純文字/CSV：每行含日期即視為假日，該行含「補班」則視為補班日<br>
+• JSON：{"hol":[...],"work":[...]} 或日期陣列<br>
+日期格式：2026-10-26、2026/10/26、20261026 皆可；UTF-8 / Big5 自動判斷。</div>
+</div></div>
+<div id="gantt" class="panel"></div>
+<dialog id="trashDialog"><h3>已刪除的專案</h3><div id="trashList"></div><form method="dialog"><button class="sec">關閉</button></form></dialog>
+<script>
+const $=id=>document.getElementById(id);
+const DEF={start:'2026-10-21',hol:'2026-10-26\n2027-04-30',work:'',wkend:true,tasks:[
+{id:1,wbs:'1',name:'專案啟動 Kick Off',dur:0,pre:'',fix:'',own:''},
+{id:2,wbs:'1.1',name:'需求訪談',dur:5,pre:'1',fix:'',own:''},
+{id:3,wbs:'1.2',name:'規格書確認',dur:5,pre:'2',fix:'',own:''}]};
+let D, MAP={}, HOL=new Set(), WORK=new Set();
+let STORE={projects:[],trash:[],activeId:null};
+
+/* ---------- IndexedDB ---------- */
+const DBN='wbsGanttDB', ST='kv', DBV=2;
+function openDB(){return new Promise((ok,ng)=>{const r=indexedDB.open(DBN,DBV);
+ r.onupgradeneeded=e=>{const db=r.result,tx=r.transaction;let store;
+  if(!db.objectStoreNames.contains(ST))store=db.createObjectStore(ST);else store=tx.objectStore(ST);
+  if(e.oldVersion<2)store.clear()};
+ r.onsuccess=()=>ok(r.result);r.onerror=()=>ng(r.error)})}
+async function dbGet(key){const db=await openDB();return new Promise((ok,ng)=>{const r=db.transaction(ST).objectStore(ST).get(key);r.onsuccess=()=>ok(r.result);r.onerror=()=>ng(r.error)})}
+async function dbSetMany(entries){const db=await openDB();return new Promise((ok,ng)=>{const t=db.transaction(ST,'readwrite'),s=t.objectStore(ST);
+ Object.entries(entries).forEach(([k,v])=>s.put(v,k));t.oncomplete=()=>ok();t.onerror=()=>ng(t.error)})}
+const copy=v=>JSON.parse(JSON.stringify(v));
+const newId=()=>globalThis.crypto?.randomUUID?.()||'p-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+function packedState(){return{projects:copy(STORE.projects),trash:copy(STORE.trash),activeId:STORE.activeId}}
+function persistState(){const s=packedState();return dbSetMany({projects:s.projects,trash:s.trash,activeId:s.activeId})}
+function captureCurrent(){if(!D)return;D.start=$('pStart').value;D.hol=$('hol').value;D.work=$('work').value;D.wkend=$('wkend').checked;
+ const i=STORE.projects.findIndex(p=>p.id===D.id);if(i>=0)STORE.projects[i]=copy(D)}
+let tmr;
+function saveNow(){clearTimeout(tmr);captureCurrent();return persistState()}
+function save(){if(!D)return;captureCurrent();clearTimeout(tmr);$('st').textContent='　儲存中…';
+ tmr=setTimeout(()=>persistState().then(()=>$('st').textContent='　✔ 已儲存 (IndexedDB)')
+  .catch(e=>$('st').textContent='　⚠ 儲存失敗：'+e),300)}
+function changed(){save();calc()}
+async function resetCurrent(){if(!confirm('將目前專案的任務與排程設定重設為預設值？'))return;
+ const id=D.id,name=D.name;D={...copy(DEF),id,name};const i=STORE.projects.findIndex(p=>p.id===id);STORE.projects[i]=copy(D);loadProject();await persistState()}
+
+/* ---------- 專案管理 ---------- */
+function renderProjectSelect(){const sel=$('projectSelect');sel.innerHTML='';
+ const counts=STORE.projects.reduce((m,p)=>(m[p.name]=(m[p.name]||0)+1,m),{}),seen={};
+ STORE.projects.forEach(p=>{seen[p.name]=(seen[p.name]||0)+1;const o=document.createElement('option');o.value=p.id;
+  o.textContent=counts[p.name]>1?`${p.name}（${p.start||'未設定'} · ${seen[p.name]}）`:p.name;sel.appendChild(o)});
+ sel.value=STORE.activeId||''}
+function loadProject(){D=STORE.projects.find(p=>p.id===STORE.activeId)||STORE.projects[0];if(!D)return;
+ STORE.activeId=D.id;renderProjectSelect();$('pStart').value=D.start||'';$('hol').value=D.hol||'';$('work').value=D.work||'';$('wkend').checked=D.wkend!==false;
+ $('pStart').onchange=changed;render()}
+async function switchProject(id){if(!STORE.projects.some(p=>p.id===id)){renderProjectSelect();return}
+ try{await saveNow();STORE.activeId=id;loadProject();await persistState();$('st').textContent='　✔ 已切換專案'}
+ catch(e){$('st').textContent='　⚠ 切換失敗：'+e;renderProjectSelect()}}
+async function createProject(){try{await saveNow()}catch(e){alert('目前專案儲存失敗，無法新增：'+e);return}
+ const name=prompt('新專案名稱','新專案');if(name===null)return;if(!name.trim()){alert('專案名稱不可空白');return}
+ const p={...copy(DEF),id:newId(),name:name.trim(),tasks:[]};STORE.projects.push(p);STORE.activeId=p.id;loadProject();
+ try{await persistState();$('st').textContent='　✔ 已建立專案'}catch(e){$('st').textContent='　⚠ 儲存失敗：'+e}}
+async function renameProject(){const name=prompt('專案名稱',D.name||'');if(name===null)return;if(!name.trim()){alert('專案名稱不可空白');return}
+ D.name=name.trim();captureCurrent();renderProjectSelect();try{await persistState();$('st').textContent='　✔ 已更新專案名稱'}catch(e){$('st').textContent='　⚠ 儲存失敗：'+e}}
+async function deleteProject(){if(STORE.projects.length<=1){alert('至少要保留一個作用中專案');return}
+ if(!confirm(`將「${D.name}」移至回收區？之後可還原。`))return;
+ try{await saveNow();STORE.trash.push({...copy(D),deletedAt:new Date().toISOString()});STORE.projects=STORE.projects.filter(p=>p.id!==D.id);
+  STORE.activeId=STORE.projects[0].id;loadProject();await persistState();$('st').textContent='　✔ 專案已移至回收區'}
+ catch(e){$('st').textContent='　⚠ 刪除失敗：'+e}}
+function openTrash(){renderTrash();$('trashDialog').showModal()}
+function renderTrash(){const root=$('trashList');root.innerHTML='';if(!STORE.trash.length){root.textContent='回收區目前沒有專案。';return}
+ STORE.trash.forEach(p=>{const row=document.createElement('div');row.className='trashrow';const label=document.createElement('span');
+  label.textContent=`${p.name}（${p.start||'未設定'}）`;const actions=document.createElement('span');
+  const restore=document.createElement('button');restore.className='sm';restore.textContent='還原';restore.onclick=()=>restoreProject(p.id);
+  const purge=document.createElement('button');purge.className='sm del';purge.textContent='永久刪除';purge.onclick=()=>purgeProject(p.id);
+  actions.append(restore,purge);row.append(label,actions);root.appendChild(row)})}
+async function restoreProject(id){const p=STORE.trash.find(x=>x.id===id);if(!p)return;const restored={...p};delete restored.deletedAt;
+ STORE.projects.push(restored);STORE.trash=STORE.trash.filter(x=>x.id!==id);renderProjectSelect();renderTrash();
+ try{await persistState()}catch(e){alert('還原失敗：'+e)}}
+async function purgeProject(id){const p=STORE.trash.find(x=>x.id===id);if(!p||!confirm(`永久刪除「${p.name}」？此操作無法復原。`))return;
+ STORE.trash=STORE.trash.filter(x=>x.id!==id);renderTrash();try{await persistState()}catch(e){alert('永久刪除失敗：'+e)}}
+
+/* ---------- 日期工具 ---------- */
+const f=d=>d.toISOString().slice(0,10);
+const P=s=>new Date(s+'T00:00:00Z');
+const add=(d,n)=>new Date(d.getTime()+n*864e5);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function isWork(d){const s=f(d),w=d.getUTCDay();
+ if(WORK.has(s))return true;if(HOL.has(s))return false;
+ return !(D.wkend&&(w==0||w==6))}
+const nextWork=d=>{let n=0;while(!isWork(d)&&n++<3660)d=add(d,1);return d};
+function endOf(st,dur){if(dur<=0)return st;let d=st,n=1;while(n<dur){d=add(d,1);if(isWork(d))n++}return d}
+function normDate(s){const m=String(s).match(/(\d{4})[-\/.年](\d{1,2})[-\/.月](\d{1,2})|(?<!\d)(\d{4})(\d{2})(\d{2})(?!\d)/);
+ if(!m)return null;const y=m[1]||m[4],mo=m[2]||m[5],da=m[3]||m[6];
+ const r=`${y}-${mo.padStart(2,'0')}-${da.padStart(2,'0')}`;const d=P(r);
+ return isNaN(d)||f(d)!==r?null:r}
+const lines=t=>t.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+
+/* ---------- 假日檔匯入 ---------- */
+async function readText(file){const buf=await file.arrayBuffer();
+ let t=new TextDecoder('utf-8').decode(buf);
+ if(t.includes('\uFFFD')){try{t=new TextDecoder('big5').decode(buf)}catch(e){}}
+ return t.replace(/^\uFEFF/,'')}
+function parseHol(text,name){const hol=new Set(),work=new Set();
+ if(/\.json$/i.test(name)){const j=JSON.parse(text);
+  (Array.isArray(j)?j:(j.hol||[])).forEach(x=>{const d=normDate(x);d&&hol.add(d)});
+  (j.work||[]).forEach(x=>{const d=normDate(x);d&&work.add(d)});return{hol,work}}
+ const L=lines(text);const sp=s=>s.split(/[,\t]/).map(x=>x.replace(/^"|"$/g,'').trim());
+ const H=L.length?sp(L[0]):[];const fi=H.findIndex(h=>h.includes('是否放假'));
+ if(fi>=0){let di=H.findIndex(h=>h.includes('西元'));if(di<0)di=H.findIndex(h=>h.includes('日期'));if(di<0)di=0;
+  L.slice(1).forEach(l=>{const c=sp(l),d=normDate(c[di]||'');if(!d)return;
+   const w=P(d).getUTCDay(),we=w==0||w==6,fl=(c[fi]||'').trim();
+   if(fl==='2'&&!we)hol.add(d);if(fl==='0'&&we)work.add(d)})}
+ else L.forEach(l=>{const d=normDate(l);if(!d)return;(/補班|上班|workday/i.test(l)?work:hol).add(d)});
+ return{hol,work}}
+async function importHol(el){const file=el.files[0];el.value='';if(!file)return;
+ try{const {hol,work}=parseHol(await readText(file),file.name);
+  if(!hol.size&&!work.size){alert('檔案中找不到可辨識的日期');return}
+  const merge=confirm(`讀到 假日 ${hol.size} 筆、補班日 ${work.size} 筆。\n\n按「確定」= 合併到現有清單\n按「取消」= 取代現有清單`);
+  const h=merge?new Set([...lines($('hol').value).map(normDate).filter(Boolean),...hol]):hol;
+  const w=merge?new Set([...lines($('work').value).map(normDate).filter(Boolean),...work]):work;
+  $('hol').value=[...h].sort().join('\n');$('work').value=[...w].sort().join('\n');changed()}
+ catch(e){alert('匯入失敗：'+e.message)}}
+function exportHol(){dl('假日清單.json',JSON.stringify({hol:lines($('hol').value),work:lines($('work').value)},null,1),'application/json')}
+
+/* ---------- 任務表 ---------- */
+function render(){const tb=$('tb');tb.innerHTML='';
+ D.tasks.forEach((t,i)=>{const tr=document.createElement('tr');
+ const inp=(k,ty='text')=>`<td><input type="${ty}" value="${esc(t[k])}" onchange="upd(${i},'${k}',this.value)"></td>`;
+ tr.innerHTML=`<td class=c>${t.id}</td>${inp('wbs')}${inp('name')}${inp('dur','number')}${inp('pre')}${inp('fix','date')}${inp('own')}
+ <td class=c id=s${i}></td><td class=c id=e${i}></td><td><button class=del onclick="delTask(${i})">✕</button></td>`;
+ tb.appendChild(tr)});calc()}
+function upd(i,k,v){D.tasks[i][k]=k=='dur'?Math.max(0,+v||0):v;changed()}
+function addTask(){const id=Math.max(0,...D.tasks.map(t=>t.id))+1;const last=D.tasks.at(-1);
+ D.tasks.push({id,wbs:'',name:'新任務',dur:1,pre:last?String(last.id):'',fix:'',own:''});save();render()}
+function delTask(i){D.tasks.splice(i,1);save();render()}
+
+/* ---------- 排程計算 ---------- */
+function calc(){HOL=new Set(lines($('hol').value).map(normDate).filter(Boolean));
+ WORK=new Set(lines($('work').value).map(normDate).filter(Boolean));D.wkend=$('wkend').checked;
+ const map={},state={};let err=0;
+ const go=t=>{if(state[t.id]==2)return;if(state[t.id]==1)throw 'loop';state[t.id]=1;
+  let st=P($('pStart').value||D.start);
+  (t.pre||'').split(/[,，\s]+/).filter(Boolean).forEach(p=>{const pt=D.tasks.find(x=>x.id==p);if(!pt)throw 'pre';go(pt);
+   const e=map[pt.id].e,c=pt.dur>0?add(e,1):e;if(c>st)st=c});
+  if(t.fix&&P(t.fix)>st)st=P(t.fix);st=nextWork(st);
+  map[t.id]={s:st,e:endOf(st,t.dur)};state[t.id]=2};
+ D.tasks.forEach((t,i)=>{try{go(t);$('s'+i).textContent=f(map[t.id].s);$('e'+i).textContent=f(map[t.id].e);$('s'+i).className='c'}
+  catch(x){err++;state[t.id]=0;$('s'+i).textContent=x=='loop'?'循環相依':'前置ID錯誤';$('s'+i).className='err';$('e'+i).textContent=''}});
+ MAP=map;const v=Object.values(map);
+ if(v.length){const s=new Date(Math.min(...v.map(x=>x.s))),e=new Date(Math.max(...v.map(x=>x.e)));
+  let n=0;for(let d=s;d<=e;d=add(d,1))if(isWork(d))n++;
+  $('sum').textContent=`｜${f(s)} ～ ${f(e)}，共 ${n} 工作天${err?'，⚠ '+err+' 筆錯誤':''}`;gantt(s,e)}
+ else{$('sum').textContent='';$('gantt').innerHTML=''}}
+function cls(d){const s=f(d);if(WORK.has(s))return 'wk';if(HOL.has(s))return 'hol';return isWork(d)?'':'off'}
+function gantt(s,e){const today=f(new Date()),days=[];for(let d=s;d<=e;d=add(d,1))days.push(d);
+ let m='<tr><td class=nm></td>',h='<tr><td class=nm>任務</td>';
+ days.forEach((d,i)=>{m+=`<td>${d.getUTCDate()==1||i==0?(d.getUTCMonth()+1)+'月':''}</td>`;h+=`<td class="${cls(d)}">${d.getUTCDate()}</td>`});
+ let rows='';D.tasks.forEach(t=>{const r=MAP[t.id];if(!r)return;
+  rows+=`<tr><td class="nm ${!(t.wbs||'').includes('.')?'lv1':''}">${esc(t.wbs)} ${esc(t.name)}</td>`;
+  days.forEach(d=>{let c=cls(d);if(d>=r.s&&d<=r.e&&isWork(d))c=t.dur==0?'ms':'bar';if(f(d)==today)c+=' today';
+   rows+=`<td class="${c}" title="${esc(t.name)} ${f(r.s)}~${f(r.e)}">${t.dur==0&&+d==+r.s?'◆':''}</td>`});rows+='</tr>'});
+ $('gantt').innerHTML='<table class=g>'+m+'</tr>'+h+'</tr>'+rows+'</table>'}
+
+/* ---------- 匯出入 ---------- */
+function dl(name,txt,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;a.click()}
+function exportCSV(){const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+ let c='ID,WBS,任務名稱,工期(工作天),前置ID,負責人,開始,結束\n';
+ D.tasks.forEach(t=>{const r=MAP[t.id];c+=[t.id,t.wbs,t.name,t.dur,t.pre,t.own,r?f(r.s):'',r?f(r.e):''].map(q).join(',')+'\n'});
+ dl('專案時程表.csv','\ufeff'+c,'text/csv')}
+function parseCSV(text){
+ const rows=[];let row=[],field='',quoted=false,afterQuote=false,line=1,rowLine=1;
+ for(let i=0;i<text.length;i++){
+  const ch=text[i];
+  if(quoted){
+   if(ch==='"'){if(text[i+1]==='"'){field+='"';i++}else{quoted=false;afterQuote=true}}
+   else{field+=ch;if(ch==='\r'){if(text[i+1]==='\n'){field+='\n';i++}line++}else if(ch==='\n')line++}
+   continue
+  }
+  if(afterQuote){
+   if(ch===','){row.push(field);field='';afterQuote=false;continue}
+   if(ch==='\r'||ch==='\n'){
+    row.push(field);rows.push({cells:row,line:rowLine});row=[];field='';afterQuote=false;
+    if(ch==='\r'&&text[i+1]==='\n')i++;line++;rowLine=line;continue
+   }
+   if(ch===' '||ch==='\t')continue;
+   throw new Error(`第 ${line} 列的引號後有多餘內容`)
+  }
+  if(ch==='"'){
+   if(field!=='')throw new Error(`第 ${line} 列的引號位置錯誤`);
+   quoted=true;continue
+  }
+  if(ch===','){row.push(field);field='';continue}
+  if(ch==='\r'||ch==='\n'){
+   row.push(field);rows.push({cells:row,line:rowLine});row=[];field='';
+   if(ch==='\r'&&text[i+1]==='\n')i++;line++;rowLine=line;continue
+  }
+  field+=ch
+ }
+ if(quoted)throw new Error(`第 ${rowLine} 列的引號未結束`);
+ if(afterQuote||field!==''||row.length){row.push(field);rows.push({cells:row,line:rowLine})}
+ return rows
+}
+function csvTaskRows(text){
+ const rows=parseCSV(text);while(rows.length&&rows[0].cells.every(x=>!x.trim()))rows.shift();
+ if(!rows.length)throw new Error('CSV 檔案是空的');
+ const head=rows.shift(),headers=head.cells.map(x=>x.trim());
+ const required=['ID','WBS','任務名稱','工期(工作天)','前置ID','負責人'];
+ const indexes={};headers.forEach((h,i)=>{if(h&&Object.hasOwn(indexes,h))throw new Error(`標題列欄位「${h}」重複`);if(h)indexes[h]=i});
+ const missing=required.filter(h=>!Object.hasOwn(indexes,h));
+ if(missing.length)throw new Error(`標題列缺少必要欄位：${missing.join('、')}`);
+ const result=[],ids=new Set();
+ rows.forEach(({cells,line})=>{
+  if(cells.every(x=>!x.trim()))return;
+  const value=h=>cells[indexes[h]]??'';
+  const fail=msg=>{throw new Error(`第 ${line} 列：${msg}`)};
+  if(cells.slice(headers.length).some(x=>x.trim()))fail('資料欄數多於標題欄數');
+  const rawId=value('ID').trim(),id=Number(rawId);
+  if(!/^\d+$/.test(rawId)||!Number.isSafeInteger(id)||id<=0)fail('ID 必須是正整數');
+  if(ids.has(id))fail(`ID ${id} 重複`);ids.add(id);
+  const rawDur=value('工期(工作天)').trim(),dur=Number(rawDur);
+  if(rawDur===''||!/^\d+$/.test(rawDur)||!Number.isSafeInteger(dur))fail('工期必須是大於或等於 0 的整數');
+  const name=value('任務名稱').trim();if(!name)fail('任務名稱不可空白');
+  const start=headers.includes('開始')?value('開始').trim():'';
+  const fix=start?normDate(start):'';if(start&&!fix)fail(`開始日期格式無效：${start}`);
+  const end=headers.includes('結束')?value('結束').trim():'';
+  if(end&&!normDate(end))fail(`結束日期格式無效：${end}`);
+  result.push({id,wbs:value('WBS').trim(),name,dur,pre:value('前置ID').trim(),fix,own:value('負責人').trim(),_line:line});
+ });
+ if(!result.length)throw new Error('CSV 中沒有任務資料');
+ result.forEach(task=>{
+  (task.pre||'').split(/[,，\s]+/).filter(Boolean).forEach(dep=>{
+   if(!/^\d+$/.test(dep)||!ids.has(Number(dep)))throw new Error(`第 ${task._line} 列：前置ID「${dep}」不存在或格式錯誤`)
+  })
+ });
+ result.forEach(task=>delete task._line);
+ return result
+}
+async function importCSV(el){const file=el.files[0];el.value='';if(!file)return;
+ try{
+  const tasks=csvTaskRows(await readText(file));
+  await saveNow();
+  const name=file.name.replace(/\.csv$/i,'').trim()||'匯入專案';
+  const project={...copy(DEF),id:newId(),name,tasks};
+  const previousActive=STORE.activeId;
+  STORE.projects.push(project);STORE.activeId=project.id;loadProject();
+  try{await persistState()}catch(e){STORE.projects=STORE.projects.filter(p=>p.id!==project.id);STORE.activeId=previousActive;loadProject();throw e}
+  $('st').textContent=`　✔ 已匯入 ${tasks.length} 筆任務至「${name}」`
+ }catch(e){alert('CSV 匯入失敗：'+e.message)}
+}
+function legacyProject(p){return{start:p.start,hol:p.hol||'',work:p.work||'',wkend:p.wkend!==false,tasks:copy(p.tasks||[])}}
+function exportJSON(){captureCurrent();persistState().catch(e=>$('st').textContent='　⚠ 儲存失敗：'+e);
+ dl('wbs_backup.json',JSON.stringify(legacyProject(D),null,1),'application/json')}
+function exportAllJSON(){captureCurrent();persistState().catch(e=>$('st').textContent='　⚠ 儲存失敗：'+e);
+ const backup={format:'wbs-gantt-projects',version:1,projects:copy(STORE.projects)};
+ dl('wbs_projects_backup.json',JSON.stringify(backup,null,1),'application/json')}
+function importedProject(p,name){if(!p||!Array.isArray(p.tasks))throw new Error('專案資料缺少 tasks 陣列');
+ if(!name.trim())throw new Error('專案名稱不可空白');
+ return{id:newId(),name:name.trim(),start:p.start||DEF.start,hol:p.hol||'',work:p.work||'',wkend:p.wkend!==false,tasks:copy(p.tasks)}}
+async function importJSON(el){const file=el.files[0];el.value='';if(!file)return;
+ try{const j=JSON.parse(await readText(file));let incoming=[];
+  if(Array.isArray(j.projects)){
+   if(!j.projects.length)throw new Error('備份內沒有專案');
+   incoming=j.projects.map((p,i)=>importedProject(p,String(p.name||`匯入專案 ${i+1}`).trim()))
+  }else if(Array.isArray(j.tasks)){
+   let name=String(j.name||'').trim();if(!name){name=prompt('匯入專案名稱',`匯入專案 ${new Date().toLocaleDateString('sv-SE')}`);if(name===null)return}
+   incoming=[importedProject(j,name)]
+  }else throw new Error('缺少 tasks 或 projects');
+  await saveNow();STORE.projects.push(...incoming);renderProjectSelect();await persistState();
+  $('st').textContent=`　✔ 已匯入 ${incoming.length} 個專案`
+ } 
+ catch(e){alert('檔案格式錯誤：'+e.message)}}
+
+/* ---------- 啟動：新版以範例專案初始化，不搬移舊版資料 ---------- */
+(async()=>{try{
+ STORE.projects=await dbGet('projects')||[];STORE.trash=await dbGet('trash')||[];STORE.activeId=await dbGet('activeId')||null;
+ if(!STORE.projects.length){const sample={...copy(DEF),id:newId(),name:'範例專案'};STORE.projects=[sample];STORE.activeId=sample.id}
+ if(!STORE.projects.some(p=>p.id===STORE.activeId))STORE.activeId=STORE.projects[0].id;
+ loadProject();await persistState();localStorage.removeItem('wbs_gantt_v1');
+ }catch(e){alert('IndexedDB 無法使用（'+e+'），本次資料將不會保存');
+  if(!STORE.projects.length){const sample={...copy(DEF),id:newId(),name:'範例專案'};STORE.projects=[sample];STORE.activeId=sample.id}
+  loadProject()}})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body></html>
