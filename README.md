@@ -1,6 +1,6 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供二十一個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、大額曝險與關聯戶圖譜速算、核心主機固定長度電文解析與規格管理、核心系統與電文錯誤碼排查對照、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、色彩故事盤、表格矩陣轉置與格式轉換、CSV 格式清理（支援 Big5／CP950 讀寫）、API Mock 與 cURL 雙向轉換，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
+本專案提供二十三個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、大額曝險與關聯戶圖譜速算、金融金額中文大寫轉換、核心主機固定長度電文解析與規格管理、核心系統與電文錯誤碼排查對照、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、文件字數與閱讀時間統計、色彩故事盤、表格矩陣轉置與格式轉換、CSV 格式清理（支援 Big5／CP950 讀寫）、API Mock 與 cURL 雙向轉換，以及 SQL 目錄、比對、格式化、個資清除與欄位血緣分析。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
 
 ## 目錄
 
@@ -15,6 +15,7 @@
 - [臺灣 NSFR 淨穩定資金比率與試算](#臺灣-nsfr-淨穩定資金比率與試算)
 - [銀行信用風險與資本適足模擬器](#銀行信用風險與資本適足模擬器)
 - [大額曝險與關聯戶圖譜速算器](#大額曝險與關聯戶圖譜速算器)
+- [金融金額中文大寫轉換器](#金融金額中文大寫轉換器)
 - [銀行核心系統固定長度電文解析與管理中心](#銀行核心系統固定長度電文解析與管理中心)
 - [核心系統與電文錯誤碼排查對照台](#核心系統與電文錯誤碼排查對照台)
 - [SQL Catalog](#sql-catalog)
@@ -28,6 +29,7 @@
 - [Markdown 卡片簡報工具 (Card Presenter)](#markdown-卡片簡報工具-card-presenter)
 - [公文簽／函排版與 Word 匯出 (DocuFormatter)](#公文簽函排版與-word-匯出-docuformatter)
 - [剪貼簿洗滌器 (Text Scrubber)](#剪貼簿洗滌器-text-scrubber)
+- [文件字數與閱讀時間統計](#文件字數與閱讀時間統計)
 - [Palette Lore 色彩故事盤](#palette-lore-色彩故事盤)
 - [資料保存、匯出與隱私](#資料保存匯出與隱私)
 - [技術棧與離線範圍](#技術棧與離線範圍)
@@ -45,6 +47,7 @@
    - [`finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html)
    - [`finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html`](./finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html)
    - [`finance/large-exposure-analyzer/large-exposure-analyzer.html`](./finance/large-exposure-analyzer/large-exposure-analyzer.html)
+   - [`finance/chinese-amount-uppercase/chinese-amount-uppercase.html`](./finance/chinese-amount-uppercase/chinese-amount-uppercase.html)
    - [`finance/fixed-width-telegram-parser/fixed-width-telegram-parser.html`](./finance/fixed-width-telegram-parser/fixed-width-telegram-parser.html)
    - [`finance/bank-error-code-resolver/bank-error-code-resolver.html`](./finance/bank-error-code-resolver/bank-error-code-resolver.html)
    - [`sql/sql-catalog/SQL_Catalog.html`](./sql/sql-catalog/SQL_Catalog.html)
@@ -58,6 +61,7 @@
    - [`docs/card-presenter/markdown_card_presenter.html`](./docs/card-presenter/markdown_card_presenter.html)
    - [`docs/docuformatter/DocuForm.html`](./docs/docuformatter/DocuForm.html)
    - [`docs/text-scrubber/text-scrubber.html`](./docs/text-scrubber/text-scrubber.html)
+   - [`docs/word-counter/word-counter.html`](./docs/word-counter/word-counter.html)
    - [`design/palette-lore/palette-lore.html`](./design/palette-lore/palette-lore.html)
 3. 使用瀏覽器頁面中的表單、按鈕與分頁完成操作。
 
@@ -67,9 +71,9 @@
 python -m http.server 8080
 ```
 
-再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、Prompt Studio、甘特圖、銀行信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器、API Mock Studio 與色彩故事盤會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR 工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
+再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、Prompt Studio、甘特圖、銀行信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器、API Mock Studio 與色彩故事盤會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR、金融金額中文大寫轉換器、文件字數與閱讀時間統計工具與 SQL Catalog 不依賴外部函式庫，可直接離線開啟；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
 
-本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，Prompt Studio 需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS，公文簽／函排版工具需要從 CDN 載入 Tailwind CSS 與 docx.js，大額曝險與關聯戶圖譜速算器需要從 CDN 載入 Tailwind CSS 與 Google Fonts，銀行核心系統固定長度電文解析與管理中心需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，核心系統與電文錯誤碼排查對照台需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 SheetJS，剪貼簿洗滌器需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 Google Fonts，MatrixPivot 表格矩陣轉置器需要從 CDN 載入 Tailwind CSS 與 Google Fonts，CSV 格式清理器需要從 CDN 載入 iconv-lite（僅 Big5／CP950 功能需要），API Mock Studio 需要從 CDN 載入 Tailwind CSS 與 Google Fonts，色彩故事盤需要從 CDN 載入 Tailwind CSS 與 Google Fonts。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化與 SQL／TXT 個資清除工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
+本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，Prompt Studio 需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS，公文簽／函排版工具需要從 CDN 載入 Tailwind CSS 與 docx.js，大額曝險與關聯戶圖譜速算器需要從 CDN 載入 Tailwind CSS 與 Google Fonts，銀行核心系統固定長度電文解析與管理中心需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，核心系統與電文錯誤碼排查對照台需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 SheetJS，剪貼簿洗滌器需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 Google Fonts，MatrixPivot 表格矩陣轉置器需要從 CDN 載入 Tailwind CSS 與 Google Fonts，CSV 格式清理器需要從 CDN 載入 iconv-lite（僅 Big5／CP950 功能需要），API Mock Studio 需要從 CDN 載入 Tailwind CSS 與 Google Fonts，色彩故事盤需要從 CDN 載入 Tailwind CSS 與 Google Fonts。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化、SQL／TXT 個資清除與文件字數與閱讀時間統計工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
 
 ## 專案結構
 
@@ -85,6 +89,7 @@ my-spa-tools/
 │  ├─ nsfr-mapping-calc/
 │  ├─ basel-creditrisk-calc/
 │  ├─ large-exposure-analyzer/
+│  ├─ chinese-amount-uppercase/  金融金額中文大寫轉換器
 │  ├─ fixed-width-telegram-parser/
 │  └─ bank-error-code-resolver/  核心系統與電文錯誤碼排查對照台
 ├─ sql/                          SQL 工具
@@ -101,7 +106,8 @@ my-spa-tools/
 │  ├─ project-gantt/
 │  ├─ card-presenter/
 │  ├─ docuformatter/
-│  └─ text-scrubber/
+│  ├─ text-scrubber/
+│  └─ word-counter/              文件字數與閱讀時間統計
 └─ design/                       設計工具
    └─ palette-lore/
 ```
@@ -120,6 +126,7 @@ flowchart TD
     B -->|NSFR 試算| K[輸入 ASF 與 RSF 明細]
     B -->|信用風險壓力試算| U[設定資本 資產與壓力情境]
     B -->|大額曝險與關聯戶試算| AL[設定集團 關聯戶與曝險明細]
+    B -->|金額中文大寫轉換| MA[輸入阿拉伯數字金額並選擇幣別抬頭]
     B -->|核心電文解析與組裝| TP[選擇電文規格並貼上多筆電文]
     B -->|電文錯誤碼排查| ER[搜尋或匯入錯誤碼並查閱處置 SOP]
     B -->|SQL 管理| I[選擇 SQL 根目錄]
@@ -131,6 +138,7 @@ flowchart TD
     B -->|CSV 格式清理| CC[匯入 CSV 或貼上 Excel 內容並勾選清理規則]
     B -->|API 測試與 Mock 模擬| AR[貼上 cURL 或手動編輯端點]
     B -->|文字洗滌與個資脫敏| Y[貼上雜亂文字並勾選洗滌規則]
+    B -->|字數統計與閱讀時間| WC[貼上或匯入純文字檔並選擇編碼]
     B -->|配色設計| W[輸入意境文字生成色盤]
     C --> F[預覽並下載 YAML 或 ZIP]
     AE --> AF[填入變數並複製組裝結果]
@@ -139,6 +147,7 @@ flowchart TD
     K --> L[查看 ASF RSF 與 NSFR]
     U --> V[查看預期損失 RWA 與 CAR]
     AL --> AM[檢核集中度 股權穿透與 What-If 壓力]
+    MA --> MB[複製中文大寫 純中文或英文金額]
     TP --> TQ[依規格拆解欄位或反向組裝電文並匯出 JSON CSV]
     ER --> ES[檢視原因 SOP 與對客話術並匯出 Excel]
     I --> J[掃描 檢索與編輯說明]
@@ -151,6 +160,7 @@ flowchart TD
     AR --> AS[模擬延遲 回應狀態 產生 Dummy 與匯出代碼 OpenAPI]
     W --> X[檢視 WCAG 對比並匯出色碼或收藏]
     Y --> Z[複製洗滌後的乾淨文字]
+    WC --> WD[檢視中英字數 段落句數 閱讀時間與高頻詞]
 ```
 
 ## 工具總覽
@@ -164,6 +174,7 @@ flowchart TD
 | 臺灣 NSFR 淨穩定資金比率與試算 | [`finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html`](./finance/nsfr-mapping-calc/NSFR_Mapping_SPA.html) | 查詢 ASF／RSF 係數並計算 NSFR | IndexedDB 優先，必要時退回 `localStorage` 或僅保留於目前頁面 |
 | 銀行信用風險與資本適足模擬器 | [`finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html`](./finance/basel-creditrisk-calc/bank_credit_risk_capital_adequacy_simulator.html) | 編輯信貸資產組合，觀察壓力情境下預期損失、RWA 與 CAR 敏感度 | 只保留在目前頁面；可匯出／匯入 JSON 模型 |
 | 大額曝險與關聯戶圖譜速算器 | [`finance/large-exposure-analyzer/large-exposure-analyzer.html`](./finance/large-exposure-analyzer/large-exposure-analyzer.html) | 檢核集團授信集中度、關係人股權穿透與 What-If 壓力情境下的大額曝險，並匯出審查底稿 | 只保留在目前頁面；可匯出案卷 JSON，主題偏好使用 `localStorage` |
+| 金融金額中文大寫轉換器 | [`finance/chinese-amount-uppercase/chinese-amount-uppercase.html`](./finance/chinese-amount-uppercase/chinese-amount-uppercase.html) | 將阿拉伯數字金額即時轉為繁體中文大寫，切換新臺幣／美金／人民幣／日圓／歐元抬頭，並輸出純中文大寫與英文大寫金額 | 只保留在目前頁面記憶體；輸出為複製到剪貼簿的文字，重新整理後需重新輸入 |
 | 銀行核心系統固定長度電文解析與管理中心 | [`finance/fixed-width-telegram-parser/fixed-width-telegram-parser.html`](./finance/fixed-width-telegram-parser/fixed-width-telegram-parser.html) | 依電文規格解析或反向組裝銀行核心主機固定長度電文，以 Big5／UTF-8 計算位元組並維護規格 | 瀏覽器 IndexedDB（`BankTelegramParserDB`：`schemas` 規格、`history` 解析歷程） |
 | 核心系統與電文錯誤碼排查對照台 | [`finance/bank-error-code-resolver/bank-error-code-resolver.html`](./finance/bank-error-code-resolver/bank-error-code-resolver.html) | 集中維護核心主機、財金跨行（FISC）、SWIFT 與批次錯誤碼，查閱處理 SOP、對客話術與權責窗口，並支援 Excel 匯入匯出與系統類別管理 | 瀏覽器 IndexedDB（`BankErrorCodesDB`：`error_codes` 錯誤碼、`system_categories` 系統類別）；可匯出 Excel |
 | SQL Catalog | [`sql/sql-catalog/SQL_Catalog.html`](./sql/sql-catalog/SQL_Catalog.html) | 掃描 SQL 根目錄、搜尋內容、維護用途與標籤、匯出清冊 | 根目錄 `sql_catalog.json`；瀏覽器 IndexedDB 作為快取與設定保存 |
@@ -177,6 +188,7 @@ flowchart TD
 | Markdown 卡片簡報工具 | [`docs/card-presenter/markdown_card_presenter.html`](./docs/card-presenter/markdown_card_presenter.html) | 以 Markdown 撰寫卡片式投影片、即時預覽、全螢幕播放，並匯出離線單一 HTML | 瀏覽器 IndexedDB（範本與草稿）；主題偏好使用 `localStorage` |
 | 公文簽／函排版與 Word 匯出 (DocuFormatter) | [`docs/docuformatter/DocuForm.html`](./docs/docuformatter/DocuForm.html) | 以表單或 Markdown 撰寫簽／函公文、校正標點與中英間距，並匯出 Word 文件 | 只保留在目前頁面記憶體；輸出為剪貼簿或 `.docx` 檔 |
 | 剪貼簿洗滌器 (Text Scrubber) | [`docs/text-scrubber/text-scrubber.html`](./docs/text-scrubber/text-scrubber.html) | 修復 PDF 斷行與隱形字元、統一標點與清單符號，並遮罩身分證、電話、統編與電子郵件等敏感資訊 | 文字與勾選規則只在目前頁面記憶體處理，不保存 |
+| 文件字數與閱讀時間統計 | [`docs/word-counter/word-counter.html`](./docs/word-counter/word-counter.html) | 統計中英字數、字元、段落與句數，估算閱讀時間並列出英文高頻詞，支援多種檔案編碼 | 內容只在目前頁面記憶體處理；閱讀速度與編碼偏好使用 `localStorage` |
 | Palette Lore 色彩故事盤 | [`design/palette-lore/palette-lore.html`](./design/palette-lore/palette-lore.html) | 以抽象意境文字生成五色配色盤，附實境 UI 模擬、WCAG 對比評測與 CSS／Tailwind／JSON 匯出 | 瀏覽器 IndexedDB（`PaletteLoreDB`：`palettes` 典藏與 `app_state` 工作階段／主題） |
 
 ## Agent YAML Maker
@@ -486,6 +498,50 @@ flowchart TD
 ```
 
 本工具使用 CDN 載入 Tailwind CSS 與 Google Fonts，首次開啟需保持網路連線。集團案卷僅保留在目前頁面記憶體，不使用 IndexedDB；重新整理或關閉頁面後需重新輸入或重新匯入。目前提供案卷 JSON 匯出但未提供 JSON 匯入，若要延續前次作業請以 CSV 重新載入戶別資料。法定限額與比率僅為試算輔助，正式授信核准仍應依銀行法、主管機關規定與內部授信政策逐案覆核。
+
+## 金融金額中文大寫轉換器
+
+金融金額中文大寫轉換器是單檔、100% 離線的銀行出納小工具：輸入阿拉伯數字金額，畫面會即時產生繁體中文大寫金額，並可切換新臺幣、美金、人民幣、日圓、歐元抬頭或無幣別前綴，另可同時輸出純中文大寫與英文大寫金額。適合開立支票、本票、取款條、存款憑條與內部會計傳票時使用；所有運算都在瀏覽器端完成，沒有外部網路傳輸。
+
+### 轉換金額
+
+1. 開啟 [`chinese-amount-uppercase.html`](./finance/chinese-amount-uppercase/chinese-amount-uppercase.html)。
+2. 在最上方「幣別抬頭」下拉選單選擇新臺幣 (NTD)、美金 (USD)、人民幣 (RMB)、日圓 (JPY)、歐元 (EUR) 或「無幣別前綴」。
+3. 在「輸入金額 (阿拉伯數字)」欄位鍵入金額（例如 `1234567.89`）；欄位右上方會同步顯示千分位格式，欄位內的清除圖示可一鍵清空。
+4. 輸出卡片會即時更新，按卡片上的「複製」按鈕即可將該段文字放入剪貼簿（成功時顯示「已複製！」）。
+5. 兩個預設勾選的選項可調整輸出：「結尾加上「整」字」控制金額是否附加「整」；「顯示英文金額」會額外產生英文大寫金額卡片。預設幣別抬頭為新臺幣 (NTD)。
+
+金額需為有效的阿拉伯數字，且不可超過 9999 兆；格式不符或超出上限時，欄位下方會顯示對應提示。
+
+### 幣別抬頭與輸出格式
+
+- **中文大寫金額 (繁體正規防偽)**：主要輸出，依所選幣別加上抬頭（例如「新臺幣」），適用於銀行支票、本票、取款條、存款憑條與內部會計傳票。
+- **純中文大寫 (無幣別抬頭)**：不含幣別前綴，適用於表單已預印「新臺幣」或特殊表格欄位；選擇「無幣別前綴」時不重複顯示。
+- **英文大寫金額 (English Words)**：預設即會顯示（可取消「顯示英文金額」隱藏），適用於外匯水單、信用狀 (L/C) 與國際貿易匯款 (TT)。
+
+### 快速累加與快捷鍵
+
+- 「快速累加」提供 `+1萬`、`+5萬`、`+10萬`、`+50萬`、`+100萬` 與 `+1000萬` 按鈕，可連續點擊疊加金額；右側「清除 (Esc)」可快速歸零。
+- 「常用驗證案例」提供 `10 (壹拾元)`、`10,005 (零伍)`、`1 億元` 與 `角分測試` 四個範例，方便快速核對輸出規則。
+- 在任何時候按 `Esc` 可清空目前輸入。
+
+### 防偽書寫重點
+
+畫面下方的「臺灣金融業大寫書寫與防偽重點說明」整理四項常見規範：正字大寫防變造（一律使用「壹、貳、參、拾」）、「壹拾」規範（十元須寫「壹拾元整」）、「整」字用法（無角分或僅有角而無分時加註「整」），以及連續零處理（多個零連續出現時依法僅書寫一個「零」）。
+
+```mermaid
+flowchart TD
+    A[選擇幣別抬頭] --> B[輸入阿拉伯數字金額]
+    B --> C{設定輸出選項}
+    C -->|結尾加整| D[中文大寫金額]
+    C -->|顯示英文金額| E[英文大寫金額]
+    B --> F[純中文大寫 無幣別抬頭]
+    D --> G[複製到剪貼簿]
+    E --> G
+    F --> G
+```
+
+本工具完全離線，不使用任何 CDN、外部函式庫、IndexedDB 或 `localStorage`；金額與輸出只保留在目前頁面記憶體，重新整理或關閉頁面後需重新輸入。大寫轉換結果為輔助格式，正式票據與傳票開立前仍應依行內規範與主管機關規定人工覆核。
 
 ## 銀行核心系統固定長度電文解析與管理中心
 
@@ -1036,6 +1092,55 @@ flowchart LR
 
 本工具使用 CDN 載入 Tailwind CSS、Phosphor Icons 與 Google Fonts，首次開啟需保持網路連線。文字與勾選規則只保留在目前頁面記憶體，不會保存或上傳；重新整理或關閉頁面後需重新貼上。個資遮罩為規則式輔助，複雜或非常見格式仍建議人工核對後再對外分享。
 
+## 文件字數與閱讀時間統計
+
+文件字數與閱讀時間統計是單檔、純離線的文字統計工具：把文字貼進輸入框，或匯入 `.txt`、`.md`、`.csv` 等純文字檔，工具會即時統計中文與英文字數、字元數、段落與句數，估算閱讀時間，並列出英文高頻詞。所有內容都在瀏覽器本機處理，不會上傳。
+
+### 輸入文字或匯入檔案
+
+1. 開啟 [`word-counter.html`](./docs/word-counter/word-counter.html)。
+2. 直接在「文字輸入」區貼上或輸入文字；統計結果會即時更新。
+3. 或將純文字檔拖放到上方框線區域，或按「選擇檔案」選取 `.txt`、`.md`、`.csv`、`.log` 等檔案（副檔名不限，避免漏掉 `.csv`、`.log`）。
+4. 載入檔案後，輸入區下方會顯示偵測到的編碼與檔案大小；展開「內容預覽（前 200 字）」可確認解讀是否正確。
+
+### 檔案編碼與自動偵測
+
+- 「檔案編碼」預設為「自動偵測」：先檢查 BOM（UTF-8、UTF-16 LE／BE），再以嚴格 UTF-8 驗證；若不符合，則在 Big5 與 GB18030 之間以常用字頻率評分擇一，適合 Windows 繁中或簡中系統匯出的檔案。
+- 可手動指定 UTF-8、UTF-16 LE／BE、Big5／CP950、Big5-HKSCS、GBK（CP936）、GB18030、Shift_JIS、EUC-KR 或 Windows-1252（西歐 ANSI）後立即重新解碼，不需重新選檔。
+- 瀏覽器沒有獨立的 `cp950` 解碼器，選「Big5（CP950）」時會以 Big5 處理；少數罕用字或造字可能有微小差異。
+- 若無法可靠判斷，狀態列會顯示提醒，並以推測的編碼解讀；請對照內容預覽確認。
+- 貼上文字時不會套用檔案編碼設定，直接以瀏覽器解讀後的字元統計。
+
+### 統計指標與閱讀時間
+
+- 統計項目包含中文字數（漢字，不含中文標點）、英文詞數、數字串、總字數（中文＋英文詞）、字元數（含／不含空白）、段落數（以空行分隔）、句數（以 `。！？!?` 與句尾英文句點估算）、行數與非空行數。
+- 「中文閱讀速度」與「英文閱讀速度」預設為 400 字／分鐘與 230 詞／分鐘，可自行調整，並會保存在瀏覽器 `localStorage`。
+- 閱讀時間同時計入中文與英文，顯示為「約 N 分 M 秒」。
+- 「目標字數」可輸入數值並選擇「下限（至少）」或「上限（至多）」，畫面會顯示進度條、達成狀態與差額，方便對照報告或簡報的篇幅限制。
+- 「英文高頻詞 Top 20」會列出出現次數最多的英文單字，並過濾常見停用詞（the、and、of 等）；中文不做斷詞。
+
+### 複製與清除
+
+- 按「📋 複製統計摘要」會將所有指標與高頻詞以純文字複製到剪貼簿。
+- 按「🗑 清除」會清空輸入、預覽與檔案資訊，設定值（閱讀速度、編碼、目標）仍會保留。
+
+```mermaid
+flowchart TD
+    A[貼上文字或匯入純文字檔] --> B{檔案編碼}
+    B -->|自動偵測| C[檢查 BOM／UTF-8／Big5 與 GB18030 評分]
+    B -->|手動指定| D[UTF-8／UTF-16／Big5／GBK／GB18030 等]
+    C --> E[即時統計中英字數 字元 段落與句數]
+    D --> E
+    E --> F[估算閱讀時間]
+    E --> G[列出英文高頻詞 Top 20]
+    E --> H[對照目標字數上下限]
+    E --> I{輸出}
+    I -->|複製| J[複製統計摘要至剪貼簿]
+    I -->|重設| K[清除輸入與預覽]
+```
+
+本工具完全離線，不使用任何 CDN 或外部函式庫；文字與上傳檔案只在目前頁面記憶體處理，不會保存或上傳。閱讀速度、編碼偏好與目標設定會以 `localStorage`（鍵值 `word_counter_prefs_v1`）記憶在目前瀏覽器，清除網站資料後需重新設定。字數計算為工具輔助，正式篇幅規範仍應依單位要求人工確認。
+
 ## Palette Lore 色彩故事盤
 
 Palette Lore 是單檔的「意境色彩演算器」：輸入抽象意境文字（例如「北歐晨霧」「賽博初雪」），工具會依內建色相／飽和度／明度公式生成一組五色配色盤，並即時套用到實境 UI 元件模擬、WCAG 2.1 對比評測與工程端格式匯出。收藏的色盤會保存在瀏覽器 IndexedDB 典藏庫。
@@ -1080,6 +1185,7 @@ flowchart LR
     B -->|NSFR| K[IndexedDB 情境 草稿 參數]
     B -->|信用風險模擬器| U[目前頁面記憶體]
     B -->|大額曝險速算器| AK[目前頁面記憶體與 localStorage 主題]
+    B -->|金額中文大寫轉換| MU[目前頁面記憶體]
     B -->|核心電文解析與規格管理| AT[IndexedDB 電文規格與解析歷程]
     B -->|電文錯誤碼排查| AZ[IndexedDB 錯誤碼與系統類別]
     B -->|SQL Catalog| I[sql_catalog.json 與瀏覽器快取]
@@ -1090,6 +1196,7 @@ flowchart LR
     B -->|卡片簡報| W[IndexedDB 範本與草稿]
     B -->|公文排版| Y[目前頁面記憶體]
     B -->|文字洗滌| AC[目前頁面記憶體]
+    B -->|字數統計| WB[目前頁面記憶體與 localStorage 偏好]
     B -->|色彩故事盤| AA[IndexedDB 典藏與工作階段]
     C --> F[JSON 備份或 YAML ZIP]
     D --> G[JSON 工作區備份]
@@ -1097,6 +1204,7 @@ flowchart LR
     K --> L[JSON 備份與情境還原]
     U --> V[JSON 模型匯出與匯入]
     AK --> AN[複製 Markdown 底稿或匯出案卷 JSON]
+    MU --> MV[複製中文大寫 純中文或英文金額]
     AT --> AY[匯出 JSON CSV 或匯入多編碼規格 CSV]
     AZ --> BA[匯出完整資料為 Excel 或重設預設範例庫]
     I --> J[CSV Markdown HTML 或 JSON 匯出]
@@ -1107,6 +1215,7 @@ flowchart LR
     W --> X[匯出離線單一 HTML]
     Y --> Z[複製或下載 docx]
     AC --> AD[複製洗滌後純文字]
+    WB --> WE[複製統計摘要]
     AA --> AB[複製 CSS Tailwind JSON 或收藏]
     AE --> AF[複製提示詞]
 ```
@@ -1117,6 +1226,7 @@ flowchart LR
 - NSFR 工具會將情境、編輯草稿與參數保存在目前瀏覽器的 IndexedDB，並提供 JSON 匯出／匯入備份；主題偏好使用 `localStorage`。若瀏覽器不支援持久化（例如部分 `file://` 環境），資料僅保留於目前頁面，請使用「匯出備份」保存。
 - 銀行信用風險模擬器不會自動保存模型；頁面重新整理或關閉後，資料會遺失。請使用 JSON 匯出／匯入保留或移轉模型。該頁也會從 CDN 載入前端資源。
 - 大額曝險與關聯戶圖譜速算器不會自動保存集團案卷；頁面重新整理或關閉後資料會遺失。可在底部按「複製審查備忘錄 (Markdown)」或「匯出案卷 JSON」保留內容；該頁也會從 CDN 載入 Tailwind CSS 與 Google Fonts，並以 `localStorage` 記憶深／淺色主題。
+- 金融金額中文大寫轉換器不使用 IndexedDB 或 `localStorage`，金額與輸出只在目前頁面記憶體處理，且完全不需要網路；輸出為複製到剪貼簿的中文大寫、純中文大寫或英文大寫金額，關閉或重新整理後需重新輸入。
 - 銀行核心系統固定長度電文解析與管理中心會將電文規格與解析歷程保存在目前瀏覽器的 IndexedDB（`BankTelegramParserDB`，object stores：`schemas`、`history`）；換瀏覽器、使用無痕視窗或清除網站資料後，規格與歷史可能無法取得。解析結果可匯出 JSON／CSV，規格可匯入／匯出多編碼 CSV，重要規格請先匯出備份。
 - 核心系統與電文錯誤碼排查對照台會將錯誤碼與系統類別保存在目前瀏覽器的 IndexedDB（`BankErrorCodesDB`，object stores：`error_codes`、`system_categories`）；換瀏覽器、使用無痕視窗或清除網站資料後，資料可能無法取得。可用「匯出完整資料為 Excel」備份，匯入支援 `.xlsx`／`.xls`／`.csv`，重要資料請先匯出保存。
 - SQL Catalog 會讀取使用者選定目錄中的 SQL 檔案，索引說明預設寫入該目錄的 `sql_catalog.json`；不支援目錄寫入時則保存於目前瀏覽器的 IndexedDB 快取。工具沒有遠端同步或後端上傳功能。
@@ -1126,6 +1236,7 @@ flowchart LR
 - Markdown 卡片簡報工具會將範本與編輯草稿保存在目前瀏覽器的 IndexedDB，主題偏好使用 `localStorage`；「匯出展示檔」產生完全離線的單一 HTML，但編輯介面樣式仍由 CDN 載入 Tailwind CSS。
 - 公文簽／函排版工具不使用 IndexedDB 或 `localStorage`，內容只保留在目前頁面記憶體；輸出為剪貼簿或使用者主動下載的 `.docx` 檔，關閉或重新整理後需重新輸入。
 - 剪貼簿洗滌器也不使用 IndexedDB 或 `localStorage`，文字與勾選規則只在目前頁面記憶體處理；輸出為複製到剪貼簿的純文字，關閉或重新整理後需重新貼上。
+- 文件字數與閱讀時間統計不使用 IndexedDB，文字與匯入檔案只在目前頁面記憶體處理，閱讀速度、編碼偏好與目標設定以 `localStorage`（鍵值 `word_counter_prefs_v1`）記憶；輸出為複製到剪貼簿的統計摘要，關閉或重新整理後需重新貼上或匯入。
 - CSV 格式清理器不使用 IndexedDB 或 `localStorage`，讀入的內容與清理結果只在目前頁面記憶體處理，輸出為使用者主動下載的 CSV 檔。
 - MatrixPivot 表格矩陣轉置器不使用 IndexedDB 或 `localStorage`，貼上的表格、轉置結果與格式輸出只在目前頁面記憶體處理；輸出為複製到剪貼簿的代碼或使用者主動下載的 CSV 檔，重新整理或關閉頁面後需重新輸入。
 - API Mock & cURL 格式轉換工作室 (API Mock Studio) 使用瀏覽器 `localStorage`（鍵值 `api_mock_studio_state_v1`）保存端點清冊、作用中端點與執行偏好；提供「匯出集合」下載 JSON 檔，可備份或跨裝置匯入還原。
@@ -1149,11 +1260,13 @@ flowchart LR
 - Markdown 卡片簡報工具：編輯介面從 CDN 載入 Tailwind CSS；「匯出展示檔」產生的單一 HTML 不含外部依賴。
 - 公文簽／函排版與 Word 匯出：從 CDN 載入 Tailwind CSS 與 docx.js。
 - 剪貼簿洗滌器 (Text Scrubber)：從 CDN 載入 Tailwind CSS、Phosphor Icons 與 Google Fonts。
+- 金融金額中文大寫轉換器：純離線，樣式與邏輯（內嵌 Tailwind 與打包後的 React）皆已內嵌於單一 HTML，不使用任何外部資源。
+- 文件字數與閱讀時間統計：純離線，不使用任何外部資源。
 - MatrixPivot 表格矩陣轉置器：從 CDN 載入 Tailwind CSS 與 Google Fonts。
 - CSV 格式清理器：從 CDN 載入 iconv-lite 0.6.3，僅 Big5／CP950 的編碼與解碼需要。
 - API Mock & cURL 格式轉換工作室：從 CDN 載入 Tailwind CSS 與 Google Fonts。
 - Palette Lore 色彩故事盤：從 CDN 載入 Tailwind CSS 與 Google Fonts。
-- 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；SQL Column Lineage Analyzer 也不依賴外部 CDN。
+- 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；金融金額中文大寫轉換器、SQL Column Lineage Analyzer 與文件字數與閱讀時間統計也不依賴外部 CDN。
 
 Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器（Big5／CP950 功能）、API Mock Studio 與色彩故事盤若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
 
@@ -1170,7 +1283,9 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 - 銀行核心系統固定長度電文解析與管理中心使用 IndexedDB（資料庫名稱 `BankTelegramParserDB`；object stores：`schemas`、`history`）保存電文規格與解析歷程。
 - 核心系統與電文錯誤碼排查對照台使用 IndexedDB（資料庫名稱 `BankErrorCodesDB`；object stores：`error_codes`、`system_categories`）保存錯誤碼與系統類別，並提供 Excel 匯入／匯出。
 - 公文簽／函排版工具不使用 IndexedDB 或 `localStorage`，內容只在目前頁面處理，重新整理後需重新輸入。
+- 金融金額中文大寫轉換器不使用 IndexedDB 或 `localStorage`，金額與輸出只在目前頁面處理，重新整理後需重新輸入。
 - 剪貼簿洗滌器不使用 IndexedDB 或 `localStorage`，文字與勾選規則只在目前頁面處理。
+- 文件字數與閱讀時間統計不使用 IndexedDB；文字與匯入檔案只在目前頁面處理，閱讀速度、編碼偏好與目標設定以 `localStorage`（鍵值 `word_counter_prefs_v1`）記憶。
 - MatrixPivot 表格矩陣轉置器不使用 IndexedDB 或 `localStorage`，表格與輸出只在目前頁面處理，重新整理後需重新輸入。
 - CSV 格式清理器的 Big5／CP950 功能依賴 CDN；CDN 無法載入時，Big5 與 CP950 匯出會停用，請改用 UTF-8 或 UTF-8（含 BOM）匯出。
 - API Mock & cURL 格式轉換工作室使用 `localStorage`（鍵值 `api_mock_studio_state_v1` 與 `api_mock_studio_theme`）保存端點清冊、操作狀態與深淺主題。
@@ -1280,6 +1395,14 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 
 檢查「標點全形化」「中英間距校正」與「遮罩關鍵字」的設定；「說明」與「擬辦／辦法」每個換行都會自成一項並加上「一、」「二、」編號，若不需編號請改為單行。修改左側欄位時右側預覽會即時更新，可據此逐步比對。
 
+### 文件字數統計匯入後出現亂碼
+
+請在「檔案編碼」改選正確的編碼（UTF-8、UTF-16 LE／BE、Big5／CP950、Big5-HKSCS、GBK、GB18030 等）後即時重新解碼，不需重新選檔。沒有 BOM 的 UTF-16 無法自動判斷，需手動指定；Big5 與 GBK 皆可解碼時，自動偵測以常用字頻率評分，仍可能誤判少數檔案，請展開「內容預覽」核對後手動調整。
+
+### 文件字數統計的閱讀時間與預期不同
+
+閱讀時間由「中文閱讀速度」與「英文閱讀速度」兩個欄位決定，預設為 400 字／分鐘與 230 詞／分鐘；可依需求調整，設定會保存在瀏覽器 `localStorage`。中文字數只計算漢字（不含中文標點與空白），英文以連續字母為一個詞，數字串另計，因此與其他工具的字數定義可能不同。
+
 ## 維護者驗證
 
 本專案是免建置的靜態 HTML／CSS／JavaScript 專案，沒有統一的 npm 測試指令。實際頁面同時使用原生 HTML／CSS／Vanilla JavaScript；Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器與 API Mock Studio 透過 CDN 載入部分資源，這是目前程式現況。若要達成完全離線的共通標準，仍需另行移除或內嵌這些 CDN 依賴。修改文件後可先執行：
@@ -1288,4 +1411,4 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟二十一個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、大額曝險與關聯戶圖譜速算器可設定淨值與集團／新增關聯戶與股權連結／檢視圖譜與法定門檻檢核／執行 What-If 壓力試算並複製底稿或匯出案卷 JSON、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、MatrixPivot 表格矩陣轉置器可貼上或匯入表格／執行行列轉置／切換 Markdown、JSON、SQL、HTML 與 CSV 輸出並複製或下載 CSV、API Mock Studio 可切換端點／貼上 cURL 解析／執行 Mock 模擬與延遲測試／產生 Dummy 假資料／匯出 OpenAPI 3.0 與 Postman Collection、CSV 格式清理器可讀入 UTF-8 與 Big5 檔案／切換清理規則並檢視預覽／匯出 CP950 時確認無法對應字元的提示，Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏、銀行核心系統固定長度電文解析與管理中心可選擇電文規格／貼上多筆電文解析並匯出 JSON 與 CSV／切換反向組裝產生固定長度電文／新增或匯入多編碼 CSV 規格並保存解析歷程、核心系統與電文錯誤碼排查對照台可搜尋與篩選錯誤碼／新增編輯與刪除代碼／維護系統類別／匯入 Excel 並匯出完整資料。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
+若修改網頁程式，請分別在現代瀏覽器開啟二十三個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、大額曝險與關聯戶圖譜速算器可設定淨值與集團／新增關聯戶與股權連結／檢視圖譜與法定門檻檢核／執行 What-If 壓力試算並複製底稿或匯出案卷 JSON、金融金額中文大寫轉換器可切換幣別抬頭與「結尾加整」／「顯示英文金額」選項／輸入金額檢視中文大寫、純中文大寫與英文大寫輸出並複製、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、MatrixPivot 表格矩陣轉置器可貼上或匯入表格／執行行列轉置／切換 Markdown、JSON、SQL、HTML 與 CSV 輸出並複製或下載 CSV、API Mock Studio 可切換端點／貼上 cURL 解析／執行 Mock 模擬與延遲測試／產生 Dummy 假資料／匯出 OpenAPI 3.0 與 Postman Collection、CSV 格式清理器可讀入 UTF-8 與 Big5 檔案／切換清理規則並檢視預覽／匯出 CP950 時確認無法對應字元的提示，Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、文件字數與閱讀時間統計可貼上文字或匯入 UTF-8／Big5 等多編碼檔案／檢視中英字數、段落句數與閱讀時間／設定目標字數並複製統計摘要、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏、銀行核心系統固定長度電文解析與管理中心可選擇電文規格／貼上多筆電文解析並匯出 JSON 與 CSV／切換反向組裝產生固定長度電文／新增或匯入多編碼 CSV 規格並保存解析歷程、核心系統與電文錯誤碼排查對照台可搜尋與篩選錯誤碼／新增編輯與刪除代碼／維護系統類別／匯入 Excel 並匯出完整資料。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。

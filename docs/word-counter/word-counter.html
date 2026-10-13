@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文件字數與閱讀時間統計 · SPA 網頁小工具</title>
+<meta name="description" content="貼上或匯入純文字檔，即時統計中文與英文字數、字元數、段落句數、閱讀時間與英文高頻詞，支援 UTF-8／UTF-16／Big5／GBK 等多種編碼。">
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --surface-2: #eef1f5;
+    --ink: #1b1f24;
+    --ink-soft: #5a6472;
+    --ink-faint: #8a94a3;
+    --line: #e2e7ee;
+    --accent: #3b6ea5;
+    --accent-soft: #e8f0fa;
+    --sage: #3f7d54;
+    --sage-soft: #e7f2ea;
+    --amber: #a9741f;
+    --amber-soft: #f8efdd;
+    --danger: #b0402f;
+    --danger-soft: #fbe9e5;
+    --shadow: 0 1px 2px rgba(20, 28, 40, .04), 0 8px 24px rgba(20, 28, 40, .06);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171b;
+      --surface: #1c2027;
+      --surface-2: #232830;
+      --ink: #eef1f5;
+      --ink-soft: #aab4c0;
+      --ink-faint: #78828f;
+      --line: #2b313a;
+      --accent: #7aa9d8;
+      --accent-soft: #1e2a38;
+      --sage: #93c39c;
+      --sage-soft: #1d2a20;
+      --amber: #dcb072;
+      --amber-soft: #2e2617;
+      --danger: #e28a76;
+      --danger-soft: #33211d;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Noto Sans TC",
+      "Microsoft JhengHei", "PingFang TC", sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+  header.top {
+    padding: 40px 0 22px;
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(1000px 340px at 15% -30%, var(--accent-soft), transparent 70%),
+      radial-gradient(800px 320px at 95% -40%, var(--sage-soft), transparent 70%);
+  }
+  .eyebrow {
+    display: inline-block;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  h1 { font-size: clamp(24px, 3.6vw, 34px); margin: 0 0 8px; letter-spacing: -.01em; }
+  header.top p { margin: 0; color: var(--ink-soft); max-width: 760px; font-size: 15px; }
+
+  main { padding: 22px 0 72px; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px 20px;
+  }
+  .panel h2 {
+    font-size: 15px;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -.005em;
+  }
+  .panel h2 .dot {
+    width: 4px; height: 15px; border-radius: 2px; background: var(--accent);
+  }
+
+  /* Settings */
+  .settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 26px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field > label, .field > span.lbl {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-faint);
+    letter-spacing: .02em;
+  }
+  select, input[type="number"], input[type="text"] {
+    font: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  select:focus, input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  input[type="number"] { width: 96px; }
+  .field .hint { font-size: 11px; color: var(--ink-faint); }
+
+  /* Grid */
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  /* Input area */
+  .drop {
+    border: 1.5px dashed var(--line);
+    border-radius: 11px;
+    padding: 12px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface-2);
+    transition: border-color .15s, background .15s;
+    margin-bottom: 12px;
+  }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop .tip { font-size: 12.5px; color: var(--ink-soft); }
+  .file-btn {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 7px 13px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .file-btn:hover { border-color: var(--accent); }
+  .file-btn input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 200px;
+  }
+
+  textarea#text {
+    width: 100%;
+    min-height: 320px;
+    resize: vertical;
+    font: inherit;
+    font-size: 14.5px;
+    line-height: 1.7;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 14px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  textarea#text:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  .input-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 12.5px;
+    color: var(--ink-faint);
+  }
+  .enc-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  .enc-status.warn { color: var(--amber); background: var(--amber-soft); }
+  .enc-status.bad { color: var(--danger); background: var(--danger-soft); }
+
+  details.preview { margin-top: 10px; }
+  details.preview summary {
+    cursor: pointer;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    user-select: none;
+  }
+  details.preview pre {
+    margin: 8px 0 0;
+    max-height: 160px;
+    overflow: auto;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 10px 12px;
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--ink-soft);
+  }
+
+  /* Stats */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+    gap: 10px;
+  }
+  .stat {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 10px 12px;
+  }
+  .stat .k { font-size: 11.5px; color: var(--ink-faint); font-weight: 600; }
+  .stat .v {
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+    word-break: break-all;
+  }
+  .stat.accent .v { color: var(--accent); }
+
+  .reading {
+    margin-top: 14px;
+    background: linear-gradient(135deg, var(--accent-soft), transparent 80%);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 12px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    align-items: baseline;
+  }
+  .reading .big { font-size: 22px; font-weight: 700; color: var(--accent); letter-spacing: -.02em; }
+  .reading .sub { font-size: 12.5px; color: var(--ink-soft); }
+
+  .target-box {
+    margin-top: 14px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 12px 14px;
+  }
+  .target-box .head {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    align-items: baseline; justify-content: space-between;
+  }
+  .target-box .head .t { font-size: 12.5px; font-weight: 600; color: var(--ink-faint); }
+  .target-box .head .msg { font-size: 13px; font-weight: 700; }
+  .target-box .msg.ok { color: var(--sage); }
+  .target-box .msg.warn { color: var(--amber); }
+  .target-box .msg.bad { color: var(--danger); }
+  .bar {
+    height: 9px;
+    background: var(--surface-2);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 9px;
+  }
+  .bar > i {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: var(--accent);
+    transition: width .25s ease, background .25s ease;
+  }
+  .bar > i.ok { background: var(--sage); }
+  .bar > i.warn { background: var(--amber); }
+  .bar > i.bad { background: var(--danger); }
+  .target-box .foot { font-size: 12px; color: var(--ink-faint); margin-top: 7px; }
+
+  /* Buttons */
+  .btn {
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    border-radius: 9px;
+    padding: 9px 15px;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    transition: border-color .15s, background .15s, color .15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn.primary:hover { filter: brightness(1.06); color: #fff; }
+  .stats-actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* Words */
+  .words { margin-top: 16px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .wchip {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-size: 13px;
+  }
+  .wchip .w { font-weight: 600; }
+  .wchip .n { font-size: 11.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .muted { color: var(--ink-faint); font-size: 13px; }
+
+  footer.foot {
+    border-top: 1px solid var(--line);
+    padding: 22px 0 44px;
+    color: var(--ink-faint);
+    font-size: 12.5px;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <span class="eyebrow">文書與簡報 · 離線可用</span>
+    <h1>文件字數與閱讀時間統計</h1>
+    <p>貼上文字或匯入純文字檔，即時統計中文與英文字詞、字元、段落與句數，估算閱讀時間並列出英文高頻詞。支援 UTF-8、UTF-16、Big5／CP950、GBK／GB18030 等多種編碼，所有內容只在瀏覽器本機處理。</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="settings panel" aria-label="統計設定">
+    <div class="field">
+      <label for="encSel">檔案編碼</label>
+      <select id="encSel">
+        <option value="auto">自動偵測</option>
+        <option value="utf-8">UTF-8</option>
+        <option value="utf-16le">UTF-16 LE</option>
+        <option value="utf-16be">UTF-16 BE</option>
+        <option value="big5">Big5（CP950）</option>
+        <option value="big5-hkscs">Big5-HKSCS</option>
+        <option value="gbk">GBK（CP936）</option>
+        <option value="gb18030">GB18030</option>
+        <option value="shift_jis">Shift_JIS</option>
+        <option value="euc-kr">EUC-KR</option>
+        <option value="windows-1252">Windows-1252（西歐 ANSI）</option>
+      </select>
+      <span class="hint">貼上文字時此設定無效</span>
+    </div>
+    <div class="field">
+      <label for="zhCpm">中文閱讀速度</label>
+      <input id="zhCpm" type="number" min="50" max="2000" step="10" value="400" aria-label="中文每分鐘字數">
+      <span class="hint">字／分鐘</span>
+    </div>
+    <div class="field">
+      <label for="enWpm">英文閱讀速度</label>
+      <input id="enWpm" type="number" min="50" max="2000" step="10" value="230" aria-label="英文每分鐘詞數">
+      <span class="hint">詞／分鐘</span>
+    </div>
+    <div class="field">
+      <label for="targetNum">目標字數（選填）</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input id="targetNum" type="number" min="0" step="1" placeholder="例如 1000" aria-label="目標字數">
+        <select id="targetMode" aria-label="目標模式">
+          <option value="min">下限（至少）</option>
+          <option value="max">上限（至多）</option>
+        </select>
+      </div>
+      <span class="hint">以中文＋英文詞計算</span>
+    </div>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2><span class="dot"></span>文字輸入</h2>
+      <div class="drop" id="drop">
+        <span class="tip">拖放檔案到此，或選擇檔案：<b>.txt / .md / .csv / 純文字</b></span>
+        <label class="file-btn">📂 選擇檔案
+          <input type="file" id="fileInput" accept=".txt,.md,.markdown,.csv,.log,.text,.json,.xml,.html,.htm,text/*">
+        </label>
+      </div>
+      <label class="sr-only" for="text">文字內容</label>
+      <textarea id="text" placeholder="在此貼上或輸入文字…&#10;也可以從上方選擇或拖放純文字檔（支援 UTF-8／UTF-16／Big5／GBK 等編碼）。"></textarea>
+      <div class="input-foot">
+        <span id="fileMeta" class="muted">尚未載入檔案</span>
+        <button class="btn" id="clearBtn" type="button">🗑 清除</button>
+      </div>
+      <div style="margin-top:10px">
+        <span class="enc-status" id="encStatus">編碼：等待輸入</span>
+      </div>
+      <details class="preview">
+        <summary>內容預覽（前 200 字）</summary>
+        <pre id="preview">—</pre>
+      </details>
+    </section>
+
+    <section class="panel">
+      <h2><span class="dot"></span>統計結果</h2>
+      <div class="stat-grid" id="statGrid"></div>
+      <div class="reading" id="reading">
+        <span class="big" id="readTime">—</span>
+        <span class="sub" id="readSub">預估閱讀時間</span>
+      </div>
+      <div class="target-box" id="targetBox" hidden>
+        <div class="head">
+          <span class="t">目標進度</span>
+          <span class="msg" id="targetMsg"></span>
+        </div>
+        <div class="bar"><i id="targetBar"></i></div>
+        <div class="foot" id="targetFoot"></div>
+      </div>
+      <div class="stats-actions">
+        <button class="btn primary" id="copyBtn" type="button">📋 複製統計摘要</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="panel words">
+    <h2><span class="dot"></span>英文高頻詞 Top 20</h2>
+    <div id="topWords" class="muted">尚無英文內容。</div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <span>文件字數與閱讀時間統計 · 免後端 · 離線可用 · 內容僅在瀏覽器本機處理，不會上傳。</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORE_KEY = "word_counter_prefs_v1";
+  var MAX_WARN = 20 * 1024 * 1024; // 20 MB
+
+  var el = {
+    encSel: document.getElementById("encSel"),
+    zhCpm: document.getElementById("zhCpm"),
+    enWpm: document.getElementById("enWpm"),
+    targetNum: document.getElementById("targetNum"),
+    targetMode: document.getElementById("targetMode"),
+    drop: document.getElementById("drop"),
+    fileInput: document.getElementById("fileInput"),
+    text: document.getElementById("text"),
+    fileMeta: document.getElementById("fileMeta"),
+    clearBtn: document.getElementById("clearBtn"),
+    encStatus: document.getElementById("encStatus"),
+    preview: document.getElementById("preview"),
+    statGrid: document.getElementById("statGrid"),
+    readTime: document.getElementById("readTime"),
+    readSub: document.getElementById("readSub"),
+    targetBox: document.getElementById("targetBox"),
+    targetMsg: document.getElementById("targetMsg"),
+    targetBar: document.getElementById("targetBar"),
+    targetFoot: document.getElementById("targetFoot"),
+    copyBtn: document.getElementById("copyBtn"),
+    topWords: document.getElementById("topWords")
+  };
+
+  var lastBuffer = null;       // ArrayBuffer of the loaded file
+  var lastFileName = "";
+  var lastFileSize = 0;
+  var lastDetected = "";       // encoding actually used for the loaded file
+  var lastManual = false;      // true if user picked the encoding manually
+
+  /* ---------- encoding detection ---------- */
+
+  function safeDecode(buf, encoding) {
+    try {
+      return new TextDecoder(encoding, { fatal: false }).decode(buf);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function supportsEncoding(encoding) {
+    try { new TextDecoder(encoding); return true; }
+    catch (e) { return false; }
+  }
+
+  // Common characters that differ between traditional and simplified forms.
+  var TRAD_STR = "這們來對與發現後裡麼經學實無長關點業將兩間問從應戰頭體見觀讓認條氣題變總電數報結務場計資軍車馬門單華萬書決議記講論請誰謝語說讀課識設詞試驗費貴買賣頁風飛龍鳥魚齊齒齡兒夾麗舉義樂喬習鄉爭虧產親億僅倉儀價眾優會傘偉傳傷倫偽為於時過還開標準確險額繳稅財貸帳戶匯銀負債損營獲運轉網訊號備軟錯誤權證啟閉載寫檔庫詢欄筆篩選預項話視鈕幫錄確認儲刪編輯複製貼復原覽縮尋頁標記註冊碼個電顏線齊邊紙張橫機傳掃貝載圖遊戲統裝員連牆監檢務組則顯區輕鬆驗動際域虛擬嚴護級願鬧鐘鐵針銀張開閉節點線導航訊號連結傳輸儲存檔案資料庫查詢報表欄位筆數篩選設定選項對話視窗按鈕說明幫助關於版本更新記錄錯誤警告提示確認取消是否開啟儲存刪除編輯新增複製貼上剪下復原重做列印預覽縮放旋轉翻頁搜尋取代全選標記註解註冊登入登出帳號密碼權限個人資料姓名出生日期電話地址電子郵件信箱收件寄件轉寄回覆附件主旨內容格式字型大小顏色粗體斜體底線對齊縮排行距段落分頁頁首頁尾邊界紙張方向直式橫式尺寸列印機傳真掃描影印拷貝存檔文件夾桌面文件下載音樂影片圖片相片相簿遊戲程式系統工具控制台裝置管理員網路連線存取權限防火牆病毒掃毒備份還原資源效能監控事件檢視器工作排程服務登錄檔設定值使用者群組本機安全原則電源選項顯示設定個人化時間語言地區存取性輕鬆存取硬體音效裝置印表機滑鼠鍵盤藍牙網際網路區域連線無線網路廣域虛擬私人網路共享中心媒體串流家庭群組遠端協助疑難解答程式相容疑難雜症問與答使用者帳戶家長監護人上網保護兒童限制遊戲分級時間限制";
+  var SIMP_STR = "这个们来对与发现后里么经学实无长关点业将两间问从应战头体见观让认条气题变总电数报结务场计资军车马门单华万书决议记讲论请谁谢语说读课识设词试验费贵买卖页风飞龙鸟鱼齐齿龄儿夹丽举义乐乔习乡争亏产亲亿仅仓仪价众优会伞伟传伤伦伪为于时过还开标准确险额缴税财贷帐户汇银负债损营获运转网讯号备软错误权证启闭载写档库询栏笔筛选预项话视钮帮录确认储删编辑复制贴复原览缩寻页标记注册码个电颜线齐边纸张横机传扫贝载图游戏统装员连墙监检务组则显区轻松验动际域虚拟严护级愿闹钟铁针银张开闭节点线导航讯号连结传输储存档案资料库查询报表栏位笔数筛选设定选项对话视窗按钮说明帮助关于版本更新记录错误警告提示确认取消是否开启储存删除编辑新增复制贴上剪下复原重做列印预览缩放旋转翻页搜寻取代全选标记注解注册登入登出帐号密码权限个人资料姓名出生日期电话地址电子邮件信箱收件寄件转寄回覆附件主旨内容格式字型大小颜色粗体斜体底线对齐缩排行距段落分页页首页尾边界纸张方向直式横式尺寸列印机传真扫描影印拷贝存档文件夹桌面文件下载音乐影片图片相片相簿游戏程式系统工具控制台装置管理员网路连线存取权限防火墙病毒扫毒备份还原资源效能监控事件检视器工作排程服务登录档设定值使用者群组本机安全原则电源选项显示设定个人化时间语言地区存取性轻松存取硬体音效装置印表机滑鼠键盘蓝芽网际网路区域连线无线网路广域虚拟私人网路共享中心媒体串流家庭群组远端协助疑难解答程式相容疑难杂症问与答使用者帐户家长监护人上网保护儿童限制游戏分级时间限制";
+
+  var TRAD_SET = new Set(TRAD_STR);
+  var SIMP_SET = new Set(SIMP_STR);
+
+  function scoreText(text, ownSet, otherSet) {
+    var hits = 0, others = 0, bad = 0;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text.charAt(i);
+      if (ch === "\uFFFD") { bad++; continue; }
+      if (ownSet.has(ch)) hits++;
+      else if (otherSet.has(ch)) others++;
+    }
+    return hits - others - bad * 3;
+  }
+
+  function detectUtf16(buf) {
+    var b = new Uint8Array(buf);
+    if (b.length < 4 || b.length % 2 !== 0) return null;
+    var lim = Math.min(b.length, 8192);
+    var even = 0, odd = 0;
+    for (var i = 0; i < lim; i++) {
+      if (b[i] === 0) { if (i % 2 === 0) even++; else odd++; }
+    }
+    var zeros = even + odd;
+    if (zeros > lim * 0.20) {
+      return odd > even ? "utf-16le" : "utf-16be";
+    }
+    return null;
+  }
+
+  // returns { encoding, uncertain }
+  function detectEncoding(buf) {
+    var b = new Uint8Array(buf);
+    if (b.length >= 3 && b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF) {
+      return { encoding: "utf-8", uncertain: false };
+    }
+    if (b.length >= 2 && b[0] === 0xFF && b[1] === 0xFE) {
+      return { encoding: "utf-16le", uncertain: false };
+    }
+    if (b.length >= 2 && b[0] === 0xFE && b[1] === 0xFF) {
+      return { encoding: "utf-16be", uncertain: false };
+    }
+
+    var u16 = detectUtf16(buf);
+    if (u16) return { encoding: u16, uncertain: false };
+
+    var utf8ok = false;
+    try { new TextDecoder("utf-8", { fatal: true }).decode(buf); utf8ok = true; }
+    catch (e) { utf8ok = false; }
+    if (utf8ok) return { encoding: "utf-8", uncertain: false };
+
+    // Big5 vs GB18030 scoring
+    var big5Text = safeDecode(buf, "big5");
+    var gbEnc = supportsEncoding("gb18030") ? "gb18030" : "gbk";
+    var gbText = safeDecode(buf, gbEnc);
+
+    var bs = big5Text === null ? -Infinity : scoreText(big5Text, TRAD_SET, SIMP_SET);
+    var gs = gbText === null ? -Infinity : scoreText(gbText, SIMP_SET, TRAD_SET);
+
+    if (bs === -Infinity && gs === -Infinity) {
+      return { encoding: "utf-8", uncertain: true };
+    }
+    var best = bs >= gs ? "big5" : gbEnc;
+    var bestScore = Math.max(bs, gs);
+    return { encoding: best, uncertain: bestScore <= 0 };
+  }
+
+  function labelFor(encoding) {
+    var map = {
+      "utf-8": "UTF-8",
+      "utf-16le": "UTF-16 LE",
+      "utf-16be": "UTF-16 BE",
+      "big5": "Big5（CP950）",
+      "big5-hkscs": "Big5-HKSCS",
+      "gbk": "GBK（CP936）",
+      "gb18030": "GB18030",
+      "shift_jis": "Shift_JIS",
+      "euc-kr": "EUC-KR",
+      "windows-1252": "Windows-1252"
+    };
+    return map[encoding] || encoding;
+  }
+
+  function decodeBuffer(buf, pref) {
+    if (pref === "auto") {
+      var res = detectEncoding(buf);
+      return { text: safeDecode(buf, res.encoding) || "", encoding: res.encoding, uncertain: res.uncertain };
+    }
+    return { text: safeDecode(buf, pref) || "", encoding: pref, uncertain: false };
+  }
+
+  /* ---------- statistics ---------- */
+
+  var HAN_RE;
+  try { HAN_RE = new RegExp("\\p{Script=Han}", "gu"); }
+  catch (e) { HAN_RE = /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF]/g; }
+
+  function countMatches(text, re) {
+    var m = text.match(re);
+    return m ? m.length : 0;
+  }
+
+  var STOPWORDS = new Set(("a an the and or but if then else of to in on at by for with about against between into through during " +
+    "before after above below from up down out off over under again further once here there when where why how " +
+    "all any both each few more most other some such no nor not only own same so than too very can will just " +
+    "should now is are was were be been being have has had having do does did doing would could might must shall " +
+    "may it its this that these those i you he she we they them his her their our your my me us him who whom which " +
+    "what as also etc via per into onto").split(/\s+/));
+
+  function computeStats(text) {
+    var han = countMatches(text, HAN_RE);
+
+    var words = text.match(/[A-Za-z]+(?:['\u2019-][A-Za-z]+)*/g) || [];
+    var enWords = words.length;
+
+    var numbers = countMatches(text, /\d+(?:[.,]\d+)*/g);
+
+    var chars = Array.from(text).length;
+    var charsNoSpace = Array.from(text.replace(/\s/g, "")).length;
+
+    var paragraphs = 0;
+    if (text.trim()) {
+      paragraphs = text.split(/\n[ \t]*\n+/).filter(function (s) { return s.trim().length > 0; }).length;
+    }
+
+    var sentences = countMatches(text, /[。！？!?]+|[.](?=\s|$)/g);
+
+    var lines = text.length ? text.split("\n").length : 0;
+    var nonEmptyLines = text.length
+      ? text.split("\n").filter(function (l) { return l.trim().length > 0; }).length
+      : 0;
+
+    // frequent English words
+    var freq = Object.create(null);
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i].toLowerCase();
+      if (w.length < 2 || STOPWORDS.has(w)) continue;
+      freq[w] = (freq[w] || 0) + 1;
+    }
+    var top = Object.keys(freq)
+      .map(function (w) { return { w: w, n: freq[w] }; })
+      .sort(function (a, b) { return b.n - a.n || (a.w < b.w ? -1 : 1); })
+      .slice(0, 20);
+
+    return {
+      han: han,
+      enWords: enWords,
+      numbers: numbers,
+      chars: chars,
+      charsNoSpace: charsNoSpace,
+      paragraphs: paragraphs,
+      sentences: sentences,
+      lines: lines,
+      nonEmptyLines: nonEmptyLines,
+      top: top,
+      totalCount: han + enWords
+    };
+  }
+
+  function fmt(n) {
+    return Number(n).toLocaleString("zh-Hant-TW");
+  }
+
+  function readingTime(stats) {
+    var cpm = clampNum(parseFloat(el.zhCpm.value), 50, 2000, 400);
+    var wpm = clampNum(parseFloat(el.enWpm.value), 50, 2000, 230);
+    var minutes = stats.han / cpm + stats.enWords / wpm;
+    if (stats.han + stats.enWords === 0) return { text: "—", sub: "預估閱讀時間" };
+    var totalSec = Math.round(minutes * 60);
+    if (totalSec < 1) totalSec = 1;
+    var mm = Math.floor(totalSec / 60), ss = totalSec % 60;
+    var label = mm > 0 ? ("約 " + mm + " 分 " + (ss ? ss + " 秒" : "0 秒")) : ("約 " + ss + " 秒");
+    return {
+      text: label,
+      sub: "中文 " + stats.han + " 字 ÷ " + cpm + " 字/分 ＋ 英文 " + stats.enWords + " 詞 ÷ " + wpm + " 詞/分"
+    };
+  }
+
+  function clampNum(v, min, max, dflt) {
+    if (!isFinite(v)) return dflt;
+    if (v < min) return min;
+    if (v > max) return max;
+    return v;
+  }
+
+  /* ---------- render ---------- */
+
+  function render() {
+    var text = el.text.value;
+    var s = computeStats(text);
+
+    var items = [
+      { k: "中文字數", v: fmt(s.han), accent: true },
+      { k: "英文詞數", v: fmt(s.enWords) },
+      { k: "數字串", v: fmt(s.numbers) },
+      { k: "總字數（中＋英）", v: fmt(s.totalCount), accent: true },
+      { k: "字元數（含空白）", v: fmt(s.chars) },
+      { k: "字元數（不含空白）", v: fmt(s.charsNoSpace) },
+      { k: "段落數", v: fmt(s.paragraphs) },
+      { k: "句數", v: fmt(s.sentences) },
+      { k: "行數", v: fmt(s.lines) },
+      { k: "非空行", v: fmt(s.nonEmptyLines) }
+    ];
+    el.statGrid.innerHTML = items.map(function (it) {
+      return '<div class="stat' + (it.accent ? " accent" : "") + '"><div class="k">' + it.k +
+        '</div><div class="v">' + it.v + "</div></div>";
+    }).join("");
+
+    var rt = readingTime(s);
+    el.readTime.textContent = rt.text;
+    el.readSub.textContent = rt.sub;
+
+    // target
+    var target = clampNum(parseFloat(el.targetNum.value), 0, 1e12, NaN);
+    if (target > 0) {
+      var mode = el.targetMode.value;
+      var pct = Math.min(100, Math.round((s.totalCount / target) * 100));
+      var diff = s.totalCount - target;
+      el.targetBox.hidden = false;
+      el.targetBar.style.width = pct + "%";
+      var cls = "", msg = "";
+      if (mode === "min") {
+        if (diff >= 0) { cls = "ok"; msg = "已達成，超出 " + fmt(diff) + " 字"; }
+        else { cls = "warn"; msg = "還差 " + fmt(-diff) + " 字"; }
+      } else {
+        if (diff > 0) { cls = "bad"; msg = "已超出 " + fmt(diff) + " 字"; }
+        else { cls = "ok"; msg = "尚可再寫 " + fmt(-diff) + " 字"; }
+      }
+      el.targetMsg.textContent = msg;
+      el.targetMsg.className = "msg " + cls;
+      el.targetBar.className = cls;
+      if (mode === "max" && diff > 0) el.targetBar.style.width = "100%";
+      var modeLabel = mode === "min" ? "下限" : "上限";
+      el.targetFoot.textContent = "目標" + modeLabel + " " + fmt(target) + " 字 · 目前 " + fmt(s.totalCount) +
+        " 字（" + pct + "%）";
+    } else {
+      el.targetBox.hidden = true;
+    }
+
+    // top words
+    if (s.top.length) {
+      el.topWords.className = "chips";
+      el.topWords.innerHTML = s.top.map(function (t) {
+        return '<span class="wchip"><span class="w">' + escapeHtml(t.w) +
+          '</span><span class="n">' + t.n + "</span></span>";
+      }).join("");
+    } else {
+      el.topWords.className = "muted";
+      el.topWords.textContent = s.enWords ? "英文內容過短或皆為常見停用詞。" : "尚無英文內容。";
+    }
+
+    lastStats = s;
+  }
+
+  var lastStats = null;
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ---------- preview & encoding status ---------- */
+
+  function updatePreview() {
+    var t = el.text.value;
+    el.preview.textContent = t ? t.slice(0, 200) : "—";
+  }
+
+  function setEncStatus(kind, text) {
+    el.encStatus.className = "enc-status" + (kind ? " " + kind : "");
+    el.encStatus.textContent = text;
+  }
+
+  /* ---------- file handling ---------- */
+
+  function readFile(file) {
+    if (!file) return;
+    lastFileName = file.name;
+    lastFileSize = file.size;
+    if (file.size > MAX_WARN) {
+      lastFileName += "（超過 20 MB，處理可能較慢）";
+    }
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      lastBuffer = e.target.result;
+      applyBuffer(false);
+    };
+    reader.onerror = function () {
+      setEncStatus("bad", "讀取檔案失敗");
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  function applyBuffer(manual) {
+    if (!lastBuffer) return;
+    var pref = manual ? el.encSel.value : "auto";
+    var res = decodeBuffer(lastBuffer, pref);
+    el.text.value = res.text;
+    lastDetected = res.encoding;
+    lastManual = manual;
+
+    el.fileMeta.textContent = "已載入：" + lastFileName + "（" + humanSize(lastFileSize) + "）";
+
+    if (pref === "auto") {
+      if (res.uncertain) {
+        setEncStatus("warn", "編碼：無法可靠判斷，暫以 " + labelFor(res.encoding) + " 解讀");
+      } else {
+        setEncStatus("", "編碼：偵測為 " + labelFor(res.encoding));
+      }
+    } else {
+      setEncStatus("", "編碼：手動指定 " + labelFor(res.encoding));
+    }
+    updatePreview();
+    render();
+  }
+
+  function humanSize(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / 1024 / 1024).toFixed(2) + " MB";
+  }
+
+  /* ---------- summary ---------- */
+
+  function buildSummary() {
+    var s = lastStats || computeStats(el.text.value);
+    var rt = readingTime(s);
+    var lines = [
+      "文件字數與閱讀時間統計",
+      "────────────────────",
+      "中文字數：" + fmt(s.han),
+      "英文詞數：" + fmt(s.enWords),
+      "總字數（中＋英）：" + fmt(s.totalCount),
+      "數字串：" + fmt(s.numbers),
+      "字元數（含空白）：" + fmt(s.chars),
+      "字元數（不含空白）：" + fmt(s.charsNoSpace),
+      "段落數：" + fmt(s.paragraphs),
+      "句數：" + fmt(s.sentences),
+      "行數：" + fmt(s.lines) + "（非空 " + fmt(s.nonEmptyLines) + "）",
+      "預估閱讀時間：" + rt.text
+    ];
+    var target = clampNum(parseFloat(el.targetNum.value), 0, 1e12, NaN);
+    if (target > 0) {
+      lines.push("目標" + (el.targetMode.value === "min" ? "下限" : "上限") + "：" + fmt(target) + " 字");
+    }
+    if (s.top.length) {
+      lines.push("高頻詞：" + s.top.slice(0, 10).map(function (t) { return t.w + "(" + t.n + ")"; }).join("、"));
+    }
+    return lines.join("\n");
+  }
+
+  function copySummary() {
+    var text = buildSummary();
+    var done = function () {
+      el.copyBtn.textContent = "✅ 已複製";
+      setTimeout(function () { el.copyBtn.textContent = "📋 複製統計摘要"; }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+
+  function fallbackCopy(text, done) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      done();
+    } catch (e) {
+      alert("複製失敗，請手動選取結果。");
+    }
+  }
+
+  /* ---------- preferences ---------- */
+
+  function savePrefs() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        zhCpm: el.zhCpm.value,
+        enWpm: el.enWpm.value,
+        encoding: el.encSel.value,
+        targetNum: el.targetNum.value,
+        targetMode: el.targetMode.value
+      }));
+    } catch (e) { /* ignore */ }
+  }
+
+  function loadPrefs() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return;
+      var p = JSON.parse(raw);
+      if (p.zhCpm) el.zhCpm.value = p.zhCpm;
+      if (p.enWpm) el.enWpm.value = p.enWpm;
+      if (p.encoding) el.encSel.value = p.encoding;
+      if (p.targetNum) el.targetNum.value = p.targetNum;
+      if (p.targetMode) el.targetMode.value = p.targetMode;
+    } catch (e) { /* ignore */ }
+  }
+
+  /* ---------- events ---------- */
+
+  var timer = null;
+  function scheduleRender() {
+    clearTimeout(timer);
+    timer = setTimeout(function () { updatePreview(); render(); }, 250);
+  }
+
+  el.text.addEventListener("input", function () {
+    scheduleRender();
+    if (el.text.value) setEncStatus("", "編碼：手動輸入文字（不套用檔案編碼）");
+    else setEncStatus("", "編碼：等待輸入");
+  });
+
+  el.fileInput.addEventListener("change", function (e) {
+    var f = e.target.files && e.target.files[0];
+    readFile(f);
+    e.target.value = "";
+  });
+
+  ["dragenter", "dragover"].forEach(function (ev) {
+    el.drop.addEventListener(ev, function (e) { e.preventDefault(); el.drop.classList.add("over"); });
+  });
+  ["dragleave", "dragend"].forEach(function (ev) {
+    el.drop.addEventListener(ev, function (e) { e.preventDefault(); el.drop.classList.remove("over"); });
+  });
+  el.drop.addEventListener("drop", function (e) {
+    e.preventDefault();
+    el.drop.classList.remove("over");
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) readFile(f);
+  });
+
+  el.encSel.addEventListener("change", function () {
+    savePrefs();
+    if (lastBuffer) applyBuffer(true);
+  });
+  el.zhCpm.addEventListener("change", function () { savePrefs(); render(); });
+  el.enWpm.addEventListener("change", function () { savePrefs(); render(); });
+  el.targetNum.addEventListener("input", function () { savePrefs(); render(); });
+  el.targetMode.addEventListener("change", function () { savePrefs(); render(); });
+
+  el.clearBtn.addEventListener("click", function () {
+    el.text.value = "";
+    lastBuffer = null;
+    lastFileName = "";
+    lastFileSize = 0;
+    el.fileMeta.textContent = "尚未載入檔案";
+    setEncStatus("", "編碼：等待輸入");
+    updatePreview();
+    render();
+  });
+
+  el.copyBtn.addEventListener("click", copySummary);
+
+  /* ---------- init ---------- */
+
+  loadPrefs();
+  updatePreview();
+  render();
+})();
+</script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
