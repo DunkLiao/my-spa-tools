@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpecDiff 規格書比對工具</title>
+<style>
+:root{--bg:#f4f5f7;--pn:#fff;--bd:#d8dce2;--tx:#1f2328;--mu:#6b7280;--pri:#2563eb;--priL:#dbe7ff;
+--add:#e7f8ec;--addS:#a6ecb8;--del:#fdecea;--delS:#ffb4ac;--mod:#fff8d6;--mov:#efebff;--movS:#cfc3ff;--cur:#2563eb;--hv:#f0f3f8}
+.dark{--bg:#16181d;--pn:#1e2128;--bd:#343842;--tx:#e6e8eb;--mu:#9aa1ac;--pri:#5b8cff;--priL:#25324f;
+--add:#14301f;--addS:#1f6b3a;--del:#3a1b1b;--delS:#8a2e2a;--mod:#3a3415;--mov:#2a2545;--movS:#4f3f9a;--cur:#5b8cff;--hv:#252932}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.6 "Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;overflow:hidden}
+button,select,input,textarea{font:inherit;color:inherit}
+button{background:var(--pn);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+button:hover{background:var(--hv)}
+button.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+button.pri:hover{filter:brightness(1.08)}
+button.sm{padding:1px 7px;font-size:12px}
+button:disabled{opacity:.5;cursor:default}
+select,input[type=text],input[type=number],textarea{background:var(--pn);border:1px solid var(--bd);border-radius:6px;padding:4px 8px}
+textarea{width:100%;resize:vertical}
+header{display:flex;gap:6px;align-items:center;padding:7px 12px;background:var(--pn);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+header .logo{font-weight:700;font-size:17px;color:var(--pri);margin-right:6px;cursor:pointer;user-select:none;border-radius:6px;padding:0 4px}
+header .logo:hover{background:var(--priL)}
+header .sep{width:1px;height:22px;background:var(--bd);margin:0 4px}
+header .grow{flex:1}
+header select{max-width:200px}
+#q{width:170px}
+.menu{position:relative}
+.menu .dd{display:none;position:absolute;right:0;top:110%;background:var(--pn);border:1px solid var(--bd);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.15);z-index:50;min-width:200px;padding:4px}
+.menu.open .dd{display:block}
+.dd button{display:block;width:100%;text-align:left;border:0;border-radius:4px}
+main{flex:1;display:grid;grid-template-columns:250px 1fr 320px;min-height:0}
+main>*{min-height:0;overflow:auto;background:var(--pn)}
+#outline{border-right:1px solid var(--bd);padding:6px 0}
+#review{border-left:1px solid var(--bd);padding:12px}
+#center{display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.tabs{display:flex;gap:2px;padding:6px 10px 0;align-items:flex-end;background:var(--bg);border-bottom:1px solid var(--bd)}
+.tabs .tab{border:1px solid transparent;border-bottom:0;border-radius:6px 6px 0 0;background:transparent;padding:5px 14px}
+.tabs .tab.on{background:var(--pn);border-color:var(--bd);font-weight:600;margin-bottom:-1px}
+.tabs .tools{margin-left:auto;display:flex;gap:8px;align-items:center;padding-bottom:5px;font-size:13px;color:var(--mu)}
+#view{flex:1;overflow:auto;background:var(--pn)}
+.olh{padding:4px 12px 8px;font-size:12px;color:var(--mu);display:flex;justify-content:space-between;align-items:center}
+.ol{padding:3px 10px 3px 0;cursor:pointer;display:flex;gap:6px;align-items:baseline;border-left:3px solid transparent;font-size:13px}
+.ol:hover{background:var(--hv)}
+.ol.on{background:var(--priL);border-left-color:var(--pri)}
+.ol .tt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ol .nm{color:var(--mu);font-size:11px}
+.ol.zero{color:var(--mu)}
+.ol.dl .tt{text-decoration:line-through;color:#c0392b}
+.ol.ad .tt{color:#1a7f37}
+.bdg{display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;font-size:11px;line-height:18px;text-align:center;background:var(--hv);color:var(--mu)}
+.bdg.hot{background:#f59e0b;color:#fff}
+/* diff rows */
+.r{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--bd);content-visibility:auto;contain-intrinsic-size:auto 40px;position:relative}
+.r.one{grid-template-columns:1fr}
+.c{padding:6px 10px 6px 46px;white-space:pre-wrap;word-break:break-word;position:relative;min-height:30px}
+.c+.c{border-left:1px solid var(--bd)}
+.c .ln{position:absolute;left:0;top:6px;width:38px;text-align:right;color:var(--mu);font-size:11px;user-select:none}
+.r.t-add .c.b,.r.t-add.one .c{background:var(--add)}
+.r.t-del .c.a,.r.t-del.one .c{background:var(--del)}
+.r.t-mod .c{background:var(--mod)}
+.r.t-move .c.b,.r.t-move.one .c{background:var(--mov)}
+.r.t-away .c.a,.r.t-away.one .c{background:var(--hv);color:var(--mu)}
+.r.t-away.one .c .tx{text-decoration:line-through}
+.r.cur{outline:2px solid var(--cur);outline-offset:-2px;z-index:1}
+.r.flash{animation:fl 1.2s}
+@keyframes fl{0%{box-shadow:inset 0 0 0 999px rgba(255,214,0,.45)}100%{box-shadow:none}}
+.r.chg{cursor:pointer}
+.r.rv .c:last-child{padding-right:110px}
+.ph{color:var(--mu);font-size:12px;font-style:italic}
+ins{background:var(--addS);text-decoration:none;border-radius:2px}
+del{background:var(--delS);text-decoration:line-through;border-radius:2px}
+.r.t-add ins,.r.t-del del{background:transparent}
+.h1{font-size:18px;font-weight:700}.h2{font-size:16px;font-weight:700}.h3{font-size:15px;font-weight:700}.h4,.h5,.h6,.h7,.h8,.h9{font-weight:700}
+.hn{color:var(--mu);font-weight:400;margin-right:6px;font-size:.85em}
+.gap{padding:4px;text-align:center;color:var(--mu);font-size:12px;background:var(--bg);border-bottom:1px solid var(--bd);cursor:pointer}
+.gap:hover{color:var(--pri)}
+.tag{position:absolute;right:6px;top:4px;font-size:11px;padding:0 6px;border-radius:9px;z-index:2}
+.mv{display:inline-block;font-size:11px;color:#6d4cd6;border:1px solid var(--movS);border-radius:4px;padding:0 4px;margin-right:6px;font-style:normal;white-space:nowrap}
+table.dt{border-collapse:collapse;width:100%;font-size:13px;white-space:normal}
+table.dt td{border:1px solid var(--bd);padding:3px 6px;vertical-align:top;white-space:pre-wrap;background:var(--pn)}
+table.dt tr.x-add td{background:var(--add)}
+table.dt tr.x-del td{background:var(--del)}
+table.dt tr.x-mod td{background:var(--mod)}
+table.dt tr.x-ph td{background:var(--bg);height:8px;padding:0}
+/* status */
+.st0{background:#fff;color:#374151;box-shadow:inset 0 0 0 1.5px #374151}.dark .st0{background:#111;color:#e5e7eb;box-shadow:inset 0 0 0 1.5px #e5e7eb}.st1{background:#64748b;color:#fff}.st2{background:#dc2626;color:#fff}.st3{background:#1d4ed8;color:#fff}.st4{background:#ea580c;color:#fff}.tag{font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.25)}.tag.st0{box-shadow:inset 0 0 0 1.5px #374151}.seg button[class*=st]{border:0}.seg button:not(.on){opacity:.55}.seg button.on{opacity:1;outline:3px solid #111;outline-offset:2px}.dark .seg button.on{outline-color:#fff}.seg button[class*=st]:hover{opacity:.9;filter:none}
+.ty{display:inline-block;font-size:11px;padding:0 7px;border-radius:9px;font-weight:600}
+.ty-add{background:var(--addS)}.ty-del{background:var(--delS)}.ty-mod{background:#fde68a;color:#5b4500}.ty-move{background:var(--movS)}
+/* review */
+#review h3{margin:0 0 6px;font-size:15px}
+.rv-sec{font-size:12px;color:var(--mu);margin-bottom:8px;word-break:break-all}
+.seg{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 10px}
+.seg button{font-size:12px;padding:2px 8px}
+.seg button.on{font-weight:700}
+.fld{margin-bottom:10px}
+.fld label{display:block;font-size:12px;color:var(--mu);margin-bottom:2px}
+.fld input{width:100%}
+.pv{border:1px solid var(--bd);border-radius:6px;padding:6px 8px;white-space:pre-wrap;word-break:break-word;font-size:13px;max-height:260px;overflow:auto;background:var(--bg)}
+.muted{color:var(--mu)}
+.small{font-size:12px}
+/* list */
+.lf{position:sticky;top:0;background:var(--pn);border-bottom:1px solid var(--bd);padding:8px 10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;z-index:3;font-size:13px}
+.li{border-bottom:1px solid var(--bd);padding:8px 12px;cursor:pointer}
+.li:hover{background:var(--hv)}
+.li.cur{background:var(--priL)}
+.li .hd{display:flex;gap:8px;align-items:center;font-size:12px;margin-bottom:3px;flex-wrap:wrap}
+.li .bd{white-space:pre-wrap;word-break:break-word;font-size:13px;max-height:160px;overflow:hidden}
+table.grid{border-collapse:collapse;width:100%;font-size:13px}
+table.grid th,table.grid td{border-bottom:1px solid var(--bd);padding:5px 8px;text-align:left;vertical-align:top}
+table.grid th{position:sticky;top:0;background:var(--bg);z-index:2}
+a.lk{color:var(--pri);cursor:pointer;text-decoration:none;margin-right:6px}
+footer{display:flex;gap:14px;align-items:center;padding:4px 12px;background:var(--pn);border-top:1px solid var(--bd);font-size:12px;flex-wrap:wrap}
+footer b{font-weight:600}
+footer .grow{flex:1}
+.cA{color:#1a7f37}.cM{color:#9a6700}.cD{color:#cf222e}.cV{color:#6d4cd6}
+/* welcome */
+.welcome{max-width:720px;margin:40px auto;padding:0 24px}
+.welcome h2{color:var(--pri)}
+.welcome ol li{margin:6px 0}
+.drop{border:2px dashed var(--bd);border-radius:10px;padding:26px;text-align:center;color:var(--mu);margin:10px 0}
+.drop.on{border-color:var(--pri);background:var(--priL)}
+.hbar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.hbar button{padding:6px 14px}
+.hcard{border:1px solid var(--bd);border-radius:10px;padding:12px 14px;margin:14px 0;background:var(--pn)}
+.hcard h4{margin:0 0 8px;font-size:14px;display:flex;align-items:center;gap:8px}
+.hcard h4 .sp{flex:1}
+.pchips{display:flex;flex-wrap:wrap;gap:6px}
+.pchips button.on{background:var(--priL);border-color:var(--pri);font-weight:700}
+.back{background:var(--priL);border:1px solid var(--pri);border-radius:10px;padding:10px 14px;margin:12px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.back .sp{flex:1}
+#btnHome.on{background:var(--priL);border-color:var(--pri)}
+/* dialog */
+dialog{border:1px solid var(--bd);border-radius:10px;padding:0;background:var(--pn);color:var(--tx);width:min(680px,94vw);box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog .dh{padding:12px 16px;border-bottom:1px solid var(--bd);font-weight:700;display:flex;justify-content:space-between}
+dialog .db{padding:14px 16px;max-height:70vh;overflow:auto}
+dialog .df{padding:10px 16px;border-top:1px solid var(--bd);display:flex;justify-content:flex-end;gap:8px}
+.row{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.row>label{min-width:80px;color:var(--mu);font-size:13px}
+.chk{display:flex;gap:6px;align-items:center;margin:6px 0}
+#toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%);background:#323232;color:#fff;padding:8px 18px;border-radius:8px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:999;max-width:80vw}
+#toast.show{opacity:.95}
+#busy{position:fixed;inset:0;background:rgba(0,0,0,.25);display:none;align-items:center;justify-content:center;z-index:998}
+#busy.show{display:flex}
+#busy div{background:var(--pn);padding:16px 26px;border-radius:10px;box-shadow:0 8px 30px rgba(0,0,0,.3)}
+.hide{display:none!important}
+@media (max-width:1100px){main{grid-template-columns:200px 1fr 270px}}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo" id="logo" title="回到主畫面">SpecDiff</span>
+  <select id="selProj" title="專案"></select>
+  <button id="btnNewProj" title="新增專案">＋專案</button>
+  <span class="sep"></span>
+  <span class="muted small">舊版</span><select id="selOld"></select>
+  <button id="btnSwap" title="交換新舊版">⇄</button>
+  <span class="muted small">新版</span><select id="selNew"></select>
+  <button id="btnCmp" class="pri">比對</button>
+  <span class="sep"></span>
+  <button id="btnImport">匯入版本</button>
+  <span class="grow"></span>
+  <input id="q" type="text" placeholder="搜尋 (Ctrl+F，Enter 下一筆)">
+  <div class="menu" id="mnuExp"><button>匯出 ▾</button><div class="dd">
+    <button data-x="html">HTML 差異報告</button>
+    <button data-x="csv">變更清單 CSV</button>
+    <button data-x="impact">影響清單 CSV（依模組）</button>
+    <hr style="border:0;border-top:1px solid var(--bd)">
+    <button data-x="backup">整庫備份 JSON</button>
+    <button data-x="restore">還原 / 合併 JSON…</button>
+  </div></div>
+  <button id="btnManage" title="專案與版本管理">管理</button>
+  <button id="btnSet" title="比對選項與設定">⚙</button>
+  <button id="btnHome" title="回到主畫面 (Alt+H)">🏠 主畫面</button>
+</header>
+<main>
+  <nav id="outline"></nav>
+  <section id="center">
+    <div class="tabs">
+      <button class="tab on" data-v="side">左右並排</button>
+      <button class="tab" data-v="inline">合併檢視</button>
+      <button class="tab" data-v="list">變更清單</button>
+      <button class="tab" data-v="req">需求編號</button>
+      <div class="tools"><label class="chk" style="margin:0"><input type="checkbox" id="chkAll">顯示全部內容</label></div>
+    </div>
+    <div id="view"></div>
+  </section>
+  <aside id="review"></aside>
+</main>
+<footer>
+  <span>新增 <b class="cA" id="fA">0</b></span>
+  <span>修改 <b class="cM" id="fM">0</b></span>
+  <span>刪除 <b class="cD" id="fD">0</b></span>
+  <span>移動 <b class="cV" id="fV">0</b></span>
+  <span>｜ 已審 <b id="fR">0/0</b></span>
+  <span>需改程式 <b id="fP">0</b></span>
+  <span class="grow muted" id="fInfo"></span>
+  <button class="sm" id="btnPrev" title="上一筆 (F7)">◀ F7</button>
+  <span id="fPos">–</span>
+  <button class="sm" id="btnNext" title="下一筆 (F8)">F8 ▶</button>
+</footer>
+
+<dialog id="dlgImport">
+  <div class="dh"><span>匯入規格書版本</span><button class="sm" data-close>✕</button></div>
+  <div class="db">
+    <div class="row"><label>專案</label><b id="impProj"></b></div>
+    <div class="drop" id="impDrop">拖曳 .docx / .txt / .md 檔案到這裡，或 <button id="impPick">選擇檔案</button>
+      <input type="file" id="impFile" accept=".docx,.txt,.md,.markdown,.csv,.tsv" multiple hidden>
+      <div id="impFiles" class="small" style="margin-top:8px"></div></div>
+    <div class="row"><label>或貼上文字</label><span class="muted small">（Markdown 標題 # 與表格 | 會自動辨識）</span></div>
+    <textarea id="impText" rows="7" placeholder="在此貼上規格書內容…"></textarea>
+    <div class="row" style="margin-top:10px"><label>版本名稱</label><input type="text" id="impVer" placeholder="例如 v1.3（多檔時以檔名為版本名）" style="flex:1"></div>
+    <div class="row"><label>文字編碼</label><select id="impEnc"><option value="auto">自動偵測</option><option value="utf-8">UTF-8</option><option value="big5">Big5</option><option value="utf-16le">UTF-16 LE</option><option value="utf-16be">UTF-16 BE</option></select><span class="muted small">僅適用 txt / md</span></div>
+  </div>
+  <div class="df"><button data-close>取消</button><button class="pri" id="impGo">匯入</button></div>
+</dialog>
+
+<dialog id="dlgSet">
+  <div class="dh"><span>比對選項與設定</span><button class="sm" data-close>✕</button></div>
+  <div class="db">
+    <b>正規化（比對時忽略）</b>
+    <label class="chk"><input type="checkbox" data-o="ignoreSpace">空白、換行、Tab</label>
+    <label class="chk"><input type="checkbox" data-o="ignoreWidth">全形 / 半形差異</label>
+    <label class="chk"><input type="checkbox" data-o="ignorePunct">標點符號</label>
+    <label class="chk"><input type="checkbox" data-o="ignoreCase">英文大小寫</label>
+    <label class="chk"><input type="checkbox" data-o="ignoreNumbering">段首章節 / 項目編號（如 3.2.1、（一）、1)）</label>
+    <hr style="border:0;border-top:1px solid var(--bd)">
+    <b>比對演算法</b>
+    <div class="row"><label>修改判定門檻</label><input type="range" min="0.2" max="0.9" step="0.05" data-o="th" id="thR"><span id="thV"></span><span class="muted small">相似度達門檻視為「修改」，否則為刪除＋新增</span></div>
+    <label class="chk"><input type="checkbox" data-o="moveDetect">偵測段落搬移（含搬移後小幅修改）</label>
+    <label class="chk"><input type="checkbox" data-o="numHeading">無標題樣式時，依「3.2.1 標題」「第一章」等文字判斷章節</label>
+    <hr style="border:0;border-top:1px solid var(--bd)">
+    <b>顯示</b>
+    <div class="row"><label>上下文段數</label><input type="number" min="0" max="20" data-o="ctx" style="width:80px"><span class="muted small">未勾「顯示全部內容」時，變更前後保留的相同段落數</span></div>
+    <div class="row"><label>需求編號格式</label><input type="text" data-o="reqRe" style="flex:1;font-family:Consolas,monospace"><span class="muted small">正規表示式</span></div>
+    <label class="chk"><input type="checkbox" data-o="dark">深色模式</label>
+  </div>
+  <div class="df"><button id="setReset">還原預設</button><span style="flex:1"></span><button data-close>取消</button><button class="pri" id="setGo">套用</button></div>
+</dialog>
+
+<dialog id="dlgManage">
+  <div class="dh"><span>專案與版本管理</span><button class="sm" data-close>✕</button></div>
+  <div class="db" id="mgBody"></div>
+  <div class="df"><button data-close>關閉</button></div>
+</dialog>
+
+<input type="file" id="restoreFile" accept=".json" hidden>
+<div id="toast"></div>
+<div id="busy"><div id="busyMsg">處理中…</div></div>
+<script>
+/* ================= DiffEngine（自包含，可放進 Web Worker） ================= */
+function SpecEngine(){
+  const PUNCT1=/[\p{P}\p{S}]/u, PUNCTG=/[\p{P}\p{S}]/gu, SPACE1=/\s/u;
+  const NUMRE=/^\s*(?:\d+(?:\.\d+)*\.?|[（(]?[一二三四五六七八九十百]+[)）、.．]|[（(]\d+[)）]|\d+[)）、]|[a-zA-Z][.)）]|第[一二三四五六七八九十百零〇\d]+[章節条條款項篇])\s*/;
+
+  function norm(s,o){
+    if(!s) return '';
+    if(o.ignoreWidth) s=s.normalize('NFKC');
+    if(o.ignoreCase) s=s.toLowerCase();
+    if(o.ignoreNumbering) s=s.replace(NUMRE,'');
+    if(o.ignorePunct) s=s.replace(PUNCTG,'');
+    if(o.ignoreSpace) s=s.replace(/\s+/g,'');
+    else s=s.replace(/[ \t\u3000]+/g,' ').replace(/ *\n */g,'\n').trim();
+    return s;
+  }
+  function charKey(c,o){
+    if(o.ignoreSpace&&SPACE1.test(c)) return null;
+    if(o.ignorePunct&&PUNCT1.test(c)) return null;
+    if(o.ignoreWidth) c=c.normalize('NFKC');
+    if(o.ignoreCase) c=c.toLowerCase();
+    return c;
+  }
+  function blockKey(b,o){
+    if(b.t==='table') return 'T\u241D'+b.rows.map(r=>r.map(c=>norm(c,o)).join('\u241F')).join('\u241E');
+    return norm(b.text,o);
+  }
+
+  /* ---- Myers O(ND)，含上限；超過上限回傳 null ---- */
+  function myers(a,a0,a1,b,b0,b1,cap){
+    const n=a1-a0,m=b1-b0,max=n+m,lim=Math.min(max,cap),off=max+1;
+    const v=new Int32Array(2*max+3),trace=[];
+    for(let d=0;d<=lim;d++){
+      trace.push(v.slice(off-d,off+d+1));
+      for(let k=-d;k<=d;k+=2){
+        let x=(k===-d||(k!==d&&v[off+k-1]<v[off+k+1]))?v[off+k+1]:v[off+k-1]+1;
+        let y=x-k;
+        while(x<n&&y<m&&a[a0+x]===b[b0+y]){x++;y++;}
+        v[off+k]=x;
+        if(x>=n&&y>=m) return back(trace,d,n,m,a0,b0);
+      }
+    }
+    return null;
+  }
+  function back(trace,D,n,m,a0,b0){
+    let x=n,y=m;const ops=[];
+    for(let d=D;d>0;d--){
+      const vv=trace[d],k=x-y,g=kk=>vv[kk+d];
+      const pk=(k===-d||(k!==d&&g(k-1)<g(k+1)))?k+1:k-1;
+      const px=g(pk),py=px-pk;
+      while(x>px&&y>py){x--;y--;ops.push([0,a0+x,b0+y]);}
+      if(pk===k+1) ops.push([2,-1,b0+py]); else ops.push([1,a0+px,-1]);
+      x=px;y=py;
+    }
+    while(x>0&&y>0){x--;y--;ops.push([0,a0+x,b0+y]);}
+    return ops.reverse();
+  }
+  /* LIS（回傳索引） */
+  function lis(arr){
+    const tails=[],prev=new Int32Array(arr.length).fill(-1),tidx=[];
+    for(let i=0;i<arr.length;i++){
+      let lo=0,hi=tails.length;
+      while(lo<hi){const mid=(lo+hi)>>1;if(tails[mid]<arr[i])lo=mid+1;else hi=mid;}
+      tails[lo]=arr[i];tidx[lo]=i;prev[i]=lo>0?tidx[lo-1]:-1;
+    }
+    const out=[];let k=tidx[tails.length-1];
+    while(k!==undefined&&k>=0){out.push(k);k=prev[k];}
+    return out.reverse();
+  }
+  function rec(a,a0,a1,b,b0,b1,out,cap,depth){
+    while(a0<a1&&b0<b1&&a[a0]===b[b0]){out.push([0,a0,b0]);a0++;b0++;}
+    const tail=[];
+    while(a1>a0&&b1>b0&&a[a1-1]===b[b1-1]){a1--;b1--;tail.push([0,a1,b1]);}
+    if(a0===a1){for(let j=b0;j<b1;j++)out.push([2,-1,j]);}
+    else if(b0===b1){for(let i=a0;i<a1;i++)out.push([1,i,-1]);}
+    else{
+      const r=myers(a,a0,a1,b,b0,b1,cap);
+      if(r){for(const x of r)out.push(x);}
+      else{
+        /* 超過上限：以兩邊皆唯一的元素為錨點（patience），分段遞迴 */
+        let anchors=[];
+        if(depth<12){
+          const ca=new Map(),cb=new Map();
+          for(let i=a0;i<a1;i++){const e=ca.get(a[i]);ca.set(a[i],e===undefined?i:-1);}
+          for(let j=b0;j<b1;j++){const e=cb.get(b[j]);cb.set(b[j],e===undefined?j:-1);}
+          const pairs=[];
+          for(let i=a0;i<a1;i++){const ia=ca.get(a[i]);if(ia===i){const jb=cb.get(a[i]);if(jb!==undefined&&jb>=0)pairs.push([i,jb]);}}
+          anchors=lis(pairs.map(p=>p[1])).map(ix=>pairs[ix]);
+        }
+        if(!anchors.length){
+          for(let i=a0;i<a1;i++)out.push([1,i,-1]);
+          for(let j=b0;j<b1;j++)out.push([2,-1,j]);
+        }else{
+          let pa=a0,pb=b0;
+          for(const [i,j] of anchors){rec(a,pa,i,b,pb,j,out,cap,depth+1);out.push([0,i,j]);pa=i+1;pb=j+1;}
+          rec(a,pa,a1,b,pb,b1,out,cap,depth+1);
+        }
+      }
+    }
+    for(let k=tail.length-1;k>=0;k--)out.push(tail[k]);
+  }
+  function diffSeq(a,b,cap){const out=[];rec(a,0,a.length,b,0,b.length,out,cap||3000,0);return out;}
+  function intern(arrA,arrB){
+    const m=new Map();let n=0;
+    const f=s=>{let v=m.get(s);if(v===undefined){v=n++;m.set(s,v);}return v;};
+    return [Int32Array.from(arrA,f),Int32Array.from(arrB,f)];
+  }
+
+  /* ---- bigram Dice 相似度 ---- */
+  function grams(s){
+    const m=new Map();
+    if(s.length<2){if(s)m.set(s,1);return {m,n:s?1:0};}
+    for(let i=0;i<s.length-1;i++){const g=s.substr(i,2);m.set(g,(m.get(g)||0)+1);}
+    return {m,n:s.length-1};
+  }
+  function inter(A,B){
+    let x=A,y=B;if(x.m.size>y.m.size){x=B;y=A;}
+    let n=0;for(const [g,c] of x.m){const d=y.m.get(g);if(d)n+=Math.min(c,d);}
+    return n;
+  }
+  function dice(A,B){
+    if(!A.n&&!B.n) return 1;
+    if(!A.n||!B.n) return 0;
+    return 2*inter(A,B)/(A.n+B.n);
+  }
+  /* 段落配對分數：Dice 與「重疊係數×0.8」取大者，讓「擴寫／縮寫」的段落也能判為修改 */
+  function simScore(A,B){
+    if(!A.n&&!B.n) return 1;
+    if(!A.n||!B.n) return 0;
+    const i=inter(A,B),d=2*i/(A.n+B.n),mn=Math.min(A.n,B.n);
+    return mn>=4?Math.max(d,0.8*i/mn):d;
+  }
+
+  /* ---- 字元級差異 → 片段 [{op:'='|'-'|'+', a, b}] ---- */
+  function charDiff(sa,sb,o){
+    sa=sa||'';sb=sb||'';
+    const ca=Array.from(sa),cb=Array.from(sb),ta=[],tb=[],ka=[],kb=[];
+    ca.forEach((c,i)=>{const k=charKey(c,o);if(k!==null){ta.push(i);ka.push(k);}});
+    cb.forEach((c,i)=>{const k=charKey(c,o);if(k!==null){tb.push(i);kb.push(k);}});
+    const [ia,ib]=intern(ka,kb);
+    const ops=diffSeq(ia,ib,2000);
+    const segs=[];
+    const push=(op,a,b)=>{if(!a&&!b)return;const L=segs[segs.length-1];if(L&&L.op===op){L.a+=a;L.b+=b;}else segs.push({op,a,b});};
+    let pa=0,pb=0;
+    for(const [op,i,j] of ops){
+      if(op===0){const xa=ta[i],xb=tb[j];push('=',ca.slice(pa,xa+1).join(''),cb.slice(pb,xb+1).join(''));pa=xa+1;pb=xb+1;}
+      else if(op===1){const xa=ta[i];push('=',ca.slice(pa,xa).join(''),'');push('-',ca[xa],'');pa=xa+1;}
+      else{const xb=tb[j];push('=','',cb.slice(pb,xb).join(''));push('+','',cb[xb]);pb=xb+1;}
+    }
+    push('=',ca.slice(pa).join(''),cb.slice(pb).join(''));
+    return cleanup(segs);
+  }
+  /* 語意清理：夾在變更中、長度 ≤2 的相同片段併入變更，再把連續變更整理成「刪→增」 */
+  function cleanup(segs){
+    for(let i=1;i<segs.length-1;i++){
+      const s=segs[i];
+      if(s.op==='='&&segs[i-1].op!=='='&&segs[i+1].op!=='='&&(Math.max(Array.from(s.a).length,Array.from(s.b).length)<=2||!/\S/.test(s.a+s.b))){
+        s.op='x';
+      }
+    }
+    const out=[];let da='',ib='';
+    const flush=()=>{if(da)out.push({op:'-',a:da,b:''});if(ib)out.push({op:'+',a:'',b:ib});da='';ib='';};
+    for(const s of segs){
+      if(s.op==='='){flush();if(s.a||s.b)out.push(s);}
+      else if(s.op==='-')da+=s.a;
+      else if(s.op==='+')ib+=s.b;
+      else{da+=s.a;ib+=s.b;}
+    }
+    flush();
+    return out;
+  }
+
+  /* ---- 依相似度配對（保持順序的 DP；過大時退回視窗貪婪法） ---- */
+  function pairHunk(D,I,simFn,th){
+    const p=D.length,q=I.length,pairs=[];
+    if(!p||!q) return pairs;
+    if(p*q>40000){
+      let jp=0;
+      for(let i=0;i<p&&jp<q;i++){
+        let best=-1,bs=th;
+        for(let j=jp;j<Math.min(q,jp+30);j++){const s=simFn(D[i],I[j]);if(s>=bs){bs=s;best=j;}}
+        if(best>=0){pairs.push([i,best]);jp=best+1;}
+      }
+      return pairs;
+    }
+    const S=new Float64Array((p+1)*(q+1)),W=q+1,sim=new Float64Array(p*q);
+    for(let i=0;i<p;i++)for(let j=0;j<q;j++)sim[i*q+j]=simFn(D[i],I[j]);
+    for(let i=1;i<=p;i++)for(let j=1;j<=q;j++){
+      let v=Math.max(S[(i-1)*W+j],S[i*W+j-1]);
+      const s=sim[(i-1)*q+j-1];
+      if(s>=th)v=Math.max(v,S[(i-1)*W+j-1]+s);
+      S[i*W+j]=v;
+    }
+    let i=p,j=q;
+    while(i>0&&j>0){
+      const s=sim[(i-1)*q+j-1];
+      if(s>=th&&Math.abs(S[i*W+j]-(S[(i-1)*W+j-1]+s))<1e-9){pairs.push([i-1,j-1]);i--;j--;}
+      else if(S[(i-1)*W+j]>=S[i*W+j-1])i--;
+      else j--;
+    }
+    return pairs.reverse();
+  }
+
+  /* ---- 表格逐列逐格比對 ---- */
+  function tableDiff(ta,tb,o,th){
+    const ka=ta.rows.map(r=>r.map(c=>norm(c,o)).join('\u241F'));
+    const kb=tb.rows.map(r=>r.map(c=>norm(c,o)).join('\u241F'));
+    const [ia,ib]=intern(ka,kb);
+    const ops=diffSeq(ia,ib,2000),rows=[];
+    const ga=ka.map(grams),gb=kb.map(grams);
+    let hd=[],hi=[];
+    const mod=(a,b)=>{
+      const n=Math.max(ta.rows[a].length,tb.rows[b].length),cells=[];
+      for(let c=0;c<n;c++)cells.push(charDiff(ta.rows[a][c]||'',tb.rows[b][c]||'',o));
+      rows.push({t:'mod',a,b,cells});
+    };
+    const flush=()=>{
+      const pr=pairHunk(hd,hi,(x,y)=>simScore(ga[x],gb[y]),Math.min(th,0.4));
+      let pd=0,pi=0;
+      for(const [x,y] of pr){
+        while(pd<x)rows.push({t:'del',a:hd[pd++],b:null});
+        while(pi<y)rows.push({t:'add',a:null,b:hi[pi++]});
+        mod(hd[pd++],hi[pi++]);
+      }
+      while(pd<hd.length)rows.push({t:'del',a:hd[pd++],b:null});
+      while(pi<hi.length)rows.push({t:'add',a:null,b:hi[pi++]});
+      hd=[];hi=[];
+    };
+    for(const [op,i,j] of ops){
+      if(op===0){flush();rows.push({t:'eq',a:i,b:j});}
+      else if(op===1)hd.push(i);else hi.push(j);
+    }
+    flush();
+    return rows;
+  }
+
+  /* ---- 主比對 ---- */
+  function compare(A,B,o){
+    const t0=Date.now(),th=o.th||0.4;
+    const KA=A.map(b=>blockKey(b,o)),KB=B.map(b=>blockKey(b,o));
+    const [ia,ib]=intern(KA,KB);
+    const ops=diffSeq(ia,ib,2500);
+    const GA=new Array(A.length),GB=new Array(B.length);
+    const gA=i=>GA[i]||(GA[i]=grams(KA[i])),gB=j=>GB[j]||(GB[j]=grams(KB[j]));
+    const compat=(i,j)=>(A[i].t==='table')===(B[j].t==='table');
+    const simFn=(i,j,diceOnly)=>{
+      if(!compat(i,j))return 0;
+      const la=KA[i].length,lb=KB[j].length;
+      if(la+lb===0)return 1;
+      if(Math.min(la,lb)<0.1*Math.max(la,lb))return 0;
+      if(diceOnly&&2*Math.min(la,lb)/(la+lb)<0.75)return 0;
+      return diceOnly?dice(gA(i),gB(j)):simScore(gA(i),gB(j));
+    };
+    const rows=[];let hd=[],hi=[];
+    const flush=()=>{
+      const pr=pairHunk(hd,hi,simFn,th);
+      let pd=0,pi=0;
+      for(const [x,y] of pr){
+        while(pd<x)rows.push({t:'del',a:hd[pd++],b:null});
+        while(pi<y)rows.push({t:'add',a:null,b:hi[pi++]});
+        rows.push({t:'mod',a:hd[pd++],b:hi[pi++]});
+      }
+      while(pd<hd.length)rows.push({t:'del',a:hd[pd++],b:null});
+      while(pi<hi.length)rows.push({t:'add',a:null,b:hi[pi++]});
+      hd=[];hi=[];
+    };
+    for(const [op,i,j] of ops){
+      if(op===0){flush();rows.push({t:'eq',a:i,b:j});}
+      else if(op===1)hd.push(i);else hi.push(j);
+    }
+    flush();
+
+    /* ---- 搬移偵測 ---- */
+    if(o.moveDetect){
+      const dels=new Map();
+      rows.forEach((r,ri)=>{if(r.t==='del'&&KA[r.a].length>=2){const k=KA[r.a];if(!dels.has(k))dels.set(k,[]);dels.get(k).push(ri);}});
+      rows.forEach((r,ri)=>{
+        if(r.t!=='add')return;
+        const L=dels.get(KB[r.b]);
+        if(L&&L.length){const di=L.shift();const d=rows[di];r.t='move';r.a=d.a;r.from=di;d.t='away';d.to=ri;}
+      });
+      /* 搬移＋小幅修改：剩餘刪除/新增中相似度 ≥ max(0.8,門檻) */
+      const rd=[],ra=[];
+      rows.forEach((r,ri)=>{if(r.t==='del'&&KA[r.a].length>=8)rd.push(ri);else if(r.t==='add'&&KB[r.b].length>=8)ra.push(ri);});
+      if(rd.length&&ra.length&&rd.length*ra.length<=250000){
+        const mth=Math.max(0.8,th),used=new Set(),cand=[];
+        for(const x of ra)for(const y of rd){const s=simFn(rows[y].a,rows[x].b,true);if(s>=mth)cand.push([s,x,y]);}
+        cand.sort((p,q)=>q[0]-p[0]);
+        for(const [,x,y] of cand){
+          if(used.has(x)||used.has(y))continue;used.add(x);used.add(y);
+          const r=rows[x],d=rows[y];r.t='move';r.a=d.a;r.from=y;r.edited=true;d.t='away';d.to=x;
+        }
+      }
+    }
+    /* ---- 細部差異 ---- */
+    for(const r of rows){
+      if(r.t==='mod'||(r.t==='move'&&r.edited)){
+        if(A[r.a].t==='table'&&B[r.b].t==='table')r.tbl=tableDiff(A[r.a],B[r.b],o,th);
+        else r.segs=charDiff(A[r.a].text,B[r.b].text,o);
+      }
+    }
+    return {rows,ms:Date.now()-t0};
+  }
+  return {compare,norm,charDiff,diffSeq,dice,grams};
+}
+/* ================= ZipReader（零依賴，使用原生 DecompressionStream） ================= */
+const ZipReader={
+  async open(buf){
+    const dv=new DataView(buf),u8=new Uint8Array(buf);
+    let eocd=-1;
+    for(let i=buf.byteLength-22;i>=Math.max(0,buf.byteLength-65557);i--){if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}}
+    if(eocd<0) throw new Error('不是有效的 ZIP / DOCX 檔案');
+    const cnt=dv.getUint16(eocd+10,true);let p=dv.getUint32(eocd+16,true);
+    const td=new TextDecoder('utf-8'),entries={};
+    for(let n=0;n<cnt;n++){
+      if(dv.getUint32(p,true)!==0x02014b50) break;
+      const method=dv.getUint16(p+10,true),csize=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+      const name=td.decode(u8.subarray(p+46,p+46+nl));
+      entries[name]={method,csize,lo};p+=46+nl+el+cl;
+    }
+    return {
+      has:n=>!!entries[n],
+      async bytes(n){
+        const e=entries[n];if(!e) return null;
+        const nl=dv.getUint16(e.lo+26,true),el=dv.getUint16(e.lo+28,true),st=e.lo+30+nl+el;
+        const data=u8.subarray(st,st+e.csize);
+        if(e.method===0) return data;
+        if(e.method!==8) throw new Error('不支援的壓縮方式：'+e.method);
+        if(typeof DecompressionStream==='undefined') throw new Error('瀏覽器不支援 DecompressionStream，請使用新版 Edge / Chrome');
+        const s=new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+        return new Uint8Array(await new Response(s).arrayBuffer());
+      },
+      async text(n){const b=await this.bytes(n);return b?new TextDecoder('utf-8').decode(b):null;}
+    };
+  }
+};
+
+/* ================= 章節文字判斷 ================= */
+function detectHeading(text){
+  const t=(text||'').trim();
+  if(!t||t.length>60||/[。；;，,：:]$/.test(t)) return 0;
+  let m=t.match(/^(\d+(?:\.\d+){1,5})\.?\s*(?=[^\d.\s])/);
+  if(m) return Math.min(m[1].split('.').length,6);
+  if(/^\d+\.?(?:\s+|[、　])(?=\S)/.test(t)) return 1;
+  if(/^第[一二三四五六七八九十百零〇\d]+[章篇部]/.test(t)) return 1;
+  if(/^第[一二三四五六七八九十百零〇\d]+節/.test(t)) return 2;
+  return 0;
+}
+
+/* ================= DocxParser ================= */
+const W_NS='http://schemas.openxmlformats.org/wordprocessingml/2006/main';
+const DocxParser={
+  kids(el){const a=[];for(let c=el.firstChild;c;c=c.nextSibling)if(c.nodeType===1)a.push(c);return a;},
+  child(el,ln){for(let c=el.firstChild;c;c=c.nextSibling)if(c.nodeType===1&&c.localName===ln)return c;return null;},
+  val(el){if(!el)return null;return el.getAttributeNS(W_NS,'val')||el.getAttribute('w:val');},
+  textOf(el){
+    let s='';
+    for(const c of this.kids(el)){
+      const ln=c.localName;
+      if(ln==='t') s+=c.textContent;
+      else if(ln==='tab'||ln==='ptab') s+='\t';
+      else if(ln==='br'||ln==='cr') s+='\n';
+      else if(ln==='noBreakHyphen') s+='-';
+      else if(['del','Fallback','pPr','rPr','tcPr','trPr','tblPr','tblGrid','instrText','delText','moveFrom','sectPr'].includes(ln)) continue;
+      else if(ln==='p'){const t=this.textOf(c);s+=(s&&t?'\n':'')+t;}
+      else if(ln==='tbl'){const t=this.tableRows(c).map(r=>r.join(' | ')).join('\n');s+=(s&&t?'\n':'')+t;}
+      else s+=this.textOf(c);
+    }
+    return s;
+  },
+  tableRows(tbl){
+    const rows=[];
+    for(const tr of this.kids(tbl)){
+      if(tr.localName!=='tr') continue;
+      const cells=[];
+      for(const tc of this.kids(tr)){
+        if(tc.localName==='tc') cells.push(this.textOf(tc).trim());
+        else if(tc.localName==='sdt'){const sc=this.child(tc,'sdtContent');if(sc)for(const x of this.kids(sc))if(x.localName==='tc')cells.push(this.textOf(x).trim());}
+      }
+      rows.push(cells);
+    }
+    return rows;
+  },
+  parseStyles(xml,DP){
+    const map={};if(!xml) return map;
+    const doc=new DP().parseFromString(xml,'application/xml');
+    const raw={};
+    const list=doc.getElementsByTagNameNS(W_NS,'style');
+    for(let i=0;i<list.length;i++){
+      const s=list[i];
+      if((s.getAttributeNS(W_NS,'type')||s.getAttribute('w:type'))!=='paragraph') continue;
+      const id=s.getAttributeNS(W_NS,'styleId')||s.getAttribute('w:styleId');
+      const name=(this.val(this.child(s,'name'))||'').trim();
+      const pPr=this.child(s,'pPr');
+      const ol=pPr?this.val(this.child(pPr,'outlineLvl')):null;
+      raw[id]={name,basedOn:this.val(this.child(s,'basedOn')),ol:ol!=null?+ol:null,num:!!(pPr&&this.child(pPr,'numPr'))};
+    }
+    const lvOf=(id,d)=>{
+      const r=raw[id];if(!r||d>10) return 0;
+      const m=r.name.match(/^(?:heading|標題|标题)\s*(\d)$/i);
+      if(m) return +m[1];
+      if(r.ol!=null&&r.ol<9) return r.ol+1;
+      return r.basedOn?lvOf(r.basedOn,d+1):0;
+    };
+    const numOf=(id,d)=>{const r=raw[id];if(!r||d>10)return false;return r.num||(r.basedOn?numOf(r.basedOn,d+1):false);};
+    for(const id in raw) map[id]={lv:lvOf(id,0),num:numOf(id,0)};
+    return map;
+  },
+  async parse(buf,opts,DP){
+    DP=DP||DOMParser;
+    const z=await ZipReader.open(buf);
+    const xml=await z.text('word/document.xml');
+    if(!xml) throw new Error('找不到 word/document.xml，可能不是 Word 文件（.doc 舊格式請先另存為 .docx）');
+    const styles=this.parseStyles(await z.text('word/styles.xml'),DP);
+    const doc=new DP().parseFromString(xml,'application/xml');
+    const body=doc.getElementsByTagNameNS(W_NS,'body')[0];
+    if(!body) throw new Error('文件內容解析失敗');
+    const blocks=[],cnt=[0,0,0,0,0,0,0,0,0,0];
+    let styled=0;
+    const walk=el=>{
+      for(const c of this.kids(el)){
+        const ln=c.localName;
+        if(ln==='p'){
+          const text=this.textOf(c).replace(/\u00a0/g,' ');
+          if(!text.trim()) continue;
+          const pPr=this.child(c,'pPr');
+          let lv=0,num=false;
+          if(pPr){
+            const st=this.val(this.child(pPr,'pStyle'));
+            if(st&&styles[st]){lv=styles[st].lv;num=styles[st].num;}
+            const ol=this.val(this.child(pPr,'outlineLvl'));
+            if(ol!=null&&+ol<9) lv=+ol+1;
+            if(this.child(pPr,'numPr')) num=true;
+          }
+          if(lv){
+            styled++;
+            const b={t:'h',lv:Math.min(lv,9),text:text.trim()};
+            if(num&&!/^\s*(\d|第)/.test(text)){
+              cnt[lv]++;for(let k=lv+1;k<cnt.length;k++)cnt[k]=0;
+              b.num=cnt.slice(1,lv+1).map(x=>x||1).join('.');
+            }
+            blocks.push(b);
+          } else blocks.push({t:'p',text});
+        } else if(ln==='tbl'){
+          const rows=this.tableRows(c);
+          if(rows.some(r=>r.some(x=>x))) blocks.push({t:'table',rows,text:rows.map(r=>r.join(' | ')).join('\n')});
+        } else if(ln==='sdt'){const sc=this.child(c,'sdtContent');if(sc)walk(sc);}
+        else if(ln==='customXml'||ln==='ins'||ln==='smartTag') walk(c);
+      }
+    };
+    walk(body);
+    if(!styled&&opts.numHeading) for(const b of blocks){if(b.t==='p'){const lv=detectHeading(b.text);if(lv){b.t='h';b.lv=lv;b.text=b.text.trim();}}}
+    return blocks;
+  }
+};
+
+/* ================= TextLoader（多編碼偵測 + 純文字 / Markdown 解析） ================= */
+const TextLoader={
+  decode(u8,enc){
+    if(enc&&enc!=='auto') return new TextDecoder(enc).decode(u8);
+    if(u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF) return new TextDecoder('utf-8').decode(u8.subarray(3));
+    if(u8[0]===0xFF&&u8[1]===0xFE) return new TextDecoder('utf-16le').decode(u8.subarray(2));
+    if(u8[0]===0xFE&&u8[1]===0xFF) return new TextDecoder('utf-16be').decode(u8.subarray(2));
+    let z=0;const n=Math.min(u8.length,2000);for(let i=0;i<n;i++)if(u8[i]===0)z++;
+    if(n&&z/n>0.2) return new TextDecoder('utf-16le').decode(u8);
+    try{return new TextDecoder('utf-8',{fatal:true}).decode(u8);}catch(e){}
+    try{return new TextDecoder('big5').decode(u8);}catch(e){}
+    return new TextDecoder('utf-8').decode(u8);
+  },
+  parse(text,isMd,opts){
+    const lines=text.replace(/\r\n?/g,'\n').split('\n'),blocks=[];
+    let para=[];
+    const flushP=()=>{const t=para.join('\n').trim();if(t){const lv=opts.numHeading?detectHeading(t):0;blocks.push(lv&&!t.includes('\n')?{t:'h',lv,text:t}:{t:'p',text:t});}para=[];};
+    const pushTable=rows=>{if(rows.length)blocks.push({t:'table',rows,text:rows.map(r=>r.join(' | ')).join('\n')});};
+    for(let i=0;i<lines.length;i++){
+      const ln=lines[i];
+      if(isMd){
+        const h=ln.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/);
+        if(h){flushP();blocks.push({t:'h',lv:h[1].length,text:h[2]});continue;}
+        if(/^\s*\|.*\|\s*$/.test(ln)){
+          flushP();const rows=[];
+          while(i<lines.length&&/^\s*\|.*\|\s*$/.test(lines[i])){
+            const L=lines[i].trim();
+            if(!/^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?$/.test(L)) rows.push(L.slice(1,-1).split('|').map(x=>x.trim()));
+            i++;
+          }
+          i--;pushTable(rows);continue;
+        }
+        if(!ln.trim()){flushP();continue;}
+        para.push(ln);
+      }else{
+        /* 純文字：每一行為一段；連續含 Tab 且欄數一致的行視為表格（例如從 Excel 貼上） */
+        if(ln.includes('\t')){
+          const nc=ln.split('\t').length;let j=i;const rows=[];
+          while(j<lines.length&&lines[j].includes('\t')&&lines[j].split('\t').length===nc){rows.push(lines[j].split('\t').map(x=>x.trim()));j++;}
+          if(rows.length>=2){pushTable(rows);i=j-1;continue;}
+        }
+        para.push(ln);flushP();
+      }
+    }
+    flushP();
+    return blocks;
+  }
+};
+
+/* ================= Store（IndexedDB 封裝；不可用時退回記憶體） ================= */
+const Store={
+  db:null,mem:null,
+  open(){
+    return new Promise(res=>{
+      let r;
+      try{r=indexedDB.open('SpecDiffDB',1);}catch(e){this.useMem();return res(false);}
+      r.onupgradeneeded=()=>{
+        const d=r.result;
+        d.createObjectStore('projects',{keyPath:'id'});
+        d.createObjectStore('documents',{keyPath:'id'}).createIndex('projectId','projectId');
+        d.createObjectStore('reviews',{keyPath:['pair','key']}).createIndex('pair','pair');
+        d.createObjectStore('settings',{keyPath:'key'});
+      };
+      r.onsuccess=()=>{this.db=r.result;res(true);};
+      r.onerror=()=>{this.useMem();res(false);};
+    });
+  },
+  useMem(){this.mem={projects:new Map(),documents:new Map(),reviews:new Map(),settings:new Map()};},
+  mk(store,v){return store==='reviews'?v.pair+'\u0001'+v.key:(store==='settings'?v.key:v.id);},
+  req(store,mode,fn){
+    return new Promise((res,rej)=>{
+      const tx=this.db.transaction(store,mode),s=tx.objectStore(store),r=fn(s);
+      tx.oncomplete=()=>res(r&&r.result);tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error);
+    });
+  },
+  get(store,key){
+    if(this.mem) return Promise.resolve(this.mem[store].get(Array.isArray(key)?key.join('\u0001'):key));
+    return this.req(store,'readonly',s=>s.get(key));
+  },
+  all(store,index,val){
+    if(this.mem){let a=[...this.mem[store].values()];if(index)a=a.filter(x=>x[index]===val);return Promise.resolve(a);}
+    return this.req(store,'readonly',s=>index?s.index(index).getAll(val):s.getAll());
+  },
+  put(store,v){
+    if(this.mem){this.mem[store].set(this.mk(store,v),v);return Promise.resolve();}
+    return this.req(store,'readwrite',s=>s.put(v));
+  },
+  putMany(store,arr){
+    if(this.mem){arr.forEach(v=>this.mem[store].set(this.mk(store,v),v));return Promise.resolve();}
+    return this.req(store,'readwrite',s=>{arr.forEach(v=>s.put(v));});
+  },
+  del(store,key){
+    if(this.mem){this.mem[store].delete(Array.isArray(key)?key.join('\u0001'):key);return Promise.resolve();}
+    return this.req(store,'readwrite',s=>s.delete(key));
+  }
+};
+/* ================= App ================= */
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const fmt=t=>t?new Date(t).toLocaleString('zh-TW',{hour12:false}):'';
+function hash(s){let h1=0xdeadbeef,h2=0x41c6ce57;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);h1=Math.imul(h1^c,2654435761);h2=Math.imul(h2^c,1597334677);}
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);}
+const LocalEngine=SpecEngine();
+const DEF={ignoreSpace:true,ignoreWidth:true,ignorePunct:false,ignoreCase:true,ignoreNumbering:false,th:0.4,moveDetect:true,numHeading:true,ctx:2,reqRe:'[A-Z]{2,6}-\\d{2,6}',dark:false};
+const STATUS=['未審','無影響','需改程式','需改測試','待確認'];
+const TYPE={add:'新增',del:'刪除',mod:'修改',move:'移動'};
+const S={opts:{...DEF},projects:[],pid:null,docs:[],docCache:new Map(),oldId:null,newId:null,res:null,A:null,B:null,
+  rows:[],changes:[],heads:[],req:[],cur:-1,view:'side',showAll:false,expanded:new Set(),gapOf:null,reviews:new Map(),pair:null,
+  lf:{types:{add:1,del:1,mod:1,move:1},status:'all',mod:'',q:''},reqAll:false,olOnly:false,searchRow:-1,home:false};
+
+/* ---------- 小工具 ---------- */
+let toastT;
+function toast(m,ms=2600){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),ms);}
+function busy(on,m){$('#busyMsg').textContent=m||'處理中…';$('#busy').classList.toggle('show',!!on);}
+function download(content,name,type){
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name.replace(/[\\/:*?"<>|]/g,'_');
+  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1000);
+}
+const isTyping=el=>el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.tagName==='SELECT'||el.isContentEditable);
+const curProj=()=>S.projects.find(p=>p.id===S.pid);
+const docLabel=id=>{const d=S.docCache.get(id);return d?d.version:'';};
+function applyTheme(){document.documentElement.classList.toggle('dark',!!S.opts.dark);}
+function saveLast(){Store.put('settings',{key:'last',value:{pid:S.pid,oldId:S.oldId,newId:S.newId}});}
+
+/* ---------- 比對執行（Web Worker，失敗時退回主執行緒） ---------- */
+let WORKER_URL=null;
+function engineRun(A,B,o){
+  return new Promise((res,rej)=>{
+    const local=()=>setTimeout(()=>{try{res(LocalEngine.compare(A,B,o));}catch(e){rej(e);}},30);
+    let w=null;
+    try{
+      if(!WORKER_URL)WORKER_URL=URL.createObjectURL(new Blob([`const E=(${SpecEngine.toString()})();onmessage=e=>{try{postMessage({ok:1,r:E.compare(e.data.A,e.data.B,e.data.o)})}catch(x){postMessage({ok:0,e:String(x&&x.message||x)})}}`],{type:'text/javascript'}));
+      w=new Worker(WORKER_URL);
+    }catch(e){w=null;}
+    if(!w) return local();
+    let done=false;
+    w.onmessage=e=>{done=true;w.terminate();e.data.ok?res(e.data.r):rej(new Error(e.data.e));};
+    w.onerror=e=>{e.preventDefault&&e.preventDefault();w.terminate();if(!done){done=true;local();}};
+    try{w.postMessage({A,B,o});}catch(e){w.terminate();local();}
+  });
+}
+
+async function runCompare(){
+  if(!S.oldId||!S.newId||!S.docCache.get(S.oldId)||!S.docCache.get(S.newId)){S.res=null;renderAll();return;}
+  if(S.oldId===S.newId){toast('請選擇兩個不同的版本');return;}
+  S.A=S.docCache.get(S.oldId);S.B=S.docCache.get(S.newId);S.home=false;
+  busy(true,'比對中…');
+  try{
+    const res=await engineRun(S.A.blocks,S.B.blocks,S.opts);
+    S.res=res;post(res);
+    S.pair=S.oldId+'|'+S.newId;
+    S.reviews=new Map((await Store.all('reviews','pair',S.pair)).map(r=>[r.key,r]));
+    S.cur=S.changes.length?0:-1;S.expanded.clear();S.searchRow=-1;
+    renderAll();
+    $('#fInfo').textContent=`比對耗時 ${res.ms} ms ・ 舊版 ${S.A.blocks.length} 段 / 新版 ${S.B.blocks.length} 段`;
+    if(S.cur>=0)select(0,false);
+  }catch(e){console.error(e);toast('比對失敗：'+e.message,5000);}
+  finally{busy(false);saveLast();}
+}
+
+/* ---------- 後處理：章節、變更清單、需求編號 ---------- */
+function post(res){
+  const A=S.A.blocks,B=S.B.blocks,rows=res.rows,heads=[],stack=[],occ=new Map(),changes=[];
+  let re=null;try{re=S.opts.reqRe?new RegExp(S.opts.reqRe,'g'):null;}catch(e){toast('需求編號正規表示式有誤，已略過');}
+  const ids=t=>{if(!re||!t)return [];re.lastIndex=0;return [...new Set(t.match(re)||[])];};
+  let sec=-1;
+  rows.forEach((r,i)=>{
+    const blk=r.b!=null?B[r.b]:A[r.a];
+    r.lv=(blk.t==='h'&&r.t!=='away')?blk.lv:0;
+    if(r.lv){
+      while(stack.length&&heads[stack[stack.length-1]].lv>=r.lv)stack.pop();
+      const h={row:i,lv:r.lv,text:blk.text,num:blk.num||'',t:r.t,parent:stack.length?stack[stack.length-1]:-1,cnt:0};
+      h.path=(h.parent>=0?heads[h.parent].path+' › ':'')+(h.num?h.num+' ':'')+h.text;
+      heads.push(h);stack.push(heads.length-1);sec=heads.length-1;
+    }
+    r.sec=sec;r.ci=undefined;
+    if(r.t!=='eq'&&r.t!=='away'){
+      const ta=r.a!=null?A[r.a].text:'',tb=r.b!=null?B[r.b].text:'';
+      let k=hash(ta)+'.'+hash(tb);const n=occ.get(k)||0;occ.set(k,n+1);if(n)k+='.'+n;
+      r.ci=changes.length;
+      changes.push({row:i,key:k,t:r.t,secPath:sec>=0?heads[sec].path:'（文件開頭）',req:[...new Set([...ids(ta),...ids(tb)])]});
+      for(let s=sec;s>=0;s=heads[s].parent)heads[s].cnt++;
+    }
+  });
+  /* 需求編號彙整 */
+  const rm=new Map(),g=id=>{if(!rm.has(id))rm.set(id,{id,inA:false,inB:false,ch:[]});return rm.get(id);};
+  A.forEach(b=>ids(b.text).forEach(id=>g(id).inA=true));
+  B.forEach(b=>ids(b.text).forEach(id=>g(id).inB=true));
+  changes.forEach((c,ci)=>c.req.forEach(id=>g(id).ch.push(ci)));
+  S.req=[...rm.values()].map(x=>({...x,st:!x.inA&&x.inB?'新增':x.inA&&!x.inB?'刪除':x.ch.length?'變更':'未變'}))
+    .sort((p,q)=>p.id.localeCompare(q.id,'zh-Hant',{numeric:true}));
+  S.rows=rows;S.heads=heads;S.changes=changes;
+  S.preCnt=changes.filter(c=>rows[c.row].sec<0).length;
+}
+
+/* ---------- 審查 ---------- */
+const getRv=ci=>S.reviews.get(S.changes[ci].key)||{status:0,module:'',note:''};
+async function setReview(ci,patch,rerender=true){
+  const c=S.changes[ci];if(!c)return;
+  const v={...getRv(ci),...patch,pair:S.pair,key:c.key,updatedAt:Date.now()};
+  S.reviews.set(c.key,v);
+  try{await Store.put('reviews',v);}catch(e){toast('儲存失敗：'+e.message);}
+  updateTag(ci);renderStatus();
+  if(rerender&&ci===S.cur)renderReview();
+}
+function modules(){const s=new Set();for(const v of S.reviews.values())(v.module||'').split(/[,，;；、\s]+/).forEach(m=>m&&s.add(m));return [...s].sort();}
+function tagHTML(ci){
+  const rv=getRv(ci);
+  return `<span class="tag st${rv.status}" data-tag>${STATUS[rv.status]}${rv.module?'・'+esc(rv.module):''}</span>`;
+}
+function updateTag(ci){
+  const row=document.getElementById('r'+S.changes[ci].row);
+  if(row){const t=row.querySelector('[data-tag]');if(t)t.outerHTML=tagHTML(ci);row.classList.add('rv');}
+  const li=$(`#view .li[data-c="${ci}"] [data-tag]`);
+  if(li){const rv=getRv(ci);li.className='ty st'+rv.status;li.textContent=STATUS[rv.status]+(rv.module?'・'+rv.module:'');}
+}
+
+/* ---------- 內容 HTML ---------- */
+const hWrap=(blk,inner)=>blk.t==='h'?`<span class="h${blk.lv}">${blk.num?`<span class="hn">${esc(blk.num)}</span>`:''}${inner}</span>`:inner;
+function plainTable(rows){return '<table class="dt">'+rows.map(r=>'<tr>'+r.map(c=>`<td>${esc(c)}</td>`).join('')+'</tr>').join('')+'</table>';}
+function blockHTML(b){return b.t==='table'?plainTable(b.rows):hWrap(b,esc(b.text));}
+function segHTML(segs,side){
+  let h='';
+  for(const s of segs){
+    if(s.op==='=')h+=esc(side==='a'?s.a:s.b);
+    else if(s.op==='-'){if(side!=='b')h+=`<del>${esc(s.a)}</del>`;}
+    else if(side!=='a')h+=`<ins>${esc(s.b)}</ins>`;
+  }
+  return h;
+}
+function tdiffHTML(r,side){
+  const ta=S.A.blocks[r.a].rows,tb=S.B.blocks[r.b].rows;
+  const nc=Math.max(1,...ta.map(x=>x.length),...tb.map(x=>x.length));
+  let h='<table class="dt">';
+  for(const x of r.tbl){
+    if((side==='a'&&x.a==null)||(side==='b'&&x.b==null)){h+=`<tr class="x-ph"><td colspan="${nc}"></td></tr>`;continue;}
+    let cells;
+    if(x.t==='mod')cells=x.cells.map(sg=>segHTML(sg,side));
+    else{const row=x.t==='del'?ta[x.a]:x.t==='add'?tb[x.b]:(side==='a'?ta[x.a]:tb[x.b]);cells=row.map(esc);}
+    h+=`<tr class="${x.t==='eq'?'':'x-'+x.t}">`+cells.map(c=>`<td>${c}</td>`).join('')+'</tr>';
+  }
+  return h+'</table>';
+}
+function diffBody(r,side){return r.tbl?tdiffHTML(r,side):hWrap(S.B.blocks[r.b],segHTML(r.segs,side));}
+function cellSide(r,side){
+  const A=S.A.blocks,B=S.B.blocks;
+  switch(r.t){
+    case 'eq':return blockHTML(side==='a'?A[r.a]:B[r.b]);
+    case 'del':return side==='a'?blockHTML(A[r.a]):'';
+    case 'add':return side==='b'?blockHTML(B[r.b]):'';
+    case 'mod':return r.tbl?tdiffHTML(r,side):hWrap(side==='a'?A[r.a]:B[r.b],segHTML(r.segs,side));
+    case 'move':return side==='a'?`<span class="ph">⇲ 由舊版第 ${r.a+1} 段移入${r.edited?'（並有修改）':''}</span>`
+      :`<span class="mv">移入</span>`+(r.edited?diffBody(r,'b'):blockHTML(B[r.b]));
+    case 'away':{
+      if(side==='b')return `<span class="ph">⇱ 已移至新版第 ${S.rows[r.to].b+1} 段</span>`;
+      const m=S.rows[r.to];
+      return `<span class="mv">移出</span>`+(m.edited?(m.tbl?tdiffHTML(m,'a'):hWrap(A[r.a],segHTML(m.segs,'a'))):blockHTML(A[r.a]));
+    }
+  }
+  return '';
+}
+function cellInline(r){
+  const A=S.A.blocks,B=S.B.blocks;
+  switch(r.t){
+    case 'eq':case 'add':return blockHTML(B[r.b]);
+    case 'del':return blockHTML(A[r.a]);
+    case 'mod':return r.tbl?tdiffHTML(r,'i'):hWrap(B[r.b],segHTML(r.segs,'i'));
+    case 'move':return `<span class="mv">由舊版第 ${r.a+1} 段移入</span>`+(r.edited?diffBody(r,'i'):blockHTML(B[r.b]));
+    case 'away':return `<span class="mv">已移至新版第 ${S.rows[r.to].b+1} 段</span><span class="tx">${blockHTML(A[r.a])}</span>`;
+  }
+  return '';
+}
+
+/* ---------- 版面 ---------- */
+function renderAll(){renderSelectors();renderOutline();renderView();renderReview();renderStatus();}
+function renderSelectors(){
+  const sp=$('#selProj');
+  sp.innerHTML=S.projects.length?S.projects.map(p=>`<option value="${p.id}"${p.id===S.pid?' selected':''}>${esc(p.name)}</option>`).join(''):'<option value="">（尚無專案）</option>';
+  const opt=sel=>'<option value="">— 選擇版本 —</option>'+S.docs.map(d=>`<option value="${d.id}"${d.id===sel?' selected':''}>${esc(d.version)}</option>`).join('');
+  $('#selOld').innerHTML=opt(S.oldId);$('#selNew').innerHTML=opt(S.newId);
+}
+function renderView(){
+  const home=!S.res||S.home;
+  renderOutline();renderReview();
+  $$('.tabs .tab').forEach(t=>t.classList.toggle('on',!home&&t.dataset.v===S.view));
+  $('#chkAll').parentElement.classList.toggle('hide',home||!(S.view==='side'||S.view==='inline'));
+  $('#btnHome').classList.toggle('on',home);
+  if(home)return welcome();
+  if(S.view==='list')renderList();else if(S.view==='req')renderReq();else renderDiff();
+}
+function welcome(){
+  const p=curProj(),n=S.docs.length;
+  let msg;
+  if(!p)msg='<p>開始前請先建立專案，或載入範例體驗完整流程。</p>';
+  else if(n<2)msg=`<p>專案「<b>${esc(p.name)}</b>」目前有 ${n} 個版本，請再匯入${n?'一':'兩'}個版本後進行比對。</p>`;
+  else msg=`<p>專案「<b>${esc(p.name)}</b>」共有 ${n} 個版本。請在下方或上方選擇「舊版」與「新版」，再按 <b>比對</b>。</p>`;
+  const back=S.res?`<div class="back"><span>📄 目前比對結果：<b>${esc(S.A.version)}</b> ⇄ <b>${esc(S.B.version)}</b>（${S.changes.length} 筆變更，已審 ${S.changes.filter((_,ci)=>getRv(ci).status).length} 筆）</span><span class="sp"></span><button class="pri" data-h="back">↩ 返回比對結果</button></div>`:'';
+  const projs=S.projects.length?`<div class="hcard"><h4>📁 切換專案<span class="sp"></span><button class="sm" data-h="newProj">＋新增專案</button></h4><div class="pchips">${S.projects.map(x=>`<button data-hp="${x.id}" class="${x.id===S.pid?'on':''}">${esc(x.name)}</button>`).join('')}</div></div>`:'';
+  const vers=p?`<div class="hcard"><h4>🗂 「${esc(p.name)}」的版本（${n}）<span class="sp"></span><button class="sm" data-h="import">＋匯入版本</button>${n>=2?`<button class="sm pri" data-h="cmp">比對所選版本</button>`:''}</h4>
+    ${n?`<table class="grid"><thead><tr><th>版本名稱</th><th>來源檔案</th><th style="width:150px">匯入時間</th><th>段/標題/表格</th><th style="width:150px">設定為</th></tr></thead><tbody>
+    ${S.docs.map(d=>`<tr><td><b>${esc(d.version)}</b>${d.id===S.oldId?' <span class="ty ty-del">舊版</span>':''}${d.id===S.newId?' <span class="ty ty-add">新版</span>':''}</td><td class="small">${esc(d.fileName)}</td><td class="small">${fmt(d.importedAt)}</td><td class="small">${d.stats?`${d.stats.blocks}/${d.stats.heads}/${d.stats.tables}`:d.blocks.length}</td>
+      <td><button class="sm" data-hold="${d.id}">設為舊版</button> <button class="sm" data-hnew="${d.id}">設為新版</button></td></tr>`).join('')}</tbody></table>`:'<div class="muted small">尚無版本，請按「匯入版本」或把檔案拖曳進來。</div>'}</div>`:'';
+  $('#view').innerHTML=`<div class="welcome">
+    <h2>SpecDiff 規格書比對工具</h2>${msg}${back}
+    <div class="hbar">
+      <button class="pri" data-h="import">📥 匯入版本</button>
+      <button data-h="newProj">＋ 新增專案</button>
+      <button data-h="demo">🧪 載入範例</button>
+      <button data-h="manage">🛠 專案與版本管理</button>
+      <button data-h="set">⚙ 比對選項</button>
+      <button data-h="backup">💾 整庫備份</button>
+      <button data-h="restore">♻ 還原備份</button>
+    </div>
+    <div class="drop" id="wDrop">把 .docx / .txt / .md 檔案拖曳到視窗任意位置即可匯入</div>
+    ${projs}${vers}
+    <ol class="muted">
+      <li>建立專案 → 匯入規格書的各個版本（docx、txt、md 或直接貼上文字）</li>
+      <li>選擇舊版與新版 → 比對；段落先對齊，再標示到字元層級的差異</li>
+      <li>在右側為每筆變更標註審查狀態、影響模組與備註（F7 / F8 切換，0–4 設定狀態）</li>
+      <li>匯出 HTML 報告、CSV 變更清單，或依模組彙總的影響清單</li>
+      <li>任何時候點左上角「SpecDiff」或右上角「🏠 主畫面」（Alt+H）即可回到此頁</li>
+    </ol>
+    <p class="small muted">所有資料都存在本機瀏覽器（IndexedDB），不會上傳到任何伺服器。建議定期用「💾 整庫備份」備份。</p></div>`;
+}
+function goHome(){S.home=true;$('#mnuExp').classList.remove('open');renderView();$('#view').scrollTop=0;}
+function leaveHome(){if(S.home&&S.res){S.home=false;renderView();}}
+async function homeAction(e){
+  const t=e.target.closest('[data-h],[data-hp],[data-hold],[data-hnew]');if(!t)return false;
+  const h=t.dataset.h;
+  if(t.dataset.hp){await loadProject(t.dataset.hp);return true;}
+  if(t.dataset.hold||t.dataset.hnew){
+    if(t.dataset.hold){S.oldId=t.dataset.hold;if(S.newId===S.oldId)S.newId=null;}
+    else{S.newId=t.dataset.hnew;if(S.oldId===S.newId)S.oldId=null;}
+    renderSelectors();saveLast();welcome();return true;
+  }
+  if(h==='back'){leaveHome();if(S.cur>=0)select(S.cur);}
+  else if(h==='import')openImport();
+  else if(h==='newProj')newProject();
+  else if(h==='demo')loadDemo();
+  else if(h==='manage'){renderManage();$('#dlgManage').showModal();}
+  else if(h==='set'){fillSettings(S.opts);$('#dlgSet').showModal();}
+  else if(h==='backup')exportBackup();
+  else if(h==='restore')$('#restoreFile').click();
+  else if(h==='cmp'){if(!S.oldId||!S.newId)toast('請先設定舊版與新版');else if(S.oldId===S.newId)toast('請選擇兩個不同的版本');else runCompare();}
+  return true;
+}
+function computeVis(){
+  const n=S.rows.length,vis=new Uint8Array(n),ctx=Math.max(0,+S.opts.ctx||0);
+  if(S.showAll)vis.fill(1);
+  else S.rows.forEach((r,i)=>{if(r.t!=='eq'){for(let k=Math.max(0,i-ctx);k<=Math.min(n-1,i+ctx);k++)vis[k]=1;}else if(r.lv)vis[i]=1;});
+  const gapOf=new Int32Array(n).fill(-1);
+  for(let i=0;i<n;){if(vis[i]){i++;continue;}const st=i;while(i<n&&!vis[i]){gapOf[i]=st;i++;}}
+  S.gapOf=gapOf;return vis;
+}
+function rowHTML(r,i,one){
+  const chg=r.t!=='eq',ci=r.ci;
+  const rv=ci!=null?getRv(ci):null;
+  const cls=`r t-${r.t}${one?' one':''}${chg?' chg':''}${ci!=null&&ci===S.cur?' cur':''}${rv?' rv':''}`;
+  const tag=ci!=null?tagHTML(ci):'';
+  if(one){
+    const ln=r.b!=null&&r.t!=='away'?r.b+1:'−'+(r.a+1);
+    return `<div class="${cls}" id="r${i}" data-r="${i}"><div class="c"><span class="ln">${ln}</span>${cellInline(r)}${tag}</div></div>`;
+  }
+  const la=r.a!=null&&r.t!=='move'?r.a+1:'',lb=r.b!=null?r.b+1:'';
+  return `<div class="${cls}" id="r${i}" data-r="${i}"><div class="c a"><span class="ln">${la}</span>${cellSide(r,'a')}</div><div class="c b"><span class="ln">${lb}</span>${cellSide(r,'b')}${tag}</div></div>`;
+}
+function renderDiff(){
+  const v=$('#view'),one=S.view==='inline',vis=computeVis(),n=S.rows.length,parts=[];
+  if(!S.changes.length)parts.push('<div class="gap" style="cursor:default">✔ 依目前比對選項，兩個版本內容相同</div>');
+  for(let i=0;i<n;){
+    if(vis[i]||S.expanded.has(S.gapOf[i])){parts.push(rowHTML(S.rows[i],i,one));i++;continue;}
+    const st=i;while(i<n&&!vis[i])i++;
+    parts.push(`<div class="gap" data-g="${st}">⋯ 省略 ${i-st} 段相同內容（點擊展開）</div>`);
+  }
+  v.innerHTML=parts.join('');
+}
+function reveal(row){
+  const g=S.gapOf?S.gapOf[row]:-1;
+  if(g>=0&&!S.expanded.has(g)){S.expanded.add(g);renderDiff();}
+}
+
+/* 變更清單 */
+function filtered(){
+  const f=S.lf,q=(f.q||'').toLowerCase(),mq=(f.mod||'').toLowerCase(),out=[];
+  S.changes.forEach((c,ci)=>{
+    if(!f.types[c.t])return;
+    const rv=getRv(ci);
+    if(f.status!=='all'&&rv.status!==+f.status)return;
+    if(mq&&!(rv.module||'').toLowerCase().includes(mq))return;
+    if(q){const r=S.rows[c.row];const t=((r.a!=null?S.A.blocks[r.a].text:'')+'\n'+(r.b!=null?S.B.blocks[r.b].text:'')+'\n'+c.secPath+'\n'+c.req.join(' ')+'\n'+(rv.note||'')).toLowerCase();if(!t.includes(q))return;}
+    out.push(ci);
+  });
+  return out;
+}
+function renderList(){
+  const f=S.lf;
+  $('#view').innerHTML=`<div class="lf">
+    ${Object.keys(TYPE).map(t=>`<label class="chk" style="margin:0"><input type="checkbox" data-lt="${t}"${f.types[t]?' checked':''}><span class="ty ty-${t}">${TYPE[t]}</span></label>`).join('')}
+    <select id="lfSt"><option value="all">全部狀態</option>${STATUS.map((s,i)=>`<option value="${i}"${f.status===String(i)?' selected':''}>${s}</option>`).join('')}</select>
+    <input type="text" id="lfMod" placeholder="模組篩選" value="${esc(f.mod)}" style="width:110px">
+    <span class="muted" id="lfCnt"></span><span style="flex:1"></span>
+    <span class="muted">批次設為</span><select id="lfBatch">${STATUS.map((s,i)=>`<option value="${i}">${s}</option>`).join('')}</select><button class="sm" id="lfGo">套用到篩選結果</button>
+  </div><div id="lItems"></div>`;
+  renderListItems();
+}
+function renderListItems(){
+  const L=filtered();
+  $('#lfCnt').textContent=`${L.length} / ${S.changes.length} 筆`;
+  $('#lItems').innerHTML=L.length?L.map(ci=>{
+    const c=S.changes[ci],r=S.rows[c.row],rv=getRv(ci);
+    return `<div class="li${ci===S.cur?' cur':''}" data-c="${ci}"><div class="hd"><b>#${ci+1}</b><span class="ty ty-${c.t}">${TYPE[c.t]}${r.edited?'＋修改':''}</span>
+      <span class="ty st${rv.status}" data-tag>${STATUS[rv.status]}${rv.module?'・'+esc(rv.module):''}</span>
+      ${c.req.map(x=>`<span class="bdg">${esc(x)}</span>`).join('')}<span class="muted">${esc(c.secPath)}</span></div>
+      <div class="bd">${cellInline(r)}</div>${rv.note?`<div class="small muted">📝 ${esc(rv.note)}</div>`:''}</div>`;
+  }).join(''):'<div class="welcome muted">沒有符合條件的變更</div>';
+}
+/* 需求編號 */
+function renderReq(){
+  const L=S.req.filter(x=>S.reqAll||x.st!=='未變');
+  const cnt=k=>S.req.filter(x=>x.st===k).length;
+  $('#view').innerHTML=`<div class="lf"><b>需求編號追蹤</b><span class="muted">格式：<code>${esc(S.opts.reqRe)}</code>（可在 ⚙ 設定）</span>
+    <span class="ty ty-add">新增 ${cnt('新增')}</span><span class="ty ty-mod">變更 ${cnt('變更')}</span><span class="ty ty-del">刪除 ${cnt('刪除')}</span><span class="ty">未變 ${cnt('未變')}</span>
+    <span style="flex:1"></span><label class="chk" style="margin:0"><input type="checkbox" id="reqAll"${S.reqAll?' checked':''}>顯示未變更的需求</label></div>
+    ${L.length?`<table class="grid"><thead><tr><th style="width:140px">需求編號</th><th style="width:80px">判定</th><th>相關變更</th></tr></thead><tbody>${L.map(x=>`<tr><td><b>${esc(x.id)}</b></td>
+      <td><span class="ty ${x.st==='新增'?'ty-add':x.st==='刪除'?'ty-del':x.st==='變更'?'ty-mod':''}">${x.st}</span></td>
+      <td>${x.ch.map(ci=>`<a class="lk" data-go="${ci}">#${ci+1} ${TYPE[S.changes[ci].t]}</a>`).join('')||'<span class="muted">—</span>'}</td></tr>`).join('')}</tbody></table>`
+    :'<div class="welcome muted">未找到符合格式的需求編號</div>'}`;
+}
+/* 大綱 */
+function renderOutline(){
+  const o=$('#outline');
+  if(!S.res){o.innerHTML='<div class="olh"><span>章節大綱</span></div><div class="muted small" style="padding:4px 12px">尚未比對</div>';return;}
+  if(S.home){o.innerHTML='<div class="olh"><span>章節大綱</span></div><div class="muted small" style="padding:4px 12px">目前在主畫面<br>返回比對結果後顯示章節大綱</div>';return;}
+  let h=`<div class="olh"><span>章節大綱（${S.heads.length}）</span><label class="chk" style="margin:0"><input type="checkbox" id="olOnly"${S.olOnly?' checked':''}>僅變更</label></div>`;
+  if(S.preCnt)h+=`<div class="ol" data-h="-1" style="padding-left:10px"><span class="tt">（文件開頭）</span><span class="bdg hot">${S.preCnt}</span></div>`;
+  S.heads.forEach((hd,i)=>{
+    if(S.olOnly&&!hd.cnt)return;
+    h+=`<div class="ol${hd.cnt?'':' zero'}${hd.t==='del'?' dl':hd.t==='add'?' ad':''}" data-h="${i}" style="padding-left:${(hd.lv-1)*14+10}px" title="${esc(hd.path)}"><span class="tt">${hd.num?`<span class="nm">${esc(hd.num)}</span> `:''}${esc(hd.text)}</span>${hd.cnt?`<span class="bdg hot">${hd.cnt}</span>`:''}</div>`;
+  });
+  if(!S.heads.length)h+='<div class="muted small" style="padding:4px 12px">文件中未偵測到章節標題。<br>docx 請使用「標題 1~9」樣式；txt 可用「3.2.1 標題」格式。</div>';
+  o.innerHTML=h;markOutline();
+}
+function markOutline(){
+  $$('#outline .ol.on').forEach(e=>e.classList.remove('on'));
+  if(S.cur<0||S.home||!S.res)return;
+  const sec=S.rows[S.changes[S.cur].row].sec;
+  const el=$(`#outline .ol[data-h="${sec}"]`);
+  if(el){el.classList.add('on');el.scrollIntoView({block:'nearest'});}
+}
+/* 審查面板 */
+function renderReview(){
+  const el=$('#review');
+  const keys=`<div class="small muted" style="margin-top:16px;line-height:1.9"><b>快捷鍵</b><br>F7 / F8：上一筆 / 下一筆變更<br>0–4：設定審查狀態<br>Ctrl+F：搜尋，Enter 下一筆<br>Alt+H：回到主畫面<br>點擊變更列即可選取</div>`;
+  if(!S.res){el.innerHTML='<h3>變更明細</h3><div class="muted">比對後在此標註審查結果。</div>'+keys;return;}
+  if(S.home){el.innerHTML='<h3>變更明細</h3><div class="muted">目前在主畫面<br>返回比對結果後即可繼續標註審查結果。</div>'+keys;return;}
+  if(S.cur<0){el.innerHTML='<h3>變更明細</h3><div class="muted">沒有變更。</div>'+keys;return;}
+  const c=S.changes[S.cur],r=S.rows[c.row],rv=getRv(S.cur);
+  el.innerHTML=`<h3>#${S.cur+1} <span class="ty ty-${c.t}">${TYPE[c.t]}${r.edited?'＋修改':''}</span></h3>
+    <div class="rv-sec">📑 ${esc(c.secPath)}</div>
+    ${c.req.length?`<div class="small" style="margin-bottom:8px">需求編號：${c.req.map(x=>`<span class="bdg">${esc(x)}</span>`).join(' ')}</div>`:''}
+    <div class="fld"><label>審查狀態（快捷鍵 0–4）</label><div class="seg">${STATUS.map((s,i)=>`<button data-s="${i}" class="st${i}${rv.status===i?' on':''}">${i} ${s}</button>`).join('')}</div></div>
+    <div class="fld"><label>影響模組（多個以逗號分隔）</label><input type="text" id="rvMod" list="modList" value="${esc(rv.module)}" placeholder="例如 LN01, RPT02"><datalist id="modList">${modules().map(m=>`<option value="${esc(m)}">`).join('')}</datalist></div>
+    <div class="fld"><label>備註</label><textarea id="rvNote" rows="4" placeholder="影響說明、待確認事項…">${esc(rv.note)}</textarea></div>
+    <div class="small muted" style="margin-bottom:8px">${rv.updatedAt?'最後更新：'+fmt(rv.updatedAt):'尚未審查'}</div>
+    <div class="fld"><label>差異內容</label><div class="pv">${cellInline(r)}</div></div>`+keys;
+}
+function renderStatus(){
+  const k={add:0,mod:0,del:0,move:0};let rv=0,p=0;
+  S.changes.forEach((c,ci)=>{k[c.t]++;const s=getRv(ci).status;if(s)rv++;if(s===2)p++;});
+  $('#fA').textContent=k.add;$('#fM').textContent=k.mod;$('#fD').textContent=k.del;$('#fV').textContent=k.move;
+  $('#fR').textContent=`${rv}/${S.changes.length}`;$('#fP').textContent=p;
+  $('#fPos').textContent=S.cur>=0?`${S.cur+1} / ${S.changes.length}`:'–';
+  if(!S.res)$('#fInfo').textContent='';
+}
+
+/* ---------- 選取與導覽 ---------- */
+function select(ci,scroll=true){
+  if(ci==null||ci<0||ci>=S.changes.length)return;
+  if(S.home){S.home=false;renderView();}
+  S.cur=ci;
+  $$('#view .cur').forEach(e=>e.classList.remove('cur'));
+  if(S.view==='side'||S.view==='inline'){
+    const row=S.changes[ci].row;reveal(row);
+    const el=document.getElementById('r'+row);
+    if(el){el.classList.add('cur');if(scroll){el.scrollIntoView({block:'center'});requestAnimationFrame(()=>el.scrollIntoView({block:'center'}));}}
+  }else if(S.view==='list'){
+    const el=$(`#view .li[data-c="${ci}"]`);if(el){el.classList.add('cur');if(scroll)el.scrollIntoView({block:'nearest'});}
+  }
+  if(!S.home)renderReview();renderStatus();markOutline();
+}
+function nav(d){
+  if(!S.changes.length)return;
+  const arr=S.view==='list'?filtered():S.changes.map((_,i)=>i);
+  if(!arr.length)return;
+  let i=arr.indexOf(S.cur);
+  if(i<0){
+    if(d>0){i=arr.findIndex(x=>x>S.cur);if(i<0)i=arr.length-1;}
+    else{i=-1;for(let k=arr.length-1;k>=0;k--)if(arr[k]<S.cur){i=k;break;}if(i<0)i=0;}
+  }
+  else i=Math.min(arr.length-1,Math.max(0,i+d));
+  select(arr[i]);
+}
+function goChange(ci){if(S.view!=='side'&&S.view!=='inline'){S.view='side';renderView();}select(ci);}
+function doSearch(dir){
+  const q=$('#q').value.trim().toLowerCase();if(!q||!S.res)return;
+  leaveHome();
+  if(S.view==='list'){S.lf.q=q;renderListItems();return;}
+  if(S.view==='req'){S.view='side';renderView();}
+  const n=S.rows.length,A=S.A.blocks,B=S.B.blocks;
+  let st=S.searchRow>=0?S.searchRow:(S.cur>=0?S.changes[S.cur].row:-1);
+  for(let k=1;k<=n;k++){
+    const i=((st+dir*k)%n+n)%n,r=S.rows[i];
+    const t=((r.a!=null?A[r.a].text:'')+'\n'+(r.b!=null?B[r.b].text:'')).toLowerCase();
+    if(t.includes(q)){
+      S.searchRow=i;
+      const ci=r.ci!=null?r.ci:(r.t==='away'?S.rows[r.to].ci:null);
+      reveal(i);
+      if(ci!=null&&r.t!=='away')select(ci);
+      const el=document.getElementById('r'+i);
+      if(el){el.scrollIntoView({block:'center'});el.classList.remove('flash');void el.offsetWidth;el.classList.add('flash');}
+      return;
+    }
+  }
+  toast('找不到「'+q+'」');
+}
+
+/* ---------- 專案 / 版本 ---------- */
+async function loadProjects(){S.projects=(await Store.all('projects')).sort((a,b)=>a.createdAt-b.createdAt);}
+async function loadProject(pid,sel){
+  S.pid=pid||null;S.docs=[];S.docCache.clear();S.res=null;S.changes=[];S.cur=-1;
+  if(S.pid){
+    S.docs=(await Store.all('documents','projectId',S.pid)).sort((a,b)=>a.importedAt-b.importedAt);
+    S.docs.forEach(d=>S.docCache.set(d.id,d));
+  }
+  const has=id=>id&&S.docCache.has(id);
+  S.oldId=sel&&has(sel.oldId)?sel.oldId:(S.docs.length>=2?S.docs[S.docs.length-2].id:null);
+  S.newId=sel&&has(sel.newId)?sel.newId:(S.docs.length>=2?S.docs[S.docs.length-1].id:(S.docs[0]?.id||null));
+  renderAll();
+  if(S.oldId&&S.newId&&S.oldId!==S.newId)await runCompare();else saveLast();
+}
+async function newProject(name){
+  name=name||prompt('新專案名稱','新專案');
+  if(!name||!name.trim())return null;
+  const p={id:uid(),name:name.trim(),createdAt:Date.now()};
+  await Store.put('projects',p);S.projects.push(p);
+  await loadProject(p.id);return p;
+}
+async function deleteReviewsForDoc(ids){
+  const all=await Store.all('reviews');
+  for(const r of all)if(r.pair.split('|').some(x=>ids.includes(x)))await Store.del('reviews',[r.pair,r.key]);
+}
+
+/* ---------- 匯入 ---------- */
+let impFiles=[];
+async function openImport(files){
+  if(!S.pid){const p=await newProject();if(!p)return;}
+  impFiles=(files&&typeof files.length==='number')?[...files]:[];
+  $('#impProj').textContent=curProj().name;$('#impText').value='';$('#impVer').value='';
+  showImpFiles();$('#dlgImport').showModal();
+}
+function showImpFiles(){
+  $('#impFiles').innerHTML=impFiles.map((f,i)=>`📄 ${esc(f.name)} <span class="muted">(${(f.size/1024).toFixed(1)} KB)</span> <a class="lk" data-rmf="${i}">移除</a>`).join('<br>');
+  if(impFiles.length===1&&!$('#impVer').value)$('#impVer').value=impFiles[0].name.replace(/\.[^.]+$/,'');
+}
+async function parseFile(f,enc){
+  const ext=(f.name.split('.').pop()||'').toLowerCase();
+  if(ext==='doc')throw new Error('不支援舊版 .doc，請在 Word 中「另存新檔」為 .docx');
+  if(ext==='pdf')throw new Error('暫不支援 PDF，請轉為 docx 或複製文字後貼上');
+  const buf=await f.arrayBuffer();
+  if(ext==='docx')return DocxParser.parse(buf,S.opts);
+  const text=TextLoader.decode(new Uint8Array(buf),enc);
+  return TextLoader.parse(text,ext==='md'||ext==='markdown',S.opts);
+}
+async function doImport(){
+  const enc=$('#impEnc').value,ver=$('#impVer').value.trim(),txt=$('#impText').value;
+  const items=impFiles.map(f=>({f}));if(txt.trim())items.push({text:txt});
+  if(!items.length){toast('請選擇檔案或貼上文字');return;}
+  const before=S.docs.length?S.docs[S.docs.length-1].id:null,added=[];
+  busy(true,'解析文件中…');
+  try{
+    for(const it of items){
+      let blocks;
+      if(it.f)blocks=await parseFile(it.f,enc);
+      else blocks=TextLoader.parse(it.text,/^#{1,6}\s/m.test(it.text)||/^\s*\|.*\|\s*$/m.test(it.text),S.opts);
+      if(!blocks.length)throw new Error((it.f?it.f.name:'貼上的文字')+' 沒有可比對的內容');
+      const label=items.length===1&&ver?ver:(it.f?it.f.name.replace(/\.[^.]+$/,''):(ver||'貼上 '+fmt(Date.now())));
+      const d={id:uid(),projectId:S.pid,version:label,fileName:it.f?it.f.name:'(貼上文字)',importedAt:Date.now()+added.length,blocks,
+        stats:{blocks:blocks.length,heads:blocks.filter(b=>b.t==='h').length,tables:blocks.filter(b=>b.t==='table').length}};
+      await Store.put('documents',d);added.push(d);
+    }
+  }catch(e){busy(false);toast('匯入失敗：'+e.message,6000);return;}
+  busy(false);$('#dlgImport').close();
+  const last=added[added.length-1];
+  const sel={newId:last.id,oldId:added.length>=2?added[added.length-2].id:before};
+  toast(`已匯入 ${added.length} 個版本：`+added.map(d=>`${d.version}（${d.stats.blocks} 段、${d.stats.heads} 標題、${d.stats.tables} 表格）`).join('；'),5000);
+  await loadProject(S.pid,sel);
+}
+
+/* ---------- 管理 ---------- */
+function renderManage(){
+  const p=curProj();
+  $('#mgBody').innerHTML=`<h4 style="margin:0 0 6px">專案</h4>
+    <table class="grid"><thead><tr><th>名稱</th><th style="width:150px">建立時間</th><th style="width:60px"></th></tr></thead><tbody>
+    ${S.projects.map(x=>`<tr><td><input type="text" data-pn="${x.id}" value="${esc(x.name)}" style="width:100%"></td><td class="small">${fmt(x.createdAt)}</td><td><button class="sm" data-pdel="${x.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan="3" class="muted">尚無專案</td></tr>'}
+    </tbody></table>
+    <h4 style="margin:16px 0 6px">「${esc(p?p.name:'')}」的版本</h4>
+    <table class="grid"><thead><tr><th>版本名稱</th><th>來源檔案</th><th style="width:150px">匯入時間</th><th>段/標題/表格</th><th style="width:60px"></th></tr></thead><tbody>
+    ${S.docs.map(d=>`<tr><td><input type="text" data-dv="${d.id}" value="${esc(d.version)}" style="width:100%"></td><td class="small">${esc(d.fileName)}</td><td class="small">${fmt(d.importedAt)}</td><td class="small">${d.stats?`${d.stats.blocks}/${d.stats.heads}/${d.stats.tables}`:d.blocks.length}</td><td><button class="sm" data-ddel="${d.id}">刪除</button></td></tr>`).join('')||'<tr><td colspan="5" class="muted">尚無版本</td></tr>'}
+    </tbody></table>
+    <p class="small muted">${Store.mem?'⚠ 目前使用記憶體儲存（IndexedDB 無法使用），關閉頁面後資料會遺失。':'資料儲存於本機 IndexedDB。'}</p>`;
+}
+
+/* ---------- 匯出 ---------- */
+const baseName=()=>`SpecDiff_${curProj()?.name||''}_${S.A.version}_vs_${S.B.version}`;
+const csvLine=a=>a.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(',');
+function exportCSV(){
+  const L=[csvLine(['編號','章節','類型','需求編號','舊版內容','新版內容','審查狀態','影響模組','備註','更新時間'])];
+  S.changes.forEach((c,ci)=>{const r=S.rows[c.row],rv=getRv(ci);
+    L.push(csvLine([ci+1,c.secPath,TYPE[c.t]+(r.edited?'(含修改)':''),c.req.join(' '),r.a!=null?S.A.blocks[r.a].text:'',r.b!=null?S.B.blocks[r.b].text:'',STATUS[rv.status],rv.module,rv.note,fmt(rv.updatedAt)]));});
+  download('\ufeff'+L.join('\r\n'),baseName()+'.csv','text/csv;charset=utf-8');
+}
+function impactData(){
+  const m=new Map();
+  S.changes.forEach((c,ci)=>{const rv=getRv(ci);if(![2,3,4].includes(rv.status))return;
+    const mods=(rv.module||'').split(/[,，;；、\s]+/).filter(Boolean);if(!mods.length)mods.push('(未指定模組)');
+    for(const md of mods){if(!m.has(md))m.set(md,{mod:md,s2:0,s3:0,s4:0,ids:[],secs:new Set(),req:new Set()});const x=m.get(md);x['s'+rv.status]++;x.ids.push(ci+1);x.secs.add(c.secPath);c.req.forEach(q=>x.req.add(q));}
+  });
+  return [...m.values()].sort((a,b)=>a.mod.localeCompare(b.mod,'zh-Hant'));
+}
+function exportImpact(){
+  const L=[csvLine(['影響模組','需改程式','需改測試','待確認','變更編號','需求編號','章節'])];
+  impactData().forEach(x=>L.push(csvLine([x.mod,x.s2,x.s3,x.s4,x.ids.map(i=>'#'+i).join(' '),[...x.req].join(' '),[...x.secs].join('\n')])));
+  download('\ufeff'+L.join('\r\n'),baseName()+'_影響清單.csv','text/csv;charset=utf-8');
+}
+function exportHTML(){
+  const k={add:0,mod:0,del:0,move:0},st=[0,0,0,0,0];
+  S.changes.forEach((c,ci)=>{k[c.t]++;st[getRv(ci).status]++;});
+  const o=S.opts,optTxt=[o.ignoreSpace&&'空白',o.ignoreWidth&&'全半形',o.ignorePunct&&'標點',o.ignoreCase&&'大小寫',o.ignoreNumbering&&'段首編號'].filter(Boolean).join('、')||'無';
+  const imp=impactData();
+  const css=`body{font:14px/1.6 "Microsoft JhengHei","PingFang TC",sans-serif;color:#1f2328;max-width:1100px;margin:24px auto;padding:0 20px}
+h1{color:#2563eb;margin-bottom:4px}h2{border-bottom:2px solid #2563eb;padding-bottom:4px;margin-top:28px}
+table.m{border-collapse:collapse;width:100%}table.m th,table.m td{border:1px solid #d8dce2;padding:5px 8px;text-align:left;vertical-align:top}table.m th{background:#f4f5f7}
+.c{border:1px solid #d8dce2;border-radius:8px;margin:10px 0;page-break-inside:avoid}.c .hd{background:#f4f5f7;padding:6px 10px;font-size:13px;display:flex;gap:8px;flex-wrap:wrap;border-radius:8px 8px 0 0}
+.c .bd{padding:8px 10px;white-space:pre-wrap;word-break:break-word}.c .nt{padding:4px 10px 8px;color:#555;font-size:13px}
+ins{background:#a6ecb8;text-decoration:none}del{background:#ffb4ac}.t-add .bd{background:#e7f8ec}.t-del .bd{background:#fdecea}.t-move .bd{background:#efebff}
+.t-add ins,.t-del del{background:transparent}
+.ty{display:inline-block;font-size:12px;padding:0 7px;border-radius:9px;font-weight:600}.ty-add{background:#a6ecb8}.ty-del{background:#ffb4ac}.ty-mod{background:#fde68a}.ty-move{background:#cfc3ff}
+.st0{background:#fff;color:#374151;border:1.5px solid #374151}.st1{background:#64748b;color:#fff}.st2{background:#dc2626;color:#fff}.st3{background:#1d4ed8;color:#fff}.st4{background:#ea580c;color:#fff}
+.mv{font-size:11px;color:#6d4cd6;border:1px solid #cfc3ff;border-radius:4px;padding:0 4px;margin-right:6px}.ph{color:#888}
+.h1{font-size:17px;font-weight:700}.h2,.h3{font-weight:700}.hn{color:#888;margin-right:6px}
+table.dt{border-collapse:collapse;width:100%;font-size:13px;white-space:normal}table.dt td{border:1px solid #d8dce2;padding:3px 6px;white-space:pre-wrap}
+tr.x-add td{background:#e7f8ec}tr.x-del td{background:#fdecea}tr.x-mod td{background:#fff8d6}.mu{color:#888}
+@media print{body{margin:0}}`;
+  const items=S.changes.map((c,ci)=>{const r=S.rows[c.row],rv=getRv(ci);
+    return `<div class="c t-${c.t}"><div class="hd"><b>#${ci+1}</b><span class="ty ty-${c.t}">${TYPE[c.t]}${r.edited?'＋修改':''}</span><span class="ty st${rv.status}">${STATUS[rv.status]}</span>${rv.module?`<span>模組：<b>${esc(rv.module)}</b></span>`:''}${c.req.length?`<span>需求：${esc(c.req.join(', '))}</span>`:''}<span class="mu">${esc(c.secPath)}</span></div>
+    <div class="bd">${cellInline(r)}</div>${rv.note?`<div class="nt">📝 ${esc(rv.note)}</div>`:''}</div>`;}).join('');
+  const html=`<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="UTF-8"><title>${esc(baseName())}</title><style>${css}</style></head><body>
+<h1>規格書差異報告</h1><div class="mu">由 SpecDiff 產生於 ${fmt(Date.now())}</div>
+<h2>比對資訊</h2><table class="m"><tr><th style="width:120px">專案</th><td>${esc(curProj()?.name)}</td></tr>
+<tr><th>舊版</th><td>${esc(S.A.version)}　<span class="mu">${esc(S.A.fileName)}・匯入 ${fmt(S.A.importedAt)}</span></td></tr>
+<tr><th>新版</th><td>${esc(S.B.version)}　<span class="mu">${esc(S.B.fileName)}・匯入 ${fmt(S.B.importedAt)}</span></td></tr>
+<tr><th>忽略項目</th><td>${optTxt}；修改判定門檻 ${o.th}；搬移偵測 ${o.moveDetect?'開':'關'}</td></tr></table>
+<h2>變更摘要</h2><table class="m"><tr><th>新增</th><th>修改</th><th>刪除</th><th>移動</th><th>合計</th>${STATUS.map(s=>`<th>${s}</th>`).join('')}</tr>
+<tr><td>${k.add}</td><td>${k.mod}</td><td>${k.del}</td><td>${k.move}</td><td><b>${S.changes.length}</b></td>${st.map(x=>`<td>${x}</td>`).join('')}</tr></table>
+<h2>影響清單（依模組）</h2>${imp.length?`<table class="m"><tr><th>影響模組</th><th>需改程式</th><th>需改測試</th><th>待確認</th><th>變更編號</th><th>需求編號</th></tr>${imp.map(x=>`<tr><td><b>${esc(x.mod)}</b></td><td>${x.s2}</td><td>${x.s3}</td><td>${x.s4}</td><td>${x.ids.map(i=>'#'+i).join(' ')}</td><td>${esc([...x.req].join(', '))}</td></tr>`).join('')}</table>`:'<p class="mu">尚無標註為「需改程式／需改測試／待確認」的變更。</p>'}
+<h2>變更明細（${S.changes.length} 筆）</h2>${items||'<p class="mu">無變更</p>'}</body></html>`;
+  download(html,baseName()+'.html','text/html;charset=utf-8');
+}
+async function exportBackup(){
+  const data={app:'SpecDiff',version:1,exportedAt:new Date().toISOString(),
+    projects:await Store.all('projects'),documents:await Store.all('documents'),reviews:await Store.all('reviews'),settings:await Store.all('settings')};
+  const d=new Date(),pad=n=>String(n).padStart(2,'0');
+  download(JSON.stringify(data),`SpecDiff_backup_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.json`,'application/json');
+}
+async function restoreBackup(file){
+  try{
+    const data=JSON.parse(await file.text());
+    if(data.app!=='SpecDiff')throw new Error('不是 SpecDiff 備份檔');
+    if(!confirm(`將合併還原：專案 ${data.projects.length}、版本 ${data.documents.length}、審查 ${data.reviews.length} 筆。\n相同 ID 的資料會被覆蓋，確定嗎？`))return;
+    busy(true,'還原中…');
+    await Store.putMany('projects',data.projects||[]);await Store.putMany('documents',data.documents||[]);
+    await Store.putMany('reviews',data.reviews||[]);
+    await loadProjects();busy(false);
+    toast('還原完成');await loadProject(S.pid&&S.projects.some(p=>p.id===S.pid)?S.pid:S.projects[0]?.id);
+  }catch(e){busy(false);toast('還原失敗：'+e.message,5000);}
+}
+
+/* ---------- 範例 ---------- */
+const DEMO_V1=`# 1 總則
+## 1.1 目的
+本規格書說明放款查詢系統之功能需求與非功能需求。
+## 1.2 適用範圍
+適用於總行授信管理部及各分行授信人員。
+# 2 系統環境
+系統應支援 IE11 瀏覽器。
+
+伺服器作業系統為 Windows Server 2012。
+# 3 功能需求
+## 3.1 放款查詢
+REQ-001 使用者可依身分證字號查詢放款明細。
+
+REQ-002 查詢結果應顯示放款帳號、核貸金額、餘額及利率。
+
+REQ-003 單筆查詢金額不得超過 100 萬元。
+## 3.2 報表
+REQ-010 系統應每日產生放款餘額日報表。
+
+REQ-011 報表格式為 PDF，並由批次於每日 07:00 前產出。
+## 3.3 資料欄位
+| 欄位 | 型態 | 說明 |
+|---|---|---|
+| CUST_ID | CHAR(10) | 身分證字號 |
+| LOAN_NO | CHAR(14) | 放款帳號 |
+| AMT | DECIMAL(15,2) | 核貸金額 |
+## 3.4 稽核
+REQ-020 所有查詢動作均須記錄稽核軌跡，包含使用者代號、查詢時間與查詢條件，保存期限五年。
+# 4 非功能需求
+查詢回應時間應於 3 秒內。
+
+系統可用率應達 99.5%。
+
+系統應於每月第一個週日 02:00 至 04:00 進行例行維護。`;
+const DEMO_V2=`# 1 總則
+## 1.1 目的
+本規格書說明放款查詢系統之功能需求與非功能需求。
+## 1.2 適用範圍
+適用於總行授信管理部及各分行授信人員。
+# 2 系統環境
+系統應支援 Microsoft Edge 及 Google Chrome 瀏覽器。
+
+伺服器作業系統為 Windows Server 2022。
+# 3 功能需求
+## 3.1 放款查詢
+REQ-001 使用者可依身分證字號或統一編號查詢放款明細。
+
+REQ-002 查詢結果應顯示放款帳號、核貸金額、餘額及利率。
+
+REQ-003 單筆查詢金額不得超過 200 萬元。
+
+REQ-004 使用者可將查詢結果匯出為 Excel 檔案。
+## 3.2 報表
+REQ-010 系統應每日產生放款餘額日報表。
+
+REQ-012 報表應上傳至文件管理系統並保存七年。
+## 3.3 資料欄位
+| 欄位 | 型態 | 說明 |
+|---|---|---|
+| CUST_ID | CHAR(10) | 身分證字號或統一編號 |
+| LOAN_NO | CHAR(16) | 放款帳號 |
+| AMT | DECIMAL(15,2) | 核貸金額 |
+| RATE | DECIMAL(7,4) | 適用利率 |
+# 4 非功能需求
+系統可用率應達 99.5%。
+
+查詢回應時間應於 3 秒內。
+
+系統應於每月第一個週日 02:00 至 04:00 進行例行維護。
+
+REQ-020 所有查詢動作均須記錄稽核軌跡，包含使用者代號、查詢時間與查詢條件，保存期限七年。`;
+async function loadDemo(){
+  const p={id:uid(),name:'範例：放款查詢系統規格書',createdAt:Date.now()};
+  await Store.put('projects',p);S.projects.push(p);
+  const mk=(v,t,i)=>{const blocks=TextLoader.parse(t,true,S.opts);return {id:uid(),projectId:p.id,version:v,fileName:'(範例)',importedAt:Date.now()+i,blocks,
+    stats:{blocks:blocks.length,heads:blocks.filter(b=>b.t==='h').length,tables:blocks.filter(b=>b.t==='table').length}};};
+  const d1=mk('v1.0',DEMO_V1,0),d2=mk('v1.1',DEMO_V2,1);
+  await Store.putMany('documents',[d1,d2]);
+  await loadProject(p.id,{oldId:d1.id,newId:d2.id});
+  toast('已建立範例專案，試試 F7 / F8 與數字鍵 0–4');
+}
+
+/* ---------- 設定 ---------- */
+function fillSettings(o){
+  $$('#dlgSet [data-o]').forEach(el=>{const k=el.dataset.o;if(el.type==='checkbox')el.checked=!!o[k];else el.value=o[k];});
+  $('#thV').textContent=(+o.th).toFixed(2);
+}
+async function applySettings(){
+  const o={...S.opts},prevNH=o.numHeading;
+  $$('#dlgSet [data-o]').forEach(el=>{const k=el.dataset.o;o[k]=el.type==='checkbox'?el.checked:(el.type==='range'||el.type==='number'?+el.value:el.value);});
+  try{new RegExp(o.reqRe);}catch(e){toast('需求編號正規表示式格式錯誤');return;}
+  S.opts=o;await Store.put('settings',{key:'opts',value:o});applyTheme();$('#dlgSet').close();
+  if(prevNH!==o.numHeading)toast('「依文字判斷章節」只影響之後匯入的文件',4000);
+  if(S.res){const cur=S.cur>=0?S.changes[S.cur].key:null;await runCompare();if(cur){const i=S.changes.findIndex(c=>c.key===cur);if(i>=0)select(i);}}
+}
+
+/* ---------- 事件 ---------- */
+let saveT;
+function bind(){
+  $('#selProj').onchange=e=>loadProject(e.target.value);
+  $('#btnNewProj').onclick=()=>newProject();
+  $('#selOld').onchange=e=>{S.oldId=e.target.value||null;if(S.oldId&&S.newId&&S.oldId!==S.newId)runCompare();else saveLast();};
+  $('#selNew').onchange=e=>{S.newId=e.target.value||null;if(S.oldId&&S.newId&&S.oldId!==S.newId)runCompare();else saveLast();};
+  $('#btnSwap').onclick=()=>{[S.oldId,S.newId]=[S.newId,S.oldId];renderSelectors();runCompare();};
+  $('#btnCmp').onclick=()=>{if(!S.oldId||!S.newId)return toast('請先選擇舊版與新版');runCompare();};
+  $('#btnImport').onclick=()=>openImport();
+  $('#logo').onclick=goHome;$('#btnHome').onclick=goHome;
+  $('#btnPrev').onclick=()=>nav(-1);$('#btnNext').onclick=()=>nav(1);
+  $('#btnSet').onclick=()=>{fillSettings(S.opts);$('#dlgSet').showModal();};
+  $('#thR').oninput=e=>$('#thV').textContent=(+e.target.value).toFixed(2);
+  $('#setGo').onclick=applySettings;$('#setReset').onclick=()=>fillSettings({...DEF,dark:S.opts.dark});
+  $('#btnManage').onclick=()=>{renderManage();$('#dlgManage').showModal();};
+  $$('dialog [data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
+  /* 匯出選單 */
+  const mn=$('#mnuExp');
+  mn.querySelector(':scope>button').onclick=e=>{e.stopPropagation();mn.classList.toggle('open');};
+  document.addEventListener('click',()=>mn.classList.remove('open'));
+  mn.querySelector('.dd').onclick=async e=>{
+    const x=e.target.dataset.x;if(!x)return;mn.classList.remove('open');
+    if(x==='backup')return exportBackup();
+    if(x==='restore')return $('#restoreFile').click();
+    if(!S.res)return toast('請先完成比對');
+    if(x==='html')exportHTML();else if(x==='csv')exportCSV();else if(x==='impact')exportImpact();
+  };
+  $('#restoreFile').onchange=e=>{const f=e.target.files[0];e.target.value='';if(f)restoreBackup(f);};
+  /* 頁籤 */
+  $$('.tabs .tab').forEach(t=>t.onclick=()=>{S.view=t.dataset.v;S.home=false;renderView();if(S.cur>=0&&(S.view!=='req'))select(S.cur);});
+  $('#chkAll').onchange=e=>{S.showAll=e.target.checked;S.expanded.clear();renderDiff();if(S.cur>=0)select(S.cur);};
+  /* 主畫面委派 */
+  $('#view').addEventListener('click',async e=>{
+    if((!S.res||S.home)&&await homeAction(e))return;
+    const g=e.target.closest('.gap[data-g]');if(g){S.expanded.add(+g.dataset.g);renderDiff();return;}
+    const go=e.target.closest('[data-go]');if(go){goChange(+go.dataset.go);return;}
+    const li=e.target.closest('.li[data-c]');if(li){select(+li.dataset.c,false);return;}
+    const r=e.target.closest('.r.chg');
+    if(r){const row=S.rows[+r.dataset.r];const ci=row.t==='away'?S.rows[row.to].ci:row.ci;if(ci!=null)select(ci,row.t==='away');}
+  });
+  $('#view').addEventListener('dblclick',e=>{const li=e.target.closest('.li[data-c]');if(li)goChange(+li.dataset.c);});
+  $('#view').addEventListener('change',e=>{
+    const t=e.target;
+    if(t.dataset.lt){S.lf.types[t.dataset.lt]=t.checked?1:0;renderListItems();}
+    else if(t.id==='lfSt'){S.lf.status=t.value;renderListItems();}
+    else if(t.id==='reqAll'){S.reqAll=t.checked;renderReq();}
+  });
+  $('#view').addEventListener('input',e=>{if(e.target.id==='lfMod'){S.lf.mod=e.target.value;renderListItems();}});
+  $('#view').addEventListener('click',async e=>{
+    if(e.target.id!=='lfGo')return;
+    const L=filtered(),s=+$('#lfBatch').value;
+    if(!L.length||!confirm(`將 ${L.length} 筆變更設為「${STATUS[s]}」？`))return;
+    for(const ci of L)await setReview(ci,{status:s},false);
+    renderListItems();renderReview();toast(`已更新 ${L.length} 筆`);
+  });
+  /* 大綱 */
+  $('#outline').addEventListener('click',e=>{
+    const el=e.target.closest('.ol[data-h]');if(!el)return;
+    const h=+el.dataset.h,row=h<0?0:S.heads[h].row;
+    if(S.view!=='side'&&S.view!=='inline'){S.view='side';S.home=false;renderView();}
+    leaveHome();reveal(row);
+    const ci=S.changes.findIndex(c=>c.row>=row&&(h<0||isUnder(S.rows[c.row].sec,h)));
+    if(ci>=0)select(ci,false);
+    const t=document.getElementById('r'+row);if(t){t.scrollIntoView({block:'start'});requestAnimationFrame(()=>t.scrollIntoView({block:'start'}));}
+  });
+  $('#outline').addEventListener('change',e=>{if(e.target.id==='olOnly'){S.olOnly=e.target.checked;renderOutline();}});
+  /* 審查面板 */
+  $('#review').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b&&S.cur>=0)setReview(S.cur,{status:+b.dataset.s});});
+  $('#review').addEventListener('input',e=>{
+    if(S.cur<0)return;const ci=S.cur;
+    const patch=e.target.id==='rvMod'?{module:e.target.value.trim()}:e.target.id==='rvNote'?{note:e.target.value}:null;
+    if(!patch)return;
+    const v={...getRv(ci),...patch};S.reviews.set(S.changes[ci].key,{...v,pair:S.pair,key:S.changes[ci].key});
+    clearTimeout(saveT);saveT=setTimeout(()=>setReview(ci,patch,false),400);
+  });
+  /* 搜尋 */
+  $('#q').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doSearch(e.shiftKey?-1:1);}else if(e.key==='Escape'){e.target.value='';S.lf.q='';if(S.view==='list')renderListItems();e.target.blur();}});
+  $('#q').addEventListener('input',e=>{S.searchRow=-1;if(S.view==='list'){S.lf.q=e.target.value.trim();renderListItems();}});
+  /* 匯入對話框 */
+  $('#impPick').onclick=e=>{e.preventDefault();$('#impFile').click();};
+  $('#impFile').onchange=e=>{impFiles.push(...e.target.files);e.target.value='';showImpFiles();};
+  $('#impFiles').onclick=e=>{const a=e.target.closest('[data-rmf]');if(a){impFiles.splice(+a.dataset.rmf,1);showImpFiles();}};
+  $('#impGo').onclick=doImport;
+  /* 管理對話框 */
+  $('#mgBody').addEventListener('change',async e=>{
+    const t=e.target;
+    if(t.dataset.pn){const p=S.projects.find(x=>x.id===t.dataset.pn);p.name=t.value.trim()||p.name;await Store.put('projects',p);renderSelectors();}
+    if(t.dataset.dv){const d=S.docCache.get(t.dataset.dv);d.version=t.value.trim()||d.version;await Store.put('documents',d);renderSelectors();}
+  });
+  $('#mgBody').addEventListener('click',async e=>{
+    const t=e.target;
+    if(t.dataset.pdel){
+      const p=S.projects.find(x=>x.id===t.dataset.pdel);
+      if(!confirm(`刪除專案「${p.name}」及其所有版本與審查紀錄？此動作無法復原。`))return;
+      const docs=await Store.all('documents','projectId',p.id);
+      for(const d of docs)await Store.del('documents',d.id);
+      await deleteReviewsForDoc(docs.map(d=>d.id));await Store.del('projects',p.id);
+      S.projects=S.projects.filter(x=>x.id!==p.id);
+      await loadProject(S.pid===p.id?S.projects[0]?.id:S.pid,{oldId:S.oldId,newId:S.newId});renderManage();
+    }
+    if(t.dataset.ddel){
+      const d=S.docCache.get(t.dataset.ddel);
+      if(!confirm(`刪除版本「${d.version}」及相關審查紀錄？`))return;
+      await Store.del('documents',d.id);await deleteReviewsForDoc([d.id]);
+      await loadProject(S.pid,{oldId:S.oldId,newId:S.newId});renderManage();
+    }
+  });
+  /* 拖曳匯入 */
+  let dc=0;
+  window.addEventListener('dragenter',e=>{e.preventDefault();dc++;$('#wDrop')?.classList.add('on');$('#impDrop').classList.add('on');});
+  window.addEventListener('dragleave',()=>{if(--dc<=0){dc=0;$('#wDrop')?.classList.remove('on');$('#impDrop').classList.remove('on');}});
+  window.addEventListener('dragover',e=>e.preventDefault());
+  window.addEventListener('drop',e=>{
+    e.preventDefault();dc=0;$('#wDrop')?.classList.remove('on');$('#impDrop').classList.remove('on');
+    const fs=[...(e.dataTransfer?.files||[])];if(!fs.length)return;
+    if($('#dlgImport').open){impFiles.push(...fs);showImpFiles();}else openImport(fs);
+  });
+  /* 快捷鍵 */
+  document.addEventListener('keydown',e=>{
+    if(document.querySelector('dialog[open]'))return;
+    if(e.altKey&&e.key.toLowerCase()==='h'){e.preventDefault();goHome();return;}
+    if(e.key==='F7'){e.preventDefault();nav(-1);}
+    else if(e.key==='F8'){e.preventDefault();nav(1);}
+    else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='f'){e.preventDefault();$('#q').focus();$('#q').select();}
+    else if(/^[0-4]$/.test(e.key)&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&!isTyping(e.target)&&S.cur>=0&&!S.home){e.preventDefault();setReview(S.cur,{status:+e.key});}
+  });
+}
+function isUnder(sec,h){for(let s=sec;s>=0;s=S.heads[s].parent)if(s===h)return true;return false;}
+
+/* ---------- 啟動 ---------- */
+(async function init(){
+  const ok=await Store.open();
+  if(!ok)toast('IndexedDB 無法使用，資料只保存在記憶體中（關閉頁面即遺失）',6000);
+  const so=await Store.get('settings','opts');if(so)S.opts={...DEF,...so.value};
+  applyTheme();bind();
+  await loadProjects();
+  const last=(await Store.get('settings','last'))?.value;
+  const pid=last&&S.projects.some(p=>p.id===last.pid)?last.pid:S.projects[0]?.id;
+  await loadProject(pid,last);
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+
+</body>
+</html>

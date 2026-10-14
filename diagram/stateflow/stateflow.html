@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StateFlow - 動態狀態機與業務流程拓撲模擬器</title>
+  <!-- Initialize theme before DOM render to prevent flash of wrong theme (default is light) -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('stateflow_theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    })();
+  </script>
+  <script type="module" crossorigin>(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),t.credentials=e.crossOrigin===`use-credentials`?`include`:e.crossOrigin===`anonymous`?`omit`:`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();function e(e){let t=e.split(`
+`),n=new Map,r=[],i=[],a=null,o=new Set,s=`業務流程狀態機`,c=``,l=e=>{let t=e.trim();return t?(n.has(t)||n.set(t,{id:t,label:t,isInitial:!1,isTerminal:!1,outDegree:0,inDegree:0}),n.get(t)):null};return t.forEach((e,t)=>{let n=t+1,u=e.trim();if(!u||u.startsWith(`//`)||u.startsWith(`#`))return;if(u.startsWith(`@`)){let e=u.indexOf(`:`);if(e===-1){i.push({line:n,message:`指令格式應為 @key: value`});return}let t=u.slice(1,e).trim().toLowerCase(),r=u.slice(e+1).trim();if(t===`name`||t===`title`)s=r;else if(t===`desc`||t===`description`)c=r;else if(t===`initial`){a=r;let e=l(r);e&&(e.isInitial=!0)}else t===`terminal`?r.split(`,`).map(e=>e.trim()).filter(Boolean).forEach(e=>{o.add(e);let t=l(e);t&&(t.isTerminal=!0)}):i.push({line:n,message:`未知的指令: @${t}`});return}let d=u.match(/(-->|->|=>)/);if(!d){i.push({line:n,message:`無效的語法（缺少箭頭 ->）: "${u}"`});return}let f=d[0],p=u.indexOf(f),m=u.slice(0,p).trim(),h=u.slice(p+f.length).trim();if(!m){i.push({line:n,message:`缺少起始狀態`});return}let g=h,_=``,v=``,y=h.indexOf(`:`);if(y!==-1){g=h.slice(0,y).trim();let e=h.slice(y+1).trim(),t=e.match(/\[(.*?)\]/);t&&(v=t[1].trim(),e=e.replace(/\[(.*?)\]/,``).trim()),_=e}if(!g){i.push({line:n,message:`缺少目標狀態`});return}let b=l(m),x=l(g);b&&x&&(b.outDegree++,x.inDegree++,r.push({id:`edge_${r.length}`,from:b.id,to:x.id,action:_||`proceed`,condition:v,line:n}),a||(a=b.id,b.isInitial=!0))}),a&&n.has(a)&&(n.get(a).isInitial=!0),o.forEach(e=>{n.has(e)&&(n.get(e).isTerminal=!0)}),{title:s,description:c,initialNodeId:a,terminalNodeIds:Array.from(o),nodes:Array.from(n.values()),edges:r,errors:i}}function t(e){let{nodes:t,edges:n,initialNodeId:r,terminalNodeIds:i}=e,a=[],o=new Map(t.map(e=>[e.id,e]));if(t.length===0)return{issues:[{type:`info`,title:`空白圖表`,message:`請在編輯器中輸入狀態機定義文字。`}],stats:{totalNodes:0,totalEdges:0,deadlocks:0,orphans:0},reachability:new Set,deadlocks:new Set,orphans:new Set};(!r||!o.has(r))&&a.push({type:`error`,code:`NO_INITIAL_STATE`,title:`缺少有效初始狀態`,message:`未定義初始狀態，或指定的 @initial 節點不存在於任何轉換中。`});let s=new Map,c=new Map;t.forEach(e=>{s.set(e.id,[]),c.set(e.id,[])}),n.forEach(e=>{s.has(e.from)&&s.get(e.from).push(e.to),c.has(e.to)&&c.get(e.to).push(e.from)});let l=new Set;if(r&&o.has(r)){let e=[r];for(l.add(r);e.length>0;){let t=e.shift(),n=s.get(t)||[];for(let t of n)l.has(t)||(l.add(t),e.push(t))}}let u=new Set;t.forEach(e=>{r&&e.id!==r&&!l.has(e.id)?(u.add(e.id),e.isOrphan=!0,a.push({type:`warning`,code:`ORPHAN_STATE`,nodeId:e.id,title:`孤島/不可達狀態：[${e.id}]`,message:`從初始狀態「${r}」無法透過任何路徑抵達此節點。`})):e.isOrphan=!1});let d=new Set,f=new Set(i);if(t.forEach(e=>{(s.get(e.id)?.length||0)===0&&!f.has(e.id)?(d.add(e.id),e.isDeadlock=!0,a.push({type:`error`,code:`DEADLOCK_STATE`,nodeId:e.id,title:`死胡同節點：[${e.id}]`,message:`此節點沒有任何可出發的動作，且未宣告為終端狀態 (@terminal)。案件進入後將卡死！`})):e.isDeadlock=!1}),f.size>0){let e=new Set,n=[...f].filter(e=>o.has(e));for(n.forEach(t=>e.add(t));n.length>0;){let t=n.shift(),r=c.get(t)||[];for(let t of r)e.has(t)||(e.add(t),n.push(t))}t.forEach(t=>{l.has(t.id)&&!e.has(t.id)&&!d.has(t.id)&&a.push({type:`warning`,code:`NO_EXIT_TO_TERMINAL`,nodeId:t.id,title:`黑洞循環/無終點路徑：[${t.id}]`,message:`此節點一旦進入，便無法透過任何後續路徑抵達任何終端狀態 (@terminal)。`})})}let p=new Set;return n.forEach(e=>{e.from===e.to&&a.push({type:`info`,code:`SELF_LOOP`,nodeId:e.from,title:`自環轉換：[${e.from}]`,message:`動作「${e.action}」將狀態轉回自己。`});let t=`${e.from}->${e.to}:${e.action}`;p.has(t)&&a.push({type:`warning`,code:`DUPLICATE_TRANSITION`,title:`重複定義的轉換`,message:`在 [${e.from}] 與 [${e.to}] 之間重複定義了動作「${e.action}」。`}),p.add(t)}),{issues:a,stats:{totalNodes:t.length,totalEdges:n.length,deadlocks:d.size,orphans:u.size,terminals:f.size},reachability:l,deadlocks:d,orphans:u}}function n(e,t,n,r=new Map){if(!e||e.length===0)return{nodes:[],width:800,height:600};let i=new Map(e.map(e=>[e.id,{...e}])),a=new Map,o=new Map;e.forEach(e=>{a.set(e.id,[]),o.set(e.id,0)}),t.forEach(e=>{a.has(e.from)&&i.has(e.to)&&e.from!==e.to&&a.get(e.from).push(e.to)});let s=new Map,c=n&&i.has(n)?n:e[0]?.id;function l(){c&&s.set(c,0);let n=!0,r=0,i=e.length*2;for(;n&&r<i;)n=!1,r++,t.forEach(t=>{if(t.from===t.to)return;let r=s.get(t.from);if(r!==void 0){let i=s.get(t.to),a=r+1;(i===void 0||a>i&&a<e.length+2)&&(s.set(t.to,a),n=!0)}});let a=0;s.forEach(e=>{e>a&&(a=e)}),e.forEach(e=>{s.has(e.id)||s.set(e.id,a+1)})}l();let u=new Map;s.forEach((e,t)=>{u.has(e)||u.set(e,[]),u.get(e).push(i.get(t))});let d=Array.from(u.keys()).sort((e,t)=>e-t),f=0;u.forEach(e=>{e.length>f&&(f=e.length)});let p=Math.max(600,f*120+160);d.forEach((e,t)=>{let n=u.get(e),i=(n.length-1)*120,a=(p-i)/2;n.forEach((n,i)=>{if(r.has(n.id)){let e=r.get(n.id);n.x=e.x,n.y=e.y}else n.x=80+t*280,n.y=a+i*120;n.width=190,n.height=72,n.layer=e})});let m=Math.max(800,160+d.length*280);return{nodes:Array.from(i.values()),width:m,height:p}}var r=class{constructor(){this.graph=null,this.currentState=null,this.history=[],this.listeners=new Set}setGraph(e){this.graph=e,this.reset()}subscribe(e){return this.listeners.add(e),()=>this.listeners.delete(e)}notify(){let e=this.getStatus();this.listeners.forEach(t=>{try{t(e)}catch(e){console.error(`Simulator listener error:`,e)}})}reset(){!this.graph||!this.graph.nodes.length?(this.currentState=null,this.history=[],this.notify()):(this.currentState=this.graph.initialNodeId||this.graph.nodes[0]?.id,this.history=[],this.notify())}getAvailableTransitions(){return!this.graph||!this.currentState?[]:this.graph.edges.filter(e=>e.from===this.currentState)}step(e,t){if(!this.currentState)return!1;let n=this.getAvailableTransitions().find(n=>n.action===e&&(!t||n.to===t));if(!n)return!1;let r=this.currentState,i=n.to;return this.history.push({step:this.history.length+1,from:r,to:i,action:n.action,condition:n.condition,time:new Date().toLocaleTimeString()}),this.currentState=i,this.notify(),!0}undo(){if(this.history.length===0)return!1;let e=this.history.pop();return this.currentState=e.from,this.notify(),!0}randomStep(){let e=this.getAvailableTransitions();if(e.length===0)return!1;let t=e[Math.floor(Math.random()*e.length)];return this.step(t.action,t.to)}getStatus(){if(!this.graph||!this.currentState)return{currentState:null,isTerminal:!1,isDeadlock:!1,availableTransitions:[],history:[],canUndo:!1};let e=this.getAvailableTransitions(),t=this.graph.terminalNodeIds.includes(this.currentState),n=!t&&e.length===0;return{currentState:this.currentState,isTerminal:t,isDeadlock:n,availableTransitions:e,history:[...this.history],canUndo:this.history.length>0}}},i=class{constructor(e,t={}){this.container=e,this.options=t,this.onNodePositionChange=t.onNodePositionChange||(()=>{}),this.onNodeClick=t.onNodeClick||(()=>{}),this.graph=null,this.layout=null,this.currentState=null,this.manualPositions=new Map,this.zoom=1,this.panX=40,this.panY=40,this.isPanning=!1,this.startPan={x:0,y:0},this.draggedNode=null,this.dragOffset={x:0,y:0},this.initCanvas(),this.bindEvents()}initCanvas(){this.container.innerHTML=`
+      <svg id="stateflow-svg" class="w-full h-full cursor-grab active:cursor-grabbing select-none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          \x3C!-- Arrow marker default -->
+          <marker id="arrow-default" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#64748b" />
+          </marker>
+          \x3C!-- Arrow marker active -->
+          <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#6366f1" />
+          </marker>
+          \x3C!-- Arrow marker error / deadlock -->
+          <marker id="arrow-error" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 9 5 L 0 9 z" fill="#ef4444" />
+          </marker>
+          \x3C!-- Filter for glowing nodes -->
+          <filter id="glow-filter" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+        <g id="viewport-group" transform="matrix(1 0 0 1 0 0)">
+          <g id="edges-layer"></g>
+          <g id="nodes-layer"></g>
+        </g>
+      </svg>
+    `,this.svg=this.container.querySelector(`#stateflow-svg`),this.viewport=this.container.querySelector(`#viewport-group`),this.edgesLayer=this.container.querySelector(`#edges-layer`),this.nodesLayer=this.container.querySelector(`#nodes-layer`)}setData(e,t,n=null){this.graph=e,this.layout=t,this.currentState=n,this.render()}setCurrentState(e){this.currentState=e,this.render()}updateTransform(){this.viewport&&this.viewport.setAttribute(`transform`,`matrix(${this.zoom} 0 0 ${this.zoom} ${this.panX} ${this.panY})`)}resetView(){if(!this.layout||!this.layout.nodes.length){this.zoom=1,this.panX=40,this.panY=40,this.updateTransform();return}let e=this.container.getBoundingClientRect(),t=this.layout.width||800,n=this.layout.height||600,r=(e.width-120)/t,i=(e.height-120)/n;this.zoom=Math.min(1.2,Math.max(.4,Math.min(r,i))),this.panX=Math.max(30,(e.width-t*this.zoom)/2),this.panY=Math.max(30,(e.height-n*this.zoom)/2),this.updateTransform()}zoomIn(){this.zoom=Math.min(this.zoom*1.2,3),this.updateTransform()}zoomOut(){this.zoom=Math.max(this.zoom/1.2,.25),this.updateTransform()}render(){if(!this.layout||!this.layout.nodes){this.edgesLayer.innerHTML=``,this.nodesLayer.innerHTML=``;return}let e=new Map(this.layout.nodes.map(e=>[e.id,e])),t=``;this.graph.edges.forEach(n=>{let r=e.get(n.from),i=e.get(n.to);if(!r||!i)return;let a=this.currentState===n.from,o=a?`stroke-indigo-600 dark:stroke-indigo-400 stroke-2 edge-flow-active`:`stroke-slate-400 dark:stroke-slate-600 stroke-1.5 hover:stroke-slate-600 dark:hover:stroke-slate-400`,s=a?`url(#arrow-active)`:`url(#arrow-default)`;if(n.from===n.to){let e=r.x+r.width/2,i=r.y,a=`M ${e-20} ${i} C ${e-40} ${i-60}, ${e+40} ${i-60}, ${e+20} ${i}`;t+=`
+          <g class="transition-opacity duration-200">
+            <path d="${a}" fill="none" class="${o}" marker-end="${s}" />
+            <rect x="${e-40}" y="${i-65}" width="80" height="20" rx="4" class="fill-white dark:fill-slate-900/95 stroke stroke-slate-300 dark:stroke-slate-700 shadow-sm" />
+            <text x="${e}" y="${i-51}" class="text-[11px] font-mono fill-slate-700 dark:fill-slate-300 text-anchor-middle" text-anchor="middle">${n.action}</text>
+          </g>
+        `}else{let e=r.x+r.width,c=r.y+r.height/2,l=i.x,u=i.y+i.height/2,d=Math.abs(l-e),f=Math.max(40,d*.45),p=`M ${e} ${c} C ${e+f} ${c}, ${l-f} ${u}, ${l} ${u}`,m=(e+l)/2,h=(c+u)/2,g=n.condition?`${n.action} [${n.condition}]`:n.action,_=Math.max(64,g.length*7.5+16);t+=`
+          <g class="edge-group transition-opacity duration-200" data-from="${n.from}" data-to="${n.to}">
+            <path d="${p}" fill="none" class="${o}" marker-end="${s}" />
+            \x3C!-- Label pill -->
+            <rect x="${m-_/2}" y="${h-11}" width="${_}" height="22" rx="11" 
+                  class="${a?`fill-indigo-50 dark:fill-indigo-950/95 stroke stroke-indigo-400 dark:stroke-indigo-500`:`fill-white dark:fill-slate-900/90 stroke stroke-slate-300 dark:stroke-slate-700`} shadow-sm" />
+            <text x="${m}" y="${h+4}" class="text-[11px] font-mono ${a?`fill-indigo-700 dark:fill-indigo-200 font-semibold`:`fill-slate-700 dark:fill-slate-300`}" text-anchor="middle">${g}</text>
+          </g>
+        `}}),this.edgesLayer.innerHTML=t;let n=``;this.layout.nodes.forEach(e=>{let t=this.currentState===e.id,r=`stroke-slate-300 dark:stroke-slate-700`,i=`fill-white dark:fill-slate-900`,a=``;e.isInitial&&(r=`stroke-emerald-500 dark:stroke-emerald-500/80`,a=`<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-600/40 text-[10px] px-1.5 py-0.5 rounded font-medium">起點</span>`),e.isTerminal&&(r=`stroke-slate-400 dark:stroke-slate-500`,a+=`<span class="bg-slate-100 text-slate-700 border border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-600 text-[10px] px-1.5 py-0.5 rounded font-medium">終點</span>`),e.isDeadlock&&(r=`stroke-rose-500`,a+=`<span class="bg-rose-100 text-rose-800 border border-rose-300 dark:bg-rose-950 dark:text-rose-300 dark:border-rose-600/60 text-[10px] px-1.5 py-0.5 rounded font-medium animate-pulse">死胡同</span>`),e.isOrphan&&(r=`stroke-amber-500 stroke-dasharray`,a+=`<span class="bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-600/60 text-[10px] px-1.5 py-0.5 rounded font-medium">孤島</span>`),t&&(r=`stroke-indigo-600 dark:stroke-indigo-400`,i=`fill-indigo-50 dark:fill-indigo-950/80`),n+=`
+        <g class="node-group cursor-pointer select-none" data-id="${e.id}" transform="translate(${e.x}, ${e.y})">
+          ${t?`
+            <circle cx="${e.width/2}" cy="${e.height/2}" r="32" class="fill-indigo-500/20 animate-pulse-ring pointer-events-none" />
+          `:``}
+
+          \x3C!-- Card Base -->
+          <rect width="${e.width}" height="${e.height}" rx="12"
+                class="${i} ${r} ${t?`stroke-2 shadow-lg shadow-indigo-500/20`:`stroke-[1.5] shadow-sm`} hover:brightness-105 transition-all duration-150" />
+          
+          \x3C!-- Terminal double-border inner ring if terminal -->
+          ${e.isTerminal?`
+            <rect x="4" y="4" width="${e.width-8}" height="${e.height-8}" rx="8" class="fill-none stroke-slate-300 dark:stroke-slate-700/60 stroke-1 pointer-events-none" />
+          `:``}
+
+          \x3C!-- Node Title & Badges in ForeignObject -->
+          <foreignObject x="0" y="0" width="${e.width}" height="${e.height}" class="pointer-events-none">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="w-full h-full p-2.5 flex flex-col justify-between">
+              <div class="flex items-center justify-between gap-1 overflow-hidden">
+                <span class="font-medium text-xs tracking-wide truncate ${t?`text-indigo-700 dark:text-indigo-200 font-bold`:`text-slate-900 dark:text-slate-100`}">
+                  ${e.id}
+                </span>
+                ${t?`<span class="flex h-2 w-2 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-500 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span></span>`:``}
+              </div>
+              <div class="flex items-center gap-1.5 overflow-hidden flex-wrap">
+                ${a}
+                <span class="text-[10px] text-slate-400 dark:text-slate-500 ml-auto font-mono">出度:${e.outDegree}</span>
+              </div>
+            </div>
+          </foreignObject>
+        </g>
+      `}),this.nodesLayer.innerHTML=n}bindEvents(){typeof window<`u`&&this.svg&&(this.svg.addEventListener(`mousedown`,e=>{let t=e.target.closest(`.node-group`);if(t){let n=t.dataset.id,r=this.layout?.nodes.find(e=>e.id===n);if(r){this.draggedNode=r;let t=this.svg.getBoundingClientRect(),i=(e.clientX-t.left-this.panX)/this.zoom,a=(e.clientY-t.top-this.panY)/this.zoom;this.dragOffset={x:i-r.x,y:a-r.y},this.onNodeClick(n)}}else this.isPanning=!0,this.startPan={x:e.clientX-this.panX,y:e.clientY-this.panY}}),window.addEventListener(`mousemove`,e=>{if(this.draggedNode){let t=this.svg.getBoundingClientRect(),n=(e.clientX-t.left-this.panX)/this.zoom,r=(e.clientY-t.top-this.panY)/this.zoom;this.draggedNode.x=n-this.dragOffset.x,this.draggedNode.y=r-this.dragOffset.y,this.manualPositions.set(this.draggedNode.id,{x:this.draggedNode.x,y:this.draggedNode.y}),this.render()}else this.isPanning&&(this.panX=e.clientX-this.startPan.x,this.panY=e.clientY-this.startPan.y,this.updateTransform())}),window.addEventListener(`mouseup`,()=>{this.draggedNode&&=(this.onNodePositionChange(this.manualPositions),null),this.isPanning=!1}),this.container.addEventListener(`wheel`,e=>{e.preventDefault();let t=this.svg.getBoundingClientRect(),n=e.clientX-t.left,r=e.clientY-t.top,i=e.deltaY<0?1.12:.89,a=Math.min(3,Math.max(.2,this.zoom*i));this.panX=n-(n-this.panX)*(a/this.zoom),this.panY=r-(r-this.panY)*(a/this.zoom),this.zoom=a,this.updateTransform()},{passive:!1}))}exportSVG(){if(!this.graph||!this.layout||!this.layout.nodes||this.layout.nodes.length===0)return``;let e=e=>e==null?``:String(e).replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&apos;`),t=typeof document<`u`&&document.documentElement.classList.contains(`dark`),n=1/0,r=1/0,i=-1/0,a=-1/0,o=this.graph.edges.some(e=>e.from===e.to);this.layout.nodes.forEach(e=>{n=Math.min(n,e.x),r=Math.min(r,e.y-(o?70:0)),i=Math.max(i,e.x+e.width),a=Math.max(a,e.y+e.height)});let s=Math.ceil(i-n+120),c=Math.ceil(a-r+120),l=60-n,u=60-r,d=t?{bg:`#020617`,gridDot:`rgba(148, 163, 184, 0.12)`,cardBg:`#0f172a`,cardBorder:`#334155`,cardText:`#f8fafc`,degreeText:`#64748b`,edgeStroke:`#64748b`,edgeActiveStroke:`#818cf8`,pillBg:`#0f172a`,pillBorder:`#334155`,pillText:`#cbd5e1`,arrowColor:`#64748b`,activeArrowColor:`#818cf8`,initialBorder:`#059669`,initialBadgeBg:`#064e3b`,initialBadgeBorder:`#059669`,initialBadgeText:`#6ee7b7`,terminalBorder:`#64748b`,terminalBadgeBg:`#1e293b`,terminalBadgeBorder:`#475569`,terminalBadgeText:`#cbd5e1`,deadlockBorder:`#e11d48`,deadlockBadgeBg:`#881337`,deadlockBadgeBorder:`#e11d48`,deadlockBadgeText:`#fda4af`,orphanBorder:`#d97706`,orphanBadgeBg:`#78350f`,orphanBadgeBorder:`#d97706`,orphanBadgeText:`#fde68a`,brandText:`#475569`}:{bg:`#f8fafc`,gridDot:`rgba(100, 116, 139, 0.18)`,cardBg:`#ffffff`,cardBorder:`#cbd5e1`,cardText:`#0f172a`,degreeText:`#94a3b8`,edgeStroke:`#64748b`,edgeActiveStroke:`#4f46e5`,pillBg:`#ffffff`,pillBorder:`#cbd5e1`,pillText:`#334155`,arrowColor:`#64748b`,activeArrowColor:`#4f46e5`,initialBorder:`#10b981`,initialBadgeBg:`#dcfce7`,initialBadgeBorder:`#86efac`,initialBadgeText:`#166534`,terminalBorder:`#94a3b8`,terminalBadgeBg:`#f1f5f9`,terminalBadgeBorder:`#cbd5e1`,terminalBadgeText:`#475569`,deadlockBorder:`#f43f5e`,deadlockBadgeBg:`#fee2e2`,deadlockBadgeBorder:`#fca5a5`,deadlockBadgeText:`#991b1b`,orphanBorder:`#f59e0b`,orphanBadgeBg:`#fef3c7`,orphanBadgeBorder:`#fcd34d`,orphanBadgeText:`#92400e`,brandText:`#94a3b8`},f=new Map(this.layout.nodes.map(e=>[e.id,e])),p=``;this.graph.edges.forEach(n=>{let r=f.get(n.from),i=f.get(n.to);if(!r||!i)return;let a=this.currentState===n.from,o=a?d.edgeActiveStroke:d.edgeStroke,s=a?`2.2`:`1.5`,c=a?`url(#export-arrow-active)`:`url(#export-arrow-default)`;if(n.from===n.to){let t=r.x+r.width/2+l,i=r.y+u,a=`M ${t-20} ${i} C ${t-40} ${i-60}, ${t+40} ${i-60}, ${t+20} ${i}`,f=e(n.action),m=Math.max(64,n.action.length*8+18);p+=`
+          <g>
+            <path d="${a}" fill="none" stroke="${o}" stroke-width="${s}" marker-end="${c}" />
+            <rect x="${t-m/2}" y="${i-68}" width="${m}" height="22" rx="6" fill="${d.pillBg}" stroke="${d.pillBorder}" stroke-width="1" filter="url(#export-shadow)" />
+            <text x="${t}" y="${i-53}" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="${d.pillText}" text-anchor="middle" dominant-baseline="middle">${f}</text>
+          </g>
+        `}else{let f=r.x+r.width+l,m=r.y+r.height/2+u,h=i.x+l,g=i.y+i.height/2+u,_=Math.abs(h-f),v=Math.max(40,_*.45),y=`M ${f} ${m} C ${f+v} ${m}, ${h-v} ${g}, ${h} ${g}`,b=(f+h)/2,x=(m+g)/2,S=n.condition?`${n.action} [${n.condition}]`:n.action,C=e(S),w=Math.max(64,S.length*7.5+18),T=a?t?`#1e1b4b`:`#eef2ff`:d.pillBg,E=a?t?`#6366f1`:`#818cf8`:d.pillBorder,D=a?t?`#c7d2fe`:`#3730a3`:d.pillText;p+=`
+          <g>
+            <path d="${y}" fill="none" stroke="${o}" stroke-width="${s}" marker-end="${c}" />
+            <rect x="${b-w/2}" y="${x-11}" width="${w}" height="22" rx="11" fill="${T}" stroke="${E}" stroke-width="1" filter="url(#export-shadow)" />
+            <text x="${b}" y="${x+1}" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="11" font-weight="500" fill="${D}" text-anchor="middle" dominant-baseline="middle">${C}</text>
+          </g>
+        `}});let m=``;return this.layout.nodes.forEach(n=>{let r=this.currentState===n.id,i=n.x+l,a=n.y+u,o=d.cardBorder,s=d.cardBg,c=1.5;n.isInitial&&(o=d.initialBorder,c=1.8),n.isTerminal&&(o=d.terminalBorder),n.isDeadlock&&(o=d.deadlockBorder,c=2),n.isOrphan&&(o=d.orphanBorder),r&&(o=t?`#818cf8`:`#4f46e5`,s=t?`#1e1b4b`:`#eef2ff`,c=2.2);let f=i+14,p=``;n.isInitial&&(p+=`
+          <rect x="${f}" y="${a+44}" width="34" height="18" rx="4" fill="${d.initialBadgeBg}" stroke="${d.initialBadgeBorder}" stroke-width="1" />
+          <text x="${f+17}" y="${a+54}" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="${d.initialBadgeText}" text-anchor="middle" dominant-baseline="middle">起點</text>
+        `,f+=38),n.isTerminal&&(p+=`
+          <rect x="${f}" y="${a+44}" width="34" height="18" rx="4" fill="${d.terminalBadgeBg}" stroke="${d.terminalBadgeBorder}" stroke-width="1" />
+          <text x="${f+17}" y="${a+54}" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="${d.terminalBadgeText}" text-anchor="middle" dominant-baseline="middle">終點</text>
+        `,f+=38),n.isDeadlock&&(p+=`
+          <rect x="${f}" y="${a+44}" width="46" height="18" rx="4" fill="${d.deadlockBadgeBg}" stroke="${d.deadlockBadgeBorder}" stroke-width="1" />
+          <text x="${f+23}" y="${a+54}" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="${d.deadlockBadgeText}" text-anchor="middle" dominant-baseline="middle">死胡同</text>
+        `,f+=50),n.isOrphan&&(p+=`
+          <rect x="${f}" y="${a+44}" width="34" height="18" rx="4" fill="${d.orphanBadgeBg}" stroke="${d.orphanBadgeBorder}" stroke-width="1" />
+          <text x="${f+17}" y="${a+54}" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="10" font-weight="600" fill="${d.orphanBadgeText}" text-anchor="middle" dominant-baseline="middle">孤島</text>
+        `,f+=38),m+=`
+        <g id="node-${e(n.id)}">
+          \x3C!-- Card Base -->
+          <rect x="${i}" y="${a}" width="${n.width}" height="${n.height}" rx="12"
+                fill="${s}" stroke="${o}" stroke-width="${c}"
+                filter="url(#export-shadow)" />
+
+          \x3C!-- Terminal double inner dashed ring -->
+          ${n.isTerminal?`
+            <rect x="${i+4}" y="${a+4}" width="${n.width-8}" height="${n.height-8}" rx="8"
+                  fill="none" stroke="${d.terminalBorder}" stroke-width="1" stroke-dasharray="3,3" opacity="0.6" />
+          `:``}
+
+          \x3C!-- Node Title Text -->
+          <text x="${i+14}" y="${a+26}"
+                font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+                font-size="12" font-weight="700" fill="${r?t?`#c7d2fe`:`#4338ca`:d.cardText}"
+                letter-spacing="0.2">
+            ${e(n.id)}
+          </text>
+
+          \x3C!-- Badges -->
+          ${p}
+
+          \x3C!-- Out Degree Info -->
+          <text x="${i+n.width-14}" y="${a+54}"
+                font-family="monospace, Consolas, Courier New, monospace"
+                font-size="10" font-weight="500" fill="${d.degreeText}"
+                text-anchor="end" dominant-baseline="middle">
+            出度:${n.outDegree}
+          </text>
+        </g>
+      `}),`<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${s} ${c}" width="${s}" height="${c}">
+  <defs>
+    \x3C!-- Arrow marker default -->
+    <marker id="export-arrow-default" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="${d.arrowColor}" />
+    </marker>
+    \x3C!-- Arrow marker active -->
+    <marker id="export-arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="${d.activeArrowColor}" />
+    </marker>
+    \x3C!-- Drop Shadow Filter -->
+    <filter id="export-shadow" x="-8%" y="-8%" width="116%" height="124%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2.5" flood-color="#000000" flood-opacity="${t?`0.45`:`0.08`}" />
+    </filter>
+    \x3C!-- Background Grid Pattern -->
+    <pattern id="export-grid-pattern" width="24" height="24" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="${d.gridDot}" />
+    </pattern>
+  </defs>
+
+  \x3C!-- Background Base Canvas -->
+  <rect width="100%" height="100%" fill="${d.bg}" />
+  <rect width="100%" height="100%" fill="url(#export-grid-pattern)" />
+
+  \x3C!-- Diagram Title / Header -->
+  <text x="60" y="40"
+        font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-size="12" font-weight="700" fill="${d.cardText}" letter-spacing="0.5">
+    ${e(this.graph.title||`StateFlow 業務流程拓撲圖`)}
+  </text>
+
+  \x3C!-- Edges Layer -->
+  <g id="export-edges">
+    ${p}
+  </g>
+
+  \x3C!-- Nodes Layer -->
+  <g id="export-nodes">
+    ${m}
+  </g>
+
+  \x3C!-- Watermark / Footer -->
+  <text x="${s-60}" y="${c-20}"
+        font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
+        font-size="10" font-weight="500" fill="${d.brandText}" text-anchor="end">
+    StateFlow · 100% 離線動態狀態機與業務流程模擬器
+  </text>
+</svg>`}},a=[{id:`loan-approval`,name:`🏦 金融核貸審查與多階段覆核`,description:`涵蓋進件、徵信、補件、照會、爭議案件特批與撥款對保全流程。`,dsl:`// @name: 金融核貸審查與覆核流程
+@initial: 申請件進件
+@terminal: 撥款完成, 案件駁回結案, 申請人主動撤件
+
+// 流程轉換規則
+申請件進件 -> 徵信與黑名單核查 : 系統自動跑批
+徵信與黑名單核查 -> 徵信未過駁回 : 命中高風險名單
+徵信未過駁回 -> 案件駁回結案 : 發送駁回簡訊
+
+徵信與黑名單核查 -> 待補件通知 : 財力證明不足 [需補扣繳憑單]
+待補件通知 -> 徵信與黑名單核查 : 客戶完成補件
+待補件通知 -> 申請人主動撤件 : 超過7天未補件
+
+徵信與黑名單核查 -> 一審人工照會 : 徵信通過
+一審人工照會 -> 二審風險覆核 : 電訪照會無誤
+一審人工照會 -> 待補件通知 : 需補保證人
+一審人工照會 -> 案件駁回結案 : 照會確認不符
+
+二審風險覆核 -> 簽約對保 : 評審核准通過
+二審風險覆核 -> 主管委員會特批 : 爭議申覆或高額放款
+二審風險覆核 -> 案件駁回結案 : 覆核不通過
+
+主管委員會特批 -> 簽約對保 : 主管簽核特批
+主管委員會特批 -> 案件駁回結案 : 否決特批
+
+簽約對保 -> 撥款完成 : 線上對保成功
+簽約對保 -> 申請人主動撤件 : 客戶放棄申貸
+`},{id:`ecommerce-return`,name:`📦 電商退換貨與異常爭議仲裁`,description:`買家售後申請、逆向物流、瑕疵鑑定與平台官方介入爭議。`,dsl:`// @name: 電商退換貨與爭議處理流程
+@initial: 買家提出申請
+@terminal: 退款入帳結案, 換貨寄出結案, 駁回退貨結案
+
+買家提出申請 -> 商家初審 : 提交退貨理由與照片
+商家初審 -> 安排逆向物流 : 商家同意退貨
+商家初審 -> 商家拒絕申請 : 理由不符或逾期
+商家初審 -> 買家取消申請 : 買家撤銷
+買家取消申請 -> 駁回退貨結案 : 案件自動關閉
+
+商家拒絕申請 -> 平台介入調解 : 買家發起爭議申訴
+商家拒絕申請 -> 駁回退貨結案 : 逾期未申訴
+
+平台介入調解 -> 安排逆向物流 : 平台判定買方勝訴
+平台介入調解 -> 駁回退貨結案 : 平台判定賣方勝訴
+
+安排逆向物流 -> 倉庫收件檢驗 : 宅配取件成功
+倉庫收件檢驗 -> 執行退款作業 : 商品完整無損
+倉庫收件檢驗 -> 寄出換貨新品 : 買家申請換貨
+倉庫收件檢驗 -> 平台介入調解 : 退回空箱或嚴重損毀
+
+執行退款作業 -> 退款入帳結案 : 金流退款成功
+寄出換貨新品 -> 換貨寄出結案 : 買家簽收完成
+`},{id:`devops-canary`,name:`🚀 DevOps 金絲雀灰度發布生命週期`,description:`從代碼構建、冒煙測試、10% 灰度觀察、指標熔斷到 100% 全量發布。`,dsl:`// @name: 金絲雀灰度發布流水線
+@initial: 構建映像檔
+@terminal: 全量上線完成, 緊急回滾結案
+
+構建映像檔 -> 冒煙測試 : 構建成功
+構建映像檔 -> 緊急回滾結案 : 構建編譯失敗
+
+冒煙測試 -> 灰度放量10% : 測試通過
+冒煙測試 -> 緊急回滾結案 : 核心API測試失敗
+
+灰度放量10% -> 監控指標觀測 : 流量切換成功
+監控指標觀測 -> 灰度放量50% : 錯誤率小於0.01%
+監控指標觀測 -> 異常熔斷處理 : 錯誤率超出閾值
+
+異常熔斷處理 -> 緊急回滾結案 : 執行自動降級復原
+
+灰度放量50% -> 性能與延遲評估 : 運行滿30分鐘
+性能與延遲評估 -> 全量上線100% : 各項指標健康
+性能與延遲評估 -> 異常熔斷處理 : P99延遲過高
+
+全量上線100% -> 全量上線完成 : 流量穩定
+`},{id:`deadlock-trap-demo`,name:`⚠️ 死胡同與孤島陷阱警示示範`,description:`特別設計包含未定義死胡同、孤島節點與死循環，用以展示 StateFlow 的拓撲診斷威力。`,dsl:`// @name: 拓撲缺陷檢測示範
+@initial: 案件進件
+@terminal: 正常完成結案
+
+案件進件 -> 風險審查 : 開始審查
+風險審查 -> 正常完成結案 : 審查合格
+
+// ❌ 陷阱 1：死胡同 (Deadlock)
+// 「異常掛起狀態」沒有向外箭頭，且未宣告為 @terminal！案件進來就卡死！
+風險審查 -> 異常掛起狀態 : 系統異常拋錯
+
+// ❌ 陷阱 2：孤島/不可達狀態 (Orphan State)
+// 此節點沒有任何來源箭頭連過來
+歷史殘留審核節點 -> 正常完成結案 : 舊邏輯處理
+
+// ❌ 陷阱 3：無出路死循環 (Trap Loop)
+風險審查 -> 陷阱循環A : 進入待定
+陷阱循環A -> 陷阱循環B : 輪詢
+陷阱循環B -> 陷阱循環A : 再次輪詢
+`}],o=`stateflow_templates_v2`,s=`stateflow_active_template_id`,c=class{constructor(){this.templates=[],this.load()}load(){try{let e=localStorage.getItem(o);e&&(this.templates=JSON.parse(e))}catch(e){console.error(`Failed to load templates from localStorage:`,e)}(!this.templates||!Array.isArray(this.templates)||this.templates.length===0)&&this.resetToDefaults()}save(){try{localStorage.setItem(o,JSON.stringify(this.templates))}catch(e){console.error(`Failed to save templates to localStorage:`,e)}}getAll(){return[...this.templates]}getById(e){return this.templates.find(t=>t.id===e)||null}getActiveTemplateId(){let e=localStorage.getItem(s);return e&&this.getById(e)?e:this.templates[0]?.id||`loan-approval`}setActiveTemplateId(e){localStorage.setItem(s,e)}create({name:e,description:t=``,dsl:n}){let r=(e||``).trim(),i={id:`tpl_`+Date.now()+`_`+Math.random().toString(36).slice(2,7),name:r||`未命名業務流程`,description:(t||``).trim(),dsl:(n||``).trim(),isCustom:!0,createdAt:Date.now(),updatedAt:Date.now()};return this.templates.unshift(i),this.save(),i}update(e,{name:t,description:n,dsl:r}){let i=this.templates.findIndex(t=>t.id===e);if(i===-1)return null;let a=this.templates[i],o={...a,name:t===void 0?a.name:t.trim(),description:n===void 0?a.description:n.trim(),dsl:r===void 0?a.dsl:r.trim(),isCustom:!0,updatedAt:Date.now()};return this.templates[i]=o,this.save(),o}delete(e){let t=this.templates.findIndex(t=>t.id===e);return t!==-1&&(this.templates.splice(t,1),this.templates.length===0?this.resetToDefaults():this.save(),!0)}duplicate(e){let t=this.getById(e);if(!t)return null;let n={id:`tpl_`+Date.now()+`_`+Math.random().toString(36).slice(2,7),name:`${t.name} (副本)`,description:t.description||``,dsl:t.dsl,isCustom:!0,createdAt:Date.now(),updatedAt:Date.now()},r=this.templates.findIndex(t=>t.id===e);return this.templates.splice(r+1,0,n),this.save(),n}resetToDefaults(){return this.templates=a.map(e=>({...e,isCustom:!1,createdAt:Date.now(),updatedAt:Date.now()})),this.save(),this.templates}exportJSON(){return JSON.stringify(this.templates,null,2)}importJSON(e){try{let t=JSON.parse(e);if(!Array.isArray(t))throw Error(`匯入的 JSON 格式必須為陣列`);let n=0;if(t.forEach(e=>{if(e.name&&e.dsl){let t=`tpl_`+Date.now()+`_`+Math.random().toString(36).slice(2,7);this.templates.unshift({id:t,name:e.name.trim(),description:(e.description||``).trim(),dsl:e.dsl.trim(),isCustom:!0,createdAt:Date.now(),updatedAt:Date.now()}),n++}}),n===0)throw Error(`匯入檔案中未發現有效範本內容`);return this.save(),n}catch(e){throw e}}},l=null,u=null,d=null,f=new Map,p=new c,m=new r,h=document.getElementById(`canvas-container`),g=new i(h,{onNodePositionChange:e=>{e.forEach((e,t)=>f.set(t,e))},onNodeClick:e=>{}});function _(e,t=!0){let n=document.getElementById(`toast`),r=document.getElementById(`toast-message`);r.textContent=e,n.classList.remove(`translate-y-16`,`opacity-0`),n.classList.add(`translate-y-0`,`opacity-100`),setTimeout(()=>{n.classList.remove(`translate-y-0`,`opacity-100`),n.classList.add(`translate-y-16`,`opacity-0`)},2600)}var v=document.getElementById(`dsl-editor`),y=document.getElementById(`dsl-char-count`),b=document.getElementById(`dsl-errors-panel`),x=document.getElementById(`dsl-errors-list`),S=document.getElementById(`template-select`),C=document.getElementById(`btn-reset-template`),w=document.getElementById(`btn-auto-layout`),T=document.getElementById(`btn-export-svg`),E=document.getElementById(`btn-copy-dsl`),D=document.getElementById(`btn-theme-toggle`),ee=document.getElementById(`btn-zoom-in`),te=document.getElementById(`btn-zoom-out`),ne=document.getElementById(`btn-zoom-reset`),re=document.getElementById(`canvas-current-chip`),O=document.getElementById(`tab-btn-sim`),k=document.getElementById(`tab-btn-diag`),ie=document.getElementById(`tab-content-sim`),ae=document.getElementById(`tab-content-diag`),A=document.getElementById(`diag-badge-count`),oe=document.getElementById(`sim-current-title`),se=document.getElementById(`sim-current-status-tag`),j=document.getElementById(`sim-actions-container`),ce=document.getElementById(`sim-actions-count`),M=document.getElementById(`btn-sim-undo`),N=document.getElementById(`btn-sim-random`),le=document.getElementById(`btn-sim-reset`),ue=document.getElementById(`sim-history-list`),de=document.getElementById(`sim-history-count`),fe=document.getElementById(`diag-overview-card`),P=document.getElementById(`diag-issues-list`),pe=document.getElementById(`diag-total-issues`),me=document.getElementById(`btn-header-save-tpl`),he=document.getElementById(`btn-header-create-tpl`),ge=document.getElementById(`btn-header-manage-tpl`),F=document.getElementById(`modal-template-manager`),_e=document.getElementById(`btn-close-tpl-manager`),I=document.getElementById(`tpl-search-input`),ve=document.getElementById(`btn-modal-create-tpl`),ye=document.getElementById(`btn-export-tpls-json`),L=document.getElementById(`tpl-file-import`),be=document.getElementById(`btn-restore-defaults`),R=document.getElementById(`tpl-cards-container`),z=document.getElementById(`modal-template-editor`),B=document.getElementById(`modal-editor-title`),xe=document.getElementById(`btn-close-tpl-editor`),V=document.getElementById(`form-tpl-id`),H=document.getElementById(`form-tpl-name`),U=document.getElementById(`form-tpl-desc`),W=document.getElementById(`form-tpl-dsl`),G=document.getElementById(`form-error-msg`),Se=document.getElementById(`btn-load-current-dsl`),Ce=document.getElementById(`btn-load-skeleton-dsl`),we=document.getElementById(`btn-cancel-tpl-form`),Te=document.getElementById(`btn-save-tpl-form`);function Ee(){De(localStorage.getItem(`stateflow_theme`)||`light`),D.addEventListener(`click`,()=>{let e=document.documentElement.classList.contains(`dark`)?`light`:`dark`;De(e),_(`已切換為${e===`dark`?`深色`:`淺色`}模式`)})}function De(e){e===`dark`?(document.documentElement.classList.add(`dark`),D.setAttribute(`title`,`切換為淺色模式 (目前: 深色)`)):(document.documentElement.classList.remove(`dark`),D.setAttribute(`title`,`切換為深色模式 (目前: 淺色)`)),localStorage.setItem(`stateflow_theme`,e),l&&u&&g.render()}function K(e){S.innerHTML=``;let t=p.getAll(),n=t.filter(e=>e.isCustom),r=t.filter(e=>!e.isCustom);if(n.length>0){let e=document.createElement(`optgroup`);e.label=`📁 自訂業務範本`,n.forEach(t=>{let n=document.createElement(`option`);n.value=t.id,n.textContent=`★ ${t.name}`,e.appendChild(n)}),S.appendChild(e)}let i=document.createElement(`optgroup`);i.label=`🏛️ 系統預設範本`,r.forEach(e=>{let t=document.createElement(`option`);t.value=e.id,t.textContent=e.name,i.appendChild(t)}),S.appendChild(i);let a=e||p.getActiveTemplateId();t.some(e=>e.id===a)?(S.value=a,p.setActiveTemplateId(a)):t.length>0&&(S.value=t[0].id,p.setActiveTemplateId(t[0].id))}function q(e,t=!0){let n=p.getById(e);n&&(f.clear(),v.value=n.dsl.trim(),p.setActiveTemplateId(n.id),S.value=n.id,Q(),g.resetView(),t&&_(`已載入範本: ${n.name}`))}function Oe(){S.addEventListener(`change`,()=>{q(S.value)}),C.addEventListener(`click`,()=>{let e=S.value;q(e,!1),_(`已重設為當前範本原始內容`)}),me.addEventListener(`click`,()=>{let e=S.value,t=p.getById(e),n=v.value;t&&(p.update(e,{dsl:n}),K(e),_(`已儲存變更至「${t.name}」`))}),he.addEventListener(`click`,()=>{X()}),ge.addEventListener(`click`,()=>{ke()})}function ke(){Y(I.value),F.classList.remove(`hidden`),setTimeout(()=>{F.classList.remove(`opacity-0`)},10)}function J(){F.classList.add(`opacity-0`),setTimeout(()=>{F.classList.add(`hidden`)},200)}function Y(t=``){let n=p.getAll(),r=(t||``).toLowerCase().trim(),i=n.filter(e=>e.name.toLowerCase().includes(r)||e.description&&e.description.toLowerCase().includes(r));if(i.length===0){R.innerHTML=`
+      <div class="text-center py-12 text-slate-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 mx-auto mb-2 opacity-40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <div class="text-xs">查無符合的業務範本</div>
+      </div>
+    `;return}let a=p.getActiveTemplateId();R.innerHTML=i.map(t=>{let n=e(t.dsl),r=n.nodes.length,i=n.edges.length,o=t.id===a,s=t.isCustom?`<span class="bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/60 text-[10px] px-2 py-0.5 rounded-full font-semibold">自訂業務範本</span>`:`<span class="bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 border border-slate-300 dark:border-slate-700 text-[10px] px-2 py-0.5 rounded-full font-medium">系統預設</span>`;return`
+      <div class="p-3.5 rounded-xl border ${o?`border-indigo-500 bg-indigo-50/30 dark:bg-indigo-950/20`:`border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900`} shadow-sm hover:border-indigo-300 dark:hover:border-slate-700 transition flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <h3 class="text-xs font-bold text-slate-900 dark:text-white truncate">${t.name}</h3>
+            ${s}
+            ${o?`<span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-0.5">● 使用中</span>`:``}
+          </div>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 mb-2">${t.description||`無描述說明`}</p>
+          <div class="flex items-center gap-3 text-[10px] text-slate-400 font-mono">
+            <span>狀態: <strong class="text-slate-700 dark:text-slate-300">${r}</strong></span>
+            <span>轉移: <strong class="text-slate-700 dark:text-slate-300">${i}</strong></span>
+            ${t.updatedAt?`<span>更新: ${new Date(t.updatedAt).toLocaleDateString()}</span>`:``}
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 shrink-0 self-end md:self-center">
+          <button data-tpl-action="load" data-id="${t.id}" class="px-2.5 py-1 text-xs rounded-lg font-medium ${o?`bg-indigo-600 text-white`:`bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200`} transition">
+            ${o?`已啟用`:`載入`}
+          </button>
+          <button data-tpl-action="edit" data-id="${t.id}" title="編輯此範本" class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          </button>
+          <button data-tpl-action="clone" data-id="${t.id}" title="複製為新範本" class="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          </button>
+          <button data-tpl-action="delete" data-id="${t.id}" title="刪除此範本" class="p-1.5 rounded-lg border border-rose-200 dark:border-rose-900/60 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+    `}).join(``),R.querySelectorAll(`[data-tpl-action]`).forEach(e=>{e.addEventListener(`click`,()=>{let t=e.dataset.tplAction,n=e.dataset.id;if(t===`load`)q(n),J();else if(t===`edit`){let e=p.getById(n);e&&X(e)}else if(t===`clone`){let e=p.duplicate(n);e&&(K(e.id),Y(I.value),_(`已建立副本: ${e.name}`))}else if(t===`delete`){let e=p.getById(n);if(!e)return;if(confirm(`確定要刪除範本「${e.name}」嗎？此操作無法復原。`)){p.delete(n);let t=p.getAll();K(t[0]?.id),Y(I.value),S.value===n&&q(t[0]?.id,!1),_(`已刪除範本: ${e.name}`)}}})})}function Ae(){_e.addEventListener(`click`,J),F.addEventListener(`click`,e=>{e.target===F&&J()}),I.addEventListener(`input`,()=>{Y(I.value)}),ve.addEventListener(`click`,()=>{X()}),ye.addEventListener(`click`,()=>{let e=p.exportJSON(),t=new Blob([e],{type:`application/json`}),n=URL.createObjectURL(t),r=document.createElement(`a`);r.href=n,r.download=`stateflow_templates_${Date.now()}.json`,document.body.appendChild(r),r.click(),document.body.removeChild(r),URL.revokeObjectURL(n),_(`已匯出所有業務範本至 JSON 檔`)}),L.addEventListener(`change`,e=>{let t=e.target.files[0];if(!t)return;let n=new FileReader;n.onload=e=>{try{let t=p.importJSON(e.target.result);K(),Y(I.value),_(`成功匯入 ${t} 個業務範本！`)}catch(e){alert(`匯入失敗: `+e.message)}L.value=``},n.readAsText(t)}),be.addEventListener(`click`,()=>{if(confirm(`確定要恢復為系統預設範本嗎？現有自訂範本將會被重設！`)){p.resetToDefaults();let e=p.getAll()[0];K(e?.id),q(e?.id),Y(),_(`已恢復系統初始預設範本`)}})}function X(e=null){G.classList.add(`hidden`),G.textContent=``,e?(B.textContent=`編輯業務範本 - ${e.name}`,V.value=e.id,H.value=e.name,U.value=e.description||``,W.value=e.dsl):(B.textContent=`新增自訂業務範本`,V.value=``,H.value=``,U.value=``,W.value=v.value.trim()||`// @name: 新業務流程
+@initial: 提出申請
+@terminal: 流程結束
+
+提出申請 -> 部門主管審批 : 提交送審
+部門主管審批 -> 流程結束 : 核准通過`),z.classList.remove(`hidden`),setTimeout(()=>{z.classList.remove(`opacity-0`)},10)}function Z(){z.classList.add(`opacity-0`),setTimeout(()=>{z.classList.add(`hidden`)},200)}function je(){xe.addEventListener(`click`,Z),we.addEventListener(`click`,Z),z.addEventListener(`click`,e=>{e.target===z&&Z()}),Se.addEventListener(`click`,()=>{W.value=v.value,_(`已帶入當前編輯器中的 DSL 內容`)}),Ce.addEventListener(`click`,()=>{W.value=`// @name: 標準業務審批流程
+@initial: 申請提出
+@terminal: 審批核准結案, 駁回退件結案
+
+申請提出 -> 部門審查 : 提交審核
+部門審查 -> 財務覆核 : 部門通過
+部門審查 -> 駁回退件結案 : 資格不符
+財務覆核 -> 審批核准結案 : 款項核撥
+財務覆核 -> 部門審查 : 需重新補件 [單據不全]`,_(`已填入標準業務流程骨架`)}),Te.addEventListener(`click`,()=>{let t=V.value,n=H.value.trim(),r=U.value.trim(),i=W.value.trim();if(!n){G.textContent=`請填寫範本名稱！`,G.classList.remove(`hidden`),H.focus();return}if(!i){G.textContent=`流程定義 DSL 不得為空！`,G.classList.remove(`hidden`),W.focus();return}let a=e(i);if(a.errors.length>0)G.textContent=`語法有誤：第 ${a.errors[0].line} 行 - ${a.errors[0].message}`,G.classList.remove(`hidden`);else{if(t){let e=p.update(t,{name:n,description:r,dsl:i});K(t),q(t,!1),Y(I.value),_(`已更新範本: ${e.name}`)}else{let e=p.create({name:n,description:r,dsl:i});K(e.id),q(e.id,!1),Y(I.value),_(`已新增範本: ${e.name}`)}Z()}})}function Q(){let r=v.value;localStorage.setItem(`stateflow_saved_dsl`,r),y.textContent=`${r.split(`
+`).length} 行`,l=e(r),l.errors.length>0?(b.classList.remove(`hidden`),x.innerHTML=l.errors.map(e=>`<li>第 ${e.line} 行：${e.message}</li>`).join(``)):(b.classList.add(`hidden`),x.innerHTML=``),d=t(l),Me(d),u=n(l.nodes,l.edges,l.initialNodeId,f),m.setGraph(l);let i=m.getStatus();g.setData(l,u,i.currentState)}function Me(e){let{issues:t,stats:n}=e,r=n.deadlocks+n.orphans;r>0?(A.textContent=r,A.classList.remove(`hidden`)):A.classList.add(`hidden`),pe.textContent=`${t.length} 個檢測項目`;let i=`bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/60 dark:border-emerald-700/50 dark:text-emerald-300`,a=`✅ 流程拓撲結構健全`,o=`未發現任何死胡同或未定義孤島狀態。`;n.deadlocks>0?(i=`bg-rose-50 border-rose-300 text-rose-900 dark:bg-rose-950/60 dark:border-rose-700/50 dark:text-rose-300`,a=`⚠️ 發現致命死胡同 (Deadlock)`,o=`存在 ${n.deadlocks} 個無出口且非終端的停滯節點，案件進入將無法完成！`):n.orphans>0&&(i=`bg-amber-50 border-amber-300 text-amber-900 dark:bg-amber-950/60 dark:border-amber-700/50 dark:text-amber-300`,a=`⚡ 存在孤島節點 (Orphan)`,o=`存在 ${n.orphans} 個從起始節點無法抵達的無效狀態。`),fe.className=`p-3.5 rounded-xl border ${i} mb-3 shadow-sm`,fe.innerHTML=`
+    <div class="font-bold text-xs mb-1">${a}</div>
+    <div class="text-[11px] opacity-90 leading-relaxed">${o}</div>
+    <div class="mt-2.5 pt-2 border-t border-current/20 grid grid-cols-4 gap-1 text-[10px] text-center font-mono">
+      <div>
+        <div class="text-slate-500 dark:text-slate-400">總狀態</div>
+        <div class="font-bold text-slate-800 dark:text-white text-xs">${n.totalNodes}</div>
+      </div>
+      <div>
+        <div class="text-slate-500 dark:text-slate-400">轉移動作</div>
+        <div class="font-bold text-slate-800 dark:text-white text-xs">${n.totalEdges}</div>
+      </div>
+      <div>
+        <div class="text-rose-600 dark:text-rose-400">死胡同</div>
+        <div class="font-bold text-rose-600 dark:text-rose-300 text-xs">${n.deadlocks}</div>
+      </div>
+      <div>
+        <div class="text-amber-600 dark:text-amber-400">孤島節點</div>
+        <div class="font-bold text-amber-600 dark:text-amber-300 text-xs">${n.orphans}</div>
+      </div>
+    </div>
+  `,t.length===0?P.innerHTML=`
+      <div class="text-center py-8 text-slate-400 text-xs">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 mx-auto mb-2 opacity-50 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        拓撲分析全數通過，無異常警示。
+      </div>
+    `:(P.innerHTML=t.map(e=>{let t=`border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 text-slate-800 dark:text-slate-300`,n=``;return e.type===`error`?(t=`border-rose-200 dark:border-rose-900/60 bg-rose-50/70 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200`,n=`<span class="text-rose-600 dark:text-rose-400 font-bold">⛔ 錯誤</span>`):e.type===`warning`?(t=`border-amber-200 dark:border-amber-900/60 bg-amber-50/70 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200`,n=`<span class="text-amber-600 dark:text-amber-400 font-bold">⚠️ 警告</span>`):(t=`border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 text-slate-800 dark:text-slate-300`,n=`<span class="text-slate-500 dark:text-slate-400 font-bold">ℹ️ 提示</span>`),`
+      <div class="p-3 rounded-lg border ${t} text-xs transition hover:border-slate-400 dark:hover:border-slate-600 shadow-sm">
+        <div class="flex items-center justify-between gap-1 mb-1">
+          <span class="font-bold">${e.title}</span>
+          ${n}
+        </div>
+        <div class="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed mb-2">${e.message}</div>
+        ${e.nodeId?`
+          <button data-focus-node="${e.nodeId}" class="btn-focus-node text-[10px] bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded transition inline-flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+            在畫布中定位此節點
+          </button>
+        `:``}
+      </div>
+    `}).join(``),P.querySelectorAll(`.btn-focus-node`).forEach(e=>{e.addEventListener(`click`,()=>{let t=e.dataset.focusNode,n=u?.nodes.find(e=>e.id===t);if(n){let e=h.getBoundingClientRect();g.panX=e.width/2-(n.x+n.width/2)*g.zoom,g.panY=e.height/2-(n.y+n.height/2)*g.zoom,g.updateTransform(),_(`已定位至節點：${t}`)}})}))}m.subscribe(e=>{let{currentState:t,isTerminal:n,isDeadlock:r,availableTransitions:i,history:a,canUndo:o}=e;re.textContent=t||`無`,oe.textContent=t||`無活動狀態`,se.innerHTML=n?`<span class="bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-600/50 px-2 py-0.5 rounded-full font-bold">🏁 已抵達終端狀態</span>`:r?`<span class="bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-600/50 px-2 py-0.5 rounded-full font-bold animate-pulse">⛔ 意外死胡同</span>`:t?`<span class="bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-700/50 px-2 py-0.5 rounded-full font-semibold">🔄 流程進行中</span>`:``,ce.textContent=`${i.length} 個可用`,i.length===0?j.innerHTML=n?`
+        <div class="text-center py-4 text-xs text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-lg">
+          流程已圓滿完成！點選下方「重新開始」可重跑流程。
+        </div>
+      `:r?`
+        <div class="text-center py-4 text-xs text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 rounded-lg">
+          此狀態無任何出口！系統已卡死。請檢查 DSL 定義。
+        </div>
+      `:`<div class="text-center py-4 text-xs text-slate-400">無可用動作</div>`:(j.innerHTML=i.map(e=>{let t=e.condition?`<span class="text-[10px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-700/40 px-1 rounded ml-1">[${e.condition}]</span>`:``;return`
+        <button data-action="${e.action}" data-target="${e.to}"
+          class="btn-trigger-action w-full flex items-center justify-between p-2.5 rounded-lg bg-white hover:bg-indigo-50/80 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/80 border border-slate-200 hover:border-indigo-300 dark:border-indigo-700/60 text-left text-xs text-slate-800 dark:text-indigo-100 transition shadow-sm hover:shadow-indigo-500/10 active:scale-[0.99]">
+          <div class="flex items-center gap-1.5 overflow-hidden">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400"></span>
+            <span class="font-bold text-slate-900 dark:text-white">${e.action}</span>
+            ${t}
+          </div>
+          <div class="text-[10px] text-slate-500 dark:text-indigo-300/80 shrink-0 flex items-center gap-1">
+            <span>前往</span>
+            <span class="font-mono bg-slate-100 dark:bg-indigo-900/90 px-1.5 py-0.5 rounded text-indigo-700 dark:text-indigo-200 font-medium">${e.to}</span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3 text-indigo-500 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+        </button>
+      `}).join(``),j.querySelectorAll(`.btn-trigger-action`).forEach(e=>{e.addEventListener(`click`,()=>{let t=e.dataset.action,n=e.dataset.target;m.step(t,n)})})),M.disabled=!o,N.disabled=i.length===0,de.textContent=`${a.length} 步`,ue.innerHTML=a.length===0?`<div class="text-center py-6 text-slate-400 text-xs">尚未執行任何動作</div>`:a.slice().reverse().map(e=>`
+      <div class="p-2.5 rounded-lg bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex flex-col gap-1 shadow-sm">
+        <div class="flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-500 font-mono">
+          <span>第 ${e.step} 步</span>
+          <span>${e.time}</span>
+        </div>
+        <div class="flex items-center gap-1.5 text-xs text-slate-700 dark:text-slate-200">
+          <span class="text-slate-500 dark:text-slate-400">${e.from}</span>
+          <span class="text-indigo-600 dark:text-indigo-400 font-mono">--[${e.action}]--></span>
+          <span class="font-bold text-slate-900 dark:text-white">${e.to}</span>
+        </div>
+      </div>
+    `).join(``),g.setCurrentState(t)}),M.addEventListener(`click`,()=>m.undo()),N.addEventListener(`click`,()=>m.randomStep()),le.addEventListener(`click`,()=>{m.reset(),_(`已重設模擬流程回起始狀態`)}),ee.addEventListener(`click`,()=>g.zoomIn()),te.addEventListener(`click`,()=>g.zoomOut()),ne.addEventListener(`click`,()=>g.resetView()),w.addEventListener(`click`,()=>{f.clear(),u=n(l.nodes,l.edges,l.initialNodeId,f),g.setData(l,u,m.currentState),g.resetView(),_(`已重新自動排列佈局`)}),T.addEventListener(`click`,()=>{let e=g.exportSVG();if(!e){_(`畫布無內容可匯出`);return}let t=S.value,n=p.getById(t),r=(n?n.name.replace(/^[^\w\u4e00-\u9fa5]+/,``).trim():`workflow`).replace(/[\\/:*?"<>| ]+/g,`_`)||`workflow`,i=new Blob([e],{type:`image/svg+xml;charset=utf-8`}),a=URL.createObjectURL(i),o=document.createElement(`a`);o.href=a,o.download=`${r}_${Date.now()}.svg`,document.body.appendChild(o),o.click(),document.body.removeChild(o),URL.revokeObjectURL(a),_(`已成功匯出高畫質向量圖 (SVG)！`)}),E.addEventListener(`click`,async()=>{try{await navigator.clipboard.writeText(v.value),_(`已複製 DSL 代碼到剪貼簿！`)}catch{v.select(),document.execCommand(`copy`),_(`已複製 DSL 代碼！`)}}),O.addEventListener(`click`,()=>{O.className=`flex-1 py-1 px-2.5 rounded-lg text-xs font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-sm flex items-center justify-center gap-1.5 transition`,k.className=`flex-1 py-1 px-2.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60 flex items-center justify-center gap-1.5 transition`,ie.classList.remove(`hidden`),ae.classList.add(`hidden`)}),k.addEventListener(`click`,()=>{k.className=`flex-1 py-1 px-2.5 rounded-lg text-xs font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-sm flex items-center justify-center gap-1.5 transition`,O.className=`flex-1 py-1 px-2.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60 flex items-center justify-center gap-1.5 transition`,ae.classList.remove(`hidden`),ie.classList.add(`hidden`)});var $=null;v.addEventListener(`input`,()=>{clearTimeout($),$=setTimeout(()=>{Q()},250)}),window.addEventListener(`keydown`,e=>{e.key===`Escape`&&(z.classList.contains(`hidden`)?F.classList.contains(`hidden`)||J():Z())});function Ne(){Ee(),Oe(),Ae(),je(),K();let e=p.getActiveTemplateId(),t=p.getById(e),n=localStorage.getItem(`stateflow_saved_dsl`);n&&n.trim()?v.value=n:t&&(v.value=t.dsl.trim()),Q(),setTimeout(()=>g.resetView(),120)}window.addEventListener(`DOMContentLoaded`,Ne);</script>
+  <style rel="stylesheet" crossorigin>*,:before,:after,::backdrop{--tw-border-spacing-x:0;--tw-border-spacing-y:0;--tw-translate-x:0;--tw-translate-y:0;--tw-rotate:0;--tw-skew-x:0;--tw-skew-y:0;--tw-scale-x:1;--tw-scale-y:1;--tw-pan-x: ;--tw-pan-y: ;--tw-pinch-zoom: ;--tw-scroll-snap-strictness:proximity;--tw-gradient-from-position: ;--tw-gradient-via-position: ;--tw-gradient-to-position: ;--tw-ordinal: ;--tw-slashed-zero: ;--tw-numeric-figure: ;--tw-numeric-spacing: ;--tw-numeric-fraction: ;--tw-ring-inset: ;--tw-ring-offset-width:0px;--tw-ring-offset-color:#fff;--tw-ring-color:#3b82f680;--tw-ring-offset-shadow:0 0 #0000;--tw-ring-shadow:0 0 #0000;--tw-shadow:0 0 #0000;--tw-shadow-colored:0 0 #0000;--tw-blur: ;--tw-brightness: ;--tw-contrast: ;--tw-grayscale: ;--tw-hue-rotate: ;--tw-invert: ;--tw-saturate: ;--tw-sepia: ;--tw-drop-shadow: ;--tw-backdrop-blur: ;--tw-backdrop-brightness: ;--tw-backdrop-contrast: ;--tw-backdrop-grayscale: ;--tw-backdrop-hue-rotate: ;--tw-backdrop-invert: ;--tw-backdrop-opacity: ;--tw-backdrop-saturate: ;--tw-backdrop-sepia: ;--tw-contain-size: ;--tw-contain-layout: ;--tw-contain-paint: ;--tw-contain-style: }*,:before,:after{box-sizing:border-box;border:0 solid #e5e7eb}:before,:after{--tw-content:""}html,:host{-webkit-text-size-adjust:100%;-moz-tab-size:4;-o-tab-size:4;tab-size:4;font-feature-settings:normal;font-variation-settings:normal;-webkit-tap-highlight-color:transparent;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5}body{line-height:inherit;margin:0}hr{height:0;color:inherit;border-top-width:1px}abbr:where([title]){text-decoration:underline dotted}h1,h2,h3,h4,h5,h6{font-size:inherit;font-weight:inherit}a{color:inherit;text-decoration:inherit}b,strong{font-weight:bolder}code,kbd,samp,pre{font-feature-settings:normal;font-variation-settings:normal;font-family:Fira Code,JetBrains Mono,Consolas,Courier New,monospace;font-size:1em}small{font-size:80%}sub,sup{vertical-align:baseline;font-size:75%;line-height:0;position:relative}sub{bottom:-.25em}sup{top:-.5em}table{text-indent:0;border-color:inherit;border-collapse:collapse}button,input,optgroup,select,textarea{font-feature-settings:inherit;font-variation-settings:inherit;font-family:inherit;font-size:100%;font-weight:inherit;line-height:inherit;letter-spacing:inherit;color:inherit;margin:0;padding:0}button,select{text-transform:none}button,input:where([type=button]),input:where([type=reset]),input:where([type=submit]){-webkit-appearance:button;background-color:#0000;background-image:none}:-moz-focusring{outline:auto}:-moz-ui-invalid{box-shadow:none}progress{vertical-align:baseline}::-webkit-inner-spin-button,::-webkit-outer-spin-button{height:auto}[type=search]{-webkit-appearance:textfield;outline-offset:-2px}::-webkit-search-decoration{-webkit-appearance:none}::-webkit-file-upload-button{-webkit-appearance:button;font:inherit}summary{display:list-item}blockquote,dl,dd,h1,h2,h3,h4,h5,h6,hr,figure,p,pre{margin:0}fieldset{margin:0;padding:0}legend{padding:0}ol,ul,menu{margin:0;padding:0;list-style:none}dialog{padding:0}textarea{resize:vertical}input::-moz-placeholder,textarea::-moz-placeholder{opacity:1;color:#9ca3af}input::placeholder,textarea::placeholder{opacity:1;color:#9ca3af}button,[role=button]{cursor:pointer}:disabled{cursor:default}img,svg,video,canvas,audio,iframe,embed,object{vertical-align:middle;display:block}img,video{max-width:100%;height:auto}[hidden]:where(:not([hidden=until-found])){display:none}body{-webkit-user-select:none;-moz-user-select:none;user-select:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-feature-settings:"cv02", "cv03", "cv04", "cv11";overflow:hidden}.container{width:100%}@media (width>=640px){.container{max-width:640px}}@media (width>=768px){.container{max-width:768px}}@media (width>=1024px){.container{max-width:1024px}}@media (width>=1280px){.container{max-width:1280px}}@media (width>=1536px){.container{max-width:1536px}}.pointer-events-none{pointer-events:none}.fixed{position:fixed}.absolute{position:absolute}.relative{position:relative}.inset-0{inset:0}.bottom-3{bottom:.75rem}.bottom-5{bottom:1.25rem}.left-2\.5{left:.625rem}.left-3{left:.75rem}.right-3{right:.75rem}.right-5{right:1.25rem}.top-2\.5{top:.625rem}.top-3{top:.75rem}.z-10{z-index:10}.z-20{z-index:20}.z-30{z-index:30}.z-50{z-index:50}.mx-auto{margin-left:auto;margin-right:auto}.mb-1{margin-bottom:.25rem}.mb-2{margin-bottom:.5rem}.mb-3{margin-bottom:.75rem}.ml-1{margin-left:.25rem}.ml-auto{margin-left:auto}.mt-2\.5{margin-top:.625rem}.line-clamp-1{-webkit-line-clamp:1;-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden}.block{display:block}.inline{display:inline}.flex{display:flex}.inline-flex{display:inline-flex}.grid{display:grid}.hidden{display:none}.h-1\.5{height:.375rem}.h-10{height:2.5rem}.h-14{height:3.5rem}.h-2{height:.5rem}.h-2\.5{height:.625rem}.h-3{height:.75rem}.h-3\.5{height:.875rem}.h-4{height:1rem}.h-5{height:1.25rem}.h-7{height:1.75rem}.h-8{height:2rem}.h-full{height:100%}.h-screen{height:100vh}.max-h-28{max-height:7rem}.max-h-48{max-height:12rem}.max-h-\[85vh\]{max-height:85vh}.max-h-\[90vh\]{max-height:90vh}.w-1\.5{width:.375rem}.w-10{width:2.5rem}.w-2{width:.5rem}.w-2\.5{width:.625rem}.w-3{width:.75rem}.w-3\.5{width:.875rem}.w-4{width:1rem}.w-5{width:1.25rem}.w-7{width:1.75rem}.w-8{width:2rem}.w-80{width:20rem}.w-full{width:100%}.w-screen{width:100vw}.min-w-0{min-width:0}.min-w-\[200px\]{min-width:200px}.max-w-2xl{max-width:42rem}.max-w-3xl{max-width:48rem}.max-w-\[150px\]{max-width:150px}.flex-1{flex:1}.shrink-0{flex-shrink:0}.translate-y-0{--tw-translate-y:0px;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.translate-y-16{--tw-translate-y:4rem;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.transform{transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}@keyframes ping{75%,to{opacity:0;transform:scale(2)}}.animate-ping{animation:1s cubic-bezier(0,0,.2,1) infinite ping}@keyframes pulse{50%{opacity:.5}}.animate-pulse{animation:2s cubic-bezier(.4,0,.6,1) infinite pulse}.cursor-grab{cursor:grab}.cursor-pointer{cursor:pointer}.select-none{-webkit-user-select:none;-moz-user-select:none;user-select:none}.resize-none{resize:none}.list-inside{list-style-position:inside}.list-disc{list-style-type:disc}.grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.flex-col{flex-direction:column}.flex-wrap{flex-wrap:wrap}.items-center{align-items:center}.justify-end{justify-content:flex-end}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.gap-0\.5{gap:.125rem}.gap-1{gap:.25rem}.gap-1\.5{gap:.375rem}.gap-2{gap:.5rem}.gap-2\.5{gap:.625rem}.gap-3{gap:.75rem}.space-y-0\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.125rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.125rem * var(--tw-space-y-reverse))}.space-y-1\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.375rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.375rem * var(--tw-space-y-reverse))}.space-y-2>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.5rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.5rem * var(--tw-space-y-reverse))}.space-y-2\.5>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.625rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.625rem * var(--tw-space-y-reverse))}.space-y-3>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(.75rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(.75rem * var(--tw-space-y-reverse))}.space-y-4>:not([hidden])~:not([hidden]){--tw-space-y-reverse:0;margin-top:calc(1rem * calc(1 - var(--tw-space-y-reverse)));margin-bottom:calc(1rem * var(--tw-space-y-reverse))}.self-end{align-self:flex-end}.overflow-hidden{overflow:hidden}.overflow-y-auto{overflow-y:auto}.truncate{text-overflow:ellipsis;white-space:nowrap;overflow:hidden}.rounded{border-radius:.25rem}.rounded-2xl{border-radius:1rem}.rounded-full{border-radius:9999px}.rounded-lg{border-radius:.5rem}.rounded-xl{border-radius:.75rem}.border{border-width:1px}.border-b{border-bottom-width:1px}.border-l{border-left-width:1px}.border-r{border-right-width:1px}.border-t{border-top-width:1px}.border-none{border-style:none}.border-amber-200{--tw-border-opacity:1;border-color:rgb(253 230 138/var(--tw-border-opacity,1))}.border-amber-300{--tw-border-opacity:1;border-color:rgb(252 211 77/var(--tw-border-opacity,1))}.border-emerald-200{--tw-border-opacity:1;border-color:rgb(167 243 208/var(--tw-border-opacity,1))}.border-emerald-300{--tw-border-opacity:1;border-color:rgb(110 231 183/var(--tw-border-opacity,1))}.border-indigo-200{--tw-border-opacity:1;border-color:rgb(199 210 254/var(--tw-border-opacity,1))}.border-indigo-500{--tw-border-opacity:1;border-color:rgb(99 102 241/var(--tw-border-opacity,1))}.border-rose-200{--tw-border-opacity:1;border-color:rgb(254 205 211/var(--tw-border-opacity,1))}.border-rose-300{--tw-border-opacity:1;border-color:rgb(253 164 175/var(--tw-border-opacity,1))}.border-slate-200{--tw-border-opacity:1;border-color:rgb(226 232 240/var(--tw-border-opacity,1))}.border-slate-300{--tw-border-opacity:1;border-color:rgb(203 213 225/var(--tw-border-opacity,1))}.border-slate-700{--tw-border-opacity:1;border-color:rgb(51 65 85/var(--tw-border-opacity,1))}.bg-amber-100{--tw-bg-opacity:1;background-color:rgb(254 243 199/var(--tw-bg-opacity,1))}.bg-amber-50{--tw-bg-opacity:1;background-color:rgb(255 251 235/var(--tw-bg-opacity,1))}.bg-amber-50\/70{background-color:#fffbebb3}.bg-emerald-100{--tw-bg-opacity:1;background-color:rgb(209 250 229/var(--tw-bg-opacity,1))}.bg-emerald-50{--tw-bg-opacity:1;background-color:rgb(236 253 245/var(--tw-bg-opacity,1))}.bg-indigo-100{--tw-bg-opacity:1;background-color:rgb(224 231 255/var(--tw-bg-opacity,1))}.bg-indigo-50{--tw-bg-opacity:1;background-color:rgb(238 242 255/var(--tw-bg-opacity,1))}.bg-indigo-50\/30{background-color:#eef2ff4d}.bg-indigo-500{--tw-bg-opacity:1;background-color:rgb(99 102 241/var(--tw-bg-opacity,1))}.bg-indigo-600{--tw-bg-opacity:1;background-color:rgb(79 70 229/var(--tw-bg-opacity,1))}.bg-rose-100{--tw-bg-opacity:1;background-color:rgb(255 228 230/var(--tw-bg-opacity,1))}.bg-rose-50{--tw-bg-opacity:1;background-color:rgb(255 241 242/var(--tw-bg-opacity,1))}.bg-rose-50\/70{background-color:#fff1f2b3}.bg-rose-600{--tw-bg-opacity:1;background-color:rgb(225 29 72/var(--tw-bg-opacity,1))}.bg-slate-100{--tw-bg-opacity:1;background-color:rgb(241 245 249/var(--tw-bg-opacity,1))}.bg-slate-100\/50{background-color:#f1f5f980}.bg-slate-100\/70{background-color:#f1f5f9b3}.bg-slate-100\/90{background-color:#f1f5f9e6}.bg-slate-50{--tw-bg-opacity:1;background-color:rgb(248 250 252/var(--tw-bg-opacity,1))}.bg-slate-50\/50{background-color:#f8fafc80}.bg-slate-50\/70{background-color:#f8fafcb3}.bg-slate-900{--tw-bg-opacity:1;background-color:rgb(15 23 42/var(--tw-bg-opacity,1))}.bg-slate-900\/50{background-color:#0f172a80}.bg-transparent{background-color:#0000}.bg-white{--tw-bg-opacity:1;background-color:rgb(255 255 255/var(--tw-bg-opacity,1))}.bg-white\/90{background-color:#ffffffe6}.bg-white\/95{background-color:#fffffff2}.fill-indigo-50{fill:#eef2ff}.fill-indigo-500\/20{fill:#6366f133}.fill-indigo-700{fill:#4338ca}.fill-none{fill:none}.fill-slate-700{fill:#334155}.fill-white{fill:#fff}.stroke-amber-500{stroke:#f59e0b}.stroke-emerald-500{stroke:#10b981}.stroke-indigo-400{stroke:#818cf8}.stroke-indigo-600{stroke:#4f46e5}.stroke-rose-500{stroke:#f43f5e}.stroke-slate-300{stroke:#cbd5e1}.stroke-slate-400{stroke:#94a3b8}.stroke-1{stroke-width:1px}.stroke-2{stroke-width:2px}.stroke-\[1\.5\]{stroke-width:1.5px}.p-1{padding:.25rem}.p-1\.5{padding:.375rem}.p-2\.5{padding:.625rem}.p-3{padding:.75rem}.p-3\.5{padding:.875rem}.p-4{padding:1rem}.p-5{padding:1.25rem}.px-1{padding-left:.25rem;padding-right:.25rem}.px-1\.5{padding-left:.375rem;padding-right:.375rem}.px-2{padding-left:.5rem;padding-right:.5rem}.px-2\.5{padding-left:.625rem;padding-right:.625rem}.px-3{padding-left:.75rem;padding-right:.75rem}.px-3\.5{padding-left:.875rem;padding-right:.875rem}.px-4{padding-left:1rem;padding-right:1rem}.px-5{padding-left:1.25rem;padding-right:1.25rem}.py-0\.5{padding-top:.125rem;padding-bottom:.125rem}.py-1{padding-top:.25rem;padding-bottom:.25rem}.py-1\.5{padding-top:.375rem;padding-bottom:.375rem}.py-12{padding-top:3rem;padding-bottom:3rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}.py-2\.5{padding-top:.625rem;padding-bottom:.625rem}.py-4{padding-top:1rem;padding-bottom:1rem}.py-6{padding-top:1.5rem;padding-bottom:1.5rem}.py-8{padding-top:2rem;padding-bottom:2rem}.pl-8{padding-left:2rem}.pr-1{padding-right:.25rem}.pr-3{padding-right:.75rem}.pt-2{padding-top:.5rem}.text-left{text-align:left}.text-center{text-align:center}.font-mono{font-family:Fira Code,JetBrains Mono,Consolas,Courier New,monospace}.text-\[10px\]{font-size:10px}.text-\[11px\]{font-size:11px}.text-base{font-size:1rem;line-height:1.5rem}.text-sm{font-size:.875rem;line-height:1.25rem}.text-xs{font-size:.75rem;line-height:1rem}.font-bold{font-weight:700}.font-medium{font-weight:500}.font-semibold{font-weight:600}.leading-relaxed{line-height:1.625}.tracking-tight{letter-spacing:-.025em}.tracking-wide{letter-spacing:.025em}.text-amber-400{--tw-text-opacity:1;color:rgb(251 191 36/var(--tw-text-opacity,1))}.text-amber-500{--tw-text-opacity:1;color:rgb(245 158 11/var(--tw-text-opacity,1))}.text-amber-600{--tw-text-opacity:1;color:rgb(217 119 6/var(--tw-text-opacity,1))}.text-amber-700{--tw-text-opacity:1;color:rgb(180 83 9/var(--tw-text-opacity,1))}.text-amber-800{--tw-text-opacity:1;color:rgb(146 64 14/var(--tw-text-opacity,1))}.text-amber-900{--tw-text-opacity:1;color:rgb(120 53 15/var(--tw-text-opacity,1))}.text-emerald-500{--tw-text-opacity:1;color:rgb(16 185 129/var(--tw-text-opacity,1))}.text-emerald-600{--tw-text-opacity:1;color:rgb(5 150 105/var(--tw-text-opacity,1))}.text-emerald-700{--tw-text-opacity:1;color:rgb(4 120 87/var(--tw-text-opacity,1))}.text-emerald-800{--tw-text-opacity:1;color:rgb(6 95 70/var(--tw-text-opacity,1))}.text-emerald-900{--tw-text-opacity:1;color:rgb(6 78 59/var(--tw-text-opacity,1))}.text-indigo-500{--tw-text-opacity:1;color:rgb(99 102 241/var(--tw-text-opacity,1))}.text-indigo-600{--tw-text-opacity:1;color:rgb(79 70 229/var(--tw-text-opacity,1))}.text-indigo-700{--tw-text-opacity:1;color:rgb(67 56 202/var(--tw-text-opacity,1))}.text-indigo-800{--tw-text-opacity:1;color:rgb(55 48 163/var(--tw-text-opacity,1))}.text-rose-500{--tw-text-opacity:1;color:rgb(244 63 94/var(--tw-text-opacity,1))}.text-rose-600{--tw-text-opacity:1;color:rgb(225 29 72/var(--tw-text-opacity,1))}.text-rose-700{--tw-text-opacity:1;color:rgb(190 18 60/var(--tw-text-opacity,1))}.text-rose-800{--tw-text-opacity:1;color:rgb(159 18 57/var(--tw-text-opacity,1))}.text-rose-900{--tw-text-opacity:1;color:rgb(136 19 55/var(--tw-text-opacity,1))}.text-slate-300{--tw-text-opacity:1;color:rgb(203 213 225/var(--tw-text-opacity,1))}.text-slate-400{--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.text-slate-500{--tw-text-opacity:1;color:rgb(100 116 139/var(--tw-text-opacity,1))}.text-slate-600{--tw-text-opacity:1;color:rgb(71 85 105/var(--tw-text-opacity,1))}.text-slate-700{--tw-text-opacity:1;color:rgb(51 65 85/var(--tw-text-opacity,1))}.text-slate-800{--tw-text-opacity:1;color:rgb(30 41 59/var(--tw-text-opacity,1))}.text-slate-900{--tw-text-opacity:1;color:rgb(15 23 42/var(--tw-text-opacity,1))}.text-white{--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.opacity-0{opacity:0}.opacity-100{opacity:1}.opacity-40{opacity:.4}.opacity-50{opacity:.5}.opacity-75{opacity:.75}.opacity-90{opacity:.9}.shadow-2xl{--tw-shadow:0 25px 50px -12px #00000040;--tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000), var(--tw-ring-shadow,0 0 #0000), var(--tw-shadow)}.shadow-lg{--tw-shadow:0 10px 15px -3px #0000001a, 0 4px 6px -4px #0000001a;--tw-shadow-colored:0 10px 15px -3px var(--tw-shadow-color), 0 4px 6px -4px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000), var(--tw-ring-shadow,0 0 #0000), var(--tw-shadow)}.shadow-md{--tw-shadow:0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;--tw-shadow-colored:0 4px 6px -1px var(--tw-shadow-color), 0 2px 4px -2px var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000), var(--tw-ring-shadow,0 0 #0000), var(--tw-shadow)}.shadow-sm{--tw-shadow:0 1px 2px 0 #0000000d;--tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);box-shadow:var(--tw-ring-offset-shadow,0 0 #0000), var(--tw-ring-shadow,0 0 #0000), var(--tw-shadow)}.shadow-indigo-500\/20{--tw-shadow-color:#6366f133;--tw-shadow:var(--tw-shadow-colored)}.outline-none{outline-offset:2px;outline:2px solid #0000}.ring{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow,0 0 #0000)}.blur{--tw-blur:blur(8px);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.filter{filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.backdrop-blur{--tw-backdrop-blur:blur(8px);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.backdrop-blur-sm{--tw-backdrop-blur:blur(4px);backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)}.transition{transition-property:color,background-color,border-color,text-decoration-color,fill,stroke,opacity,box-shadow,transform,filter,backdrop-filter;transition-duration:.15s;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-all{transition-property:all;transition-duration:.15s;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-colors{transition-property:color,background-color,border-color,text-decoration-color,fill,stroke;transition-duration:.15s;transition-timing-function:cubic-bezier(.4,0,.2,1)}.transition-opacity{transition-property:opacity;transition-duration:.15s;transition-timing-function:cubic-bezier(.4,0,.2,1)}.duration-150{transition-duration:.15s}.duration-200{transition-duration:.2s}.duration-300{transition-duration:.3s}::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:#f1f5f9b3}.dark ::-webkit-scrollbar-track{background:#0f172a99}::-webkit-scrollbar-thumb{background:#94a3b899;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#64748bcc}.dark ::-webkit-scrollbar-thumb{background:#47556999}.dark ::-webkit-scrollbar-thumb:hover{background:#64748bcc}.bg-grid-pattern{background-image:radial-gradient(circle,#64748b38 1px,#0000 1px);background-size:24px 24px}.dark .bg-grid-pattern{background-image:radial-gradient(circle,#94a3b81f 1px,#0000 1px)}@keyframes active-pulse-ring{0%{r:28;opacity:.8}70%{r:44;opacity:0}to{r:44;opacity:0}}.animate-pulse-ring{animation:2s cubic-bezier(.24,0,.38,1) infinite active-pulse-ring}@keyframes flow-dash{to{stroke-dashoffset:-24px}}.edge-flow-active{stroke-dasharray:6 6;animation:1s linear infinite flow-dash}.selection\:bg-indigo-100 ::-moz-selection{--tw-bg-opacity:1;background-color:rgb(224 231 255/var(--tw-bg-opacity,1))}.selection\:bg-indigo-100 ::selection{--tw-bg-opacity:1;background-color:rgb(224 231 255/var(--tw-bg-opacity,1))}.selection\:bg-indigo-100::-moz-selection{--tw-bg-opacity:1;background-color:rgb(224 231 255/var(--tw-bg-opacity,1))}.selection\:bg-indigo-100::selection{--tw-bg-opacity:1;background-color:rgb(224 231 255/var(--tw-bg-opacity,1))}.placeholder\:text-slate-400::-moz-placeholder{--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.placeholder\:text-slate-400::placeholder{--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.hover\:border-indigo-300:hover{--tw-border-opacity:1;border-color:rgb(165 180 252/var(--tw-border-opacity,1))}.hover\:border-slate-400:hover{--tw-border-opacity:1;border-color:rgb(148 163 184/var(--tw-border-opacity,1))}.hover\:bg-indigo-50\/80:hover{background-color:#eef2ffcc}.hover\:bg-indigo-700:hover{--tw-bg-opacity:1;background-color:rgb(67 56 202/var(--tw-bg-opacity,1))}.hover\:bg-rose-50:hover{--tw-bg-opacity:1;background-color:rgb(255 241 242/var(--tw-bg-opacity,1))}.hover\:bg-slate-100:hover{--tw-bg-opacity:1;background-color:rgb(241 245 249/var(--tw-bg-opacity,1))}.hover\:bg-slate-200:hover{--tw-bg-opacity:1;background-color:rgb(226 232 240/var(--tw-bg-opacity,1))}.hover\:bg-slate-200\/60:hover{background-color:#e2e8f099}.hover\:stroke-slate-600:hover{stroke:#475569}.hover\:text-slate-800:hover{--tw-text-opacity:1;color:rgb(30 41 59/var(--tw-text-opacity,1))}.hover\:text-slate-900:hover{--tw-text-opacity:1;color:rgb(15 23 42/var(--tw-text-opacity,1))}.hover\:underline:hover{text-decoration-line:underline}.hover\:shadow-indigo-500\/10:hover{--tw-shadow-color:#6366f11a;--tw-shadow:var(--tw-shadow-colored)}.hover\:brightness-105:hover{--tw-brightness:brightness(1.05);filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)}.focus\:border-indigo-500:focus{--tw-border-opacity:1;border-color:rgb(99 102 241/var(--tw-border-opacity,1))}.focus\:ring-0:focus{--tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);--tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(0px + var(--tw-ring-offset-width)) var(--tw-ring-color);box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow,0 0 #0000)}.active\:scale-\[0\.99\]:active{--tw-scale-x:.99;--tw-scale-y:.99;transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))}.active\:cursor-grabbing:active{cursor:grabbing}.disabled\:cursor-not-allowed:disabled{cursor:not-allowed}.disabled\:opacity-40:disabled{opacity:.4}.dark\:block:is(.dark *){display:block}.dark\:hidden:is(.dark *){display:none}.dark\:border-amber-600\/60:is(.dark *){border-color:#d9770699}.dark\:border-amber-700\/40:is(.dark *){border-color:#b4530966}.dark\:border-amber-700\/50:is(.dark *){border-color:#b4530980}.dark\:border-amber-900\/60:is(.dark *){border-color:#78350f99}.dark\:border-emerald-600\/40:is(.dark *){border-color:#05966966}.dark\:border-emerald-600\/50:is(.dark *){border-color:#05966980}.dark\:border-emerald-700\/50:is(.dark *){border-color:#04785780}.dark\:border-emerald-800\/40:is(.dark *){border-color:#065f4666}.dark\:border-indigo-700\/50:is(.dark *){border-color:#4338ca80}.dark\:border-indigo-700\/60:is(.dark *){border-color:#4338ca99}.dark\:border-rose-600\/50:is(.dark *){border-color:#e11d4880}.dark\:border-rose-600\/60:is(.dark *){border-color:#e11d4899}.dark\:border-rose-700\/50:is(.dark *){border-color:#be123c80}.dark\:border-rose-800\/50:is(.dark *){border-color:#9f123980}.dark\:border-rose-900\/50:is(.dark *){border-color:#88133780}.dark\:border-rose-900\/60:is(.dark *){border-color:#88133799}.dark\:border-slate-600:is(.dark *){--tw-border-opacity:1;border-color:rgb(71 85 105/var(--tw-border-opacity,1))}.dark\:border-slate-700:is(.dark *){--tw-border-opacity:1;border-color:rgb(51 65 85/var(--tw-border-opacity,1))}.dark\:border-slate-700\/70:is(.dark *){border-color:#334155b3}.dark\:border-slate-800:is(.dark *){--tw-border-opacity:1;border-color:rgb(30 41 59/var(--tw-border-opacity,1))}.dark\:border-slate-800\/80:is(.dark *){border-color:#1e293bcc}.dark\:border-slate-900:is(.dark *){--tw-border-opacity:1;border-color:rgb(15 23 42/var(--tw-border-opacity,1))}.dark\:bg-amber-950:is(.dark *){--tw-bg-opacity:1;background-color:rgb(69 26 3/var(--tw-bg-opacity,1))}.dark\:bg-amber-950\/30:is(.dark *){background-color:#451a034d}.dark\:bg-amber-950\/60:is(.dark *){background-color:#451a0399}.dark\:bg-emerald-950:is(.dark *){--tw-bg-opacity:1;background-color:rgb(2 44 34/var(--tw-bg-opacity,1))}.dark\:bg-emerald-950\/20:is(.dark *){background-color:#022c2233}.dark\:bg-emerald-950\/60:is(.dark *){background-color:#022c2299}.dark\:bg-indigo-400:is(.dark *){--tw-bg-opacity:1;background-color:rgb(129 140 248/var(--tw-bg-opacity,1))}.dark\:bg-indigo-900\/90:is(.dark *){background-color:#312e81e6}.dark\:bg-indigo-950:is(.dark *){--tw-bg-opacity:1;background-color:rgb(30 27 75/var(--tw-bg-opacity,1))}.dark\:bg-indigo-950\/20:is(.dark *){background-color:#1e1b4b33}.dark\:bg-indigo-950\/60:is(.dark *){background-color:#1e1b4b99}.dark\:bg-indigo-950\/80:is(.dark *){background-color:#1e1b4bcc}.dark\:bg-rose-950:is(.dark *){--tw-bg-opacity:1;background-color:rgb(76 5 25/var(--tw-bg-opacity,1))}.dark\:bg-rose-950\/30:is(.dark *){background-color:#4c05194d}.dark\:bg-rose-950\/40:is(.dark *){background-color:#4c051966}.dark\:bg-rose-950\/60:is(.dark *){background-color:#4c051999}.dark\:bg-slate-800:is(.dark *){--tw-bg-opacity:1;background-color:rgb(30 41 59/var(--tw-bg-opacity,1))}.dark\:bg-slate-800\/80:is(.dark *){background-color:#1e293bcc}.dark\:bg-slate-900:is(.dark *){--tw-bg-opacity:1;background-color:rgb(15 23 42/var(--tw-bg-opacity,1))}.dark\:bg-slate-900\/40:is(.dark *){background-color:#0f172a66}.dark\:bg-slate-900\/50:is(.dark *){background-color:#0f172a80}.dark\:bg-slate-900\/60:is(.dark *){background-color:#0f172a99}.dark\:bg-slate-900\/80:is(.dark *){background-color:#0f172acc}.dark\:bg-slate-900\/90:is(.dark *){background-color:#0f172ae6}.dark\:bg-slate-950:is(.dark *){--tw-bg-opacity:1;background-color:rgb(2 6 23/var(--tw-bg-opacity,1))}.dark\:bg-slate-950\/40:is(.dark *){background-color:#02061766}.dark\:bg-slate-950\/70:is(.dark *){background-color:#020617b3}.dark\:bg-slate-950\/80:is(.dark *){background-color:#020617cc}.dark\:fill-indigo-200:is(.dark *){fill:#c7d2fe}.dark\:fill-indigo-950\/80:is(.dark *){fill:#1e1b4bcc}.dark\:fill-indigo-950\/95:is(.dark *){fill:#1e1b4bf2}.dark\:fill-slate-300:is(.dark *){fill:#cbd5e1}.dark\:fill-slate-900:is(.dark *){fill:#0f172a}.dark\:fill-slate-900\/90:is(.dark *){fill:#0f172ae6}.dark\:fill-slate-900\/95:is(.dark *){fill:#0f172af2}.dark\:stroke-emerald-500\/80:is(.dark *){stroke:#10b981cc}.dark\:stroke-indigo-400:is(.dark *){stroke:#818cf8}.dark\:stroke-indigo-500:is(.dark *){stroke:#6366f1}.dark\:stroke-slate-500:is(.dark *){stroke:#64748b}.dark\:stroke-slate-600:is(.dark *){stroke:#475569}.dark\:stroke-slate-700:is(.dark *){stroke:#334155}.dark\:stroke-slate-700\/60:is(.dark *){stroke:#33415599}.dark\:text-amber-200:is(.dark *){--tw-text-opacity:1;color:rgb(253 230 138/var(--tw-text-opacity,1))}.dark\:text-amber-300:is(.dark *){--tw-text-opacity:1;color:rgb(252 211 77/var(--tw-text-opacity,1))}.dark\:text-amber-400:is(.dark *){--tw-text-opacity:1;color:rgb(251 191 36/var(--tw-text-opacity,1))}.dark\:text-emerald-300:is(.dark *){--tw-text-opacity:1;color:rgb(110 231 183/var(--tw-text-opacity,1))}.dark\:text-emerald-400:is(.dark *){--tw-text-opacity:1;color:rgb(52 211 153/var(--tw-text-opacity,1))}.dark\:text-indigo-100:is(.dark *){--tw-text-opacity:1;color:rgb(224 231 255/var(--tw-text-opacity,1))}.dark\:text-indigo-200:is(.dark *){--tw-text-opacity:1;color:rgb(199 210 254/var(--tw-text-opacity,1))}.dark\:text-indigo-300:is(.dark *){--tw-text-opacity:1;color:rgb(165 180 252/var(--tw-text-opacity,1))}.dark\:text-indigo-300\/80:is(.dark *){color:#a5b4fccc}.dark\:text-indigo-300\/90:is(.dark *){color:#a5b4fce6}.dark\:text-indigo-400:is(.dark *){--tw-text-opacity:1;color:rgb(129 140 248/var(--tw-text-opacity,1))}.dark\:text-rose-200:is(.dark *){--tw-text-opacity:1;color:rgb(254 205 211/var(--tw-text-opacity,1))}.dark\:text-rose-300:is(.dark *){--tw-text-opacity:1;color:rgb(253 164 175/var(--tw-text-opacity,1))}.dark\:text-rose-300\/90:is(.dark *){color:#fda4afe6}.dark\:text-rose-400:is(.dark *){--tw-text-opacity:1;color:rgb(251 113 133/var(--tw-text-opacity,1))}.dark\:text-slate-100:is(.dark *){--tw-text-opacity:1;color:rgb(241 245 249/var(--tw-text-opacity,1))}.dark\:text-slate-200:is(.dark *){--tw-text-opacity:1;color:rgb(226 232 240/var(--tw-text-opacity,1))}.dark\:text-slate-300:is(.dark *){--tw-text-opacity:1;color:rgb(203 213 225/var(--tw-text-opacity,1))}.dark\:text-slate-400:is(.dark *){--tw-text-opacity:1;color:rgb(148 163 184/var(--tw-text-opacity,1))}.dark\:text-slate-500:is(.dark *){--tw-text-opacity:1;color:rgb(100 116 139/var(--tw-text-opacity,1))}.dark\:text-slate-700:is(.dark *){--tw-text-opacity:1;color:rgb(51 65 85/var(--tw-text-opacity,1))}.dark\:text-white:is(.dark *){--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}.dark\:selection\:bg-indigo-700\/60 :is(.dark *)::-moz-selection{background-color:#4338ca99}.dark\:selection\:bg-indigo-700\/60 :is(.dark *)::selection{background-color:#4338ca99}.dark\:selection\:bg-indigo-700\/60:is(.dark *)::-moz-selection{background-color:#4338ca99}.dark\:selection\:bg-indigo-700\/60:is(.dark *)::selection{background-color:#4338ca99}.dark\:placeholder\:text-slate-600:is(.dark *)::-moz-placeholder{--tw-text-opacity:1;color:rgb(71 85 105/var(--tw-text-opacity,1))}.dark\:placeholder\:text-slate-600:is(.dark *)::placeholder{--tw-text-opacity:1;color:rgb(71 85 105/var(--tw-text-opacity,1))}.dark\:hover\:border-slate-600:hover:is(.dark *){--tw-border-opacity:1;border-color:rgb(71 85 105/var(--tw-border-opacity,1))}.dark\:hover\:border-slate-700:hover:is(.dark *){--tw-border-opacity:1;border-color:rgb(51 65 85/var(--tw-border-opacity,1))}.dark\:hover\:bg-indigo-900\/80:hover:is(.dark *){background-color:#312e81cc}.dark\:hover\:bg-rose-950\/50:hover:is(.dark *){background-color:#4c051980}.dark\:hover\:bg-slate-700:hover:is(.dark *){--tw-bg-opacity:1;background-color:rgb(51 65 85/var(--tw-bg-opacity,1))}.dark\:hover\:bg-slate-800:hover:is(.dark *){--tw-bg-opacity:1;background-color:rgb(30 41 59/var(--tw-bg-opacity,1))}.dark\:hover\:bg-slate-800\/60:hover:is(.dark *){background-color:#1e293b99}.dark\:hover\:stroke-slate-400:hover:is(.dark *){stroke:#94a3b8}.dark\:hover\:text-slate-200:hover:is(.dark *){--tw-text-opacity:1;color:rgb(226 232 240/var(--tw-text-opacity,1))}.dark\:hover\:text-white:hover:is(.dark *){--tw-text-opacity:1;color:rgb(255 255 255/var(--tw-text-opacity,1))}@media (width>=640px){.sm\:block{display:block}.sm\:inline{display:inline}.sm\:flex{display:flex}.sm\:max-w-\[210px\]{max-width:210px}.sm\:gap-2{gap:.5rem}.sm\:px-2\.5{padding-left:.625rem;padding-right:.625rem}.sm\:px-3{padding-left:.75rem;padding-right:.75rem}.sm\:px-4{padding-left:1rem;padding-right:1rem}}@media (width>=768px){.md\:inline{display:inline}.md\:w-96{width:24rem}.md\:flex-row{flex-direction:row}.md\:items-center{align-items:center}.md\:self-center{align-self:center}}@media (width>=1024px){.lg\:flex{display:flex}}
+/*$vite$:1*/</style>
+</head>
+<body class="h-screen w-screen flex flex-col overflow-hidden bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-150">
+
+  <!-- Top Navigation Header -->
+  <header class="h-14 border-b border-slate-200 bg-white/95 dark:border-slate-800 dark:bg-slate-900/90 backdrop-blur px-3 sm:px-4 flex items-center justify-between shrink-0 z-30 transition-colors">
+    <div class="flex items-center gap-3">
+      <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold shadow-md shadow-indigo-500/20">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm font-bold tracking-tight text-slate-900 dark:text-white">StateFlow</h1>
+          <span class="text-[10px] bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950 dark:text-indigo-400 dark:border-indigo-700/50 px-1.5 py-0.5 rounded font-mono font-medium">100% 離線 SPA</span>
+        </div>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:block">動態狀態機與業務流程拓撲模擬器</p>
+      </div>
+    </div>
+
+    <!-- Middle Header: Template Selector & CRUD Quick Actions -->
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <!-- Template Select Dropdown -->
+      <div class="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700/70 rounded-lg px-2 sm:px-2.5 py-1 text-xs">
+        <span class="text-slate-500 dark:text-slate-400 hidden md:inline">業務範本:</span>
+        <select id="template-select" class="bg-transparent text-slate-800 dark:text-slate-200 outline-none cursor-pointer font-medium max-w-[150px] sm:max-w-[210px] truncate">
+          <!-- Populated by JS -->
+        </select>
+      </div>
+
+      <!-- Quick Template CRUD Buttons -->
+      <button id="btn-header-save-tpl" title="儲存編輯器修改至當前範本" class="flex items-center gap-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 px-2 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 transition shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        <span class="hidden sm:inline">儲存</span>
+      </button>
+
+      <button id="btn-header-create-tpl" title="新增自訂業務範本" class="flex items-center gap-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 px-2 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 transition shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span class="hidden sm:inline">新增</span>
+      </button>
+
+      <button id="btn-header-manage-tpl" title="範本庫管理 (CRUD、匯入/匯出、複製)" class="flex items-center gap-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-300 transition shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+        <span>範本庫</span>
+      </button>
+
+      <!-- Auto Layout Button -->
+      <button id="btn-auto-layout" title="重新自動計算分層佈局" class="hidden lg:flex items-center gap-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 px-2.5 py-1 rounded-lg text-xs text-slate-700 dark:text-slate-300 transition shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+        重整佈局
+      </button>
+    </div>
+
+    <!-- Right Header: Theme Toggle, Export and Utility -->
+    <div class="flex items-center gap-1.5 sm:gap-2">
+      <!-- Light / Dark Mode Toggle Button -->
+      <button id="btn-theme-toggle" title="切換明暗色彩主題 (預設: 淺色模式)" class="flex items-center justify-center w-8 h-8 rounded-lg bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-amber-400 transition shadow-sm">
+        <!-- Sun icon (shown in dark mode) -->
+        <svg id="icon-theme-sun" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 hidden dark:block text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        <!-- Moon icon (shown in light mode) -->
+        <svg id="icon-theme-moon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 block dark:hidden text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+
+      <button id="btn-export-svg" title="匯出高畫質向量圖 (SVG)" class="hidden sm:flex items-center gap-1.5 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 px-2.5 py-1 rounded-lg text-xs font-medium transition shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+        匯出 SVG
+      </button>
+
+      <button id="btn-copy-dsl" title="複製 DSL 代碼" class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-2.5 sm:px-3 py-1 rounded-lg text-xs font-medium shadow-sm transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+        <span class="hidden sm:inline">複製</span> DSL
+      </button>
+    </div>
+  </header>
+
+  <!-- Main 3-Column Workspace -->
+  <main class="flex-1 flex overflow-hidden">
+
+    <!-- Column 1: Left DSL Text Editor (Width 320px ~ 360px) -->
+    <section class="w-80 md:w-96 border-r border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/60 flex flex-col shrink-0 transition-colors">
+      <div class="h-10 px-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-100/90 dark:bg-slate-900/80 transition-colors">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">流程定義 (DSL)</span>
+          <span id="dsl-char-count" class="text-[10px] text-slate-500 font-mono">0 行</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button id="btn-reset-template" title="重置為當前範本原始內容" class="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 px-1.5 py-0.5 rounded hover:bg-slate-200 dark:hover:bg-slate-800 transition">
+            重設
+          </button>
+        </div>
+      </div>
+
+      <!-- Editor Textarea Area -->
+      <div class="flex-1 relative flex overflow-hidden bg-white dark:bg-slate-950/70 font-mono text-xs transition-colors">
+        <textarea id="dsl-editor" spellcheck="false" 
+          class="w-full h-full p-3.5 bg-transparent text-slate-800 dark:text-slate-200 resize-none outline-none leading-relaxed border-none focus:ring-0 font-mono selection:bg-indigo-100 dark:selection:bg-indigo-700/60 placeholder:text-slate-400 dark:placeholder:text-slate-600"
+          placeholder="// 輸入狀態轉換，例如：&#10;@initial: 草稿&#10;@terminal: 完成&#10;草稿 -> 審查 : 提交&#10;審查 -> 完成 : 通過"></textarea>
+      </div>
+
+      <!-- Syntax Errors Bar -->
+      <div id="dsl-errors-panel" class="hidden border-t border-rose-200 bg-rose-50 dark:border-rose-900/50 dark:bg-rose-950/40 p-2.5 max-h-28 overflow-y-auto">
+        <div class="flex items-center gap-1 text-xs text-rose-700 dark:text-rose-300 font-semibold mb-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          語法解析錯誤:
+        </div>
+        <ul id="dsl-errors-list" class="text-[11px] text-rose-600 dark:text-rose-300/90 list-disc list-inside space-y-0.5"></ul>
+      </div>
+
+      <!-- DSL Cheatsheet Help Footer -->
+      <div class="p-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/90 text-[11px] text-slate-600 dark:text-slate-400 transition-colors">
+        <div class="flex items-center justify-between text-slate-700 dark:text-slate-300 font-medium mb-1">
+          <span>極簡 DSL 提示:</span>
+        </div>
+        <code class="block text-[10px] text-slate-700 dark:text-indigo-300/90 bg-slate-100 dark:bg-slate-950/80 p-1.5 rounded border border-slate-200 dark:border-slate-800/80 space-y-0.5">
+          <div><span class="text-emerald-600 dark:text-emerald-400 font-semibold">@initial:</span> 起始狀態</div>
+          <div><span class="text-amber-600 dark:text-amber-400 font-semibold">@terminal:</span> 終點A, 終點B</div>
+          <div>來源 -> 目標 : 觸發動作 [條件備註]</div>
+        </code>
+      </div>
+    </section>
+
+    <!-- Column 2: Center Interactive SVG Canvas -->
+    <section class="flex-1 relative flex flex-col bg-slate-100/70 dark:bg-slate-950 overflow-hidden transition-colors">
+      <!-- Floating Canvas Toolbar -->
+      <div class="absolute top-3 left-3 z-20 flex items-center gap-1.5 bg-white/95 dark:bg-slate-900/90 backdrop-blur border border-slate-200 dark:border-slate-800 rounded-lg p-1 shadow-md transition-colors">
+        <button id="btn-zoom-in" title="放大 (+)" class="w-7 h-7 flex items-center justify-center rounded text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <button id="btn-zoom-out" title="縮小 (-)" class="w-7 h-7 flex items-center justify-center rounded text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <button id="btn-zoom-reset" title="適應畫布置中" class="px-2 h-7 flex items-center justify-center rounded text-xs text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition font-mono font-medium">
+          100%
+        </button>
+      </div>
+
+      <!-- Current State Indicator Chip -->
+      <div class="absolute top-3 right-3 z-20 flex items-center gap-2 bg-white/95 dark:bg-slate-900/90 backdrop-blur border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1.5 shadow-md text-xs transition-colors">
+        <span class="text-slate-500 dark:text-slate-400">當前停留狀態:</span>
+        <span id="canvas-current-chip" class="font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 dark:text-indigo-400 dark:bg-indigo-950/80 dark:border-indigo-700/50 px-2 py-0.5 rounded">未開始</span>
+      </div>
+
+      <!-- SVG Canvas Holder -->
+      <div id="canvas-container" class="w-full h-full relative bg-grid-pattern overflow-hidden">
+        <!-- SVG injected by svgCanvas.js -->
+      </div>
+
+      <!-- Canvas Bottom Hint -->
+      <div class="absolute bottom-3 left-3 z-10 pointer-events-none text-[11px] text-slate-500 bg-white/90 dark:bg-slate-950/80 px-2 py-1 rounded border border-slate-200 dark:border-slate-900 shadow-sm transition-colors">
+        💡 提示：按住滑鼠拖曳畫布平移 / 滾輪縮放 / 拖動節點微調位置
+      </div>
+    </section>
+
+    <!-- Column 3: Right Panel (Simulator & Topology Diagnostics) -->
+    <section class="w-80 md:w-96 border-l border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-900/60 flex flex-col shrink-0 transition-colors">
+      <!-- Tabs: 流程模擬器 / 拓撲診斷 -->
+      <div class="h-10 border-b border-slate-200 dark:border-slate-800 bg-slate-100/90 dark:bg-slate-900/90 flex items-center px-2 gap-1 shrink-0 transition-colors">
+        <button id="tab-btn-sim" class="flex-1 py-1 px-2.5 rounded-lg text-xs font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-sm flex items-center justify-center gap-1.5 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          流程模擬器
+        </button>
+        <button id="tab-btn-diag" class="flex-1 py-1 px-2.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800/60 flex items-center justify-center gap-1.5 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          拓撲診斷
+          <span id="diag-badge-count" class="hidden bg-rose-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
+        </button>
+      </div>
+
+      <!-- Tab Content 1: Simulator View -->
+      <div id="tab-content-sim" class="flex-1 flex flex-col overflow-hidden">
+        <!-- Current State Status Box -->
+        <div class="p-3.5 border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-900/40 transition-colors">
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium mb-1">當前模擬狀態 (Current State)</div>
+          <div class="flex items-center justify-between">
+            <div id="sim-current-title" class="text-base font-bold text-slate-900 dark:text-white tracking-wide truncate">草稿</div>
+            <div id="sim-current-status-tag" class="text-xs">
+              <!-- e.g. 運行中, 已抵達終點, 意外死胡同 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Available Actions Section -->
+        <div class="p-3.5 border-b border-slate-200 dark:border-slate-800">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">可用轉移動作 (Actions)</span>
+            <span id="sim-actions-count" class="text-[10px] text-slate-500 font-mono">0 個可用</span>
+          </div>
+          <div id="sim-actions-container" class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            <!-- Buttons dynamically generated -->
+          </div>
+        </div>
+
+        <!-- Simulator Control Toolbar -->
+        <div class="p-2.5 border-b border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-950/40 flex items-center gap-1.5 transition-colors">
+          <button id="btn-sim-undo" title="回退上一步" class="flex-1 flex items-center justify-center gap-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-300 dark:border-slate-700 text-xs py-1.5 rounded-lg text-slate-700 dark:text-slate-200 shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+            上一步
+          </button>
+          <button id="btn-sim-random" title="隨機選擇一項可用動作前進" class="flex-1 flex items-center justify-center gap-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 disabled:opacity-40 disabled:cursor-not-allowed border border-slate-300 dark:border-slate-700 text-xs py-1.5 rounded-lg text-slate-700 dark:text-slate-200 shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+            隨機探索
+          </button>
+          <button id="btn-sim-reset" title="重設回初始狀態" class="flex-1 flex items-center justify-center gap-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-xs py-1.5 rounded-lg text-slate-700 dark:text-slate-200 shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            重新開始
+          </button>
+        </div>
+
+        <!-- Execution History Stack / Trace Log -->
+        <div class="flex-1 flex flex-col overflow-hidden p-3.5">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">執行軌跡 (History Log)</span>
+            <span id="sim-history-count" class="text-[10px] text-slate-500 font-mono">0 步</span>
+          </div>
+          <div id="sim-history-list" class="flex-1 overflow-y-auto space-y-2 pr-1 text-xs">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: Topology Diagnostics View -->
+      <div id="tab-content-diag" class="hidden flex-1 flex flex-col overflow-hidden p-3.5">
+        <!-- Health Overview Card -->
+        <div id="diag-overview-card" class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-300 dark:border-slate-700 mb-3 shadow-sm transition-colors">
+          <!-- Dynamic health status -->
+        </div>
+
+        <!-- Issue Cards List -->
+        <div class="flex-1 overflow-y-auto space-y-2.5 pr-1">
+          <div class="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center justify-between">
+            <span>檢測報告清單</span>
+            <span id="diag-total-issues" class="text-[10px] text-slate-500 font-mono">0 個問題</span>
+          </div>
+          <div id="diag-issues-list" class="space-y-2">
+            <!-- Issue items -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============================================== -->
+  <!-- MODAL 1: Business Templates Manager (CRUD)     -->
+  <!-- ============================================== -->
+  <div id="modal-template-manager" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden transition-all">
+      <!-- Modal Header -->
+      <div class="h-14 px-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-slate-900/90">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+          </div>
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white">業務範本管理庫</h2>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">建立、管理、備份與切換您的狀態機業務範本</p>
+          </div>
+        </div>
+        <button id="btn-close-tpl-manager" class="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Modal Toolbar -->
+      <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5 bg-white dark:bg-slate-900">
+        <div class="relative flex-1 min-w-[200px]">
+          <input id="tpl-search-input" type="text" placeholder="搜尋範本名稱或描述..." 
+            class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        </div>
+        <div class="flex items-center gap-2">
+          <button id="btn-modal-create-tpl" class="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium shadow-sm transition">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            新建範本
+          </button>
+          <button id="btn-export-tpls-json" title="匯出所有範本為 JSON 檔" class="flex items-center gap-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-medium transition shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            匯出 JSON
+          </button>
+          <label class="flex items-center gap-1 bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 px-2.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition shadow-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            匯入 JSON
+            <input type="file" id="tpl-file-import" accept=".json" class="hidden">
+          </label>
+          <button id="btn-restore-defaults" title="恢復系統原始範本" class="flex items-center gap-1 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 px-2 py-1.5 rounded-lg text-xs transition">
+            恢復預設
+          </button>
+        </div>
+      </div>
+
+      <!-- Templates Cards List -->
+      <div id="tpl-cards-container" class="flex-1 overflow-y-auto p-4 space-y-3 bg-slate-50/50 dark:bg-slate-950/40">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- MODAL 2: Template Editor / Creator Form        -->
+  <!-- ============================================== -->
+  <div id="modal-template-editor" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden transition-all">
+      <!-- Editor Header -->
+      <div class="h-14 px-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50 dark:bg-slate-900/90">
+        <div>
+          <h2 id="modal-editor-title" class="text-sm font-bold text-slate-900 dark:text-white">新增業務範本</h2>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400">定義範本名稱、描述與 DSL 流程架構</p>
+        </div>
+        <button id="btn-close-tpl-editor" class="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 flex items-center justify-center transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Editor Form Body -->
+      <div class="p-5 flex-1 overflow-y-auto space-y-4 text-xs">
+        <input type="hidden" id="form-tpl-id" value="">
+        
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            範本名稱 <span class="text-rose-500">*</span>
+          </label>
+          <input type="text" id="form-tpl-name" placeholder="例如：🏢 企業出差報支核銷流程"
+            class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500 shadow-sm">
+        </div>
+
+        <div>
+          <label class="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+            業務情境描述
+          </label>
+          <input type="text" id="form-tpl-desc" placeholder="簡述此流程適用部門、主要審批關卡與核准條件..."
+            class="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500 shadow-sm">
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block font-semibold text-slate-700 dark:text-slate-300">
+              流程定義 DSL <span class="text-rose-500">*</span>
+            </label>
+            <div class="flex items-center gap-1.5">
+              <button id="btn-load-current-dsl" type="button" class="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline">
+                帶入當前編輯器內容
+              </button>
+              <span class="text-slate-300 dark:text-slate-700">|</span>
+              <button id="btn-load-skeleton-dsl" type="button" class="text-[11px] text-indigo-600 dark:text-indigo-400 hover:underline">
+                帶入空白骨架
+              </button>
+            </div>
+          </div>
+          <textarea id="form-tpl-dsl" rows="10" spellcheck="false"
+            class="w-full p-3 font-mono text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-200 outline-none focus:border-indigo-500 shadow-sm leading-relaxed"
+            placeholder="// @name: 流程名稱&#10;@initial: 起始&#10;@terminal: 結束&#10;起始 -> 審核 : 提交&#10;審核 -> 結束 : 通過"></textarea>
+        </div>
+
+        <div id="form-error-msg" class="hidden text-xs text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 p-2.5 rounded-lg border border-rose-200 dark:border-rose-900/50">
+        </div>
+      </div>
+
+      <!-- Editor Footer -->
+      <div class="h-14 px-5 border-t border-slate-200 dark:border-slate-800 flex items-center justify-end gap-2.5 shrink-0 bg-slate-50 dark:bg-slate-900/90">
+        <button id="btn-cancel-tpl-form" class="px-3.5 py-1.5 rounded-lg text-xs font-medium border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+          取消
+        </button>
+        <button id="btn-save-tpl-form" class="px-4 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition">
+          確認儲存
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-16 opacity-0 transition-all duration-300 pointer-events-none bg-slate-900 dark:bg-slate-800 text-white text-xs px-3.5 py-2.5 rounded-xl shadow-2xl border border-slate-700 flex items-center gap-2">
+    <span id="toast-message">Notification</span>
+  </div>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+
+</body>
+</html>

@@ -1,0 +1,1965 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>會議燃燒成本看板 · SPA 網頁小工具</title>
+<meta name="description" content="設定與會者人數與時薪級距，按下開始會議即時累積人力成本，搭配議程產出檢核與會後產出 vs 成本評估卡（PNG），純離線可用。">
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --surface: #ffffff;
+    --surface-2: #eef1f5;
+    --ink: #1b1f24;
+    --ink-soft: #5a6472;
+    --ink-faint: #8a94a3;
+    --line: #e2e7ee;
+    --accent: #3b6ea5;
+    --accent-soft: #e8f0fa;
+    --sage: #3f7d54;
+    --sage-soft: #e7f2ea;
+    --amber: #a9741f;
+    --amber-soft: #f8efdd;
+    --danger: #b0402f;
+    --danger-soft: #fbe9e5;
+    --shadow: 0 1px 2px rgba(20, 28, 40, .04), 0 8px 24px rgba(20, 28, 40, .06);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171b;
+      --surface: #1c2027;
+      --surface-2: #232830;
+      --ink: #eef1f5;
+      --ink-soft: #aab4c0;
+      --ink-faint: #78828f;
+      --line: #2b313a;
+      --accent: #7aa9d8;
+      --accent-soft: #1e2a38;
+      --sage: #93c39c;
+      --sage-soft: #1d2a20;
+      --amber: #dcb072;
+      --amber-soft: #2e2617;
+      --danger: #e28a76;
+      --danger-soft: #33211d;
+      --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 8px 24px rgba(0, 0, 0, .35);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "Noto Sans TC",
+      "Microsoft JhengHei", "PingFang TC", sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+
+  header.top {
+    padding: 40px 0 22px;
+    border-bottom: 1px solid var(--line);
+    background:
+      radial-gradient(1000px 340px at 15% -30%, var(--accent-soft), transparent 70%),
+      radial-gradient(800px 320px at 95% -40%, var(--sage-soft), transparent 70%);
+  }
+  .eyebrow {
+    display: inline-block;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  h1 { font-size: clamp(24px, 3.6vw, 34px); margin: 0 0 8px; letter-spacing: -.01em; }
+  header.top p { margin: 0; color: var(--ink-soft); max-width: 820px; font-size: 15px; }
+
+  main { padding: 22px 0 80px; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+  }
+  .panel h2 {
+    font-size: 15px;
+    margin: 0 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    letter-spacing: -.005em;
+    flex-wrap: wrap;
+  }
+  .panel h2 .dot { width: 4px; height: 15px; border-radius: 2px; background: var(--accent); }
+  .hint { font-size: 12.5px; color: var(--ink-faint); font-weight: 400; }
+  .h2sub {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    margin: 20px 0 10px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* ---------- 版面 ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+
+  /* ---------- 按鈕與輸入 ---------- */
+  .btn {
+    font: inherit;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.primary:hover:not(:disabled) { color: #fff; filter: brightness(1.07); }
+  .btn.warn { color: var(--amber); border-color: var(--amber); background: var(--amber-soft); }
+  .btn.warn:hover:not(:disabled) { background: var(--amber); color: #fff; }
+  .btn.danger { color: var(--danger); }
+  .btn.danger:hover:not(:disabled) { border-color: var(--danger); background: var(--danger-soft); color: var(--danger); }
+  .btn.big { font-size: 15px; padding: 12px 22px; border-radius: 12px; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .icon-btn {
+    font: inherit;
+    font-size: 13px;
+    line-height: 1;
+    color: var(--ink-faint);
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 5px 7px;
+    cursor: pointer;
+  }
+  .icon-btn:hover { color: var(--danger); background: var(--danger-soft); }
+
+  input[type="text"], input[type="number"], select {
+    font: inherit;
+    font-size: 14px;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 8px 10px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+    min-width: 0;
+  }
+  input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  input:disabled, select:disabled, .btn:disabled { background: var(--surface-2); }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field .lbl { font-size: 12px; font-weight: 600; color: var(--ink-faint); letter-spacing: .02em; }
+  .settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px 22px;
+    align-items: flex-end;
+  }
+  .settings .field input[type="number"] { width: 110px; }
+  .settings .field input[type="text"] { width: 220px; }
+  .inline-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+  .inline-fields input[type="text"] { flex: 1 1 180px; }
+  .inline-fields select { flex: 0 1 220px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 16px; }
+  .actions.center { justify-content: center; }
+  .row-between {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 12px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 999px;
+    padding: 5px 12px;
+  }
+  .chip.plain { color: var(--ink-soft); background: var(--surface-2); }
+
+  .file-btn {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 9px 14px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .file-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .file-btn input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; font-size: 200px; }
+
+  /* ---------- 表格 ---------- */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead th {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--ink-faint);
+    letter-spacing: .03em;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  tbody td { padding: 6px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.tiers input[type="text"] { width: 100%; min-width: 110px; }
+  table.tiers input[type="number"] { width: 88px; }
+  table.history td { font-variant-numeric: tabular-nums; }
+
+  .badge {
+    display: inline-block;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .badge.sage { color: var(--sage); background: var(--sage-soft); }
+  .badge.amber { color: var(--amber); background: var(--amber-soft); }
+  .badge.danger { color: var(--danger); background: var(--danger-soft); }
+  .badge.gray { color: var(--ink-faint); background: var(--surface-2); }
+
+  /* ---------- 計時大錶 ---------- */
+  #meterPanel { text-align: center; padding: 22px 20px 20px; }
+  .meter-head { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; }
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 5px 13px;
+    border-radius: 999px;
+    color: var(--ink-soft);
+    background: var(--surface-2);
+  }
+  .status-chip.running { color: var(--accent); background: var(--accent-soft); }
+  .status-chip.paused { color: var(--amber); background: var(--amber-soft); }
+  .status-chip.ended { color: var(--sage); background: var(--sage-soft); }
+  #meterPanel .amount {
+    font-size: clamp(44px, 10vw, 96px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -.025em;
+    font-variant-numeric: tabular-nums;
+    margin: 6px 0 2px;
+    color: var(--ink);
+    transition: color .2s;
+  }
+  #meterPanel .amount small {
+    font-size: .34em;
+    font-weight: 700;
+    color: var(--ink-faint);
+    vertical-align: .85em;
+    margin-right: .18em;
+    letter-spacing: 0;
+  }
+  #meterPanel.warn .amount { color: var(--amber); }
+  #meterPanel.over .amount { color: var(--danger); }
+  #meterPanel.over .amount { animation: breathe 1.6s ease-in-out infinite; }
+  @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: .68; } }
+  .rate-line { font-size: 13.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+  .rate-line strong { color: var(--ink-soft); }
+
+  .progress {
+    position: relative;
+    height: 14px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    overflow: hidden;
+    margin: 16px auto 6px;
+    max-width: 720px;
+  }
+  .progress.slim { height: 9px; margin: 12px 0 0; max-width: none; }
+  .progress .bar {
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: var(--accent);
+    transition: width .25s linear, background .2s;
+  }
+  #meterPanel.warn .progress .bar { background: var(--amber); }
+  #meterPanel.over .progress .bar { background: var(--danger); }
+  .progress-note { font-size: 12.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .metric {
+    background: var(--surface-2);
+    border-radius: 11px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
+  }
+  .metric span { font-size: 11.5px; color: var(--ink-faint); font-weight: 600; letter-spacing: .02em; }
+  .metric b { font-size: 16px; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+
+  /* ---------- 議程 ---------- */
+  .agenda-list { display: flex; flex-direction: column; gap: 8px; }
+  .agenda-item {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 8px 10px;
+  }
+  .agenda-item.done { border-color: color-mix(in srgb, var(--sage) 40%, var(--line)); }
+  .agenda-item input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--sage); flex: 0 0 auto; cursor: pointer; }
+  .agenda-item .text { flex: 1 1 40%; min-width: 90px; }
+  .agenda-item .output { flex: 1 1 30%; min-width: 90px; font-size: 13px; }
+  .agenda-item.done .text { text-decoration: line-through; color: var(--ink-faint); }
+  .add-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+  }
+  .add-row .field-grow { flex: 1 1 200px; }
+  .empty-note { font-size: 13px; color: var(--ink-faint); padding: 6px 2px; }
+
+  /* ---------- 評估卡 ---------- */
+  .card-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .card-grid { grid-template-columns: 1fr; } }
+  .card-preview canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: #101419;
+  }
+  pre.card-text {
+    margin: 0;
+    font: 13px/1.75 "Consolas", "Menlo", "Microsoft JhengHei", monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    padding: 12px 14px;
+    max-height: 420px;
+    overflow: auto;
+    color: var(--ink-soft);
+  }
+
+  .toast {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 2147482000;
+    max-width: 320px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #fff;
+    background: rgba(28, 32, 39, .94);
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 11px;
+    padding: 11px 14px;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .32);
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity .2s, transform .2s;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.bad { background: rgba(140, 46, 34, .95); }
+
+  [hidden] { display: none !important; }
+  @media print {
+    .btn, .file-btn, header.top, .toast { display: none !important; }
+    .panel { break-inside: avoid; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <span class="eyebrow">Meeting Burn Rate · 離線可用 · NTD</span>
+    <h1>會議燃燒成本看板</h1>
+    <p>輸入與會者人數與時薪級距，按下「開始會議」後像計程車錶一樣即時累積人力成本；搭配議程產出檢核，會議結束一鍵產生「產出 vs 成本評估卡」，可下載 PNG 貼到群組。設定與歷史紀錄只留在本機瀏覽器，不會上傳。</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- 計時大錶 -->
+  <section class="panel" id="meterPanel">
+    <div class="meter-head">
+      <span class="status-chip" id="statusChip">待開始</span>
+      <span class="hint" id="meterHint">按「開始會議」即開始累積</span>
+    </div>
+    <div class="amount"><small>NT$</small><span id="amountValue">0</span></div>
+    <div class="rate-line">每秒 <strong id="perSec">0</strong> · 每分鐘 <strong id="perMin">0</strong> NTD</div>
+    <div class="progress"><div class="bar" id="progressBar"></div></div>
+    <div class="progress-note" id="progressNote">時間進度 0%</div>
+    <div class="metrics">
+      <div class="metric"><span>已進行</span><b id="elapsedText">00:00:00</b></div>
+      <div class="metric"><span>與會人數</span><b id="headcountText">0</b></div>
+      <div class="metric"><span>每人平均成本</span><b id="perPersonText">NT$ 0</b></div>
+      <div class="metric"><span>每小時成本</span><b id="hourlyText">NT$ 0</b></div>
+      <div class="metric"><span>超時加碼</span><b id="overtimeText">NT$ 0</b></div>
+      <div class="metric"><span>議程產出</span><b id="progressText">0 / 0</b></div>
+    </div>
+    <div class="actions center">
+      <button class="btn" id="pauseBtn" type="button" disabled>⏸ 暫停</button>
+      <button class="btn warn" id="endBtn" type="button" disabled>■ 結束並產生評估卡</button>
+      <button class="btn danger" id="resetBtn" type="button" disabled>↺ 重設</button>
+    </div>
+  </section>
+
+  <div class="grid">
+    <!-- 成本設定 -->
+    <section class="panel" id="setupPanel">
+      <h2><span class="dot"></span>與會者與成本設定</h2>
+      <div class="table-wrap">
+        <table class="tiers">
+          <thead>
+            <tr>
+              <th>級距</th>
+              <th>人數</th>
+              <th>平均時薪 (NTD/hr)</th>
+              <th class="num">每小時小計</th>
+              <th class="num">占比</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tierBody"></tbody>
+        </table>
+      </div>
+      <div class="row-between">
+        <button class="btn" id="addTier" type="button">＋ 新增級距</button>
+        <div class="chips" id="costChips"></div>
+      </div>
+
+      <div class="h2sub">常用組合（Preset）</div>
+      <div class="inline-fields">
+        <input id="presetName" type="text" placeholder="組合名稱，例如：週會、跨部門專案會議">
+        <button class="btn" id="savePreset" type="button">儲存目前組合</button>
+        <select id="presetSelect" aria-label="常用組合"></select>
+        <button class="btn" id="applyPreset" type="button">套用</button>
+        <button class="btn danger" id="delPreset" type="button">刪除</button>
+      </div>
+
+      <div class="h2sub">會議參數</div>
+      <div class="settings">
+        <label class="field"><span class="lbl">會議名稱</span><input id="meetingName" type="text" placeholder="例如：跨部門專案會議"></label>
+        <label class="field"><span class="lbl">預計議程時長（分）</span><input id="plannedMin" type="number" min="1" step="5" value="60"></label>
+        <label class="field"><span class="lbl">超時預警門檻（%）</span><input id="warnPct" type="number" min="10" max="100" step="5" value="80"></label>
+      </div>
+      <div class="h2sub">評等標準（產出 × 成本加權分數）</div>
+      <div class="settings">
+        <label class="field"><span class="lbl">產出權重（%）</span><input id="gradeOutputWeight" type="number" min="0" max="100" step="5" value="60"></label>
+        <label class="field"><span class="lbl">超時容忍（%）</span><input id="gradeOvertimeGrace" type="number" min="0" max="100" step="1" value="5"></label>
+        <label class="field"><span class="lbl">超時歸零點（%）</span><input id="gradeOvertimeZero" type="number" min="1" max="200" step="5" value="50"></label>
+        <label class="field"><span class="lbl">良好門檻（分）</span><input id="gradeGoodScore" type="number" min="0" max="100" step="1" value="85"></label>
+        <label class="field"><span class="lbl">持平門檻（分）</span><input id="gradeFairScore" type="number" min="0" max="100" step="1" value="65"></label>
+        <button class="btn" id="gradeReset" type="button">回預設</button>
+      </div>
+      <p class="hint" id="gradeHint"></p>
+
+      <div class="actions">
+        <button class="btn primary big" id="startBtn" type="button">▶ 開始會議</button>
+        <span class="hint" id="setupHint"></span>
+      </div>
+    </section>
+
+    <!-- 議程檢核 -->
+    <section class="panel" id="agendaPanel">
+      <h2><span class="dot"></span>議程產出檢核清單 <span class="hint" id="agendaRate">0 / 0（0%）</span></h2>
+      <div class="agenda-list" id="agendaList"></div>
+      <div class="add-row">
+        <input id="agendaText" class="field-grow" type="text" placeholder="議程項目，例如：確認上線時程">
+        <input id="agendaOutput" class="field-grow" type="text" placeholder="預期產出，例如：決議日期">
+        <button class="btn" id="addAgenda" type="button">＋ 新增議程</button>
+      </div>
+      <div class="progress slim"><div class="bar" id="agendaBar"></div></div>
+      <p class="hint">會議進行中可即時勾選已完成並產出的議程，產出率會與超時狀況一起換算評等並寫入評估卡。</p>
+    </section>
+  </div>
+
+  <!-- 評估卡 -->
+  <section class="panel" id="cardPanel" hidden>
+    <h2><span class="dot"></span>產出 vs 成本評估卡 <span class="hint" id="cardMeta"></span></h2>
+    <div class="card-grid">
+      <div id="cardPreview" class="card-preview"></div>
+      <div>
+        <pre id="cardText" class="card-text"></pre>
+        <div class="actions">
+          <button class="btn primary" id="downloadPng" type="button">⬇ 下載評估卡 PNG</button>
+          <button class="btn" id="copyText" type="button">⧉ 複製文字摘要</button>
+        </div>
+        <p class="hint">PNG 可直接貼到群組或會議紀錄；文字摘要適合貼進郵件或工單。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 歷史紀錄 -->
+  <section class="panel">
+    <h2><span class="dot"></span>歷史會議紀錄 <span class="hint" id="historyNote"></span></h2>
+    <div class="table-wrap">
+      <table class="history">
+        <thead>
+          <tr>
+            <th>時間</th>
+            <th>會議</th>
+            <th class="num">人數</th>
+            <th class="num">時長</th>
+            <th class="num">總成本</th>
+            <th class="num">人均</th>
+            <th class="num">產出率</th>
+            <th>評等</th>
+            <th class="num">分數</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+    <div id="emptyHistory" class="empty-note">尚無紀錄。結束第一場會議後會自動寫入。</div>
+    <div class="actions">
+      <button class="btn" id="exportCsv" type="button">⬇ 匯出 CSV</button>
+      <button class="btn" id="exportJson" type="button">⬇ 備份 JSON</button>
+      <label class="file-btn">⬆ 匯入 JSON<input type="file" id="importJson" accept=".json,application/json"></label>
+      <button class="btn danger" id="clearHistory" type="button">清空歷史</button>
+    </div>
+    <p class="hint" id="compareNote"></p>
+  </section>
+</main>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  var LS_KEY = 'meeting_burn_rate_settings_v1';
+  var DB_NAME = 'MeetingBurnRateDB';
+  var DB_VERSION = 1;
+  var STORE = 'meetings';
+  var MAX_CARD_ITEMS = 14;
+  var SEGMENT_COLORS = ['#7aa9d8', '#9bc7a1', '#dcb072', '#e28a76', '#b39ddb', '#5fb3b3'];
+
+  var DEFAULT_TIERS = [
+    { name: '高階主管', count: 1, rate: 2000 },
+    { name: '中階主管', count: 3, rate: 1200 },
+    { name: '基層人員', count: 4, rate: 800 }
+  ];
+  var DEFAULT_AGENDA = [
+    { text: '確認上線時程與里程碑', output: '決議日期', done: false },
+    { text: '風險與待解問題盤點', output: '風險清單', done: false },
+    { text: '分工與負責人指派', output: '負責人名單', done: false }
+  ];
+
+  var state = {
+    tiers: [],
+    presets: [],
+    agenda: [],
+    meetingName: '',
+    plannedMin: 60,
+    warnPct: 80,
+    gradeCfg: null,
+    status: 'idle',
+    accumulatedMs: 0,
+    segStart: 0,
+    startedAt: 0,
+    endedAt: 0,
+    hourlyCost: 0,
+    headcount: 0,
+    avgRate: 0,
+    lastRecord: null
+  };
+
+  var memRecords = [];
+  var idbFailed = false;
+  var memMode = false;
+  var rafId = 0;
+  var gradeRefreshTimer = 0;
+  var lastCanvas = null;
+  var el = {};
+
+  function $(id) { return document.getElementById(id); }
+  function now() {
+    return (window.performance && typeof window.performance.now === 'function')
+      ? window.performance.now() : Date.now();
+  }
+  function num(v) { var n = parseFloat(v); return isFinite(n) ? n : 0; }
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  function fmtMoney(n) { return 'NT$ ' + Math.round(n).toLocaleString('en-US'); }
+  function fmtPlain(n) { return Math.round(n).toLocaleString('en-US'); }
+  function fmtDur(ms) {
+    var t = Math.max(0, Math.floor(ms / 1000));
+    var h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60;
+    return pad2(h) + ':' + pad2(m) + ':' + pad2(s);
+  }
+  function fmtDurShort(ms) {
+    var min = Math.round(Math.max(0, ms) / 60000);
+    if (min < 60) return min + ' 分';
+    return Math.floor(min / 60) + ' 時 ' + pad2(min % 60) + ' 分';
+  }
+  /* 超時長度：不足一分鐘以秒顯示，避免卡片出現「+0 分」卻同時列出加碼金額 */
+  function fmtOverShort(ms) {
+    ms = Math.max(0, num(ms));
+    if (ms < 60000) return Math.round(ms / 1000) + ' 秒';
+    return Math.round(ms / 60000) + ' 分';
+  }
+  function fmtDateTime(ts) {
+    if (!ts) return '－';
+    var d = new Date(ts);
+    return d.getFullYear() + '/' + pad2(d.getMonth() + 1) + '/' + pad2(d.getDate())
+      + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function setText(node, text) { if (node && node.textContent !== text) node.textContent = text; }
+
+  var toastTimer = 0;
+  function toast(msg, bad) {
+    el.toast.textContent = msg;
+    el.toast.className = 'toast show' + (bad ? ' bad' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { el.toast.className = 'toast'; }, 2800);
+  }
+
+  /* ---------- 成本計算 ---------- */
+  function hourlyCost() {
+    var sum = 0;
+    state.tiers.forEach(function (t) { sum += num(t.count) * num(t.rate); });
+    return sum;
+  }
+  function headcount() {
+    var sum = 0;
+    state.tiers.forEach(function (t) { sum += num(t.count); });
+    return sum;
+  }
+  function tickRate() {
+    var hc = hourlyCost();
+    return { perHour: hc, perMin: hc / 60, perSec: hc / 3600 };
+  }
+  function plannedMs() { return Math.max(1, num(state.plannedMin)) * 60000; }
+  function elapsedMs() {
+    if (state.status === 'running') return state.accumulatedMs + (now() - state.segStart);
+    return state.accumulatedMs;
+  }
+  function overtimeMs() { return Math.max(0, elapsedMs() - plannedMs()); }
+  function agendaStats() {
+    var done = 0;
+    state.agenda.forEach(function (a) { if (a.done) done++; });
+    return { done: done, total: state.agenda.length };
+  }
+  /* ---------- 評等標準（產出 × 成本加權分數） ---------- */
+  var DEFAULT_GRADE_CFG = {
+    outputWeight: 60,     /* 產出率權重（%），成本分權重為 100 減此值 */
+    overtimeGracePct: 5,  /* 超時容忍（%）：此範圍內不扣成本分 */
+    overtimeZeroPct: 50,  /* 超時歸零點（%）：超過容忍後遞減，到此比例成本分為 0 */
+    goodScore: 85,        /* 良好門檻（分） */
+    fairScore: 65         /* 持平門檻（分） */
+  };
+  var MIN_AGENDA_SAMPLE = 3;  /* 議程項目少於此數時，評等僅供參考 */
+
+  function clampNum(v, lo, hi) {
+    v = num(v);
+    if (!(v >= lo)) v = lo;
+    if (v > hi) v = hi;
+    return v;
+  }
+  /* 讀入的設定一律經過這裡正規化，避免舊資料或手動輸入造成不合理門檻 */
+  function normalizeCfg(c) {
+    c = (c && typeof c === 'object') ? c : {};
+    var d = DEFAULT_GRADE_CFG;
+    function pick(key, lo, hi) {
+      var raw = c[key];
+      if (raw === undefined || raw === null || raw === '') return d[key];
+      return clampNum(raw, lo, hi);
+    }
+    var out = {
+      outputWeight: pick('outputWeight', 0, 100),
+      overtimeGracePct: pick('overtimeGracePct', 0, 100),
+      overtimeZeroPct: pick('overtimeZeroPct', 1, 200),
+      goodScore: pick('goodScore', 0, 100),
+      fairScore: pick('fairScore', 0, 100)
+    };
+    if (out.overtimeZeroPct <= out.overtimeGracePct) {
+      out.overtimeZeroPct = Math.min(200, out.overtimeGracePct + 5);
+    }
+    if (out.fairScore >= out.goodScore) {
+      out.fairScore = Math.max(0, out.goodScore - 5);
+    }
+    return out;
+  }
+  /* 超時比例（%）＝ 超時時間 ÷ 計畫時間；分子分母同乘時薪後與「超時成本 ÷ 計畫成本」等值 */
+  function overRatioOf(elapsedMs, plannedMin) {
+    var pMs = Math.max(1, num(plannedMin)) * 60000;
+    return Math.max(0, num(elapsedMs) - pMs) / pMs * 100;
+  }
+  function scoreOf(doneRate, overtimeRatio, cfg) {
+    cfg = normalizeCfg(cfg);
+    var w = cfg.outputWeight / 100;
+    var span = cfg.overtimeZeroPct - cfg.overtimeGracePct;
+    var excess = Math.max(0, num(overtimeRatio) - cfg.overtimeGracePct);
+    var costScore = clampNum(100 - (span > 0 ? excess / span * 100 : 100), 0, 100);
+    var outputScore = clampNum(doneRate, 0, 100);
+    return {
+      score: Math.round(outputScore * w + costScore * (1 - w)),
+      outputScore: Math.round(outputScore),
+      costScore: Math.round(costScore),
+      cfg: cfg
+    };
+  }
+  /* info: { doneRate, overtimeRatio, doneCount, totalCount, cfg } */
+  function gradeOf(info) {
+    info = info || {};
+    var cfg = normalizeCfg(info.cfg);
+    var total = num(info.totalCount);
+    if (!total) {
+      return { label: '無法評估', tone: 'gray', score: null, cfg: cfg,
+        short: '未設定議程檢核項目', desc: '未設定議程檢核項目，無法判讀產出效率' };
+    }
+    var doneRate = clampNum(info.doneRate, 0, 100);
+    var overRatio = Math.max(0, num(info.overtimeRatio));
+    var doneCount = clampNum(info.doneCount, 0, total);
+    var s = scoreOf(doneRate, overRatio, cfg);
+    var label, tone, judge;
+    if (s.score >= cfg.goodScore) {
+      label = '良好'; tone = 'sage'; judge = '如期結束且議程多數達成，成本效率佳';
+    } else if (s.score >= cfg.fairScore) {
+      label = '持平'; tone = 'amber'; judge = '產出與成本大致打平，仍有優化空間';
+    } else {
+      label = '浪費'; tone = 'danger'; judge = '產出不足或超時明顯，建議檢討議程與必要出席';
+    }
+    var late = overRatio > cfg.overtimeGracePct;
+    var notes = [];
+    if (doneCount < total) notes.push((total - doneCount) + ' 項議程未完成');
+    notes.push(late ? '超時 ' + Math.round(overRatio) + '%（逾容忍 ' + cfg.overtimeGracePct + '%）' : '時間內結束');
+    if (total < MIN_AGENDA_SAMPLE) notes.push('議程僅 ' + total + ' 項，樣本偏少');
+    return {
+      label: label, tone: tone, score: s.score, cfg: cfg,
+      outputScore: s.outputScore, costScore: s.costScore,
+      short: '綜合 ' + s.score + ' 分（產出 ' + s.outputScore + ' ／ 成本 ' + s.costScore + '）・'
+        + (late ? '超時 ' + Math.round(overRatio) + '%' : '時間內結束'),
+      desc: '綜合 ' + s.score + ' 分（產出 ' + s.outputScore + ' 分／成本 ' + s.costScore + ' 分）・'
+        + notes.join('・') + '。' + judge
+    };
+  }
+  /* 供評估卡與文字摘要標示「這場會議是用哪一套標準算的」 */
+  function gradeStandardText(cfg) {
+    cfg = normalizeCfg(cfg);
+    return '評等標準：產出率 ' + cfg.outputWeight + '% ＋ 成本分 ' + (100 - cfg.outputWeight) + '%'
+      + '｜超時容忍 ' + cfg.overtimeGracePct + '%'
+      + (cfg.overtimeZeroPct > cfg.overtimeGracePct ? '、逾 ' + cfg.overtimeZeroPct + '% 成本分歸零' : '')
+      + '｜' + cfg.goodScore + ' 分以上良好、' + cfg.fairScore + ' 分以上持平';
+  }
+
+  /* ---------- 設定保存 ---------- */
+  function saveSettings() {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({
+        v: 2,
+        tiers: state.tiers,
+        presets: state.presets,
+        agenda: state.agenda,
+        meetingName: state.meetingName,
+        plannedMin: state.plannedMin,
+        warnPct: state.warnPct,
+        gradeCfg: state.gradeCfg
+      }));
+    } catch (e) { /* 私密瀏覽或 file:// 限制時忽略 */ }
+  }
+  function cloneTiers(list) {
+    return (list || []).map(function (t) {
+      return { name: String(t.name || '級距'), count: num(t.count), rate: num(t.rate) };
+    });
+  }
+  function cloneAgenda(list) {
+    return (list || []).map(function (a) {
+      return { text: String(a.text || ''), output: String(a.output || ''), done: !!a.done };
+    });
+  }
+
+  function loadSettings() {
+    var raw = null;
+    try { raw = localStorage.getItem(LS_KEY); } catch (e) { raw = null; }
+    var d = null;
+    if (raw) { try { d = JSON.parse(raw); } catch (e) { d = null; } }
+    if (d && typeof d === 'object') {
+      state.tiers = Array.isArray(d.tiers) && d.tiers.length ? cloneTiers(d.tiers) : cloneTiers(DEFAULT_TIERS);
+      state.presets = Array.isArray(d.presets) ? d.presets : [];
+      state.agenda = Array.isArray(d.agenda) && d.agenda.length ? cloneAgenda(d.agenda) : cloneAgenda(DEFAULT_AGENDA);
+      state.meetingName = typeof d.meetingName === 'string' ? d.meetingName : '跨部門專案會議';
+      state.plannedMin = num(d.plannedMin) || 60;
+      state.warnPct = num(d.warnPct) || 80;
+    } else {
+      state.tiers = cloneTiers(DEFAULT_TIERS);
+      state.presets = [];
+      state.agenda = cloneAgenda(DEFAULT_AGENDA);
+      state.meetingName = '跨部門專案會議';
+      state.plannedMin = 60;
+      state.warnPct = 80;
+    }
+    state.gradeCfg = normalizeCfg(d && typeof d === 'object' ? d.gradeCfg : null);
+  }
+
+  /* ---------- IndexedDB ---------- */
+  var dbPromise = null;
+  function openDB() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve) {
+      var settled = false;
+      var timer = 0;
+      function done(db) {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        resolve(db);
+      }
+      if (!window.indexedDB) { memMode = true; done(null); return; }
+      var req;
+      try { req = window.indexedDB.open(DB_NAME, DB_VERSION); }
+      catch (e) { memMode = true; done(null); return; }
+      /* 部分 file:// 環境會讓 open 永遠不回應，逾時即改用頁面記憶體 */
+      timer = setTimeout(function () { memMode = true; done(null); }, 1500);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) {
+          var os = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+          os.createIndex('endedAt', 'endedAt');
+        }
+      };
+      req.onsuccess = function () { done(req.result); };
+      req.onerror = function () { idbFailed = true; done(null); };
+      req.onblocked = function () { idbFailed = true; done(null); };
+    });
+    return dbPromise;
+  }
+  function idbRun(mode, fn) {
+    return openDB().then(function (db) {
+      if (!db) { memMode = true; return null; }
+      return new Promise(function (resolve, reject) {
+        var tx = db.transaction(STORE, mode);
+        var store = tx.objectStore(STORE);
+        var out = fn(store);
+        tx.oncomplete = function () { resolve(out && out.result !== undefined ? out.result : null); };
+        tx.onerror = function () { reject(tx.error); };
+      });
+    }).catch(function () { idbFailed = true; return null; });
+  }
+  function addRecord(rec) {
+    return idbRun('readwrite', function (st) { return st.add(rec); }).then(function (id) {
+      if (id === null) { rec.id = 'mem-' + Date.now(); memRecords.push(rec); if (idbFailed || memMode) toast('本機歷史資料庫無法使用，紀錄僅保留於本次頁面', true); }
+      else { rec.id = id; }
+      return rec;
+    });
+  }
+  /* 紀錄一律由此正規化：欄位補齊並以「目前」的評等標準重算分數與評等，
+     因此舊紀錄（含舊制三門檻、或匯入時未帶超時比例的資料）不會顯示過時的評等。 */
+  function normalizeRecord(r) {
+    r = (r && typeof r === 'object') ? r : {};
+    var agenda = Array.isArray(r.agenda) ? r.agenda : [];
+    var doneInAgenda = 0;
+    agenda.forEach(function (a) { if (a && a.done) doneInAgenda++; });
+    var totalCount = num(r.totalCount) || agenda.length;
+    var doneCount = Math.min(totalCount, Math.max(num(r.doneCount), doneInAgenda));
+    var out = {
+      name: String(r.name || '未命名會議'),
+      startedAt: num(r.startedAt),
+      endedAt: num(r.endedAt),
+      elapsedMs: num(r.elapsedMs),
+      plannedMin: num(r.plannedMin),
+      headcount: num(r.headcount),
+      hourlyCost: num(r.hourlyCost),
+      avgRate: num(r.avgRate),
+      tiers: Array.isArray(r.tiers) ? r.tiers : [],
+      agenda: agenda,
+      doneCount: doneCount,
+      totalCount: totalCount,
+      doneRate: totalCount ? Math.round(doneCount / totalCount * 100) : 0,
+      overtimeMs: num(r.overtimeMs),
+      overtimeCost: num(r.overtimeCost),
+      totalCost: num(r.totalCost),
+      perPerson: num(r.perPerson)
+    };
+    if (r.id !== undefined && r.id !== null) out.id = r.id;
+    out.grade = gradeOf({
+      doneRate: out.doneRate,
+      overtimeRatio: overRatioOf(out.elapsedMs, out.plannedMin),
+      doneCount: out.doneCount,
+      totalCount: out.totalCount,
+      cfg: state.gradeCfg
+    });
+    return out;
+  }
+  function listRecords() {
+    function finish(rows) {
+      return rows.slice().sort(function (a, b) { return (b.endedAt || 0) - (a.endedAt || 0); })
+        .map(normalizeRecord);
+    }
+    if (memMode) return Promise.resolve(finish(memRecords));
+    return idbRun('readonly', function (st) { return st.getAll(); }).then(function (rows) {
+      if (memMode) return finish(memRecords);
+      return finish(rows || []);
+    });
+  }
+  function deleteRecord(id) {
+    if (typeof id === 'string' && id.indexOf('mem-') === 0) {
+      memRecords = memRecords.filter(function (r) { return r.id !== id; });
+      return Promise.resolve();
+    }
+    return idbRun('readwrite', function (st) { return st.delete(id); });
+  }
+  function clearRecords() {
+    memRecords = [];
+    return idbRun('readwrite', function (st) { return st.clear(); });
+  }
+
+  /* ---------- 級距列表 ---------- */
+  function renderTiers() {
+    var html = '';
+    state.tiers.forEach(function (t, i) {
+      html += '<tr data-idx="' + i + '">'
+        + '<td><input type="text" data-field="name" value="' + esc(t.name) + '" aria-label="級距名稱"></td>'
+        + '<td><input type="number" min="0" step="1" data-field="count" value="' + num(t.count) + '" aria-label="人數"></td>'
+        + '<td><input type="number" min="0" step="100" data-field="rate" value="' + num(t.rate) + '" aria-label="平均時薪"></td>'
+        + '<td class="num" data-cell="subtotal">' + fmtMoney(num(t.count) * num(t.rate)) + '</td>'
+        + '<td class="num" data-cell="share">0%</td>'
+        + '<td><button class="icon-btn" type="button" data-act="del" title="刪除此級距" aria-label="刪除此級距">✕</button></td>'
+        + '</tr>';
+    });
+    el.tierBody.innerHTML = html;
+    renderCostSummary();
+  }
+  function renderCostSummary() {
+    var total = hourlyCost();
+    var rows = el.tierBody.querySelectorAll('tr');
+    for (var i = 0; i < rows.length; i++) {
+      var t = state.tiers[i];
+      if (!t) continue;
+      var sub = num(t.count) * num(t.rate);
+      var subCell = rows[i].querySelector('[data-cell="subtotal"]');
+      var shareCell = rows[i].querySelector('[data-cell="share"]');
+      setText(subCell, fmtMoney(sub));
+      setText(shareCell, (total > 0 ? Math.round(sub / total * 100) : 0) + '%');
+    }
+    var hc = headcount();
+    var avg = hc > 0 ? total / hc : 0;
+    el.costChips.innerHTML = ''
+      + '<span class="chip">與會 ' + hc + ' 人</span>'
+      + '<span class="chip">每小時 ' + fmtMoney(total) + '</span>'
+      + '<span class="chip plain">加權平均時薪 ' + fmtMoney(avg) + '</span>';
+    if (hc === 0 || total === 0) {
+      el.setupHint.textContent = '請先設定至少一位與會者與時薪。';
+    } else {
+      el.setupHint.textContent = '';
+    }
+    el.startBtn.disabled = (state.status === 'running' || state.status === 'paused') || hc === 0 || total === 0;
+  }
+
+  /* ---------- 評等標準設定列 ---------- */
+  var GRADE_FIELDS = [
+    { id: 'gradeOutputWeight', key: 'outputWeight' },
+    { id: 'gradeOvertimeGrace', key: 'overtimeGracePct' },
+    { id: 'gradeOvertimeZero', key: 'overtimeZeroPct' },
+    { id: 'gradeGoodScore', key: 'goodScore' },
+    { id: 'gradeFairScore', key: 'fairScore' }
+  ];
+  function cfgFromState() {
+    var out = {};
+    GRADE_FIELDS.forEach(function (f) { out[f.key] = state.gradeCfg ? state.gradeCfg[f.key] : null; });
+    return normalizeCfg(out);
+  }
+  function applyGradeCfgToInputs() {
+    var cfg = cfgFromState();
+    GRADE_FIELDS.forEach(function (f) { if (el[f.id]) el[f.id].value = num(cfg[f.key]); });
+  }
+  function renderGradeHint() {
+    if (!el.gradeHint) return;
+    var cfg = cfgFromState();
+    var s = agendaStats();
+    var text = gradeStandardText(cfg);
+    if (!s.total) {
+      text += '（尚未設定議程項目，無法試算）';
+    } else {
+      var nowScore = scoreOf(s.total ? Math.round(s.done / s.total * 100) : 0, overRatioOf(elapsedMs(), state.plannedMin), cfg);
+      text += '（目前試算 ' + nowScore.score + ' 分：產出 ' + nowScore.outputScore
+        + ' ／ 成本 ' + nowScore.costScore + '）';
+    }
+    setText(el.gradeHint, text);
+  }
+
+  /* ---------- 議程 ---------- */
+  function renderAgenda() {
+    if (!state.agenda.length) {
+      el.agendaList.innerHTML = '<div class="empty-note">尚無議程項目，請於下方新增。</div>';
+    } else {
+      var html = '';
+      state.agenda.forEach(function (a, i) {
+        html += '<div class="agenda-item' + (a.done ? ' done' : '') + '" data-idx="' + i + '">'
+          + '<input type="checkbox" data-act="done"' + (a.done ? ' checked' : '') + ' aria-label="標記完成">'
+          + '<input class="text" type="text" data-field="text" value="' + esc(a.text) + '" placeholder="議程項目" aria-label="議程項目">'
+          + '<input class="output" type="text" data-field="output" value="' + esc(a.output) + '" placeholder="預期產出" aria-label="預期產出">'
+          + '<button class="icon-btn" type="button" data-act="del" title="刪除議程" aria-label="刪除議程">✕</button>'
+          + '</div>';
+      });
+      el.agendaList.innerHTML = html;
+    }
+    renderAgendaSummary();
+  }
+  function renderAgendaSummary() {
+    var s = agendaStats();
+    var pct = s.total ? Math.round(s.done / s.total * 100) : 0;
+    setText(el.agendaRate, s.done + ' / ' + s.total + '（' + pct + '%）');
+    el.agendaBar.style.width = pct + '%';
+    setText(el.progressText, s.done + ' / ' + s.total);
+    renderGradeHint();
+  }
+
+  /* ---------- Preset ---------- */
+  function renderPresets() {
+    var html = '<option value="">— 選擇組合 —</option>';
+    state.presets.forEach(function (p, i) {
+      html += '<option value="' + i + '">' + esc(p.name) + '</option>';
+    });
+    el.presetSelect.innerHTML = html;
+  }
+
+  /* ---------- 計時器 ---------- */
+  function lockSetup(lock) {
+    var nodes = el.setupPanel.querySelectorAll('input, select, button');
+    for (var i = 0; i < nodes.length; i++) nodes[i].disabled = lock;
+    el.setupPanel.style.opacity = lock ? '.72' : '';
+    if (lock) {
+      el.startBtn.disabled = true;
+    } else {
+      renderCostSummary();
+    }
+  }
+  function renderTimerState() {
+    var s = state.status;
+    var chip = el.statusChip;
+    chip.className = 'status-chip' + (s === 'idle' ? '' : ' ' + s);
+    setText(chip, s === 'running' ? '● 會議進行中' : s === 'paused' ? '⏸ 已暫停' : s === 'ended' ? '✓ 會議已結束' : '待開始');
+    setText(el.pauseBtn, s === 'paused' ? '▶ 繼續' : '⏸ 暫停');
+    el.pauseBtn.disabled = !(s === 'running' || s === 'paused');
+    el.endBtn.disabled = !(s === 'running' || s === 'paused');
+    el.resetBtn.disabled = !(s === 'paused' || s === 'ended');
+    setText(el.meterHint, s === 'running' ? '成本隨時間即時累積中'
+      : s === 'paused' ? '已暫停，成本停止累積'
+      : s === 'ended' ? '可下載評估卡或按「重設」準備下一場'
+      : '按「開始會議」即開始累積');
+  }
+  function updateMeter() {
+    var ms = elapsedMs();
+    var rate = tickRate();
+    var cost = ms / 3600000 * rate.perHour;
+    var hc = headcount();
+    var pMs = plannedMs();
+    var over = Math.max(0, ms - pMs);
+    var pct = pMs > 0 ? (ms / pMs * 100) : 0;
+
+    setText(el.amountValue, fmtPlain(Math.floor(cost)));
+    setText(el.perSec, fmtPlain(rate.perSec));
+    setText(el.perMin, fmtPlain(rate.perMin));
+    setText(el.elapsedText, fmtDur(ms));
+    setText(el.headcountText, String(hc));
+    setText(el.perPersonText, fmtMoney(hc > 0 ? cost / hc : 0));
+    setText(el.hourlyText, fmtMoney(rate.perHour));
+    setText(el.overtimeText, fmtMoney(over / 3600000 * rate.perHour));
+    setText(el.progressNote, '時間進度 ' + Math.round(pct) + '%（' + fmtDurShort(ms) + ' / ' + num(state.plannedMin) + ' 分）');
+
+    el.progressBar.style.width = Math.min(100, pct) + '%';
+    var cls = '';
+    if (ms > 0 && ms >= pMs) cls = ' over';
+    else if (ms > 0 && pct >= num(state.warnPct)) cls = ' warn';
+    if (el.meterPanel.className !== 'panel' + cls) el.meterPanel.className = 'panel' + cls;
+    renderGradeHint();
+  }
+  function stopLoop() { if (rafId) { cancelAnimationFrame(rafId); rafId = 0; } }
+  function loop() {
+    updateMeter();
+    if (state.status === 'running') rafId = requestAnimationFrame(loop);
+  }
+  function startTimer() {
+    if (hourlyCost() <= 0 || headcount() <= 0) { toast('請先設定與會者與時薪', true); return; }
+    state.accumulatedMs = 0;
+    state.segStart = now();
+    state.startedAt = Date.now();
+    state.endedAt = 0;
+    state.status = 'running';
+    lockSetup(true);
+    renderTimerState();
+    updateMeter();
+    stopLoop();
+    rafId = requestAnimationFrame(loop);
+    toast('會議開始，成本累積中');
+  }
+  function pauseTimer() {
+    if (state.status === 'running') {
+      state.accumulatedMs = elapsedMs();
+      state.status = 'paused';
+      stopLoop();
+      updateMeter();
+      renderTimerState();
+      toast('已暫停計時');
+    } else if (state.status === 'paused') {
+      state.segStart = now();
+      state.status = 'running';
+      renderTimerState();
+      updateMeter();
+      rafId = requestAnimationFrame(loop);
+      toast('繼續計時');
+    }
+  }
+  function endTimer() {
+    if (state.status !== 'running' && state.status !== 'paused') return;
+    if (state.status === 'running') state.accumulatedMs = elapsedMs();
+    state.endedAt = Date.now();
+    state.status = 'ended';
+    stopLoop();
+    updateMeter();
+    renderTimerState();
+    lockSetup(false);
+    var rec = collectRecord();
+    state.lastRecord = rec;
+    showCard(rec);
+    addRecord(rec).then(function () {
+      refreshHistory(rec);
+      toast('已寫入歷史紀錄');
+    });
+  }
+  function resetTimer() {
+    if ((state.status === 'running' || state.status === 'paused') && !confirm('會議仍在進行中，確定要重設計時嗎？（不會寫入紀錄）')) return;
+    state.status = 'idle';
+    state.accumulatedMs = 0;
+    state.segStart = 0;
+    state.startedAt = 0;
+    state.endedAt = 0;
+    stopLoop();
+    lockSetup(false);
+    renderTimerState();
+    updateMeter();
+    el.cardPanel.hidden = true;
+    lastCanvas = null;
+    setText(el.cardMeta, '');
+    setText(el.compareNote, '');
+    toast('已重設，可開始下一場會議');
+  }
+
+  function collectRecord() {
+    var ms = state.accumulatedMs;
+    var hc = headcount();
+    var hourly = hourlyCost();
+    var pMs = plannedMs();
+    var over = Math.max(0, ms - pMs);
+    var s = agendaStats();
+    var doneRate = s.total ? Math.round(s.done / s.total * 100) : 0;
+    var overRatio = overRatioOf(ms, state.plannedMin);
+    var grade = gradeOf({
+      doneRate: doneRate, overtimeRatio: overRatio,
+      doneCount: s.done, totalCount: s.total, cfg: state.gradeCfg
+    });
+    var cost = ms / 3600000 * hourly;
+    return {
+      name: (state.meetingName || '').trim() || '未命名會議',
+      startedAt: state.startedAt || (Date.now() - ms),
+      endedAt: state.endedAt || Date.now(),
+      elapsedMs: ms,
+      plannedMin: num(state.plannedMin),
+      headcount: hc,
+      hourlyCost: hourly,
+      avgRate: hc > 0 ? hourly / hc : 0,
+      tiers: state.tiers.map(function (t) { return { name: t.name, count: num(t.count), rate: num(t.rate) }; }),
+      agenda: state.agenda.map(function (a) { return { text: a.text, output: a.output, done: !!a.done }; }),
+      doneCount: s.done,
+      totalCount: s.total,
+      doneRate: doneRate,
+      overtimeMs: over,
+      overtimeCost: over / 3600000 * hourly,
+      totalCost: cost,
+      perPerson: hc > 0 ? cost / hc : 0,
+      grade: grade
+    };
+  }
+
+  /* ---------- 評估卡 ---------- */
+  function cardFont(weight, size) {
+    return weight + ' ' + size + 'px "Microsoft JhengHei","PingFang TC","Noto Sans TC","Segoe UI",sans-serif';
+  }
+  function roundRect(g, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
+  }
+  function fit(g, text, maxW) {
+    text = String(text == null ? '' : text);
+    if (g.measureText(text).width <= maxW) return text;
+    var s = text;
+    while (s.length > 1 && g.measureText(s + '…').width > maxW) s = s.slice(0, -1);
+    return s + '…';
+  }
+  function toneColor(tone) {
+    if (tone === 'sage') return '#9bc7a1';
+    if (tone === 'danger') return '#e28a76';
+    if (tone === 'amber') return '#dcb072';
+    return '#8a94a3';
+  }
+  function drawCard(rec) {
+    var items = (rec.agenda || []).slice();
+    var shown = items.slice(0, MAX_CARD_ITEMS);
+    var extra = items.length - shown.length;
+    var W = 1080;
+    var H = 1086 + shown.length * 48 + (extra > 0 ? 48 : 0);
+    var c = document.createElement('canvas');
+    c.width = W;
+    c.height = H;
+    var g = c.getContext('2d');
+    if (!g) return null;
+    var P = 72;
+    var cw = W - P * 2;
+    var ink = '#eef1f5', soft = '#aab4c0', faint = '#78828f', surface = '#1a1f27';
+    var tone = toneColor(rec.grade.tone);
+    var accent = '#7aa9d8';
+
+    g.textBaseline = 'middle';
+    g.textAlign = 'left';
+
+    g.fillStyle = '#101419';
+    g.fillRect(0, 0, W, H);
+    var grad = g.createLinearGradient(0, 0, W, 0);
+    grad.addColorStop(0, tone);
+    grad.addColorStop(1, '#2b313a');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, 10);
+
+    /* header */
+    g.fillStyle = faint;
+    g.font = cardFont(600, 22);
+    g.fillText('MEETING ROI CARD · 產出 vs 成本評估卡', P, 92);
+
+    g.fillStyle = ink;
+    g.font = cardFont(800, 46);
+    g.fillText(fit(g, rec.name, cw - 260), P, 152);
+
+    g.fillStyle = faint;
+    g.font = cardFont(500, 22);
+    g.fillText(fmtDateTime(rec.startedAt) + ' ～ ' + pad2(new Date(rec.endedAt).getHours()) + ':' + pad2(new Date(rec.endedAt).getMinutes()), P, 204);
+
+    /* grade badge */
+    var badge = rec.grade.label;
+    g.font = cardFont(700, 24);
+    var bw = Math.max(120, g.measureText(badge).width + 52);
+    var bx = W - P - bw, by = 126;
+    g.save();
+    g.globalAlpha = .16;
+    g.fillStyle = tone;
+    roundRect(g, bx, by, bw, 52, 26);
+    g.fill();
+    g.restore();
+    g.strokeStyle = tone;
+    g.lineWidth = 2;
+    roundRect(g, bx, by, bw, 52, 26);
+    g.stroke();
+    g.fillStyle = tone;
+    g.textAlign = 'center';
+    g.fillText(badge, bx + bw / 2, by + 27);
+
+    /* divider */
+    g.strokeStyle = '#2b313a';
+    g.lineWidth = 1;
+    g.beginPath(); g.moveTo(P, 240); g.lineTo(W - P, 240); g.stroke();
+
+    /* big cost */
+    g.textAlign = 'left';
+    g.fillStyle = faint;
+    g.font = cardFont(600, 24);
+    g.fillText('本次會議總人力成本', P, 300);
+    g.fillStyle = ink;
+    g.font = cardFont(800, 92);
+    g.fillText('NT$ ' + fmtPlain(rec.totalCost), P, 372);
+    g.textAlign = 'right';
+    g.fillStyle = soft;
+    g.font = cardFont(600, 28);
+    g.fillText('每人平均 ' + fmtMoney(rec.perPerson), W - P, 384);
+    g.textAlign = 'left';
+
+    g.strokeStyle = '#2b313a';
+    g.beginPath(); g.moveTo(P, 434); g.lineTo(W - P, 434); g.stroke();
+
+    /* metric rows */
+    var colW = cw / 3;
+    function metric(col, row, label, value) {
+      var x = P + colW * col;
+      var ly = row === 0 ? 478 : 580;
+      g.fillStyle = faint;
+      g.font = cardFont(600, 21);
+      g.fillText(label, x, ly);
+      g.fillStyle = ink;
+      g.font = cardFont(700, 32);
+      g.fillText(fit(g, value, colW - 24), x, ly + 40);
+    }
+    metric(0, 0, '會議時長', fmtDurShort(rec.elapsedMs));
+    metric(1, 0, '與會人數', rec.headcount + ' 人');
+    metric(2, 0, '人均成本', fmtMoney(rec.perPerson));
+    metric(0, 1, '每分鐘成本', fmtMoney(rec.hourlyCost / 60));
+    metric(1, 1, '每小時成本', fmtMoney(rec.hourlyCost));
+    metric(2, 1, '超時加碼', rec.overtimeMs > 0 ? fmtMoney(rec.overtimeCost) + '（+' + fmtOverShort(rec.overtimeMs) + '）' : '無超時');
+
+    g.strokeStyle = '#2b313a';
+    g.beginPath(); g.moveTo(P, 660); g.lineTo(W - P, 660); g.stroke();
+
+    /* 成本結構 */
+    g.fillStyle = faint;
+    g.font = cardFont(600, 21);
+    g.fillText('成本結構（每小時）', P, 700);
+    var segs = [];
+    var total = 0;
+    (rec.tiers || []).forEach(function (t, i) {
+      var v = num(t.count) * num(t.rate);
+      if (v > 0) segs.push({ name: t.name || ('級距 ' + (i + 1)), value: v });
+      total += v;
+    });
+    if (segs.length > 4) {
+      var rest = segs.slice(4).reduce(function (a, s) { return a + s.value; }, 0);
+      segs = segs.slice(0, 4);
+      segs.push({ name: '其他', value: rest });
+    }
+    var barY = 722, barH = 24;
+    g.save();
+    roundRect(g, P, barY, cw, barH, 12);
+    g.clip();
+    var x = P;
+    if (total <= 0) {
+      g.fillStyle = surface;
+      g.fillRect(P, barY, cw, barH);
+    } else {
+      segs.forEach(function (s, i) {
+        var w = cw * (s.value / total);
+        g.fillStyle = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
+        g.fillRect(x, barY, Math.max(2, w), barH);
+        x += w;
+      });
+    }
+    g.restore();
+
+    g.font = cardFont(600, 20);
+    var lx = P;
+    segs.forEach(function (s, i) {
+      var label = s.name + ' ' + Math.round(s.value / total * 100) + '%';
+      var w = g.measureText(label).width + 34;
+      if (lx + w > W - P && lx > P) { return; }
+      g.fillStyle = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
+      g.beginPath(); g.arc(lx + 7, 776, 7, 0, Math.PI * 2); g.fill();
+      g.fillStyle = soft;
+      g.fillText(label, lx + 20, 776);
+      lx += w;
+    });
+
+    g.strokeStyle = '#2b313a';
+    g.beginPath(); g.moveTo(P, 812); g.lineTo(W - P, 812); g.stroke();
+
+    /* 議程產出 */
+    var rateTxt = rec.totalCount ? (rec.doneCount + ' / ' + rec.totalCount + ' 項（' + rec.doneRate + '%）') : '未設定檢核項目';
+    g.fillStyle = faint;
+    g.font = cardFont(600, 21);
+    g.fillText('議程產出檢核', P, 856);
+    g.textAlign = 'right';
+    g.fillStyle = tone;
+    g.font = cardFont(700, 21);
+    g.fillText(rateTxt, W - P, 856);
+    g.textAlign = 'left';
+
+    var y = 900;
+    shown.forEach(function (a) {
+      var seg = a.done ? '#9bc7a1' : '#4b5461';
+      g.strokeStyle = seg;
+      g.lineWidth = 2;
+      g.beginPath(); g.arc(P + 9, y, 10, 0, Math.PI * 2); g.stroke();
+      if (a.done) {
+        g.strokeStyle = seg;
+        g.lineWidth = 3;
+        g.beginPath();
+        g.moveTo(P + 3, y);
+        g.lineTo(P + 8, y + 5);
+        g.lineTo(P + 16, y - 5);
+        g.stroke();
+      }
+      g.fillStyle = a.done ? ink : faint;
+      g.font = cardFont(600, 24);
+      var out = a.output ? '（' + a.output + '）' : '';
+      var full = String(a.text || '') + (out ? ' ' + out : '');
+      g.fillText(fit(g, full, cw - 44), P + 34, y);
+      y += 48;
+    });
+    if (extra > 0) {
+      g.fillStyle = faint;
+      g.font = cardFont(600, 22);
+      g.fillText('… 另有 ' + extra + ' 項議程未列出', P + 34, y);
+    }
+
+    /* footer */
+    g.strokeStyle = '#2b313a';
+    g.beginPath(); g.moveTo(P, H - 146); g.lineTo(W - P, H - 146); g.stroke();
+    g.fillStyle = tone;
+    g.font = cardFont(700, 22);
+    var gradeTxt = '評等：' + rec.grade.label + (rec.grade.score == null ? '' : ' · ' + rec.grade.score + ' 分');
+    g.fillText(gradeTxt, P, H - 112);
+    g.textAlign = 'right';
+    g.fillStyle = faint;
+    g.font = cardFont(500, 18);
+    g.fillText('由「會議燃燒成本看板」產生 · 資料僅保存在本機', W - P, H - 112);
+    g.textAlign = 'left';
+    g.fillStyle = soft;
+    g.font = cardFont(500, 21);
+    g.fillText(fit(g, rec.grade.short || rec.grade.desc, cw - 120), P, H - 76);
+    g.fillStyle = faint;
+    g.font = cardFont(500, 18);
+    g.fillText(fit(g, gradeStandardText(rec.grade.cfg || state.gradeCfg), cw), P, H - 40);
+    g.textAlign = 'left';
+
+    return c;
+  }
+  function cardTextOf(rec) {
+    var lines = [];
+    lines.push('【產出 vs 成本評估卡】' + rec.name);
+    lines.push('時間：' + fmtDateTime(rec.startedAt) + ' ～ ' + fmtDateTime(rec.endedAt) + '（' + fmtDurShort(rec.elapsedMs) + '）');
+    lines.push('與會：' + rec.headcount + ' 人（加權平均時薪 ' + fmtMoney(rec.avgRate) + '）');
+    lines.push('總人力成本：' + fmtMoney(rec.totalCost) + '（人均 ' + fmtMoney(rec.perPerson) + '）');
+    lines.push('預算時長：' + num(rec.plannedMin) + ' 分｜超時：' + (rec.overtimeMs > 0
+      ? '+' + fmtOverShort(rec.overtimeMs) + '（多燒 ' + fmtMoney(rec.overtimeCost) + '）' : '無'));
+    lines.push('議程產出：' + (rec.totalCount ? rec.doneCount + '/' + rec.totalCount + '（' + rec.doneRate + '%）' : '未設定檢核項目')
+      + ' → 評等：' + rec.grade.label + (rec.grade.score == null ? '' : '（' + rec.grade.score + ' 分）'));
+    if (rec.agenda && rec.agenda.length) {
+      lines.push('');
+      rec.agenda.forEach(function (a) {
+        lines.push((a.done ? '✓ ' : '✗ ') + (a.text || '') + (a.output ? '（' + a.output + '）' : ''));
+      });
+    }
+    lines.push('');
+    lines.push('判讀：' + rec.grade.desc);
+    lines.push(gradeStandardText(rec.grade.cfg || state.gradeCfg));
+    lines.push('（由「會議燃燒成本看板」於本機產生）');
+    return lines.join('\n');
+  }
+  function showCard(rec) {
+    el.cardPanel.hidden = false;
+    lastCanvas = drawCard(rec);
+    el.cardPreview.innerHTML = '';
+    if (lastCanvas) el.cardPreview.appendChild(lastCanvas);
+    setText(el.cardText, cardTextOf(rec));
+    setText(el.cardMeta, fmtDateTime(rec.startedAt) + ' ・ ' + fmtDurShort(rec.elapsedMs));
+    el.cardPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function downloadCanvas() {
+    if (!lastCanvas) { toast('尚無評估卡可下載', true); return; }
+    var name = (state.lastRecord ? state.lastRecord.name : 'meeting').replace(/[\\/:*?"<>|]/g, '_');
+    var stamp = new Date();
+    var fname = 'meeting-roi-card-' + name + '-' + stamp.getFullYear() + pad2(stamp.getMonth() + 1) + pad2(stamp.getDate()) + '.png';
+    if (lastCanvas.toBlob) {
+      lastCanvas.toBlob(function (blob) {
+        if (!blob) { fallbackDownload(lastCanvas.toDataURL('image/png'), fname); return; }
+        var url = URL.createObjectURL(blob);
+        triggerDownload(url, fname);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      }, 'image/png');
+    } else {
+      fallbackDownload(lastCanvas.toDataURL('image/png'), fname);
+    }
+    toast('已產出評估卡 PNG');
+  }
+  function triggerDownload(url, fname) {
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+  function fallbackDownload(dataUrl, fname) { triggerDownload(dataUrl, fname); }
+  function downloadBlob(content, fname, type) {
+    var blob = new Blob([content], { type: type || 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    triggerDownload(url, fname);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast('已複製文字摘要'); },
+        function () { legacyCopy(text); });
+    } else {
+      legacyCopy(text);
+    }
+  }
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    toast(ok ? '已複製文字摘要' : '複製失敗，請手動選取文字', !ok);
+  }
+
+  /* ---------- 歷史紀錄 ---------- */
+  function historyCsv(rows) {
+    var head = ['日期', '時間', '會議名稱', '與會人數', '時長(分)', '總成本(NTD)', '人均成本(NTD)',
+      '每小時成本(NTD)', '預算時長(分)', '超時(分)', '議程完成', '議程總數', '產出率(%)', '評等', '評等分數'];
+    var out = [head.join(',')];
+    rows.forEach(function (r) {
+      var d = new Date(r.endedAt || r.startedAt || 0);
+      var min = Math.round((r.elapsedMs || 0) / 60000);
+      out.push([
+        d.getFullYear() + '/' + pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()),
+        pad2(d.getHours()) + ':' + pad2(d.getMinutes()),
+        csvCell(r.name),
+        r.headcount,
+        min,
+        Math.round(r.totalCost || 0),
+        Math.round(r.perPerson || 0),
+        Math.round(r.hourlyCost || 0),
+        num(r.plannedMin),
+        Math.round((r.overtimeMs || 0) / 60000),
+        r.doneCount,
+        r.totalCount,
+        r.totalCount ? r.doneRate : '',
+        csvCell(r.grade ? r.grade.label : ''),
+        r.grade && r.grade.score != null ? r.grade.score : ''
+      ].join(','));
+    });
+    return out.join('\r\n');
+  }
+  function csvCell(v) {
+    v = String(v == null ? '' : v);
+    return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  }
+  function refreshHistory(newRec) {
+    listRecords().then(function (rows) {
+      var html = '';
+      rows.forEach(function (r) {
+        var grade = r.grade || { label: '－', tone: 'gray', score: null };
+        html += '<tr data-id="' + esc(r.id) + '">'
+          + '<td>' + fmtDateTime(r.startedAt) + '</td>'
+          + '<td>' + esc(r.name) + '</td>'
+          + '<td class="num">' + r.headcount + '</td>'
+          + '<td class="num">' + fmtDurShort(r.elapsedMs) + '</td>'
+          + '<td class="num">' + fmtMoney(r.totalCost) + '</td>'
+          + '<td class="num">' + fmtMoney(r.perPerson) + '</td>'
+          + '<td class="num">' + (r.totalCount ? r.doneRate + '%' : '－') + '</td>'
+          + '<td><span class="badge ' + grade.tone + '" title="' + esc(grade.desc || '') + '">'
+          + esc(grade.label) + '</span></td>'
+          + '<td class="num">' + (grade.score == null ? '－' : grade.score) + '</td>'
+          + '<td><button class="icon-btn" type="button" data-act="card" title="檢視評估卡">🃏</button>'
+          + '<button class="icon-btn" type="button" data-act="del" title="刪除">✕</button></td>'
+          + '</tr>';
+      });
+      el.historyBody.innerHTML = html;
+      el.emptyHistory.hidden = rows.length > 0;
+      setText(el.historyNote, rows.length ? '共 ' + rows.length + ' 場' : '');
+      el.exportCsv.disabled = !rows.length;
+      el.exportJson.disabled = !rows.length;
+      el.clearHistory.disabled = !rows.length;
+      updateCompare(rows, newRec);
+    });
+  }
+  function updateCompare(rows, newRec) {
+    if (!rows.length) { setText(el.compareNote, ''); return; }
+    var cur = newRec || rows[0];
+    var idx = -1;
+    for (var i = 0; i < rows.length; i++) {
+      if (String(rows[i].id) === String(cur.id)) { idx = i; break; }
+    }
+    if (idx < 0) idx = 0;
+    var prev = rows[idx + 1];
+    var parts = [];
+    if (prev) {
+      parts.push('相較上一場「' + prev.name + '」：成本 ' + signedPct(cur.totalCost, prev.totalCost)
+        + '、時長 ' + signedPct(cur.elapsedMs, prev.elapsedMs)
+        + '、產出率 ' + (cur.totalCount && prev.totalCount ? (cur.doneRate - prev.doneRate >= 0 ? '+' : '') + (cur.doneRate - prev.doneRate) + ' 個百分點' : '－'));
+    }
+    if (rows.length > 1) {
+      var avgCost = rows.reduce(function (a, r) { return a + (r.totalCost || 0); }, 0) / rows.length;
+      var avgMin = rows.reduce(function (a, r) { return a + (r.elapsedMs || 0); }, 0) / rows.length;
+      parts.push('歷史平均：成本 ' + fmtMoney(avgCost) + '、時長 ' + fmtDurShort(avgMin)
+        + '（本場成本 ' + signedPct(cur.totalCost, avgCost) + '）');
+    }
+    setText(el.compareNote, parts.join('　|　'));
+  }
+  function signedPct(cur, base) {
+    if (!base) return '－';
+    var d = (cur - base) / base * 100;
+    return (d >= 0 ? '+' : '') + Math.round(d) + '%';
+  }
+
+  /* ---------- 事件 ---------- */
+  function bind() {
+    /* 級距表 */
+    el.tierBody.addEventListener('input', function (e) {
+      var input = e.target;
+      if (!input || !input.dataset || !input.dataset.field) return;
+      var tr = input.closest('tr');
+      if (!tr) return;
+      var i = parseInt(tr.dataset.idx, 10);
+      var t = state.tiers[i];
+      if (!t) return;
+      var f = input.dataset.field;
+      t[f] = (f === 'name') ? input.value : Math.max(0, num(input.value));
+      renderCostSummary();
+      saveSettings();
+      updateMeter();
+    });
+    el.tierBody.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-act="del"]');
+      if (!btn) return;
+      var tr = btn.closest('tr');
+      var i = parseInt(tr.dataset.idx, 10);
+      if (state.tiers.length <= 1) { toast('至少保留一個級距', true); return; }
+      state.tiers.splice(i, 1);
+      renderTiers();
+      saveSettings();
+      updateMeter();
+    });
+    el.addTier.addEventListener('click', function () {
+      state.tiers.push({ name: '自訂級距', count: 1, rate: 1000 });
+      renderTiers();
+      saveSettings();
+      updateMeter();
+    });
+
+    /* Preset */
+    el.savePreset.addEventListener('click', function () {
+      var name = (el.presetName.value || '').trim();
+      if (!name) { toast('請先輸入組合名稱', true); return; }
+      var snapshot = state.tiers.map(function (t) { return { name: t.name, count: num(t.count), rate: num(t.rate) }; });
+      state.presets = state.presets.filter(function (p) { return p.name !== name; });
+      state.presets.push({ name: name, tiers: snapshot });
+      el.presetName.value = '';
+      renderPresets();
+      saveSettings();
+      toast('已儲存組合「' + name + '」');
+    });
+    el.applyPreset.addEventListener('click', function () {
+      var i = el.presetSelect.value;
+      if (i === '') { toast('請先選擇組合', true); return; }
+      var p = state.presets[parseInt(i, 10)];
+      if (!p) return;
+      state.tiers = p.tiers.map(function (t) { return { name: t.name, count: num(t.count), rate: num(t.rate) }; });
+      renderTiers();
+      saveSettings();
+      updateMeter();
+      toast('已套用「' + p.name + '」');
+    });
+    el.delPreset.addEventListener('click', function () {
+      var i = el.presetSelect.value;
+      if (i === '') { toast('請先選擇組合', true); return; }
+      var p = state.presets[parseInt(i, 10)];
+      if (!p) return;
+      if (!confirm('確定刪除組合「' + p.name + '」？')) return;
+      state.presets.splice(parseInt(i, 10), 1);
+      renderPresets();
+      saveSettings();
+      toast('已刪除組合');
+    });
+
+    /* 會議參數 */
+    [['meetingName', false], ['plannedMin', true], ['warnPct', true]].forEach(function (pair) {
+      var node = el[pair[0]];
+      node.addEventListener('input', function () {
+        state[pair[0]] = pair[1] ? Math.max(pair[0] === 'warnPct' ? 10 : 1, num(node.value)) : node.value;
+        saveSettings();
+        updateMeter();
+      });
+    });
+
+    /* 評等標準：輸入時即時正規化並保存，失焦時把自動調整後的實際值寫回欄位 */
+    function writeGradeField(key, value) {
+      var next = {};
+      GRADE_FIELDS.forEach(function (g) { next[g.key] = state.gradeCfg ? state.gradeCfg[g.key] : null; });
+      next[key] = value;
+      state.gradeCfg = normalizeCfg(next);
+      saveSettings();
+      renderGradeHint();
+      updateMeter();
+      /* 歷史紀錄的分數與評等是用目前標準即時重算的，標準一改就要重畫（延遲避免連續輸入時反覆查詢） */
+      clearTimeout(gradeRefreshTimer);
+      gradeRefreshTimer = setTimeout(function () { refreshHistory(null); }, 350);
+    }
+    GRADE_FIELDS.forEach(function (f) {
+      var node = el[f.id];
+      if (!node) return;
+      node.addEventListener('input', function () {
+        if (node.value === '') return;
+        writeGradeField(f.key, node.value);
+      });
+      node.addEventListener('change', function () {
+        if (node.value === '') return;
+        applyGradeCfgToInputs();
+      });
+    });
+    el.gradeReset.addEventListener('click', function () {
+      clearTimeout(gradeRefreshTimer);
+      state.gradeCfg = normalizeCfg(null);
+      applyGradeCfgToInputs();
+      saveSettings();
+      renderGradeHint();
+      updateMeter();
+      refreshHistory(null);
+      toast('評等標準已回到預設值');
+    });
+
+    /* 議程 */
+    el.agendaList.addEventListener('input', function (e) {
+      var input = e.target;
+      if (!input || !input.dataset || !input.dataset.field) return;
+      var row = input.closest('.agenda-item');
+      if (!row) return;
+      var i = parseInt(row.dataset.idx, 10);
+      if (!state.agenda[i]) return;
+      state.agenda[i][input.dataset.field] = input.value;
+      saveSettings();
+    });
+    el.agendaList.addEventListener('change', function (e) {
+      var box = e.target;
+      if (!box || box.dataset.act !== 'done') return;
+      var row = box.closest('.agenda-item');
+      var i = parseInt(row.dataset.idx, 10);
+      if (!state.agenda[i]) return;
+      state.agenda[i].done = box.checked;
+      row.className = 'agenda-item' + (box.checked ? ' done' : '');
+      renderAgendaSummary();
+      saveSettings();
+    });
+    el.agendaList.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-act="del"]');
+      if (!btn) return;
+      var row = btn.closest('.agenda-item');
+      var i = parseInt(row.dataset.idx, 10);
+      state.agenda.splice(i, 1);
+      renderAgenda();
+      saveSettings();
+    });
+    el.addAgenda.addEventListener('click', function () {
+      var text = (el.agendaText.value || '').trim();
+      if (!text) { toast('請輸入議程項目', true); return; }
+      state.agenda.push({ text: text, output: (el.agendaOutput.value || '').trim(), done: false });
+      el.agendaText.value = '';
+      el.agendaOutput.value = '';
+      renderAgenda();
+      saveSettings();
+      el.agendaText.focus();
+    });
+    [el.agendaText, el.agendaOutput].forEach(function (node) {
+      node.addEventListener('keydown', function (e) { if (e.key === 'Enter') el.addAgenda.click(); });
+    });
+
+    /* 計時 */
+    el.startBtn.addEventListener('click', startTimer);
+    el.pauseBtn.addEventListener('click', pauseTimer);
+    el.endBtn.addEventListener('click', endTimer);
+    el.resetBtn.addEventListener('click', resetTimer);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) updateMeter(); });
+
+    /* 評估卡 */
+    el.downloadPng.addEventListener('click', downloadCanvas);
+    el.copyText.addEventListener('click', function () {
+      var rec = state.lastRecord;
+      if (!rec) { toast('尚無評估卡內容', true); return; }
+      copyText(cardTextOf(rec));
+    });
+
+    /* 歷史紀錄 */
+    el.historyBody.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      var tr = btn.closest('tr');
+      var id = tr.dataset.id;
+      var act = btn.dataset.act;
+      if (act === 'del') {
+        if (!confirm('確定刪除這筆會議紀錄？')) return;
+        deleteRecord(isNaN(Number(id)) ? id : Number(id)).then(function () {
+          if (state.lastRecord && String(state.lastRecord.id) === String(id)) state.lastRecord = null;
+          refreshHistory(null);
+          toast('已刪除紀錄');
+        });
+      } else if (act === 'card') {
+        listRecords().then(function (rows) {
+          for (var i = 0; i < rows.length; i++) {
+            if (String(rows[i].id) === String(id)) { state.lastRecord = rows[i]; showCard(rows[i]); return; }
+          }
+        });
+      }
+    });
+    el.exportCsv.addEventListener('click', function () {
+      listRecords().then(function (rows) {
+        if (!rows.length) return;
+        downloadBlob('\ufeff' + historyCsv(rows), 'meeting-burn-rate-history.csv', 'text/csv;charset=utf-8');
+        toast('已匯出 CSV');
+      });
+    });
+    el.exportJson.addEventListener('click', function () {
+      listRecords().then(function (rows) {
+        if (!rows.length) return;
+        downloadBlob(JSON.stringify({ v: 1, exportedAt: new Date().toISOString(), meetings: rows }, null, 2),
+          'meeting-burn-rate-backup.json', 'application/json');
+        toast('已匯出 JSON 備份');
+      });
+    });
+    el.importJson.addEventListener('change', function () {
+      var file = el.importJson.files && el.importJson.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        var data = null;
+        try { data = JSON.parse(reader.result); } catch (e) { data = null; }
+        var rows = data && Array.isArray(data.meetings) ? data.meetings : (Array.isArray(data) ? data : null);
+        if (!rows) { toast('檔案格式無法識別', true); el.importJson.value = ''; return; }
+        var chain = Promise.resolve();
+        rows.forEach(function (r) {
+          /* 一律重算評等與分數（不信任備份檔內的評等），並重新配發主鍵避免重複匯入時撞鍵 */
+          var rec = normalizeRecord(r);
+          delete rec.id;
+          chain = chain.then(function () { return addRecord(rec); });
+        });
+        chain.then(function () { refreshHistory(null); toast('已匯入 ' + rows.length + ' 筆紀錄'); });
+        el.importJson.value = '';
+      };
+      reader.readAsText(file);
+    });
+    el.clearHistory.addEventListener('click', function () {
+      if (!confirm('確定清空所有歷史會議紀錄？此動作無法復原。')) return;
+      clearRecords().then(function () {
+        state.lastRecord = null;
+        refreshHistory(null);
+        setText(el.compareNote, '');
+        toast('已清空歷史紀錄');
+      });
+    });
+  }
+
+  /* ---------- 初始化 ---------- */
+  function init() {
+    el = {
+      meterPanel: $('meterPanel'), statusChip: $('statusChip'), meterHint: $('meterHint'),
+      amountValue: $('amountValue'), perSec: $('perSec'), perMin: $('perMin'),
+      progressBar: $('progressBar'), progressNote: $('progressNote'),
+      elapsedText: $('elapsedText'), headcountText: $('headcountText'),
+      perPersonText: $('perPersonText'), hourlyText: $('hourlyText'),
+      overtimeText: $('overtimeText'), progressText: $('progressText'),
+      pauseBtn: $('pauseBtn'), endBtn: $('endBtn'), resetBtn: $('resetBtn'),
+      setupPanel: $('setupPanel'), tierBody: $('tierBody'), addTier: $('addTier'),
+      costChips: $('costChips'), presetName: $('presetName'), savePreset: $('savePreset'),
+      presetSelect: $('presetSelect'), applyPreset: $('applyPreset'), delPreset: $('delPreset'),
+      meetingName: $('meetingName'), plannedMin: $('plannedMin'), warnPct: $('warnPct'),
+      gradeOutputWeight: $('gradeOutputWeight'), gradeOvertimeGrace: $('gradeOvertimeGrace'),
+      gradeOvertimeZero: $('gradeOvertimeZero'), gradeGoodScore: $('gradeGoodScore'),
+      gradeFairScore: $('gradeFairScore'), gradeHint: $('gradeHint'), gradeReset: $('gradeReset'),
+      startBtn: $('startBtn'), setupHint: $('setupHint'),
+      agendaPanel: $('agendaPanel'), agendaList: $('agendaList'), agendaRate: $('agendaRate'),
+      agendaBar: $('agendaBar'), agendaText: $('agendaText'), agendaOutput: $('agendaOutput'),
+      addAgenda: $('addAgenda'),
+      cardPanel: $('cardPanel'), cardPreview: $('cardPreview'), cardText: $('cardText'),
+      cardMeta: $('cardMeta'), downloadPng: $('downloadPng'), copyText: $('copyText'),
+      historyBody: $('historyBody'), historyNote: $('historyNote'), emptyHistory: $('emptyHistory'),
+      exportCsv: $('exportCsv'), exportJson: $('exportJson'), importJson: $('importJson'),
+      clearHistory: $('clearHistory'), compareNote: $('compareNote'), toast: $('toast')
+    };
+
+    loadSettings();
+    el.meetingName.value = state.meetingName;
+    el.plannedMin.value = num(state.plannedMin);
+    el.warnPct.value = num(state.warnPct);
+    applyGradeCfgToInputs();
+    renderTiers();
+    renderPresets();
+    renderAgenda();
+    renderTimerState();
+    updateMeter();
+    bind();
+    refreshHistory(null);
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+</script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

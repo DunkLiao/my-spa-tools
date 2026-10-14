@@ -27,6 +27,7 @@ my-spa-tools/
 ├─ sql/                          SQL 工具（每個工具一個子資料夾）
 │  ├─ sql-catalog/  sql-compare/  oracle-sql-formatter/
 │  ├─ sql-pii-cleaner/  sql-lineage-analyzer/
+│  └─ sql-lab/                    SQL Lab 離線 SQL 測試工具（沙箱、匯入與測試案例）
 ├─ data/                         資料工具
 │  ├─ matrix-pivot/              表格矩陣轉置與格式轉換器
 │  ├─ csv-cleaner/               CSV 格式清理器（含 Big5／CP950 讀寫）
@@ -35,12 +36,16 @@ my-spa-tools/
 │  ├─ project-gantt/  card-presenter/  docuformatter/  text-scrubber/
 │  ├─ word-counter/              文件字數與閱讀時間統計
 │  ├─ wbs-gantt/                 WBS 甘特排程器
-│  └─ scratchpad/                離線速記便箋
-└─ design/                       設計工具
-   └─ palette-lore/
+│  ├─ scratchpad/                離線速記便箋
+│  ├─ meeting-burn-rate/         會議燃燒成本看板（即時人力成本與產出評估卡）
+│  └─ spec-diff/                 SpecDiff 規格書比對工具（版本比對與審查標註）
+├─ design/                       設計工具
+│  └─ palette-lore/
+└─ diagram/                      流程與圖表建模
+   └─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器
 ```
 
-分類層固定為六類：`agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`。每個工具自成一層子資料夾，HTML 檔名沿用工具原名。**所有工具頁面都位於根目錄下兩層**（`<類別>/<工具>/<檔名>.html`）。
+分類層固定為七類：`agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`。每個工具自成一層子資料夾，HTML 檔名沿用工具原名。**所有工具頁面都位於根目錄下兩層**（`<類別>/<工具>/<檔名>.html`）。
 
 ## 強制規則
 
@@ -88,7 +93,7 @@ my-spa-tools/
 ## 命名與分類慣例
 
 - 資料夾名稱一律使用小寫 kebab-case，並對齊工具語意（例如 `oracle-sql-formatter`）。
-- 工具放在 `agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/` 六類之一。
+- 工具放在 `agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/` 七類之一。
 - HTML 入口檔名沿用工具既有名稱，不隨資料夾改名。
 - 單一工具的說明請併入根目錄 `README.md`，**不要**在各工具子資料夾內另建 README。
 
@@ -104,7 +109,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 25 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 29 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。
