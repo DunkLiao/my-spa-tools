@@ -4,7 +4,7 @@
 
 ## 專案概述
 
-`my-spa-tools` 是一組**免建置、無後端**的單頁網頁工具集合。每個工具都是一個獨立的靜態 HTML 檔（多數內含 CSS 與 JavaScript；`agent-yaml-maker` 另外拆分 `app.js` 與 `styles.css`）。沒有 `package.json`、沒有打包流程、沒有測試框架，所有邏輯在瀏覽器端執行。
+`my-spa-tools` 是一組**免建置、無後端**的單頁網頁工具集合。每個工具都是一個獨立的靜態 HTML 檔（多數內含 CSS 與 JavaScript；`agent-yaml-maker` 另外拆分 `app.js` 與 `styles.css`，`screenshot-ocr-kb` 另含 `download_ocr_engine.bat` 作為 OCR 引擎檔下載輔助）。沒有 `package.json`、沒有打包流程、沒有測試框架，所有邏輯在瀏覽器端執行。
 
 ## 目錄結構
 
@@ -31,7 +31,8 @@ my-spa-tools/
 ├─ data/                         資料工具
 │  ├─ matrix-pivot/              表格矩陣轉置與格式轉換器
 │  ├─ csv-cleaner/               CSV 格式清理器（含 Big5／CP950 讀寫）
-│  └─ api-mock-studio/           API Mock 與 cURL 格式轉換工作室
+│  ├─ api-mock-studio/           API Mock 與 cURL 格式轉換工作室
+│  └─ screenshot-ocr-kb/         截圖 OCR 知識庫（Tesseract OCR、集合與操作流程；含 download_ocr_engine.bat）
 ├─ docs/                         文書與簡報
 │  ├─ project-gantt/  card-presenter/  docuformatter/  text-scrubber/
 │  ├─ word-counter/              文件字數與閱讀時間統計
@@ -109,7 +110,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 29 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 30 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。
