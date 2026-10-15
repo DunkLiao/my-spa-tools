@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FolderTree Architect — 路徑轉樹狀結構</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161920;
+    --panel-2: #1c2029;
+    --panel-3: #222733;
+    --border: #262b36;
+    --text: #e6e9ef;
+    --muted: #8b93a5;
+    --accent: #6ea8fe;
+    --accent-weak: rgba(110, 168, 254, .14);
+    --green: #7ee787;
+    --orange: #ffa657;
+    --danger: #ff7b72;
+    --radius: 8px;
+    --mono: ui-monospace, "SFMono-Regular", "Cascadia Code", Consolas, "Liberation Mono", Menlo, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  }
+
+  [data-theme="light"] {
+    --bg: #f4f6f9;
+    --panel: #ffffff;
+    --panel-2: #eef1f5;
+    --panel-3: #e5e9f0;
+    --border: #dde2ea;
+    --text: #1a1f29;
+    --muted: #5c6675;
+    --accent: #2563eb;
+    --accent-weak: rgba(37, 99, 235, .10);
+    --green: #15803d;
+    --orange: #b45309;
+    --danger: #dc2626;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ---------- Header ---------- */
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 14px; letter-spacing: .2px; }
+  .brand .logo {
+    width: 26px; height: 26px; border-radius: 7px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--accent), var(--green));
+    color: #0b0d12; font-size: 15px; font-weight: 800;
+  }
+  .brand small { color: var(--muted); font-weight: 400; font-size: 11.5px; }
+  .spacer { flex: 1 1 auto; }
+
+  /* ---------- Hint banner ---------- */
+  .hint {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 8px 16px;
+    font-size: 12px;
+    line-height: 1.5;
+    background: var(--accent-weak);
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+  .hint b { color: var(--accent); }
+
+  /* ---------- Buttons ---------- */
+  button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 11px;
+    font-family: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: border-color .15s, color .15s, background .15s, filter .15s;
+    white-space: nowrap;
+  }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button.primary:hover { filter: brightness(1.1); color: #fff; }
+  button.ghost { background: transparent; }
+  button.icon { padding: 6px 9px; font-size: 14px; line-height: 1; }
+
+  /* ---------- Toolbar ---------- */  .toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 16px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .toolbar-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .field { display: flex; align-items: center; gap: 6px; }
+  .field > label { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .filter-label { color: var(--muted); font-size: 12px; }
+  .sep { width: 1px; height: 20px; background: var(--border); }
+
+  input[type="text"], select, textarea {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 5px 8px;
+    font-family: inherit;
+    font-size: 12.5px;
+    outline: none;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-weak);
+  }
+  select { cursor: pointer; }
+  input[type="number"] { width: 60px; }
+
+  .chips { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--panel-2);
+    cursor: pointer;
+    user-select: none;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: var(--mono);
+    transition: .15s;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip input { accent-color: var(--accent); margin: 0; }
+  .chip.on { border-color: var(--accent); background: var(--accent-weak); color: var(--accent); }
+  .chip.toggle { font-family: var(--sans); }
+
+  /* ---------- Workbench ---------- */
+  .workbench {
+    flex: 1 1 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 12px;
+    min-height: 0;
+  }
+  .panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    min-height: 0;
+    position: relative;
+  }
+  .panel.dragover { outline: 2px dashed var(--accent); outline-offset: -7px; }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 10px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+  }
+  .panel-title {
+    font-size: 11px;
+    letter-spacing: .8px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    padding: 9px 2px;
+    white-space: nowrap;
+  }
+  .tabs { display: flex; gap: 4px; }
+  .tab {
+    padding: 7px 12px;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    margin-bottom: -1px;
+  }
+  .tab:hover { color: var(--text); border-color: transparent; }
+  .tab.active {
+    background: var(--panel-2);
+    border-color: var(--border);
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .panel-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; position: relative; }
+
+  textarea.input-area {
+    flex: 1 1 auto;
+    resize: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    white-space: pre;
+    overflow: auto;
+  }
+  textarea.input-area:focus { box-shadow: none; }
+  .hidden { display: none !important; }
+
+  .drop-overlay {
+    position: absolute;
+    inset: 0;
+    display: none;
+    place-items: center;
+    background: color-mix(in srgb, var(--bg) 82%, transparent);
+    color: var(--accent);
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 5;
+    text-align: center;
+  }
+  .panel.dragover .drop-overlay { display: grid; }
+
+  .panel-foot {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--panel-2);
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    padding: 3px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .badge b { color: var(--text); }
+
+  pre.output {
+    flex: 1 1 auto;
+    margin: 0;
+    overflow: auto;
+    padding: 14px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.65;
+    white-space: pre;
+    tab-size: 2;
+  }
+  .placeholder { color: var(--muted); font-style: italic; font-family: var(--sans); }
+
+  #previewPane {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 14px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  .tree-line { white-space: pre; }
+  .tree-guide { color: var(--muted); }
+  .tree-root { color: var(--green); font-weight: 700; }
+  .tree-dir { color: var(--accent); font-weight: 600; }
+  .tree-file { color: var(--text); }
+  .tree-comment { color: var(--muted); font-style: italic; }
+  .tree-trunc { color: var(--muted); }
+
+  /* ---------- Scrollbars ---------- */
+  ::-webkit-scrollbar { width: 11px; height: 11px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; border: 2px solid transparent; background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--muted); background-clip: content-box; }
+
+  .toast {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: var(--panel-3);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 9px 16px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    opacity: 0;
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+    z-index: 50;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    .workbench { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="logo">▤</span>
+    <span>FolderTree Architect<br /><small>路徑 → 樹狀文字，100% 本地運算</small></span>
+  </div>
+  <div class="spacer"></div>
+  <button class="ghost" data-sample="react">Load Sample: React App</button>
+  <button class="ghost" data-sample="monorepo">Load Sample: Monorepo</button>
+  <button class="icon" id="themeToggle" title="切換主題">🌙</button>
+</header>
+
+<div class="hint hidden" id="fileProtoHint">
+  <span>⚠️ 目前以 <b>file://</b> 開啟：Chrome 不允許網頁讀取「拖曳進來的資料夾」。拖曳資料夾時會自動改用系統資料夾選擇器；若需完整拖曳掃描，請以本機伺服器（http://）開啟。</span>
+  <div class="spacer"></div>
+  <button class="ghost" id="dismissHint">知道了</button>
+</div>
+
+<section class="toolbar">
+  <div class="toolbar-row">
+    <div class="field">
+      <label for="rootName">Root Name</label>
+      <input type="text" id="rootName" value="my-awesome-app" size="20" spellcheck="false" />
+    </div>
+    <div class="sep"></div>
+    <div class="field">
+      <label for="format">Format</label>
+      <select id="format">
+        <option value="unicode">Unicode CLI</option>
+        <option value="ascii">Classic ASCII</option>
+        <option value="markdown">Markdown List</option>
+        <option value="annotated">Annotated</option>
+        <option value="json">JSON Tree</option>
+      </select>
+    </div>
+    <div class="field">
+      <label for="maxDepth">Depth</label>
+      <select id="maxDepth">
+        <option value="-1">All</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+      </select>
+    </div>
+    <label class="chip toggle" title="目錄排在同層檔案之前">
+      <input type="checkbox" id="foldersFirst" checked /> Folders First
+    </label>
+    <label class="chip toggle" title="目錄名稱後方補上 /">
+      <input type="checkbox" id="trailingSlash" checked /> Dir /
+    </label>
+    <label class="chip toggle" title="Markdown 縮排格數">
+      <input type="checkbox" id="caseSensitive" /> Case-sensitive
+    </label>
+    <div class="field">
+      <label for="indentSize">Indent</label>
+      <select id="indentSize">
+        <option value="2">2</option>
+        <option value="4">4</option>
+      </select>
+    </div>
+    <label class="chip toggle">
+      <input type="checkbox" id="showStats" checked /> Stats
+    </label>
+  </div>
+
+  <div class="toolbar-row">
+    <span class="filter-label">Ignore Filters:</span>
+    <div class="chips" id="presetChips">
+      <label class="chip"><input type="checkbox" data-patterns=".git" checked /> .git/</label>
+      <label class="chip"><input type="checkbox" data-patterns="node_modules" checked /> node_modules/</label>
+      <label class="chip"><input type="checkbox" data-patterns=".DS_Store" checked /> .DS_Store</label>
+      <label class="chip"><input type="checkbox" data-patterns="dist,build,vendor,target" /> dist/ build/ vendor/ target/</label>
+      <label class="chip"><input type="checkbox" data-patterns="*.map,*.log" /> *.map *.log</label>
+      <label class="chip"><input type="checkbox" id="ignoreHidden" /> hidden files</label>
+    </div>
+    <div class="field">
+      <input type="text" id="customPatterns" placeholder="custom patterns: *.lock, coverage/**" size="30" spellcheck="false" />
+    </div>
+  </div>
+</section>
+
+<main class="workbench">
+  <!-- LEFT -->
+  <section class="panel" id="leftPanel">
+    <div class="panel-head">
+      <div class="tabs">
+        <button class="tab active" data-left="raw">Raw Paths (Paste / Drop)</button>
+        <button class="tab" data-left="indented">Indented</button>
+      </div>
+      <span class="panel-title">Input Source</span>
+    </div>
+    <div class="panel-body">
+      <textarea id="rawInput" class="input-area" spellcheck="false" placeholder="每行一個路徑，例如：
+src/index.ts
+src/components/Button.tsx  # 通用按鈕元件
+package.json
+
+（或直接把資料夾拖進來）"></textarea>
+      <textarea id="indentedInput" class="input-area hidden" spellcheck="false" placeholder="縮排清單，例如：
+src
+  components
+    Button.tsx
+    Modal.tsx
+  index.ts  # 入口
+package.json"></textarea>
+      <div class="drop-overlay">放開以掃描此資料夾<br /><small>只讀取檔名與路徑，不上傳內容</small></div>
+    </div>
+    <div class="panel-foot">
+      <span class="badge" id="statTotal">Total Paths: <b>0</b></span>
+      <span class="badge" id="statSplit"><b>0</b> dirs · <b>0</b> files</span>
+      <div class="spacer"></div>
+      <button class="ghost" id="scanFolder" title="改用資料夾選擇器掃描（免拖曳）">📁 Scan Folder</button>
+      <button class="ghost" id="clearInput">Clear</button>
+    </div>
+    <input type="file" id="folderPicker" webkitdirectory directory multiple class="hidden" />
+  </section>
+
+  <!-- RIGHT -->
+  <section class="panel" id="rightPanel">
+    <div class="panel-head">
+      <div class="tabs">
+        <button class="tab active" data-right="plain">Plain Text</button>
+        <button class="tab" data-right="markdown">Markdown Block</button>
+        <button class="tab" data-right="preview">Preview</button>
+      </div>
+      <span class="panel-title">Generated Tree</span>
+    </div>
+    <div class="panel-body">
+      <pre class="output" id="plainPane"></pre>
+      <pre class="output hidden" id="markdownPane"></pre>
+      <div id="previewPane" class="hidden"></div>
+    </div>
+    <div class="panel-foot">
+      <button class="primary" id="copyMarkdown">Copy Markdown</button>
+      <button id="copyText">Copy Text</button>
+      <button id="download">Download</button>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+   *  1. DOM
+   * ======================================================= */
+  const $ = (id) => document.getElementById(id);
+  const rootNameEl = $("rootName");
+  const formatEl = $("format");
+  const maxDepthEl = $("maxDepth");
+  const foldersFirstEl = $("foldersFirst");
+  const trailingSlashEl = $("trailingSlash");
+  const caseSensitiveEl = $("caseSensitive");
+  const indentSizeEl = $("indentSize");
+  const showStatsEl = $("showStats");
+  const ignoreHiddenEl = $("ignoreHidden");
+  const customPatternsEl = $("customPatterns");
+  const rawInput = $("rawInput");
+  const indentedInput = $("indentedInput");
+  const leftPanel = $("leftPanel");
+  const plainPane = $("plainPane");
+  const markdownPane = $("markdownPane");
+  const previewPane = $("previewPane");
+  const statTotal = $("statTotal");
+  const statSplit = $("statSplit");
+  const toastEl = $("toast");
+
+  let leftMode = "raw";       // raw | indented
+  let rightView = "plain";    // plain | markdown | preview
+  let currentPlain = "";
+
+  /* =========================================================
+   *  2. Data model & helpers
+   * ======================================================= */
+  /**
+   * @typedef {Object} TreeNode
+   * @property {string} id
+   * @property {string} name
+   * @property {'file'|'directory'} type
+   * @property {number} depth
+   * @property {string} [comment]
+   * @property {Map<string, TreeNode>} children
+   * @property {boolean} [truncated]
+   */
+
+  function normalizePath(raw) {
+    let p = String(raw).replace(/\\/g, "/").trim();
+    p = p.replace(/^\.\//, "").replace(/^\/+/, "");
+    p = p.replace(/\/{2,}/g, "/");
+    p = p.replace(/\/+$/, "");
+    return p;
+  }
+
+  function splitComment(line) {
+    const m = line.match(/\s+#\s*(.*)$/);
+    if (m) return { value: line.slice(0, m.index).trim(), comment: m[1].trim() };
+    return { value: line.trim(), comment: "" };
+  }
+
+  /* =========================================================
+   *  3. Input parsing (Raw + Indented)
+   * ======================================================= */
+  function parseEntries(text, mode) {
+    const entries = [];
+    const lines = text.split(/\r?\n/);
+    if (mode === "raw") {
+      for (const line of lines) {
+        const t = line.trim();
+        if (!t || t.startsWith("#")) continue;
+        const { value, comment } = splitComment(t);
+        if (!value) continue;
+        entries.push({ path: value, comment });
+      }
+    } else {
+      const stack = [];
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        const indentStr = (line.match(/^[ \t]*/) || [""])[0];
+        const indent = indentStr.replace(/\t/g, "    ").length;
+        let rest = line.slice(indentStr.length).trim();
+        rest = rest.replace(/^[-*+]\s+/, "").replace(/^\d+[.)]\s+/, "");
+        const { value, comment } = splitComment(rest);
+        if (!value) continue;
+        while (stack.length && stack[stack.length - 1].indent >= indent) stack.pop();
+        const parent = stack.length ? stack[stack.length - 1].path : "";
+        const full = parent ? parent + "/" + normalizePath(value) : normalizePath(value);
+        if (!full) continue;
+        stack.push({ indent: indent, path: full });
+        entries.push({ path: full, comment });
+      }
+    }
+    return entries;
+  }
+
+  /* =========================================================
+   *  4. Trie construction
+   * ======================================================= */
+  function buildTreeFromPaths(entries, config) {
+    const root = {
+      id: config.rootName || ".",
+      name: config.rootName || ".",
+      type: "directory",
+      depth: 0,
+      comment: "",
+      children: new Map(),
+      truncated: false
+    };
+
+    for (const entry of entries) {
+      const rawPath = String(entry.path);
+      const hadTrailingSlash = /[\\/]\s*$/.test(rawPath);
+      const cleanPath = normalizePath(rawPath);
+      if (!cleanPath) continue;
+
+      const parts = cleanPath.split("/").filter(Boolean);
+      let node = root;
+
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        const isLast = i === parts.length - 1;
+
+        if (!node.children.has(part)) {
+          node.children.set(part, {
+            id: parts.slice(0, i + 1).join("/"),
+            name: part,
+            type: !isLast || hadTrailingSlash ? "directory" : "file",
+            depth: node.depth + 1,
+            comment: "",
+            children: new Map(),
+            truncated: false
+          });
+        }
+        const child = node.children.get(part);
+        if (!isLast) child.type = "directory"; // 有子節點 → 必為目錄
+        if (isLast && entry.comment) child.comment = entry.comment;
+        node = child;
+      }
+    }
+    return root;
+  }
+
+  /* =========================================================
+   *  5. Filtering (glob → regex + depth truncation)
+   * ======================================================= */
+  function globToRegExp(glob) {
+    let g = glob.trim().replace(/^\.\//, "").replace(/\/+$/, "");
+    if (!g) return null;
+    let re = "";
+    for (let i = 0; i < g.length; i++) {
+      const c = g[i];
+      if (c === "*") {
+        if (g[i + 1] === "*") { re += ".*"; i++; }
+        else re += "[^/]*";
+      } else if (c === "?") {
+        re += "[^/]";
+      } else if ("\\^$.|+()[]{}".indexOf(c) !== -1) {
+        re += "\\" + c;
+      } else {
+        re += c;
+      }
+    }
+    try { return new RegExp("^" + re + "$"); } catch (e) { return null; }
+  }
+
+  function buildRegexes(config) {
+    const out = [];
+    for (const p of config.ignorePatterns) {
+      const re = globToRegExp(p);
+      if (re) out.push(re);
+    }
+    return out;
+  }
+
+  function shouldIgnore(node, config) {
+    if (config.ignoreHiddenFiles && node.name.startsWith(".")) return true;
+    for (const re of config._regexes) {
+      if (re.test(node.name) || re.test(node.id)) return true;
+    }
+    return false;
+  }
+
+  function filterTree(node, config) {
+    const clone = {
+      id: node.id,
+      name: node.name,
+      type: node.type,
+      depth: node.depth,
+      comment: node.comment,
+      children: new Map(),
+      truncated: false
+    };
+    for (const [key, child] of node.children) {
+      if (shouldIgnore(child, config)) continue;
+      if (config.maxDepth >= 0 && child.depth > config.maxDepth) {
+        clone.truncated = true;
+        continue;
+      }
+      clone.children.set(key, filterTree(child, config));
+    }
+    return clone;
+  }
+
+  /* =========================================================
+   *  6. Sorting
+   * ======================================================= */
+  function sortTree(root, config) {
+    // Intl.Collator 重用同一個比較器，遠比逐次 localeCompare 快（10k+ 節點）
+    const cmp = new Intl.Collator(undefined, {
+      numeric: true,
+      sensitivity: config.caseSensitiveSort ? "case" : "base"
+    }).compare;
+
+    (function walk(node) {
+      const entries = Array.from(node.children.entries());
+      entries.sort((a, b) => {
+        if (config.foldersFirst) {
+          const da = a[1].type === "directory" ? 0 : 1;
+          const db = b[1].type === "directory" ? 0 : 1;
+          if (da !== db) return da - db;
+        }
+        return cmp(a[1].name, b[1].name);
+      });
+      node.children = new Map(entries);
+      for (const child of node.children.values()) walk(child);
+    })(root);
+
+    return root;
+  }
+
+  /* =========================================================
+   *  7. Renderers
+   * ======================================================= */
+  const TREE_CHARS = {
+    unicode: { tee: "\u251C\u2500\u2500 ", last: "\u2514\u2500\u2500 ", pipe: "\u2502   ", space: "    " },
+    ascii:   { tee: "|-- ", last: "\\-- ", pipe: "|   ", space: "    " }
+  };
+
+  function labelFor(node, config) {
+    if (node.type === "directory" && config.trailingSlashForDirs) return node.name + "/";
+    return node.name;
+  }
+
+  function collectRows(root, config, style) {
+    const ch = TREE_CHARS[style];
+    const rows = [];
+    rows.push({ prefix: "", branch: "", label: labelFor(root, config), comment: root.comment || "", isDir: true, isRoot: true });
+
+    (function walk(node, prefix) {
+      const children = Array.from(node.children.values());
+      const total = children.length + (node.truncated ? 1 : 0);
+      children.forEach((child, i) => {
+        const isLast = i === total - 1;
+        rows.push({
+          prefix: prefix,
+          branch: isLast ? ch.last : ch.tee,
+          label: labelFor(child, config),
+          comment: child.comment || "",
+          isDir: child.type === "directory"
+        });
+        walk(child, prefix + (isLast ? ch.space : ch.pipe));
+      });
+      if (node.truncated) {
+        rows.push({ prefix: prefix, branch: ch.last, label: "...", comment: "", isDir: false, truncated: true });
+      }
+    })(root, "");
+    return rows;
+  }
+
+  function renderTree(root, config, style) {
+    return collectRows(root, config, style)
+      .map((r) => r.prefix + r.branch + r.label)
+      .join("\n");
+  }
+
+  function isFullWidth(cp) {
+    return (
+      (cp >= 0x1100 && cp <= 0x115f) ||
+      (cp >= 0x2e80 && cp <= 0xa4cf) ||
+      (cp >= 0xac00 && cp <= 0xd7a3) ||
+      (cp >= 0xf900 && cp <= 0xfaff) ||
+      (cp >= 0xfe30 && cp <= 0xfe4f) ||
+      (cp >= 0xff00 && cp <= 0xff60) ||
+      (cp >= 0xffe0 && cp <= 0xffe6) ||
+      (cp >= 0x1f300 && cp <= 0x1faff)
+    );
+  }
+  function displayWidth(str) {
+    let w = 0;
+    for (const ch of str) w += isFullWidth(ch.codePointAt(0)) ? 2 : 1;
+    return w;
+  }
+
+  function renderAnnotated(root, config) {
+    const rows = collectRows(root, config, "unicode");
+    let width = 0;
+    for (const r of rows) width = Math.max(width, displayWidth(r.prefix + r.branch + r.label));
+    return rows
+      .map((r) => {
+        const base = r.prefix + r.branch + r.label;
+        if (!r.comment) return base;
+        const gap = width - displayWidth(base) + 2;
+        return base + " ".repeat(gap) + "# " + r.comment;
+      })
+      .join("\n");
+  }
+
+  function renderMarkdown(root, config) {
+    const unit = " ".repeat(config.indentSize);
+    const lines = [];
+    (function walk(node, level) {
+      const suffix = node.comment ? " \u2014 " + node.comment : "";
+      lines.push(unit.repeat(level) + "* " + node.name + suffix);
+      for (const child of node.children.values()) walk(child, level + 1);
+      if (node.truncated) lines.push(unit.repeat(level + 1) + "* ...");
+    })(root, 0);
+    return lines.join("\n");
+  }
+
+  function renderJson(root, config) {
+    const build = (node) => {
+      const o = {
+        name: node.type === "directory" && config.trailingSlashForDirs ? node.name + "/" : node.name,
+        type: node.type
+      };
+      if (node.comment) o.comment = node.comment;
+      if (node.truncated) o.truncated = true;
+      if (node.children.size) o.children = Array.from(node.children.values()).map(build);
+      return o;
+    };
+    return JSON.stringify(build(root), null, 2);
+  }
+
+  function renderOutput(root, config) {
+    switch (config.format) {
+      case "ascii": return renderTree(root, config, "ascii");
+      case "markdown": return renderMarkdown(root, config);
+      case "annotated": return renderAnnotated(root, config);
+      case "json": return renderJson(root, config);
+      default: return renderTree(root, config, "unicode");
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  function renderPreview(root, config) {
+    const rows = collectRows(root, config, "unicode");
+    if (rows.length === 0) return '<span class="placeholder">沒有可顯示的節點。</span>';
+    return rows
+      .map((r) => {
+        const cls = r.isRoot ? "root" : r.truncated ? "trunc" : r.isDir ? "dir" : "file";
+        let html = '<span class="tree-guide">' + escapeHtml(r.prefix + r.branch) + "</span>";
+        html += '<span class="tree-' + cls + '">' + escapeHtml(r.label) + "</span>";
+        if (r.comment) html += ' <span class="tree-comment">' + escapeHtml("# " + r.comment) + "</span>";
+        return '<div class="tree-line">' + html + "</div>";
+      })
+      .join("");
+  }
+
+  function collectStats(root) {
+    let dirs = 0, files = 0;
+    (function walk(n) {
+      for (const c of n.children.values()) {
+        if (c.type === "directory") { dirs++; walk(c); } else { files++; }
+      }
+    })(root);
+    return { dirs, files };
+  }
+
+  /* =========================================================
+   *  8. Config from DOM
+   * ======================================================= */
+  function readConfig() {
+    const patterns = [];
+    document.querySelectorAll("#presetChips input[data-patterns]").forEach((cb) => {
+      if (cb.checked) {
+        cb.getAttribute("data-patterns").split(",").forEach((p) => { if (p.trim()) patterns.push(p.trim()); });
+      }
+    });
+    customPatternsEl.value.split(/[\n,]+/).forEach((p) => { if (p.trim()) patterns.push(p.trim()); });
+
+    const config = {
+      rootName: rootNameEl.value.trim() || "root",
+      format: formatEl.value,
+      maxDepth: parseInt(maxDepthEl.value, 10),
+      foldersFirst: foldersFirstEl.checked,
+      trailingSlashForDirs: trailingSlashEl.checked,
+      ignoreHiddenFiles: ignoreHiddenEl.checked,
+      ignorePatterns: patterns,
+      indentSize: parseInt(indentSizeEl.value, 10) || 2,
+      showFileStats: showStatsEl.checked,
+      caseSensitiveSort: caseSensitiveEl.checked
+    };
+    config._regexes = buildRegexes(config);
+    return config;
+  }
+
+  /* =========================================================
+   *  9. Main pipeline
+   * ======================================================= */
+  function update() {
+    const config = readConfig();
+    const text = leftMode === "raw" ? rawInput.value : indentedInput.value;
+    const entries = parseEntries(text, leftMode);
+    const rawTree = buildTreeFromPaths(entries, config);
+    const filtered = filterTree(rawTree, config);
+    const sorted = sortTree(filtered, config);
+
+    const stats = collectStats(sorted);
+    statTotal.innerHTML = "Total Paths: <b>" + (stats.dirs + stats.files) + "</b>";
+    statSplit.innerHTML = "<b>" + stats.dirs + "</b> dirs &middot; <b>" + stats.files + "</b> files";
+
+    const hasInput = entries.length > 0;
+    let plain = renderOutput(sorted, config);
+    if (config.showFileStats && hasInput) {
+      const note = "\n\n" + stats.dirs + " directories, " + stats.files + " files";
+      if (config.format !== "json") plain += note;
+    }
+    if (!hasInput) {
+      plain = "";
+      plainPane.innerHTML = '<span class="placeholder">在左側輸入路徑，或直接拖入一個資料夾。</span>';
+      markdownPane.textContent = "";
+      previewPane.innerHTML = '<span class="placeholder">尚無輸出。</span>';
+      currentPlain = "";
+      return;
+    }
+    currentPlain = plain;
+
+    plainPane.textContent = plain;
+    markdownPane.textContent = config.format === "markdown"
+      ? plain
+      : "```text\n" + plain + "\n```";
+    previewPane.innerHTML = renderPreview(sorted, config);
+  }
+
+  let debounceTimer = null;
+  function scheduleUpdate() {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(update, 120);
+  }
+
+  /* =========================================================
+   *  10. Tabs
+   * ======================================================= */
+  function setLeftMode(mode) {
+    leftMode = mode;
+    document.querySelectorAll("[data-left]").forEach((t) => t.classList.toggle("active", t.getAttribute("data-left") === mode));
+    rawInput.classList.toggle("hidden", mode !== "raw");
+    indentedInput.classList.toggle("hidden", mode !== "indented");
+    update();
+  }
+  function setRightView(view) {
+    rightView = view;
+    document.querySelectorAll("[data-right]").forEach((t) => t.classList.toggle("active", t.getAttribute("data-right") === view));
+    plainPane.classList.toggle("hidden", view !== "plain");
+    markdownPane.classList.toggle("hidden", view !== "markdown");
+    previewPane.classList.toggle("hidden", view !== "preview");
+  }
+  document.querySelectorAll("[data-left]").forEach((t) =>
+    t.addEventListener("click", () => setLeftMode(t.getAttribute("data-left")))
+  );
+  document.querySelectorAll("[data-right]").forEach((t) =>
+    t.addEventListener("click", () => setRightView(t.getAttribute("data-right")))
+  );
+
+  /* =========================================================
+   *  11. Chip visual sync
+   * ======================================================= */
+  function syncChips() {
+    document.querySelectorAll(".chip").forEach((chip) => {
+      const cb = chip.querySelector('input[type="checkbox"]');
+      if (cb) chip.classList.toggle("on", cb.checked);
+    });
+  }
+  document.querySelectorAll("#presetChips input, .chip input").forEach((cb) => {
+    cb.addEventListener("change", () => { syncChips(); scheduleUpdate(); });
+  });
+
+  /* =========================================================
+   *  12. Live inputs
+   * ======================================================= */
+  [rawInput, indentedInput, rootNameEl, customPatternsEl].forEach((el) =>
+    el.addEventListener("input", scheduleUpdate)
+  );
+  [formatEl, maxDepthEl, indentSizeEl].forEach((el) => el.addEventListener("change", update));
+  [foldersFirstEl, trailingSlashEl, caseSensitiveEl, showStatsEl].forEach((el) =>
+    el.addEventListener("change", update)
+  );
+
+  /* =========================================================
+   *  13. Copy / Download
+   * ======================================================= */
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toastEl.classList.remove("show"), 1600);
+  }
+  function copyText(text, label) {
+    const done = () => showToast(label + " 已複製");
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+    } else {
+      fallbackCopy(text, done);
+    }
+  }
+  function fallbackCopy(text, done) {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { showToast("複製失敗"); }
+    document.body.removeChild(ta);
+  }
+
+  $("copyText").addEventListener("click", () => copyText(currentPlain, "Plain text"));
+  $("copyMarkdown").addEventListener("click", () => {
+    const md = formatEl.value === "markdown" ? currentPlain : "```text\n" + currentPlain + "\n```";
+    copyText(md, "Markdown");
+  });
+  $("download").addEventListener("click", () => {
+    const fmt = formatEl.value;
+    const ext = fmt === "json" ? "json" : fmt === "markdown" ? "md" : "txt";
+    const name = (rootNameEl.value.trim() || "tree") + "." + ext;
+    const blob = new Blob([currentPlain], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("已下載 " + name);
+  });
+
+  /* =========================================================
+   *  14. Folder drag & drop (File System Access API)
+   * ======================================================= */
+  function readAllEntries(reader) {
+    // Chromium quirk: the FIRST readEntries() batch can legitimately come back
+    // empty even when the directory has entries. So do not treat a single empty
+    // batch as "done" — only stop after several consecutive empty batches.
+    return new Promise((resolve, reject) => {
+      const all = [];
+      let emptyStreak = 0;
+      let calls = 0;
+      const next = () => {
+        if (++calls > 100000) { resolve(all); return; } // safety guard
+        reader.readEntries((results) => {
+          if (results.length) {
+            emptyStreak = 0;
+            for (const r of results) all.push(r);
+            next();
+          } else {
+            emptyStreak++;
+            if (emptyStreak >= 3) resolve(all);
+            else next();
+          }
+        }, reject);
+      };
+      next();
+    });
+  }
+  function scanEntry(entry, prefix, out) {
+    return new Promise((resolve) => {
+      if (entry.isFile) {
+        out.push(prefix + entry.name);
+        resolve();
+      } else if (entry.isDirectory) {
+        out.push(prefix + entry.name + "/");
+        readAllEntries(entry.createReader())
+          .then((children) => Promise.all(children.map((c) => scanEntry(c, prefix + entry.name + "/", out))))
+          .then(resolve)
+          .catch(resolve);
+      } else {
+        resolve();
+      }
+    });
+  }
+
+  // 掃描資料夾時，最上層的資料夾名稱會與 Root Name 重複，這裡自動剝除。
+  // 只有當「所有路徑都共用同一個第一層目錄」時才剝除（單一資料夾掃描的典型情況）；
+  // 若一次拖入多個不同名稱的資料夾，則維持原樣，避免語意不明。
+  function stripCommonTopLevel(paths) {
+    if (paths.length < 1) return paths;
+    const norm = (p) => String(p).replace(/\\/g, "/").replace(/^\.\//, "");
+    let common = null;
+    for (const p of paths) {
+      const m = norm(p).match(/^([^/]+)\//);
+      if (!m) return paths;          // 有頂層檔案（無斜線）→ 不剝除
+      if (common === null) common = m[1];
+      else if (common !== m[1]) return paths; // 第一層不一致 → 不剝除
+    }
+    if (common === null) return paths;
+    return paths
+      .map((p) => {
+        const m = norm(p).match(/^[^/]+\/(.*)$/);
+        return m ? m[1] : "";
+      })
+      .filter(Boolean);
+  }
+
+  ["dragenter", "dragover"].forEach((ev) =>
+    leftPanel.addEventListener(ev, (e) => { e.preventDefault(); leftPanel.classList.add("dragover"); })
+  );
+  ["dragleave", "dragend", "drop"].forEach((ev) =>
+    leftPanel.addEventListener(ev, (e) => {
+      e.preventDefault();
+      if (ev === "dragleave" && leftPanel.contains(e.relatedTarget)) return;
+      leftPanel.classList.remove("dragover");
+    })
+  );
+  const IS_FILE_PROTOCOL = location.protocol === "file:";
+
+  leftPanel.addEventListener("drop", (e) => {
+    const dt = e.dataTransfer;
+    if (!dt || !dt.items || !dt.items.length) return;
+
+    // webkitGetAsEntry() must be called synchronously during the drop event.
+    const entries = [];
+    for (let i = 0; i < dt.items.length; i++) {
+      const item = dt.items[i];
+      const entry = item.webkitGetAsEntry && item.webkitGetAsEntry();
+      if (entry) entries.push(entry);
+    }
+    if (!entries.length) return;
+
+    const hasDir = entries.some((en) => en.isDirectory);
+
+    // Chrome blocks File System API directory enumeration on file:// origins:
+    // readEntries() never calls back and getAsFileSystemHandle() hangs. So when a
+    // folder is dropped on a file:// page, fall back to the folder picker, which
+    // does work there. (Called synchronously so the user-gesture is still valid.)
+    if (hasDir && IS_FILE_PROTOCOL) {
+      setLeftMode("raw");
+      showToast("file:// 模式無法讀取拖曳的目錄，已開啟資料夾選擇器");
+      folderPicker.click();
+      return;
+    }
+
+    const paths = [];
+    setLeftMode("raw");
+    Promise.all(entries.map((en) => scanEntry(en, "", paths))).then(() => {
+      if (!paths.length) { showToast("掃描不到任何內容，改用「Scan Folder」試試"); return; }
+      const before = paths[0];
+      const finalPaths = stripCommonTopLevel(paths);
+      rawInput.value = finalPaths.join("\n");
+      scheduleUpdate();
+      showToast("已掃描 " + finalPaths.length + " 條路徑" + (finalPaths[0] !== before ? "（已省略最上層資料夾）" : ""));
+    });
+  });
+
+  /* =========================================================
+   *  15. Clear / Samples / Theme
+   * ======================================================= */
+  $("clearInput").addEventListener("click", () => {
+    rawInput.value = "";
+    indentedInput.value = "";
+    update();
+  });
+
+  /* Folder picker fallback: works even where drag & drop is blocked. */
+  const folderPicker = $("folderPicker");
+  $("scanFolder").addEventListener("click", () => folderPicker.click());
+  folderPicker.addEventListener("change", () => {
+    const files = Array.from(folderPicker.files || []);
+    folderPicker.value = "";
+    if (!files.length) return;
+    const rawPaths = files.map((f) => f.webkitRelativePath || f.name);
+    const paths = stripCommonTopLevel(rawPaths);
+    setLeftMode("raw");
+    rawInput.value = paths.join("\n");
+    scheduleUpdate();
+    showToast("已掃描 " + paths.length + " 條路徑" + (paths[0] !== rawPaths[0] ? "（已省略最上層資料夾）" : ""));
+  });
+
+  const SAMPLES = {
+    react: [
+      "src/index.ts",
+      "src/components/Button.tsx",
+      "src/components/Modal.tsx",
+      "src/components/Card.tsx",
+      "src/services/api.ts",
+      "src/hooks/useAuth.ts",
+      "src/utils/math.ts",
+      "public/favicon.ico",
+      "public/logo.svg",
+      "package.json",
+      "tsconfig.json",
+      "vite.config.ts",
+      ".gitignore",
+      "README.md",
+      "node_modules/.bin/vite",
+      "dist/index.js.map"
+    ].join("\n"),
+    monorepo: [
+      "package.json",
+      "pnpm-workspace.yaml",
+      "turbo.json",
+      "README.md",
+      "apps/web/package.json",
+      "apps/web/next.config.js",
+      "apps/web/src/index.tsx",
+      "apps/web/src/pages/_app.tsx",
+      "apps/web/src/pages/index.tsx",
+      "apps/web/src/components/Header.tsx",
+      "apps/api/package.json",
+      "apps/api/src/server.ts",
+      "apps/api/src/routes/users.ts",
+      "apps/api/src/routes/posts.ts",
+      "apps/api/src/middleware/auth.ts",
+      "packages/ui/package.json",
+      "packages/ui/src/Button.tsx",
+      "packages/ui/src/Input.tsx",
+      "packages/config/package.json",
+      "packages/config/eslint.cjs",
+      "packages/utils/package.json",
+      "packages/utils/src/string.ts",
+      "packages/utils/src/array.ts",
+      "node_modules/.pnpm/lock.yaml",
+      "dist/bundle.js",
+      "build/output.map",
+      "coverage/lcov.info",
+      "logs/app.log"
+    ].join("\n")
+  };
+
+  document.querySelectorAll("[data-sample]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      setLeftMode("raw");
+      rawInput.value = SAMPLES[btn.getAttribute("data-sample")] || "";
+      update();
+    })
+  );
+
+  const themeToggle = $("themeToggle");
+  function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    themeToggle.textContent = theme === "dark" ? "🌙" : "☀️";
+    try { localStorage.setItem("fta-theme", theme); } catch (e) {}
+  }
+  themeToggle.addEventListener("click", () => {
+    applyTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  });
+  try {
+    const saved = localStorage.getItem("fta-theme");
+    if (saved) applyTheme(saved);
+  } catch (e) {}
+
+  /* =========================================================
+   *  16. Boot
+   * ======================================================= */
+  if (IS_FILE_PROTOCOL) {
+    const hint = $("fileProtoHint");
+    if (hint) {
+      let dismissed = false;
+      try { dismissed = localStorage.getItem("fta-file-hint") === "1"; } catch (e) {}
+      if (!dismissed) hint.classList.remove("hidden");
+      const dismiss = $("dismissHint");
+      if (dismiss) dismiss.addEventListener("click", () => {
+        hint.classList.add("hidden");
+        try { localStorage.setItem("fta-file-hint", "1"); } catch (e) {}
+      });
+    }
+    const overlay = document.querySelector(".drop-overlay");
+    if (overlay) overlay.innerHTML = "放開以選擇資料夾<br /><small>file:// 模式下由系統選擇器掃描</small>";
+  }
+
+  syncChips();
+  rawInput.value = SAMPLES.react;
+  setRightView("plain");
+  update();
+})();
+</script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
