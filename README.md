@@ -1,6 +1,6 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供三十四個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程（動態甘特圖與 WBS 甘特排程器）、專案時程與處理流程紀錄（事件、流程紀錄、附件與到期提醒）、會議人力成本即時看板（燃燒速率與產出 vs 成本評估卡）、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、大額曝險與關聯戶圖譜速算、金融金額中文大寫轉換、核心主機固定長度電文解析與規格管理、核心系統與電文錯誤碼排查對照、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、文件字數與閱讀時間統計、資料夾路徑轉目錄樹與格式輸出（Unicode／ASCII 樹狀文字、Markdown 清單、對齊註解與 JSON）、規格書版本比對與審查、離線速記便箋、色彩故事盤、狀態機與業務流程拓撲建模與模擬、表格矩陣轉置與格式轉換、CSV 格式清理（支援 Big5／CP950 讀寫）、API Mock 與 cURL 雙向轉換、資料品質稽核（CSV／Excel 匯入、欄位剖析與六構面規則檢核）、資料關聯探索（CSV／TSV 匯入、自動推測主外鍵與 ER 圖）、截圖 OCR 知識庫（截圖貼上、Tesseract OCR 與全文檢索），以及 SQL 目錄、比對、格式化、個資清除、欄位血緣分析與 SQL 沙箱測試。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
+本專案提供三十五個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程（動態甘特圖與 WBS 甘特排程器）、專案時程與處理流程紀錄（事件、流程紀錄、附件與到期提醒）、會議人力成本即時看板（燃燒速率與產出 vs 成本評估卡）、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、大額曝險與關聯戶圖譜速算、金融金額中文大寫轉換、核心主機固定長度電文解析與規格管理、核心系統與電文錯誤碼排查對照、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、文件字數與閱讀時間統計、資料夾路徑轉目錄樹與格式輸出（Unicode／ASCII 樹狀文字、Markdown 清單、對齊註解與 JSON）、規格書版本比對與審查、離線速記便箋、色彩故事盤、狀態機與業務流程拓撲建模與模擬、表格矩陣轉置與格式轉換、CSV 格式清理（支援 Big5／CP950 讀寫）、API Mock 與 cURL 雙向轉換、資料品質稽核（CSV／Excel 匯入、欄位剖析與六構面規則檢核）、資料關聯探索（CSV／TSV 匯入、自動推測主外鍵與 ER 圖）、截圖 OCR 知識庫（截圖貼上、Tesseract OCR 與全文檢索），以及 SQL 目錄、比對、格式化、個資清除、欄位血緣分析、SQL 沙箱測試與 SQL 欄位映射。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
 
 ## 目錄
 
@@ -27,6 +27,7 @@
 - [SQL／TXT 個資掃描與清除](#sqltxt-個資掃描與清除)
 - [SQL Column Lineage Analyzer](#sql-column-lineage-analyzer)
 - [SQL Lab](#sql-lab)
+- [Schema Studio — SQL 欄位映射](#schema-studio--sql-欄位映射)
 - [MatrixPivot 表格矩陣轉置器](#matrixpivot-表格矩陣轉置器)
 - [CSV 格式清理器](#csv-格式清理器)
 - [API Mock & cURL 格式轉換工作室 (API Mock Studio)](#api-mock--curl-格式轉換工作室-api-mock-studio)
@@ -70,6 +71,7 @@
    - [`sql/sql-pii-cleaner/sql-pii-cleaner.html`](./sql/sql-pii-cleaner/sql-pii-cleaner.html)
    - [`sql/sql-lineage-analyzer/SQL_Column_Lineage_Analyzer.html`](./sql/sql-lineage-analyzer/SQL_Column_Lineage_Analyzer.html)
    - [`sql/sql-lab/sql-lab.html`](./sql/sql-lab/sql-lab.html)
+   - [`sql/schema-studio/schema-studio.html`](./sql/schema-studio/schema-studio.html)
    - [`data/matrix-pivot/matrix-pivot.html`](./data/matrix-pivot/matrix-pivot.html)
    - [`data/csv-cleaner/csv-cleaner.html`](./data/csv-cleaner/csv-cleaner.html)
    - [`data/api-mock-studio/api-mock-studio.html`](./data/api-mock-studio/api-mock-studio.html)
@@ -93,9 +95,9 @@
 python -m http.server 8080
 ```
 
-再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、Prompt Studio、甘特圖、銀行信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器、API Mock Studio 與色彩故事盤會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR、金融金額中文大寫轉換器、WBS 甘特排程器、專案時程暨處理流程紀錄系統、資料品質稽核中心、資料關聯探索器、離線速記便箋、文件字數與閱讀時間統計工具、FolderTree Architect 路徑轉樹狀結構、會議燃燒成本看板、StateFlow 動態狀態機與業務流程拓撲模擬器、SpecDiff 規格書比對工具、截圖 OCR 知識庫與 SQL Catalog 不依賴外部函式庫，可直接離線開啟（截圖 OCR 知識庫首次使用需先匯入一次本機的 Tesseract 引擎檔，之後即完全離線）；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
+再開啟 `http://localhost:8080/`，並進入上述子目錄。Agent YAML Maker、Prompt Studio、甘特圖、銀行信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器、API Mock Studio 與色彩故事盤會從 CDN 載入部分樣式或函式庫；若要完整使用，首次開啟時請保持網路連線。LCR、NSFR、金融金額中文大寫轉換器、WBS 甘特排程器、專案時程暨處理流程紀錄系統、資料品質稽核中心、資料關聯探索器、離線速記便箋、文件字數與閱讀時間統計工具、FolderTree Architect 路徑轉樹狀結構、會議燃燒成本看板、StateFlow 動態狀態機與業務流程拓撲模擬器、SpecDiff 規格書比對工具、截圖 OCR 知識庫、SQL Catalog 與 Schema Studio 不依賴外部函式庫，可直接離線開啟（截圖 OCR 知識庫首次使用需先匯入一次本機的 Tesseract 引擎檔，之後即完全離線）；SQL Catalog 的「選擇目錄」功能建議使用 Chrome 或 Edge。
 
-本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，Prompt Studio 需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS，公文簽／函排版工具需要從 CDN 載入 Tailwind CSS 與 docx.js，大額曝險與關聯戶圖譜速算器需要從 CDN 載入 Tailwind CSS 與 Google Fonts，銀行核心系統固定長度電文解析與管理中心需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，核心系統與電文錯誤碼排查對照台需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 SheetJS，剪貼簿洗滌器需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 Google Fonts，MatrixPivot 表格矩陣轉置器需要從 CDN 載入 Tailwind CSS 與 Google Fonts，CSV 格式清理器需要從 CDN 載入 iconv-lite（僅 Big5／CP950 功能需要），API Mock Studio 需要從 CDN 載入 Tailwind CSS 與 Google Fonts，色彩故事盤需要從 CDN 載入 Tailwind CSS 與 Google Fonts，SQL Lab 選用 SQLite 引擎時需要從 CDN 載入 sql.js 與其 wasm 檔（內建引擎可離線使用）。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化、SQL／TXT 個資清除與文件字數與閱讀時間統計工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
+本專案的「免建置」不等於每個頁面都能在完全斷網下完整使用：Agent YAML Maker 需要從 CDN 載入 Tailwind CSS、js-yaml 與 JSZip，Prompt Studio 需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，甘特圖與 Markdown 卡片簡報工具需要從 CDN 載入 Tailwind CSS，公文簽／函排版工具需要從 CDN 載入 Tailwind CSS 與 docx.js，大額曝險與關聯戶圖譜速算器需要從 CDN 載入 Tailwind CSS 與 Google Fonts，銀行核心系統固定長度電文解析與管理中心需要從 CDN 載入 Tailwind CSS 與 Font Awesome 圖示，核心系統與電文錯誤碼排查對照台需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 SheetJS，剪貼簿洗滌器需要從 CDN 載入 Tailwind CSS、Phosphor Icons 與 Google Fonts，MatrixPivot 表格矩陣轉置器需要從 CDN 載入 Tailwind CSS 與 Google Fonts，CSV 格式清理器需要從 CDN 載入 iconv-lite（僅 Big5／CP950 功能需要），API Mock Studio 需要從 CDN 載入 Tailwind CSS 與 Google Fonts，色彩故事盤需要從 CDN 載入 Tailwind CSS 與 Google Fonts，SQL Lab 選用 SQLite 引擎時需要從 CDN 載入 sql.js 與其 wasm 檔（內建引擎可離線使用）。若這些資源尚未載入，頁面可能缺少樣式或部分功能；請改用可連線的環境，或先以瀏覽器快取及靜態伺服器測試。SQL 比對、SQL 格式化、SQL／TXT 個資清除、Schema Studio 與文件字數與閱讀時間統計工具則以瀏覽器本機處理檔案，不會將內容上傳至本專案後端。
 
 ## 專案結構
 
@@ -120,7 +122,8 @@ my-spa-tools/
 │  ├─ oracle-sql-formatter/
 │  ├─ sql-pii-cleaner/
 │  ├─ sql-lineage-analyzer/
-│  └─ sql-lab/                    SQL Lab 離線 SQL 測試工具（沙箱、匯入與測試案例）
+│  ├─ sql-lab/                    SQL Lab 離線 SQL 測試工具（沙箱、匯入與測試案例）
+│  └─ schema-studio/             Schema Studio SQL 欄位映射與 DDL 產生器
 ├─ data/                         資料工具
 │  ├─ matrix-pivot/
 │  ├─ csv-cleaner/
@@ -171,6 +174,7 @@ flowchart TD
     B -->|SQL 個資清除| Q[選擇 SQL／TXT 資料夾]
     B -->|SQL 欄位血緣分析| S[載入或貼上 SQL]
     B -->|SQL 沙箱測試| SL[建立工作區並匯入 CSV SQL 或 SQLite]
+    B -->|SQL 欄位映射| SS[並排比對來源與目標結構並建立欄位映射]
     B -->|表格轉置與格式轉換| AP[貼上或匯入 CSV TSV 表格文字]
     B -->|CSV 格式清理| CC[匯入 CSV 或貼上 Excel 內容並勾選清理規則]
     B -->|API 測試與 Mock 模擬| AR[貼上 cURL 或手動編輯端點]
@@ -204,6 +208,7 @@ flowchart TD
     Q --> R[掃描命中並匯出清除副本或寫回]
     S --> T[分析血緣圖、欄位對照與上下游追溯]
     SL --> SM[執行查詢 檢視結果並執行測試案例]
+    SS --> SU[檢視 SQL DDL Pandas dbt 與 MyBatis 輸出並匯出 JSON]
     AP --> AQ[轉置矩陣並複製或下載 Markdown JSON SQL HTML CSV]
     CC --> CD[預覽清理結果並選擇 UTF-8 或 Big5／CP950 下載]
     AR --> AS[模擬延遲 回應狀態 產生 Dummy 與匯出代碼 OpenAPI]
@@ -244,6 +249,7 @@ flowchart TD
 | SQL／TXT 個資掃描與清除 | [`sql/sql-pii-cleaner/sql-pii-cleaner.html`](./sql/sql-pii-cleaner/sql-pii-cleaner.html) | 掃描常見身分證字號、帳號、統編與擔保品編號，產生清除副本或寫回 | 檔案只在目前頁面記憶體處理，不保存掃描結果 |
 | SQL Column Lineage Analyzer | [`sql/sql-lineage-analyzer/SQL_Column_Lineage_Analyzer.html`](./sql/sql-lineage-analyzer/SQL_Column_Lineage_Analyzer.html) | 分析 Oracle SQL 欄位來源、轉換、上下游影響與 CTE 結構，匯出血緣資料 | SQL 與分析結果只在目前頁面記憶體處理，不保存或上傳 |
 | SQL Lab | [`sql/sql-lab/sql-lab.html`](./sql/sql-lab/sql-lab.html) | 在瀏覽器內開 SQL 沙箱：內建引擎或 SQLite（sql.js）、多工作區、查詢與執行計畫、結構瀏覽、CSV／SQL／SQLite 匯入、片段與歷史，並可建立比對預期結果的測試案例 | 瀏覽器 IndexedDB（`sql-lab`：`workspaces`、`history`、`snippets`、`testcases`、`testruns`、`settings`）；提供完整備份 JSON 匯出／匯入 |
+| Schema Studio — SQL 欄位映射 | [`sql/schema-studio/schema-studio.html`](./sql/schema-studio/schema-studio.html) | 並排比對來源與目標資料表結構，以拖拉端點或自動配對建立欄位映射並設定轉換規則，即時產生 SQL SELECT／DDL、Pandas、dbt 與 MyBatis 程式碼 | 瀏覽器 `localStorage`（鍵值 `schema-studio-state-v1`）；提供設定 JSON 匯出／匯入 |
 | MatrixPivot 表格矩陣轉置器 | [`data/matrix-pivot/matrix-pivot.html`](./data/matrix-pivot/matrix-pivot.html) | 貼上或匯入 CSV／TSV 表格，即時轉置矩陣、清理空白與 Trim，並輸出 Markdown、JSON、SQL INSERT、HTML 或 CSV | 內容與輸出只保留在目前頁面記憶體；可複製代碼或下載 CSV |
 | CSV 格式清理器 | [`data/csv-cleaner/csv-cleaner.html`](./data/csv-cleaner/csv-cleaner.html) | 清理 CSV 的空白、不可見字元、全形英數、金額千分位與民國／西元日期，支援 UTF-8、UTF-16、Big5 與 CP950 讀寫 | 內容與輸出只保留在目前頁面記憶體；可下載 CSV 檔 |
 | API Mock & cURL 格式轉換工作室 | [`data/api-mock-studio/api-mock-studio.html`](./data/api-mock-studio/api-mock-studio.html) | 貼上 cURL 雙向解析、純前端 Mock 模擬與延遲測試、臺灣金融 Dummy 假資料生成、產生多語言程式碼並匯出 OpenAPI 3.0 與 Postman 集合 | 端點清冊與當前設定保存在瀏覽器 `localStorage`；支援 JSON 匯入／匯出 |
@@ -1084,6 +1090,62 @@ flowchart TD
 
 本工具主要從 CDN 載入 sql.js（版本預設 1.10.3，來源可選 jsDelivr、cdnjs 或 unpkg）與其 WebAssembly 檔，且**只在選用 SQLite 引擎時才需要**；內建引擎不需網路。下載後的 sql.js 會快取在瀏覽器 IndexedDB，之後即使離線也能使用 SQLite 引擎。工作區資料、片段、查詢歷史、測試案例、執行紀錄與介面設定都存放在瀏覽器 IndexedDB（資料庫名稱 `sql-lab`，object stores：`workspaces`、`history`、`snippets`、`testcases`、`testruns`、`settings`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得，請用「設定 → 備份與還原」的「下載完整備份」保存，日後以「從備份還原」帶回。內建引擎以常用 SQLite 語法實作，特殊函數或邊界行為仍可能與正式 SQLite 或商用資料庫不同，正式 SQL 仍請回到目標資料庫驗證。
 
+## Schema Studio — SQL 欄位映射
+
+Schema Studio 是單檔的 SQL 欄位映射與 DDL 產生器：把來源資料表與目標資料表的結構並排放在畫面上，用拖拉端點或「自動配對」建立欄位對應，必要時替每個欄位加上 SQL 轉換表達式，工具會即時產生可直接使用的 SQL SELECT、目標資料表 DDL、Pandas、dbt 與 MyBatis 程式碼。所有解析、配對與程式碼產生都在瀏覽器端完成，不會上傳資料。
+
+### 輸入來源與目標結構
+
+1. 開啟 [`schema-studio.html`](./sql/schema-studio/schema-studio.html)。
+2. 在「來源結構」或「目標結構」面板按「輸入結構」，於對話框貼上下列任一格式後按「解析欄位」：
+   - `CREATE TABLE` DDL（支援欄位型別、`PRIMARY KEY`、`NOT NULL` 與 `COMMENT`，並會推斷資料表名稱）。
+   - JSON 物件或物件陣列（依值推斷型別）。
+   - JSON Schema（讀取 `properties`、`required`、`type`、`format` 與 `description`）。
+   - CSV 標頭，或每行一個欄位的清單（可附型別）。
+3. 也可按「貼上 DDL / JSON」快速帶入，或用「＋ 新增欄位」手動建立，再以欄位右側的「⋯」「×」編輯或刪除。
+
+### 建立欄位映射
+
+- 點一下來源欄位再點目標欄位即可建立映射；也可直接從來源端點拖曳到目標欄位。
+- 面板上方「自動配對」會依「完全相符 → 命名相符（忽略底線）→ 縮寫相符」提出候選，確認後批次套用。
+- 點擊映射線或目標欄位可開啟「映射設定」，從常用樣板（TRIM、UPPER、LOWER、COALESCE／NVL、CAST、TO_CHAR、CASE WHEN、CONCAT）挑選，或以 `{{src}}`、`{{src1}}`、`{{src2}}` 自訂 SQL 表達式；一個目標欄位可彙整多個來源欄位。
+- 「交換」可對調來源與目標資料表，「清除全部」可重設目前內容。
+
+### 產生程式碼與選項
+
+「產生的程式碼」區塊會即時更新，共有五個分頁：
+
+- **SQL SELECT**：輸出 `INSERT INTO 目標 (...) SELECT ...` 的移轉語句（未映射的欄位標為 `NULL ... /* TODO: Unmapped */`）。
+- **Target DDL**：依目標欄位產生 `CREATE TABLE`；選擇 Oracle 方言時會自動轉換型別（例如 `VARCHAR` → `VARCHAR2`、`BIGINT` → `NUMBER(19,0)`、`TEXT` → `CLOB`）。
+- **Pandas**：產生可直接套用的 `DataFrame` 改名與轉換程式碼，無法對應的表達式會以 `# TODO` 標示。
+- **dbt Model**：輸出引用 `{{ source(...) }}` 的 dbt 模型。
+- **MyBatis XML**：輸出含 `<select>` 的 Mapper XML。
+
+上方可設定「目標 SQL 方言」（PostgreSQL、MySQL、Oracle、SQL Server、SQLite）、是否「引用識別字」（依方言使用雙引號、反引號或方括號）、「關鍵字大寫」，以及「補齊稽核欄位」（自動加入 `created_at`、`updated_at`）。
+
+### 匯出、保存與注意事項
+
+- 設定會自動保存在瀏覽器 `localStorage`（鍵值 `schema-studio-state-v1`），重新整理後仍會保留；可用「匯出 JSON」下載設定、用「匯入設定」帶回，也可按「載入範例」還原示範內容。
+- 「複製程式碼」會把目前分頁結果放入剪貼簿；「下載程式碼」會依分頁下載 `migration.sql`、`target_schema.sql`、`transform.py`、`model.sql` 或 `Mapper.xml`。
+- 欄位型別與轉換規則取決於使用者輸入與樣板，工具不會連線資料庫驗證；產生的 SQL 請回到目標資料庫或測試環境確認。
+
+```mermaid
+flowchart TD
+    A[貼上或手動輸入來源與目標結構] --> B[解析 DDL JSON JSON Schema 或欄位清單]
+    B --> C{建立映射}
+    C -->|手動| D[點選或拖曳來源與目標欄位]
+    C -->|自動配對| E[依名稱與縮寫提出候選]
+    D --> F[設定轉換規則與樣板]
+    E --> F
+    F --> G[選擇方言與輸出選項]
+    G --> H[檢視 SQL DDL Pandas dbt 與 MyBatis]
+    H --> I{輸出方式}
+    I -->|複製或下載| J[複製或下載程式碼]
+    I -->|保存設定| K[匯出或匯入 JSON 設定]
+```
+
+本工具不使用 IndexedDB，也不依賴任何 CDN；所有解析、配對與程式碼產生都在瀏覽器端完成。設定與主題保存在瀏覽器 `localStorage`，換瀏覽器、使用無痕視窗或清除網站資料後可能無法取得，重要設定請先用「匯出 JSON」保存。
+
 ## MatrixPivot 表格矩陣轉置器
 
 MatrixPivot 是單檔的表格矩陣轉置與格式轉換器：把從 Excel、Google Sheets 或 CSV／TSV 檔案取得的表格文字貼進左側，工具會即時解析成矩陣、在右側以網格預覽，並可一鍵行列轉置、清理空白與轉出工程常用格式。所有解析與轉換都在瀏覽器端完成，不會上傳內容。
@@ -1826,6 +1888,7 @@ flowchart LR
     B -->|SQL Formatter| N[目前頁面與 localStorage 設定]
     B -->|SQL 欄位血緣| R[目前頁面記憶體]
     B -->|SQL 沙箱測試| SJ[IndexedDB 工作區 片段 歷史與測試案例]
+    B -->|SQL 欄位映射| SSE[localStorage 映射設定與主題]
     B -->|表格矩陣轉置| AG[目前頁面記憶體]
     B -->|截圖 OCR 知識庫| OK[IndexedDB 截圖 縮圖 筆記 集合 流程與引擎檔]
     B -->|資料品質稽核| DQ[IndexedDB 資料集 剖析 範本 紀錄與問題]
@@ -1856,6 +1919,7 @@ flowchart LR
     N --> P[寫回備份或 ZIP 報告]
     R --> S[CSV JSON Mermaid SVG 或 PNG 匯出]
     SJ --> SK[匯出完整備份 JSON 或報告 CSV]
+    SSE --> SSF[匯出或匯入設定 JSON 與複製或下載程式碼]
     AG --> AH[複製代碼或下載 CSV]
     OK --> OM[匯出分享圖 ZIP 備份或流程 Word PDF]
     DQ --> DN[匯出問題 CSV 報告 HTML 清理後資料或整庫 JSON]
@@ -1889,6 +1953,7 @@ flowchart LR
 - SQL／TXT 個資清除工具只在目前頁面記憶體中處理檔案；關閉或重新整理後需重新選取資料夾。可寫回模式會依設定建立 `_backup_時間` 備份，唯讀模式請使用 ZIP 保存結果。
 - SQL Column Lineage Analyzer 只在目前頁面記憶體中解析 SQL 與建立血緣結果；不使用 IndexedDB 或 `localStorage`，關閉、重新整理或清除頁面後需重新載入。CSV、JSON、Mermaid、SVG 與 PNG 都是由使用者主動下載的輸出檔。
 - SQL Lab 會將工作區（含 SQLite 二進位內容）、查詢歷史、片段、測試案例、執行紀錄與介面設定保存在目前瀏覽器的 IndexedDB（`sql-lab`，object stores：`workspaces`、`history`、`snippets`、`testcases`、`testruns`、`settings`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得，請以「下載完整備份」保存並用「從備份還原」帶回。sql.js 的 Wasm 檔也會快取在同一瀏覽器，選用 SQLite 引擎時第一次需能連線 CDN，或改用本機 `sql-wasm.js`／`sql-wasm.wasm` 載入。
+- Schema Studio — SQL 欄位映射會將來源與目標結構、欄位映射、轉換規則、方言與顯示選項及深／淺色主題保存在目前瀏覽器的 `localStorage`（鍵值 `schema-studio-state-v1`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得。可隨時用「匯出 JSON」保存設定、用「匯入設定」帶回；產生的程式碼由使用者自行複製或下載。
 - Markdown 卡片簡報工具會將範本與編輯草稿保存在目前瀏覽器的 IndexedDB，主題偏好使用 `localStorage`；「匯出展示檔」產生完全離線的單一 HTML，但編輯介面樣式仍由 CDN 載入 Tailwind CSS。
 - 公文簽／函排版工具不使用 IndexedDB 或 `localStorage`，內容只保留在目前頁面記憶體；輸出為剪貼簿或使用者主動下載的 `.docx` 檔，關閉或重新整理後需重新輸入。
 - 剪貼簿洗滌器也不使用 IndexedDB 或 `localStorage`，文字與勾選規則只在目前頁面記憶體處理；輸出為複製到剪貼簿的純文字，關閉或重新整理後需重新貼上。
@@ -1939,9 +2004,10 @@ flowchart LR
 - Palette Lore 色彩故事盤：從 CDN 載入 Tailwind CSS 與 Google Fonts。
 - StateFlow 動態狀態機與業務流程拓撲模擬器：純離線，樣式與邏輯（內嵌 Tailwind 與打包後的 JavaScript）皆已內嵌於單一 HTML，不使用任何外部資源。
 - SQL Lab：內建引擎為純離線；選用 SQLite 引擎時從 CDN 載入 sql.js（預設 1.10.3；可選 jsDelivr、cdnjs 或 unpkg）與 `sql-wasm.wasm`，下載後快取於瀏覽器 IndexedDB，也可改由本機 `sql-wasm.js`／`sql-wasm.wasm` 載入。
+- Schema Studio — SQL 欄位映射：純離線，樣式與邏輯皆已內嵌於單一 HTML，不使用任何外部資源。
 - SpecDiff 規格書比對工具：純離線，不使用任何外部資源（`.docx` 解析與差異比對皆以原生 JavaScript 實作）。
 - FolderTree Architect 路徑轉樹狀結構：純離線，樣式與邏輯皆已內嵌於單一 HTML，不使用任何外部資源。
-- 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；金融金額中文大寫轉換器、SQL Column Lineage Analyzer、WBS 甘特排程器、專案時程暨處理流程紀錄系統、資料品質稽核中心、資料關聯探索器、離線速記便箋、文件字數與閱讀時間統計、會議燃燒成本看板、StateFlow 動態狀態機與業務流程拓撲模擬器、截圖 OCR 知識庫、FolderTree Architect 路徑轉樹狀結構與 SpecDiff 規格書比對工具也不依賴外部 CDN。
+- 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；金融金額中文大寫轉換器、Schema Studio — SQL 欄位映射、SQL Column Lineage Analyzer、WBS 甘特排程器、專案時程暨處理流程紀錄系統、資料品質稽核中心、資料關聯探索器、離線速記便箋、文件字數與閱讀時間統計、會議燃燒成本看板、StateFlow 動態狀態機與業務流程拓撲模擬器、截圖 OCR 知識庫、FolderTree Architect 路徑轉樹狀結構與 SpecDiff 規格書比對工具也不依賴外部 CDN。
 
 Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器（Big5／CP950 功能）、API Mock Studio、色彩故事盤與 SQL Lab（SQLite 引擎）若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏；SQL Lab 的內建引擎不受影響，仍可正常使用。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
 
@@ -1974,6 +2040,7 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 - Palette Lore 色彩故事盤使用 IndexedDB（資料庫名稱 `PaletteLoreDB`；object stores：`palettes`、`app_state`）典藏色盤與工作階段／主題。
 - StateFlow 動態狀態機與業務流程拓撲模擬器不使用 IndexedDB，僅以 `localStorage`（鍵值 `stateflow_saved_dsl`、`stateflow_templates_v2`、`stateflow_active_template_id`、`stateflow_theme`）保存草稿、自訂範本與主題偏好。
 - SQL Lab 使用 IndexedDB（資料庫名稱 `sql-lab`；object stores：`workspaces`、`history`、`snippets`、`testcases`、`testruns`、`settings`）保存工作區、查詢歷史、片段、測試案例、執行紀錄與介面設定，並快取 sql.js 的 Wasm 檔；提供完整備份 JSON 匯出／匯入。
+- Schema Studio — SQL 欄位映射僅以 `localStorage`（鍵值 `schema-studio-state-v1`）保存來源與目標結構、欄位映射、轉換規則、方言與顯示選項及主題偏好；不使用 IndexedDB。
 - SpecDiff 規格書比對工具使用 IndexedDB（資料庫名稱 `SpecDiffDB`；object stores：`documents`、`projects`、`reviews`、`settings`）保存版本文件、專案、審查標註與設定；IndexedDB 無法使用時退回記憶體儲存，並提供整庫備份 JSON 匯出／還原。
 - FolderTree Architect 路徑轉樹狀結構不使用 IndexedDB 或外部函式庫；僅以 `localStorage`（鍵值 `fta-theme`、`fta-file-hint`）記憶深／淺色主題與 `file://` 提示偏好，路徑清單與輸出只在目前頁面處理。
 
@@ -2157,4 +2224,4 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟三十四個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、WBS 甘特排程器可設定專案起日與 WBS 任務／前置相依並檢視工作天與甘特圖／匯出 CSV 與 JSON、專案時程暨處理流程紀錄系統可新增專案與事件並設定狀態／優先度／期限與人員／新增處理流程紀錄與附件（含路徑連結）／切換列表、甘特與月曆檢視並以狀態、處理人員與關鍵字篩選／匯出專案或整庫 JSON 並匯入還原／匯出 `.ics` 提醒與維護人員 CSV、離線速記便箋可新增便箋與標籤／切換 Markdown 預覽與雙欄模式／搜尋與置頂／匯出與匯入 JSON 並匯出 Markdown、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、大額曝險與關聯戶圖譜速算器可設定淨值與集團／新增關聯戶與股權連結／檢視圖譜與法定門檻檢核／執行 What-If 壓力試算並複製底稿或匯出案卷 JSON、金融金額中文大寫轉換器可切換幣別抬頭與「結尾加整」／「顯示英文金額」選項／輸入金額檢視中文大寫、純中文大寫與英文大寫輸出並複製、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、SQL Lab 可新增與切換工作區／在編輯器執行查詢與檢視結果並匯出 CSV／以結構樹插入查詢與檢視資料庫結構並下載 SQL Dump／以 CSV、SQL 腳本或 SQLite 檔匯入資料／保存與搜尋片段及查詢歷史／建立含預期結果的測試案例並執行套件與匯出報告 CSV／重新整理後確認工作區與設定仍在、MatrixPivot 表格矩陣轉置器可貼上或匯入表格／執行行列轉置／切換 Markdown、JSON、SQL、HTML 與 CSV 輸出並複製或下載 CSV、API Mock Studio 可切換端點／貼上 cURL 解析／執行 Mock 模擬與延遲測試／產生 Dummy 假資料／匯出 OpenAPI 3.0 與 Postman Collection、CSV 格式清理器可讀入 UTF-8 與 Big5 檔案／切換清理規則並檢視預覽／匯出 CP950 時確認無法對應字元的提示，Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、文件字數與閱讀時間統計可貼上文字或匯入 UTF-8／Big5 等多編碼檔案／檢視中英字數、段落句數與閱讀時間／設定目標字數並複製統計摘要、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏、StateFlow 動態狀態機與業務流程拓撲模擬器可切換內建與自訂範本／以 DSL 定義狀態、動作與條件並即時繪製拓撲圖／拖曳節點、縮放畫布與重整佈局／執行流程模擬並使用「上一步」「隨機探索」「重新開始」／切換拓撲診斷確認死胡同、孤島、黑洞循環與自環等問題並顯示問題數／新增、編輯、複製與刪除範本並匯出與匯入範本庫 JSON／匯出 SVG 與複製 DSL／重新整理後確認草稿與自訂範本仍在、銀行核心系統固定長度電文解析與管理中心可選擇電文規格／貼上多筆電文解析並匯出 JSON 與 CSV／切換反向組裝產生固定長度電文／新增或匯入多編碼 CSV 規格並保存解析歷程、核心系統與電文錯誤碼排查對照台可搜尋與篩選錯誤碼／新增編輯與刪除代碼／維護系統類別／匯入 Excel 並匯出完整資料、會議燃燒成本看板可設定人數與時薪級距（含新增與刪除級距、儲存與套用常用組合）／開始、暫停與結束計時並檢視超時加碼／勾選議程產出率／下載 PNG 評估卡與複製文字摘要／調整評等標準（產出權重、超時容忍、容忍與門檻）並確認提示文字、卡片與歷史分數同步更新且「回預設」可還原／重新整理後確認設定與 IndexedDB 紀錄仍在，並匯出 CSV 與 JSON 後再匯入還原（確認匯入後評等與分數依現行標準重算）、截圖 OCR 知識庫可先至「⚙ OCR 引擎設定」匯入主程式、Worker、核心與語言檔並執行 OCR 測試／以 `Ctrl`+`V` 貼上或匯入截圖（確認完全相同的圖片會自動略過）並辨識文字／以關鍵字、`#標籤` 與 `-排除` 語法搜尋並在檢視器確認命中高亮／編輯標題、分類、標籤與備註並加入集合／框選區域 OCR、文字標註、遮蔽區域與匯出分享圖／建立操作流程並下載 Word 或列印 PDF／匯出 ZIP 備份後再還原／重新整理後確認 IndexedDB（`snap-ocr-kb`）資料仍在、資料品質稽核中心可拖曳或選擇 CSV／TSV／TXT／XLSX 匯入並以自動偵測的編碼與分隔符號預覽確認／查看欄位剖析的型態、空值與分布／建立範本與規則（含必填、唯一、型別、範例清單、正規式、跨欄比較、檢查碼、日期缺口與跨資料集參照）並加入例外／執行稽核時可顯示進度與取消並產生總分、維度分數與 A–E 評等／在問題明細篩選分頁並點選列檢視原始資料／匯出問題明細 CSV、問題列原始資料、HTML 報告與清理後資料 CSV／以批次比對檢視分數趨勢與兩批次差異／匯出完整備份 JSON 後再匯入還原、資料關聯探索器可匯入多個 CSV／TSV 並逐檔確認編碼與分隔符號／按分析後檢視主鍵候選、外鍵關聯（信心、包含率與孤兒值）與欄位相依／在 ER 圖標示關聯並匯出 SVG 或 PNG／產生 JOIN SQL 與孤兒值查詢 SQL 並匯出孤兒值 CSV／以路徑查詢與影響分析追蹤欄位並匯出清單／匯出 Mermaid、DDL（Oracle、SQL Server、SQLite）、Excel、Markdown 與 HTML 報告／匯出工作區 JSON 後再匯入還原、SpecDiff 規格書比對工具可新增專案與匯入 docx／txt／Markdown 多個版本（或貼上文字）／選擇舊版與新版比對並切換左右並排、合併檢視、變更清單與需求編號四種檢視／依類型、審查狀態與模組篩選並批次套用狀態／逐筆設定審查狀態、影響模組與備註並以 F7／F8 導覽／調整比對選項（正規化、修改門檻、搬移偵測）後重新比對／匯出 HTML 差異報告與變更清單／影響清單 CSV／匯出整庫 JSON 後還原，並確認 IndexedDB 無法使用時會退回記憶體儲存並提示、FolderTree Architect 路徑轉樹狀結構可貼上路徑清單或拖曳資料夾掃描／切換 Raw Paths 與 Indented 輸入／切換 Unicode、ASCII、Markdown、Annotated 與 JSON 輸出並調整深度、忽略樣式與排序選項／在 Preview 分頁檢視色彩樹狀圖／複製 Markdown、純文字或下載檔案。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
+若修改網頁程式，請分別在現代瀏覽器開啟三十五個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、WBS 甘特排程器可設定專案起日與 WBS 任務／前置相依並檢視工作天與甘特圖／匯出 CSV 與 JSON、專案時程暨處理流程紀錄系統可新增專案與事件並設定狀態／優先度／期限與人員／新增處理流程紀錄與附件（含路徑連結）／切換列表、甘特與月曆檢視並以狀態、處理人員與關鍵字篩選／匯出專案或整庫 JSON 並匯入還原／匯出 `.ics` 提醒與維護人員 CSV、離線速記便箋可新增便箋與標籤／切換 Markdown 預覽與雙欄模式／搜尋與置頂／匯出與匯入 JSON 並匯出 Markdown、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、大額曝險與關聯戶圖譜速算器可設定淨值與集團／新增關聯戶與股權連結／檢視圖譜與法定門檻檢核／執行 What-If 壓力試算並複製底稿或匯出案卷 JSON、金融金額中文大寫轉換器可切換幣別抬頭與「結尾加整」／「顯示英文金額」選項／輸入金額檢視中文大寫、純中文大寫與英文大寫輸出並複製、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、SQL Lab 可新增與切換工作區／在編輯器執行查詢與檢視結果並匯出 CSV／以結構樹插入查詢與檢視資料庫結構並下載 SQL Dump／以 CSV、SQL 腳本或 SQLite 檔匯入資料／保存與搜尋片段及查詢歷史／建立含預期結果的測試案例並執行套件與匯出報告 CSV／重新整理後確認工作區與設定仍在、MatrixPivot 表格矩陣轉置器可貼上或匯入表格／執行行列轉置／切換 Markdown、JSON、SQL、HTML 與 CSV 輸出並複製或下載 CSV、API Mock Studio 可切換端點／貼上 cURL 解析／執行 Mock 模擬與延遲測試／產生 Dummy 假資料／匯出 OpenAPI 3.0 與 Postman Collection、CSV 格式清理器可讀入 UTF-8 與 Big5 檔案／切換清理規則並檢視預覽／匯出 CP950 時確認無法對應字元的提示，Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、文件字數與閱讀時間統計可貼上文字或匯入 UTF-8／Big5 等多編碼檔案／檢視中英字數、段落句數與閱讀時間／設定目標字數並複製統計摘要、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏、StateFlow 動態狀態機與業務流程拓撲模擬器可切換內建與自訂範本／以 DSL 定義狀態、動作與條件並即時繪製拓撲圖／拖曳節點、縮放畫布與重整佈局／執行流程模擬並使用「上一步」「隨機探索」「重新開始」／切換拓撲診斷確認死胡同、孤島、黑洞循環與自環等問題並顯示問題數／新增、編輯、複製與刪除範本並匯出與匯入範本庫 JSON／匯出 SVG 與複製 DSL／重新整理後確認草稿與自訂範本仍在、銀行核心系統固定長度電文解析與管理中心可選擇電文規格／貼上多筆電文解析並匯出 JSON 與 CSV／切換反向組裝產生固定長度電文／新增或匯入多編碼 CSV 規格並保存解析歷程、核心系統與電文錯誤碼排查對照台可搜尋與篩選錯誤碼／新增編輯與刪除代碼／維護系統類別／匯入 Excel 並匯出完整資料、會議燃燒成本看板可設定人數與時薪級距（含新增與刪除級距、儲存與套用常用組合）／開始、暫停與結束計時並檢視超時加碼／勾選議程產出率／下載 PNG 評估卡與複製文字摘要／調整評等標準（產出權重、超時容忍、容忍與門檻）並確認提示文字、卡片與歷史分數同步更新且「回預設」可還原／重新整理後確認設定與 IndexedDB 紀錄仍在，並匯出 CSV 與 JSON 後再匯入還原（確認匯入後評等與分數依現行標準重算）、截圖 OCR 知識庫可先至「⚙ OCR 引擎設定」匯入主程式、Worker、核心與語言檔並執行 OCR 測試／以 `Ctrl`+`V` 貼上或匯入截圖（確認完全相同的圖片會自動略過）並辨識文字／以關鍵字、`#標籤` 與 `-排除` 語法搜尋並在檢視器確認命中高亮／編輯標題、分類、標籤與備註並加入集合／框選區域 OCR、文字標註、遮蔽區域與匯出分享圖／建立操作流程並下載 Word 或列印 PDF／匯出 ZIP 備份後再還原／重新整理後確認 IndexedDB（`snap-ocr-kb`）資料仍在、資料品質稽核中心可拖曳或選擇 CSV／TSV／TXT／XLSX 匯入並以自動偵測的編碼與分隔符號預覽確認／查看欄位剖析的型態、空值與分布／建立範本與規則（含必填、唯一、型別、範例清單、正規式、跨欄比較、檢查碼、日期缺口與跨資料集參照）並加入例外／執行稽核時可顯示進度與取消並產生總分、維度分數與 A–E 評等／在問題明細篩選分頁並點選列檢視原始資料／匯出問題明細 CSV、問題列原始資料、HTML 報告與清理後資料 CSV／以批次比對檢視分數趨勢與兩批次差異／匯出完整備份 JSON 後再匯入還原、資料關聯探索器可匯入多個 CSV／TSV 並逐檔確認編碼與分隔符號／按分析後檢視主鍵候選、外鍵關聯（信心、包含率與孤兒值）與欄位相依／在 ER 圖標示關聯並匯出 SVG 或 PNG／產生 JOIN SQL 與孤兒值查詢 SQL 並匯出孤兒值 CSV／以路徑查詢與影響分析追蹤欄位並匯出清單／匯出 Mermaid、DDL（Oracle、SQL Server、SQLite）、Excel、Markdown 與 HTML 報告／匯出工作區 JSON 後再匯入還原、SpecDiff 規格書比對工具可新增專案與匯入 docx／txt／Markdown 多個版本（或貼上文字）／選擇舊版與新版比對並切換左右並排、合併檢視、變更清單與需求編號四種檢視／依類型、審查狀態與模組篩選並批次套用狀態／逐筆設定審查狀態、影響模組與備註並以 F7／F8 導覽／調整比對選項（正規化、修改門檻、搬移偵測）後重新比對／匯出 HTML 差異報告與變更清單／影響清單 CSV／匯出整庫 JSON 後還原，並確認 IndexedDB 無法使用時會退回記憶體儲存並提示、FolderTree Architect 路徑轉樹狀結構可貼上路徑清單或拖曳資料夾掃描／切換 Raw Paths 與 Indented 輸入／切換 Unicode、ASCII、Markdown、Annotated 與 JSON 輸出並調整深度、忽略樣式與排序選項／在 Preview 分頁檢視色彩樹狀圖／複製 Markdown、純文字或下載檔案、Schema Studio — SQL 欄位映射可貼上 DDL／JSON／JSON Schema 解析來源與目標欄位／以點選、拖曳或自動配對建立欄位映射並設定轉換規則與樣板／切換 SQL SELECT、Target DDL、Pandas、dbt 與 MyBatis 分頁檢視輸出／切換方言與引用識別字、關鍵字大寫與補齊稽核欄位選項／複製或下載程式碼並匯出與匯入 JSON 設定且重新整理後仍保留。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
