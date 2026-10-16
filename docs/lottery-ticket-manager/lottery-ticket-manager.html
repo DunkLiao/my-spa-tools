@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>園遊會摸彩券管理工具 v2（IndexedDB）</title>
+<style>
+:root{--pri:#1f7a4d;--pri2:#2e9e66;--bg:#f4f7f5;--bd:#d7e0db;--txt:#223;--red:#c0392b}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+header{background:linear-gradient(90deg,var(--pri),var(--pri2));color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:20px;margin:0;flex:1}
+header select{padding:6px;border-radius:6px;border:none;min-width:300px;font-size:14px}
+nav{display:flex;gap:4px;background:#fff;padding:0 16px;border-bottom:1px solid var(--bd);flex-wrap:wrap}
+nav button{border:none;background:none;padding:12px 16px;cursor:pointer;font-size:15px;border-bottom:3px solid transparent;font-family:inherit}
+nav button.active{border-color:var(--pri);color:var(--pri);font-weight:bold}
+main{padding:16px 20px;max-width:1280px;margin:auto}
+section{display:none}section.active{display:block}
+.card{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:16px;color:var(--pri)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:8px}
+.field{display:flex;flex-direction:column;gap:3px}
+.field label{font-size:12px;color:#556}
+input,select,textarea{padding:6px 8px;border:1px solid var(--bd);border-radius:6px;font-size:14px;font-family:inherit}
+input.num{width:100px;font-family:Consolas,monospace;letter-spacing:1px}
+.btn{padding:7px 14px;border:1px solid var(--pri);background:var(--pri);color:#fff;border-radius:6px;cursor:pointer;font-size:14px;font-family:inherit}
+.btn.sec{background:#fff;color:var(--pri)}
+.btn.danger{background:var(--red);border-color:var(--red)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn.sm.danger{background:#fff;color:var(--red)}
+table{width:100%;border-collapse:collapse;background:#fff}
+th,td{border-bottom:1px solid #e6ece8;padding:6px 8px;text-align:left;white-space:nowrap}
+th{background:#eef5f1;position:sticky;top:0;z-index:1}
+.mono{font-family:Consolas,monospace}
+.tblwrap{max-height:520px;overflow:auto;border:1px solid var(--bd);border-radius:8px}
+.muted{color:#778;font-size:12px}
+.badge{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:#e8f5ee;color:var(--pri)}
+.badge.off{background:#eee;color:#888}
+.msg{padding:8px 12px;border-radius:6px;margin-top:8px;display:none}
+.msg.show{display:block}
+.msg.info{background:#eaf4ff;color:#1a4f8a}
+.msg.ok{background:#e8f5ee;color:var(--pri)}
+.msg.warn{background:#fff6e5;color:#8a5a00}
+.msg.err{background:#fdecea;color:var(--red)}
+.stats{display:flex;gap:12px;flex-wrap:wrap}
+.stat{background:#f0f7f3;border-radius:8px;padding:6px 14px}
+.stat b{font-size:18px;color:var(--pri)}
+.pager{display:flex;gap:6px;align-items:center;margin-top:8px}
+.bar{background:#f7faf8;padding:8px;border-radius:6px;align-items:center}
+.bar.red{background:#fdf3f2}
+dialog{border:none;border-radius:10px;padding:18px;min-width:400px;box-shadow:0 10px 40px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+#toast{position:fixed;right:20px;bottom:20px;background:#333;color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.3s;pointer-events:none;z-index:99}
+#toast.show{opacity:.95}
+.empty{padding:30px;text-align:center;color:#889}
+tr.cur td{background:#f3fbf6}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎟 園遊會摸彩券管理工具</h1>
+  <span>目前期別：</span><select id="curEvent"></select>
+</header>
+<nav>
+  <button type="button" data-tab="events" class="active">期別管理</button>
+  <button type="button" data-tab="people">人員管理</button>
+  <button type="button" data-tab="tickets">摸彩券管理</button>
+  <button type="button" data-tab="report">報表匯出</button>
+  <button type="button" data-tab="system">系統</button>
+</nav>
+<main>
+
+<!-- 期別管理 -->
+<section id="sec-events" class="active">
+  <div class="card">
+    <h3 id="evFormTitle">新增期別</h3>
+    <input type="hidden" id="evId">
+    <div class="row">
+      <div class="field" style="flex:1;min-width:300px"><label>園遊會名稱 *</label><input id="evName" placeholder="例：鎖頭銀行 115 年度永續公益園遊會"></div>
+      <div class="field"><label>民國年度</label><input id="evYear" type="number" style="width:90px" placeholder="115"></div>
+      <div class="field"><label>活動日期</label><input id="evDate" type="date"></div>
+      <div class="field"><label>地點</label><input id="evLoc" style="width:240px"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>備註</label><input id="evMemo"></div>
+      <button type="button" class="btn" id="evSave">儲存</button>
+      <button type="button" class="btn sec" id="evReset">清除</button>
+    </div>
+    <div class="muted">民國年度空白時，系統會自動從名稱中的「○○○ 年度」帶入。</div>
+  </div>
+  <div class="card">
+    <h3>期別列表</h3>
+    <div class="tblwrap"><table>
+      <thead><tr><th>年度</th><th>園遊會名稱</th><th>活動日期</th><th>地點</th><th>摸彩券張數</th><th>操作</th></tr></thead>
+      <tbody id="evBody"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- 人員管理 -->
+<section id="sec-people">
+  <div class="card">
+    <h3 id="pFormTitle">新增人員</h3>
+    <input type="hidden" id="pId">
+    <div class="row">
+      <div class="field"><label>姓名 *</label><input id="pName"></div>
+      <div class="field"><label>員編</label><input id="pEmp"></div>
+      <div class="field"><label>單位</label><input id="pDept"></div>
+      <div class="field"><label>狀態</label><select id="pActive"><option value="1">啟用</option><option value="0">停用</option></select></div>
+      <button type="button" class="btn" id="pSave">儲存</button>
+      <button type="button" class="btn sec" id="pReset">清除</button>
+    </div>
+    <div class="muted">同名人員請填寫員編或單位來區分。停用的人員不會出現在下拉選單，但已設定的摸彩券資料會保留。</div>
+  </div>
+  <div class="card">
+    <h3>批次匯入人員</h3>
+    <div class="muted">每行一人，格式：姓名,員編,單位（員編、單位可省略；可用逗號或 Tab 分隔，可直接從 Excel 貼上）。名單中已存在的人員會略過。</div>
+    <textarea id="pBulk" rows="4" style="width:100%;margin-top:6px" placeholder="王小明,E0001,資訊處&#10;李大華"></textarea>
+    <div class="row" style="margin-top:6px"><button type="button" class="btn" id="pBulkBtn">匯入</button></div>
+  </div>
+  <div class="card">
+    <h3>人員列表</h3>
+    <div class="row"><input id="pSearch" placeholder="搜尋姓名／員編／單位" style="width:260px"></div>
+    <div class="tblwrap"><table>
+      <thead><tr><th>姓名</th><th>員編</th><th>單位</th><th>狀態</th><th>存根人張數</th><th>代抽人張數</th><th>操作</th></tr></thead>
+      <tbody id="pBody"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- 摸彩券管理 -->
+<section id="sec-tickets">
+  <div id="tNoEvent" class="card empty">請先到「期別管理」建立期別，並在上方選擇目前期別。</div>
+  <div id="tMain">
+    <div class="card">
+      <h3>新增摸彩券 — <span id="tEvName"></span></h3>
+      <div class="row">
+        <label><input type="radio" name="tMode" value="single" checked> 單筆</label>
+        <label><input type="radio" name="tMode" value="range"> 起訖</label>
+      </div>
+      <div class="row">
+        <div class="field"><label id="tStartLbl">摸彩券編號 *</label><input id="tStart" class="num" maxlength="5" placeholder="00001"></div>
+        <div class="field" id="tEndWrap" style="display:none"><label>訖號 *</label><input id="tEnd" class="num" maxlength="5" placeholder="00050"></div>
+        <div class="field"><label>存根人 *</label><input id="tStub" list="dlPeople" placeholder="輸入或選擇姓名"></div>
+        <div class="field"><label>代抽人（可空白）</label><input id="tProxy" list="dlPeople" placeholder="空白"></div>
+        <div class="field"><label>號碼重複時</label><select id="tDup"><option value="skip">跳過重複號碼</option><option value="overwrite">覆蓋存根人／代抽人</option></select></div>
+        <button type="button" class="btn sec" id="tPreview">預覽</button>
+        <button type="button" class="btn" id="tAdd">新增</button>
+      </div>
+      <div class="muted">編號為 5 位純數字，輸入不足 5 位時會自動補 0（例如 101 → 00101）。起訖模式單次最多 5,000 張。</div>
+      <div id="tMsg" class="msg"></div>
+    </div>
+
+    <div class="card">
+      <h3>摸彩券列表</h3>
+      <div class="stats" id="tStats"></div>
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label>號碼包含</label><input id="fNo" class="num"></div>
+        <div class="field"><label>存根人</label><select id="fStub"></select></div>
+        <div class="field"><label>代抽人</label><select id="fProxy"></select></div>
+        <button type="button" class="btn sec" id="fClear">清除篩選</button>
+      </div>
+      <div class="row bar">
+        <span>已勾選 <b id="selCount">0</b> 筆</span>
+        <div class="field"><label>批次存根人</label><input id="bStub" list="dlPeople" placeholder="不變更"></div>
+        <div class="field"><label>批次代抽人</label><input id="bProxy" list="dlPeople" placeholder="不變更"></div>
+        <label><input type="checkbox" id="bProxyClear"> 清空代抽人</label>
+        <button type="button" class="btn" id="bApply">批次修改</button>
+        <button type="button" class="btn danger" id="bDel">刪除勾選</button>
+        <button type="button" class="btn sec" id="bNone">取消勾選</button>
+      </div>
+      <div class="row bar red">
+        <span>依範圍刪除：</span>
+        <input id="rdStart" class="num" maxlength="5" placeholder="起號"> ～
+        <input id="rdEnd" class="num" maxlength="5" placeholder="訖號">
+        <button type="button" class="btn danger" id="rdBtn">刪除範圍</button>
+      </div>
+      <div class="tblwrap"><table>
+        <thead><tr><th style="width:36px"><input type="checkbox" id="chkAll" title="勾選本頁"></th><th class="mono">摸彩券編號</th><th>存根人</th><th>代抽人</th><th>更新時間</th><th>操作</th></tr></thead>
+        <tbody id="tBody"></tbody>
+      </table></div>
+      <div class="pager" id="tPager"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 報表匯出 -->
+<section id="sec-report">
+  <div class="card">
+    <h3>報表匯出</h3>
+    <div class="row">
+      <div class="field"><label>期別</label><select id="rEvent"></select></div>
+      <button type="button" class="btn sec" id="rGen">產生預覽</button>
+      <button type="button" class="btn" id="rCsv">匯出 CSV</button>
+      <button type="button" class="btn" id="rXlsx">匯出 Excel (.xlsx)</button>
+    </div>
+    <div class="muted">合併規則：依「期別＋存根人＋代抽人」分組，組內號碼連續才合併為一列；號碼不連續時另起一列，單一號碼的起號與訖號相同。匯出欄位：園遊會名稱｜存根人姓名｜代抽人姓名｜摸彩券編號起號｜摸彩券編號訖號。</div>
+    <div class="stats" id="rStats" style="margin:10px 0"></div>
+    <div class="tblwrap"><table>
+      <thead><tr><th>園遊會名稱</th><th>存根人姓名</th><th>代抽人姓名</th><th class="mono">摸彩券編號起號</th><th class="mono">摸彩券編號訖號</th><th>張數</th></tr></thead>
+      <tbody id="rBody"><tr><td colspan="6" class="empty">請按「產生預覽」</td></tr></tbody>
+    </table></div>
+  </div>
+</section>
+
+<!-- 系統 -->
+<section id="sec-system">
+  <div class="card">
+    <h3>儲存狀態</h3>
+    <div id="sysStore" class="stats"></div>
+    <div class="muted" style="margin-top:6px">所有資料（期別、人員、摸彩券、目前期別設定）皆儲存在瀏覽器的 IndexedDB，不使用 localStorage。請固定用同一個瀏覽器、同一個檔案路徑開啟，並避免使用無痕模式或預覽視窗。</div>
+  </div>
+  <div class="card">
+    <h3>完整備份</h3>
+    <div class="muted">將所有期別、人員、摸彩券匯出為 JSON 檔。資料存在本機瀏覽器，建議定期備份。</div>
+    <div class="row" style="margin-top:8px"><button type="button" class="btn" id="sysBackup">匯出備份 (JSON)</button></div>
+  </div>
+  <div class="card">
+    <h3>還原備份</h3>
+    <div class="row">
+      <input type="file" id="sysFile" accept=".json,application/json">
+      <select id="sysMode"><option value="merge">合併（相同 ID 覆蓋，同期別重複號碼略過）</option><option value="replace">覆蓋（先清空現有資料）</option></select>
+      <button type="button" class="btn" id="sysImport">匯入</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3>清除資料</h3>
+    <div class="row"><button type="button" class="btn danger" id="sysClear">清除全部資料</button></div>
+  </div>
+</section>
+</main>
+
+<datalist id="dlPeople"></datalist>
+
+<dialog id="dlg">
+  <h3 style="margin-top:0;color:var(--pri)">編輯摸彩券</h3>
+  <input type="hidden" id="dId">
+  <div class="field" style="margin-bottom:8px"><label>摸彩券編號 *</label><input id="dNo" class="num" maxlength="5"></div>
+  <div class="field" style="margin-bottom:8px"><label>存根人 *</label><input id="dStub" list="dlPeople"></div>
+  <div class="field" style="margin-bottom:8px"><label>代抽人（可空白）</label><input id="dProxy" list="dlPeople"></div>
+  <div id="dMsg" class="msg"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:12px">
+    <button type="button" class="btn sec" id="dCancel">取消</button>
+    <button type="button" class="btn" id="dSave">儲存</button>
+  </div>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+const DB_NAME = 'LotteryTicketDB', DB_VER = 2;   // v2：新增 meta store（保存目前期別等設定），既有資料完整保留
+const NO_LEN = 5, NO_RE = /^\d{5}$/, RANGE_LIMIT = 5000, PAGE_SIZE = 50;
+const S = { events: [], people: [], allTickets: [], tickets: [], pmap: new Map(),
+  cur: '', page: 1, selected: new Set(), report: null };
+let db;
+
+/* ---------- 工具函式 ---------- */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => (Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+const pad = v => /^\d{1,5}$/.test(v) ? v.padStart(NO_LEN, '0') : v;
+const nowIso = () => new Date().toISOString();
+const fmtTime = iso => iso ? new Date(iso).toLocaleString('zh-TW', { hour12: false }) : '';
+function toast(m) { const t = $('toast'); t.textContent = m; t.classList.add('show'); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2200); }
+function showMsg(el, type, html) { el.className = 'msg show ' + type; el.innerHTML = html; }
+function hideMsg(el) { el.className = 'msg'; }
+function personLabel(p) { return p ? p.name + (p.empNo ? '｜' + p.empNo : '') + (p.dept ? '｜' + p.dept : '') : ''; }
+function personName(id) { const p = S.pmap.get(id); return p ? p.name : (id ? '(已刪除)' : ''); }
+function stamp() { const d = new Date(), z = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}_${z(d.getHours())}${z(d.getMinutes())}`; }
+function download(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+
+/* 由輸入文字找出人員：優先比對完整標籤，其次比對唯一姓名 */
+function resolvePerson(text) {
+  const t = (text || '').trim();
+  if (!t) return null;
+  const byLabel = S.people.find(p => personLabel(p) === t);
+  if (byLabel) return byLabel;
+  const byName = S.people.filter(p => p.name === t);
+  if (byName.length > 1) throw `「${t}」有同名人員，請從下拉選單選擇含員編／單位的選項`;
+  return byName[0] || null;
+}
+
+/* ---------- IndexedDB ---------- */
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      // 只新增、不刪除任何 object store，升級時既有資料不會遺失
+      if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'key' });
+      if (!d.objectStoreNames.contains('events')) d.createObjectStore('events', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('people')) d.createObjectStore('people', { keyPath: 'id' });
+      if (!d.objectStoreNames.contains('tickets')) {
+        const t = d.createObjectStore('tickets', { keyPath: 'id' });
+        t.createIndex('eventId', 'eventId');
+        t.createIndex('eventTicket', ['eventId', 'ticketNo'], { unique: true });
+      }
+    };
+    r.onsuccess = () => {
+      const d = r.result;
+      d.onversionchange = () => { d.close(); alert('資料庫版本已在其他分頁更新，請重新整理本頁。'); };
+      res(d);
+    };
+    r.onerror = () => rej(r.error);
+    r.onblocked = () => alert('請先關閉其他已開啟本工具的分頁，再重新整理本頁以完成資料庫升級。');
+  });
+}
+async function getMeta(key, def = '') {
+  const r = await reqP(db.transaction('meta').objectStore('meta').get(key));
+  return r ? r.value : def;
+}
+const setMeta = (key, value) => txRun('meta', tx => tx.objectStore('meta').put({ key, value, updatedAt: nowIso() }));
+/* 舊版曾把目前期別存在 localStorage，首次啟動時搬移到 IndexedDB 後移除 */
+async function migrateLocalStorage() {
+  try {
+    const old = window.localStorage && localStorage.getItem('lt_currentEvent');
+    if (old !== null && old !== undefined) {
+      if (!(await getMeta('currentEvent'))) await setMeta('currentEvent', old);
+      localStorage.removeItem('lt_currentEvent');
+    }
+  } catch (e) { /* 環境不允許 localStorage 時直接略過 */ }
+}
+/* 向瀏覽器申請持久化儲存，避免空間不足時 IndexedDB 被自動清除 */
+async function requestPersist() {
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      S.persisted = await navigator.storage.persisted() || await navigator.storage.persist();
+    }
+  } catch (e) { S.persisted = false; }
+}
+const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const getAll = store => reqP(db.transaction(store).objectStore(store).getAll());
+function txRun(stores, fn) {
+  return new Promise((res, rej) => {
+    const tx = db.transaction(stores, 'readwrite');
+    fn(tx);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error || new Error('交易已中止'));
+  });
+}
+const bulk = (store, puts = [], dels = []) => txRun(store, tx => { const os = tx.objectStore(store); puts.forEach(p => os.put(p)); dels.forEach(k => os.delete(k)); });
+
+/* ---------- 載入與整體繪製 ---------- */
+async function refresh() {
+  const [ev, pp, tk] = await Promise.all([getAll('events'), getAll('people'), getAll('tickets')]);
+  S.events = ev.sort((a, b) => (b.year || 0) - (a.year || 0) || a.name.localeCompare(b.name, 'zh-Hant'));
+  S.people = pp.sort((a, b) => a.name.localeCompare(b.name, 'zh-Hant') || (a.empNo || '').localeCompare(b.empNo || ''));
+  S.pmap = new Map(S.people.map(p => [p.id, p]));
+  S.allTickets = tk;
+  if (!S.events.some(e => e.id === S.cur)) { S.cur = S.events[0]?.id || ''; await setMeta('currentEvent', S.cur); }
+  S.tickets = tk.filter(t => t.eventId === S.cur).sort((a, b) => a.ticketNo.localeCompare(b.ticketNo));
+  const ids = new Set(S.tickets.map(t => t.id));
+  [...S.selected].forEach(id => { if (!ids.has(id)) S.selected.delete(id); });
+  renderAll();
+}
+function renderAll() { renderHeader(); renderEvents(); renderPeople(); renderDatalist(); renderTickets(); renderReportSelect(); renderStore(); }
+function renderStore() {
+  $('sysStore').innerHTML = `<div class="stat">儲存方式 <b>IndexedDB</b></div>
+    <div class="stat">資料庫 <b>${DB_NAME} v${db.version}</b></div>
+    <div class="stat">持久化儲存 <b>${S.persisted ? '已啟用' : '未啟用'}</b></div>
+    <div class="stat">期別 <b>${S.events.length}</b></div><div class="stat">人員 <b>${S.people.length}</b></div>
+    <div class="stat">摸彩券 <b>${S.allTickets.length.toLocaleString()}</b></div>`;
+}
+
+function renderHeader() {
+  $('curEvent').innerHTML = S.events.length
+    ? S.events.map(e => `<option value="${esc(e.id)}"${e.id === S.cur ? ' selected' : ''}>${esc(e.name)}</option>`).join('')
+    : '<option value="">（尚未建立期別）</option>';
+}
+function renderDatalist() {
+  $('dlPeople').innerHTML = S.people.filter(p => p.active !== false).map(p => `<option value="${esc(personLabel(p))}"></option>`).join('');
+}
+
+/* ---------- 期別管理 ---------- */
+function renderEvents() {
+  const cnt = {}; S.allTickets.forEach(t => cnt[t.eventId] = (cnt[t.eventId] || 0) + 1);
+  $('evBody').innerHTML = S.events.length ? S.events.map(e => `
+    <tr class="${e.id === S.cur ? 'cur' : ''}">
+      <td>${esc(e.year || '')}</td>
+      <td>${esc(e.name)} ${e.id === S.cur ? '<span class="badge">目前期別</span>' : ''}</td>
+      <td>${esc(e.eventDate || '')}</td><td>${esc(e.location || '')}</td>
+      <td>${(cnt[e.id] || 0).toLocaleString()}</td>
+      <td>
+        ${e.id !== S.cur ? `<button type="button" class="btn sm sec" data-ev-act="cur" data-id="${esc(e.id)}">設為目前</button>` : ''}
+        <button type="button" class="btn sm sec" data-ev-act="edit" data-id="${esc(e.id)}">編輯</button>
+        <button type="button" class="btn sm danger" data-ev-act="del" data-id="${esc(e.id)}">刪除</button>
+      </td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty">尚無期別，請在上方新增</td></tr>';
+}
+function resetEventForm() { ['evId', 'evName', 'evYear', 'evDate', 'evLoc', 'evMemo'].forEach(i => $(i).value = ''); $('evFormTitle').textContent = '新增期別'; }
+async function saveEvent() {
+  const id = $('evId').value, name = $('evName').value.trim();
+  if (!name) return toast('請輸入園遊會名稱');
+  if (S.events.some(e => e.name === name && e.id !== id)) return toast('園遊會名稱已存在');
+  let year = $('evYear').value.trim();
+  if (!year) { const m = name.match(/(\d{2,3})\s*年度/); if (m) year = m[1]; }
+  const old = S.events.find(e => e.id === id);
+  const rec = { ...(old || { id: uid(), createdAt: nowIso() }), name, year: year ? Number(year) : null,
+    eventDate: $('evDate').value, location: $('evLoc').value.trim(), memo: $('evMemo').value.trim(), updatedAt: nowIso() };
+  await bulk('events', [rec]);
+  if (!S.cur) { S.cur = rec.id; await setMeta('currentEvent', S.cur); }
+  resetEventForm(); await refresh(); toast(old ? '期別已更新' : '期別已新增');
+}
+async function eventAction(act, id) {
+  const e = S.events.find(x => x.id === id); if (!e) return;
+  if (act === 'cur') return setCurrent(id);
+  if (act === 'edit') {
+    $('evId').value = e.id; $('evName').value = e.name; $('evYear').value = e.year || '';
+    $('evDate').value = e.eventDate || ''; $('evLoc').value = e.location || ''; $('evMemo').value = e.memo || '';
+    $('evFormTitle').textContent = '編輯期別'; window.scrollTo({ top: 0, behavior: 'smooth' }); return;
+  }
+  if (act === 'del') {
+    const tk = S.allTickets.filter(t => t.eventId === id);
+    if (prompt(`即將刪除期別「${e.name}」\n此期別底下的 ${tk.length} 張摸彩券也會一併刪除，且無法復原。\n\n請輸入「刪除期別」確認：`) !== '刪除期別') return toast('已取消刪除期別');
+    await txRun(['events', 'tickets'], tx => { tx.objectStore('events').delete(id); const os = tx.objectStore('tickets'); tk.forEach(t => os.delete(t.id)); });
+    await refresh(); toast('期別已刪除');
+  }
+}
+async function setCurrent(id) { S.cur = id; await setMeta('currentEvent', id); S.selected.clear(); S.page = 1; await refresh(); }
+
+/* ---------- 人員管理 ---------- */
+function refCounts() {
+  const m = new Map();
+  S.allTickets.forEach(t => {
+    if (t.stubPersonId) { const r = m.get(t.stubPersonId) || { stub: 0, proxy: 0 }; r.stub++; m.set(t.stubPersonId, r); }
+    if (t.proxyPersonId) { const r = m.get(t.proxyPersonId) || { stub: 0, proxy: 0 }; r.proxy++; m.set(t.proxyPersonId, r); }
+  });
+  return m;
+}
+function renderPeople() {
+  const q = $('pSearch').value.trim().toLowerCase(), refs = refCounts();
+  const list = S.people.filter(p => !q || [p.name, p.empNo, p.dept].some(v => (v || '').toLowerCase().includes(q)));
+  $('pBody').innerHTML = list.length ? list.map(p => {
+    const r = refs.get(p.id) || { stub: 0, proxy: 0 };
+    return `<tr><td>${esc(p.name)}</td><td>${esc(p.empNo || '')}</td><td>${esc(p.dept || '')}</td>
+      <td>${p.active === false ? '<span class="badge off">停用</span>' : '<span class="badge">啟用</span>'}</td>
+      <td>${r.stub}</td><td>${r.proxy}</td>
+      <td><button type="button" class="btn sm sec" data-pp-act="edit" data-id="${esc(p.id)}">編輯</button>
+        <button type="button" class="btn sm sec" data-pp-act="toggle" data-id="${esc(p.id)}">${p.active === false ? '啟用' : '停用'}</button>
+        <button type="button" class="btn sm danger" data-pp-act="del" data-id="${esc(p.id)}">刪除</button></td></tr>`;
+  }).join('') : '<tr><td colspan="7" class="empty">尚無人員資料</td></tr>';
+}
+function resetPersonForm() { ['pId', 'pName', 'pEmp', 'pDept'].forEach(i => $(i).value = ''); $('pActive').value = '1'; $('pFormTitle').textContent = '新增人員'; }
+async function savePerson() {
+  const id = $('pId').value, name = $('pName').value.trim();
+  if (!name) return toast('請輸入姓名');
+  const old = S.people.find(p => p.id === id);
+  const rec = { ...(old || { id: uid(), createdAt: nowIso() }), name, empNo: $('pEmp').value.trim(), dept: $('pDept').value.trim(),
+    active: $('pActive').value === '1', updatedAt: nowIso() };
+  if (S.people.some(p => p.id !== rec.id && personLabel(p) === personLabel(rec)))
+    return toast('已有相同姓名／員編／單位的人員，請填寫員編或單位區分');
+  await bulk('people', [rec]); resetPersonForm(); await refresh(); toast(old ? '人員已更新（所有期別同步顯示）' : '人員已新增');
+}
+async function bulkImportPeople() {
+  const lines = $('pBulk').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return toast('請輸入人員資料');
+  const labels = new Set(S.people.map(personLabel)), puts = []; let skip = 0;
+  lines.forEach(l => {
+    const [name, empNo = '', dept = ''] = l.split(/[,\t，]/).map(s => s.trim());
+    if (!name) return;
+    const rec = { id: uid(), name, empNo, dept, active: true, createdAt: nowIso(), updatedAt: nowIso() };
+    const lb = personLabel(rec);
+    if (labels.has(lb)) { skip++; return; }
+    labels.add(lb); puts.push(rec);
+  });
+  if (puts.length) await bulk('people', puts);
+  $('pBulk').value = ''; await refresh(); toast(`匯入 ${puts.length} 人，略過重複 ${skip} 人`);
+}
+async function personAction(act, id) {
+  const p = S.people.find(x => x.id === id); if (!p) return;
+  if (act === 'edit') {
+    $('pId').value = p.id; $('pName').value = p.name; $('pEmp').value = p.empNo || ''; $('pDept').value = p.dept || '';
+    $('pActive').value = p.active === false ? '0' : '1'; $('pFormTitle').textContent = '編輯人員';
+    window.scrollTo({ top: 0, behavior: 'smooth' }); return;
+  }
+  if (act === 'toggle') { await bulk('people', [{ ...p, active: p.active === false, updatedAt: nowIso() }]); await refresh(); return; }
+  if (act === 'del') {
+    const used = S.allTickets.filter(t => t.stubPersonId === id || t.proxyPersonId === id);
+    if (used.length) {
+      const by = {}; used.forEach(t => { const n = S.events.find(e => e.id === t.eventId)?.name || '(未知期別)'; by[n] = (by[n] || 0) + 1; });
+      alert(`「${p.name}」已被 ${used.length} 張摸彩券引用，無法刪除：\n\n` + Object.entries(by).map(([n, c]) => `・${n}：${c} 張`).join('\n') + '\n\n建議改為「停用」。');
+      return;
+    }
+    if (!confirm(`確定刪除人員「${personLabel(p)}」？`)) return;
+    await bulk('people', [], [id]); await refresh(); toast('人員已刪除');
+  }
+}
+
+/* ---------- 摸彩券管理 ---------- */
+/* 安全刪除：交易只鎖定 tickets store，逐筆讀出核對「確實是摸彩券且屬於目前期別」才刪除；
+   刪除後再核對期別與人員筆數未變動，若有異常即中止交易（全部回復） */
+function deleteTickets(ids) {
+  const eventId = S.cur, want = [...new Set(ids)].filter(Boolean);
+  if (!eventId) return Promise.reject(new Error('尚未選擇期別'));
+  if (!want.length) return Promise.resolve(0);
+  return new Promise((res, rej) => {
+    const tx = db.transaction(['tickets'], 'readwrite'), os = tx.objectStore('tickets');
+    let n = 0;
+    want.forEach(id => {
+      const g = os.get(id);
+      g.onsuccess = () => {
+        const t = g.result;
+        if (t && t.eventId === eventId && NO_RE.test(t.ticketNo || '')) { os.delete(id); n++; }
+      };
+    });
+    tx.oncomplete = () => res(n);
+    tx.onerror = () => rej(tx.error);
+    tx.onabort = () => rej(tx.error || new Error('交易已中止'));
+  }).then(async n => {
+    const [ev, pp] = await Promise.all([reqP(db.transaction('events').objectStore('events').count()),
+                                        reqP(db.transaction('people').objectStore('people').count())]);
+    if (ev !== S.events.length || pp !== S.people.length)
+      console.warn('刪除後期別／人員筆數與畫面不一致（可能有其他分頁同時修改）', { ev, pp });
+    return n;
+  });
+}
+function filteredTickets() {
+  const no = $('fNo').value.trim(), st = $('fStub').value, px = $('fProxy').value;
+  return S.tickets.filter(t => (!no || t.ticketNo.includes(no)) && (!st || t.stubPersonId === st) &&
+    (!px || (px === '__none' ? !t.proxyPersonId : t.proxyPersonId === px)));
+}
+function fillFilterSelect(sel, ids, withNone) {
+  const v = sel.value;
+  const opts = [...ids].map(id => ({ id, n: personLabel(S.pmap.get(id)) || '(已刪除)' })).sort((a, b) => a.n.localeCompare(b.n, 'zh-Hant'));
+  sel.innerHTML = '<option value="">全部</option>' + (withNone ? '<option value="__none">（空白）</option>' : '') +
+    opts.map(o => `<option value="${esc(o.id)}">${esc(o.n)}</option>`).join('');
+  sel.value = [...sel.options].some(o => o.value === v) ? v : '';
+}
+function renderTickets() {
+  const ev = S.events.find(e => e.id === S.cur);
+  $('tNoEvent').style.display = ev ? 'none' : ''; $('tMain').style.display = ev ? '' : 'none';
+  if (!ev) return;
+  $('tEvName').textContent = ev.name;
+  fillFilterSelect($('fStub'), new Set(S.tickets.map(t => t.stubPersonId).filter(Boolean)), false);
+  fillFilterSelect($('fProxy'), new Set(S.tickets.map(t => t.proxyPersonId).filter(Boolean)), true);
+
+  const list = filteredTickets(), pages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+  if (S.page > pages) S.page = pages;
+  const rows = list.slice((S.page - 1) * PAGE_SIZE, S.page * PAGE_SIZE);
+  $('tBody').innerHTML = rows.length ? rows.map(t => `
+    <tr><td><input type="checkbox" class="rowChk" data-id="${esc(t.id)}"${S.selected.has(t.id) ? ' checked' : ''}></td>
+      <td class="mono">${esc(t.ticketNo)}</td><td>${esc(personName(t.stubPersonId))}</td><td>${esc(personName(t.proxyPersonId))}</td>
+      <td class="muted">${esc(fmtTime(t.updatedAt))}</td>
+      <td><button type="button" class="btn sm sec" data-tk-act="edit" data-id="${esc(t.id)}">編輯</button>
+        <button type="button" class="btn sm danger" data-tk-act="del" data-id="${esc(t.id)}">刪除</button></td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty">沒有符合的摸彩券</td></tr>';
+  $('chkAll').checked = rows.length > 0 && rows.every(t => S.selected.has(t.id));
+  $('selCount').textContent = S.selected.size;
+  $('tPager').innerHTML = `<button type="button" class="btn sm sec" data-pg="first"${S.page <= 1 ? ' disabled' : ''}>«</button>
+    <button type="button" class="btn sm sec" data-pg="prev"${S.page <= 1 ? ' disabled' : ''}>‹</button>
+    <span>第 ${S.page} / ${pages} 頁（篩選結果 ${list.length.toLocaleString()} 筆）</span>
+    <button type="button" class="btn sm sec" data-pg="next"${S.page >= pages ? ' disabled' : ''}>›</button>
+    <button type="button" class="btn sm sec" data-pg="last"${S.page >= pages ? ' disabled' : ''}>»</button>`;
+  $('tPager').dataset.pages = pages;
+  const stubs = new Set(S.tickets.map(t => t.stubPersonId)), withProxy = S.tickets.filter(t => t.proxyPersonId).length;
+  $('tStats').innerHTML = `<div class="stat">本期總張數 <b>${S.tickets.length.toLocaleString()}</b></div>
+    <div class="stat">存根人數 <b>${stubs.size}</b></div>
+    <div class="stat">有代抽人 <b>${withProxy.toLocaleString()}</b> 張</div>
+    <div class="stat">代抽人空白 <b>${(S.tickets.length - withProxy).toLocaleString()}</b> 張</div>`;
+}
+function buildPending() {
+  const mode = document.querySelector('input[name=tMode]:checked').value;
+  const s = pad($('tStart').value.trim()); $('tStart').value = s;
+  if (!NO_RE.test(s)) throw '摸彩券編號必須為 5 位純數字';
+  let nos = [s];
+  if (mode === 'range') {
+    const e = pad($('tEnd').value.trim()); $('tEnd').value = e;
+    if (!NO_RE.test(e)) throw '訖號必須為 5 位純數字';
+    const a = +s, b = +e;
+    if (b < a) throw '訖號必須大於或等於起號';
+    if (b - a + 1 > RANGE_LIMIT) throw `單次最多 ${RANGE_LIMIT.toLocaleString()} 張，目前為 ${(b - a + 1).toLocaleString()} 張`;
+    nos = []; for (let i = a; i <= b; i++) nos.push(String(i).padStart(NO_LEN, '0'));
+  }
+  const stub = resolvePerson($('tStub').value);
+  if (!stub) throw '請選擇有效的存根人（需先在「人員管理」建立）';
+  const pt = $('tProxy').value.trim(); let proxy = null;
+  if (pt) { proxy = resolvePerson(pt); if (!proxy) throw '代抽人不在人員名單中'; }
+  const exist = new Map(S.tickets.map(t => [t.ticketNo, t]));
+  return { nos, dups: nos.filter(n => exist.has(n)), exist, stub, proxy };
+}
+function previewTickets() {
+  try {
+    const p = buildPending(), dupMode = $('tDup').value;
+    const dupTxt = p.dups.length ? `，其中重複 <b>${p.dups.length}</b> 張（${p.dups.slice(0, 10).join('、')}${p.dups.length > 10 ? '…' : ''}），將${dupMode === 'skip' ? '跳過' : '覆蓋'}` : '，無重複號碼';
+    showMsg($('tMsg'), p.dups.length ? 'warn' : 'info', `共 <b>${p.nos.length}</b> 張（${p.nos[0]}${p.nos.length > 1 ? ' ～ ' + p.nos[p.nos.length - 1] : ''}）${dupTxt}。<br>存根人：${esc(personLabel(p.stub))}；代抽人：${p.proxy ? esc(personLabel(p.proxy)) : '（空白）'}`);
+  } catch (e) { showMsg($('tMsg'), 'err', esc(e.message || e)); }
+}
+async function addTickets() {
+  try {
+    const p = buildPending(), dupMode = $('tDup').value, now = nowIso(), puts = [];
+    if (p.dups.length && !confirm(`有 ${p.dups.length} 張號碼已存在，將${dupMode === 'skip' ? '跳過' : '覆蓋存根人／代抽人'}，確定繼續？`)) return;
+    let added = 0, over = 0, skipped = 0;
+    p.nos.forEach(n => {
+      const ex = p.exist.get(n);
+      if (ex) {
+        if (dupMode === 'skip') { skipped++; return; }
+        over++; puts.push({ ...ex, stubPersonId: p.stub.id, proxyPersonId: p.proxy ? p.proxy.id : '', updatedAt: now });
+      } else {
+        added++; puts.push({ id: uid(), eventId: S.cur, ticketNo: n, stubPersonId: p.stub.id, proxyPersonId: p.proxy ? p.proxy.id : '', createdAt: now, updatedAt: now });
+      }
+    });
+    if (!puts.length) return showMsg($('tMsg'), 'warn', '沒有可寫入的號碼（全部重複已跳過）');
+    await bulk('tickets', puts);
+    const last = +p.nos[p.nos.length - 1];
+    if (last < 99999) $('tStart').value = String(last + 1).padStart(NO_LEN, '0');
+    $('tEnd').value = '';
+    await refresh();
+    showMsg($('tMsg'), 'ok', `完成：新增 ${added} 張、覆蓋 ${over} 張、跳過 ${skipped} 張。`);
+  } catch (e) { showMsg($('tMsg'), 'err', esc(e.message || e)); }
+}
+function openEdit(id) {
+  const t = S.tickets.find(x => x.id === id); if (!t) return;
+  $('dId').value = t.id; $('dNo').value = t.ticketNo;
+  $('dStub').value = personLabel(S.pmap.get(t.stubPersonId)); $('dProxy').value = personLabel(S.pmap.get(t.proxyPersonId));
+  hideMsg($('dMsg')); $('dlg').showModal();
+}
+async function saveEdit() {
+  try {
+    const id = $('dId').value, t = S.tickets.find(x => x.id === id); if (!t) return;
+    const no = pad($('dNo').value.trim()); $('dNo').value = no;
+    if (!NO_RE.test(no)) throw '摸彩券編號必須為 5 位純數字';
+    if (S.tickets.some(x => x.ticketNo === no && x.id !== id)) throw `號碼 ${no} 在本期別已存在`;
+    const stub = resolvePerson($('dStub').value); if (!stub) throw '請選擇有效的存根人';
+    const pt = $('dProxy').value.trim(); let proxy = null;
+    if (pt) { proxy = resolvePerson(pt); if (!proxy) throw '代抽人不在人員名單中'; }
+    await bulk('tickets', [{ ...t, ticketNo: no, stubPersonId: stub.id, proxyPersonId: proxy ? proxy.id : '', updatedAt: nowIso() }]);
+    $('dlg').close(); await refresh(); toast('摸彩券已更新');
+  } catch (e) { showMsg($('dMsg'), 'err', esc(e.message || e)); }
+}
+async function batchApply() {
+  try {
+    if (!S.selected.size) throw '請先勾選摸彩券';
+    const bs = $('bStub').value.trim(), bp = $('bProxy').value.trim(), clear = $('bProxyClear').checked;
+    let stub = null, proxy;
+    if (bs) { stub = resolvePerson(bs); if (!stub) throw '批次存根人不在人員名單中'; }
+    if (clear) proxy = null;
+    else if (bp) { proxy = resolvePerson(bp); if (!proxy) throw '批次代抽人不在人員名單中'; }
+    if (!stub && !clear && !bp) throw '請輸入要變更的存根人或代抽人';
+    if (!confirm(`確定批次修改 ${S.selected.size} 筆？`)) return;
+    const now = nowIso();
+    const puts = S.tickets.filter(t => S.selected.has(t.id)).map(t => ({ ...t,
+      stubPersonId: stub ? stub.id : t.stubPersonId,
+      proxyPersonId: clear ? '' : (proxy ? proxy.id : t.proxyPersonId), updatedAt: now }));
+    await bulk('tickets', puts);
+    $('bStub').value = ''; $('bProxy').value = ''; $('bProxyClear').checked = false;
+    await refresh(); toast(`已修改 ${puts.length} 筆`);
+  } catch (e) { toast(e.message || e); }
+}
+async function batchDelete() {
+  if (!S.selected.size) return toast('請先勾選摸彩券');
+  if (!confirm(`確定刪除勾選的 ${S.selected.size} 筆摸彩券？\n（只刪除摸彩券，期別與人員資料不受影響）`)) return;
+  try { const n = await deleteTickets([...S.selected]); S.selected.clear(); await refresh(); toast(`已刪除 ${n} 筆摸彩券`); }
+  catch (err) { alert('刪除失敗：' + (err.message || err)); }
+}
+async function rangeDelete() {
+  const s = pad($('rdStart').value.trim()), e = pad($('rdEnd').value.trim());
+  $('rdStart').value = s; $('rdEnd').value = e;
+  if (!NO_RE.test(s) || !NO_RE.test(e)) return toast('起訖號必須為 5 位純數字');
+  if (e < s) return toast('訖號必須大於或等於起號');
+  const ids = S.tickets.filter(t => t.ticketNo >= s && t.ticketNo <= e).map(t => t.id);
+  if (!ids.length) return toast('範圍內沒有摸彩券');
+  if (!confirm(`範圍 ${s} ～ ${e} 內共有 ${ids.length} 張，確定刪除？\n（只刪除摸彩券，期別與人員資料不受影響）`)) return;
+  try { const n = await deleteTickets(ids); ids.forEach(id => S.selected.delete(id)); await refresh(); toast(`已刪除 ${n} 張摸彩券`); }
+  catch (err) { alert('刪除失敗：' + (err.message || err)); }
+}
+
+/* ---------- 報表 ---------- */
+function renderReportSelect() {
+  const sel = $('rEvent'), v = sel.value || S.cur;
+  const asc = [...S.events].sort((a, b) => (a.year || 0) - (b.year || 0) || a.name.localeCompare(b.name, 'zh-Hant'));
+  sel.innerHTML = '<option value="__all">全部期別</option>' + asc.map(e => `<option value="${esc(e.id)}">${esc(e.name)}</option>`).join('');
+  sel.value = [...sel.options].some(o => o.value === v) ? v : '__all';
+}
+function buildReport() {
+  const evId = $('rEvent').value;
+  const tickets = evId === '__all' ? S.allTickets : S.allTickets.filter(t => t.eventId === evId);
+  const evOrder = [...S.events].sort((a, b) => (a.year || 0) - (b.year || 0) || a.name.localeCompare(b.name, 'zh-Hant'));
+  const evIdx = new Map(evOrder.map((e, i) => [e.id, i])), evName = new Map(S.events.map(e => [e.id, e.name]));
+  const groups = new Map();
+  tickets.forEach(t => {
+    const k = t.eventId + '|' + (t.stubPersonId || '') + '|' + (t.proxyPersonId || '');
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(t);
+  });
+  const rows = [];
+  groups.forEach(list => {
+    list.sort((a, b) => a.ticketNo.localeCompare(b.ticketNo));
+    const mk = (a, b, n) => ({ eventId: a.eventId, eventName: evName.get(a.eventId) || '', stub: personName(a.stubPersonId),
+      proxy: personName(a.proxyPersonId), start: a.ticketNo, end: b.ticketNo, count: n });
+    let start = list[0], prev = list[0], n = 1;
+    for (let i = 1; i <= list.length; i++) {
+      const cur = list[i];
+      if (cur && +cur.ticketNo === +prev.ticketNo + 1) { prev = cur; n++; continue; }
+      rows.push(mk(start, prev, n));
+      if (cur) { start = cur; prev = cur; n = 1; }
+    }
+  });
+  rows.sort((a, b) => (evIdx.get(a.eventId) ?? 0) - (evIdx.get(b.eventId) ?? 0) || a.start.localeCompare(b.start) || a.stub.localeCompare(b.stub, 'zh-Hant'));
+  return { rows, total: tickets.length, label: evId === '__all' ? '全部期別' : (evName.get(evId) || '') };
+}
+function renderReport() {
+  const r = buildReport(); S.report = r;
+  $('rStats').innerHTML = `<div class="stat">摸彩券總張數 <b>${r.total.toLocaleString()}</b></div><div class="stat">合併後列數 <b>${r.rows.length.toLocaleString()}</b></div>`;
+  $('rBody').innerHTML = r.rows.length ? r.rows.map(x => `<tr><td>${esc(x.eventName)}</td><td>${esc(x.stub)}</td><td>${esc(x.proxy)}</td>
+    <td class="mono">${x.start}</td><td class="mono">${x.end}</td><td>${x.count}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="empty">沒有資料</td></tr>';
+  return r;
+}
+const REPORT_HEADER = ['園遊會名稱', '存根人姓名', '代抽人姓名', '摸彩券編號起號', '摸彩券編號訖號'];
+function exportCsv() {
+  const r = renderReport(); if (!r.rows.length) return toast('沒有可匯出的資料');
+  const q = v => /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  const lines = [REPORT_HEADER.join(',')].concat(r.rows.map(x => [q(x.eventName), q(x.stub), q(x.proxy), `="${x.start}"`, `="${x.end}"`].join(',')));
+  download(new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' }), `摸彩券報表_${r.label}_${stamp()}.csv`);
+}
+function exportXlsx() {
+  const r = renderReport(); if (!r.rows.length) return toast('沒有可匯出的資料');
+  download(makeXlsx(REPORT_HEADER, r.rows.map(x => [x.eventName, x.stub, x.proxy, x.start, x.end]), '摸彩券報表'), `摸彩券報表_${r.label}_${stamp()}.xlsx`);
+}
+
+/* ---------- 內建 XLSX 產生器（無外部套件） ---------- */
+const xmlEsc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function makeXlsx(header, rows, sheetName) {
+  const col = i => String.fromCharCode(65 + i);
+  let sd = '';
+  [header, ...rows].forEach((r, ri) => {
+    sd += `<row r="${ri + 1}">` + r.map((v, ci) =>
+      `<c r="${col(ci)}${ri + 1}" t="inlineStr" s="${ri === 0 ? 1 : 2}"><is><t xml:space="preserve">${xmlEsc(v)}</t></is></c>`).join('') + '</row>';
+  });
+  const NS = 'http://schemas.openxmlformats.org';
+  const files = [
+    { name: '[Content_Types].xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="${NS}/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>` },
+    { name: '_rels/.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${NS}/package/2006/relationships"><Relationship Id="rId1" Type="${NS}/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>` },
+    { name: 'xl/workbook.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="${NS}/spreadsheetml/2006/main" xmlns:r="${NS}/officeDocument/2006/relationships"><sheets><sheet name="${xmlEsc(sheetName)}" sheetId="1" r:id="rId1"/></sheets></workbook>` },
+    { name: 'xl/_rels/workbook.xml.rels', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="${NS}/package/2006/relationships"><Relationship Id="rId1" Type="${NS}/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="${NS}/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>` },
+    { name: 'xl/styles.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="${NS}/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Microsoft JhengHei"/></font><font><b/><sz val="11"/><name val="Microsoft JhengHei"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFE2F0E8"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="3"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="49" fontId="1" fillId="2" borderId="1" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"/></cellXfs></styleSheet>` },
+    { name: 'xl/worksheets/sheet1.xml', data: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="${NS}/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="1" width="40" customWidth="1"/><col min="2" max="3" width="16" customWidth="1"/><col min="4" max="5" width="18" customWidth="1"/></cols><sheetData>${sd}</sheetData></worksheet>` }
+  ];
+  return zipStore(files, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_T[(c ^ b[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zipStore(files, mime) {
+  const enc = new TextEncoder(), parts = [], cd = []; let off = 0;
+  files.forEach(f => {
+    const name = enc.encode(f.name), data = enc.encode(f.data), crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, 0, true); lh.setUint16(12, 0x21, true); lh.setUint32(14, crc, true); lh.setUint32(18, data.length, true);
+    lh.setUint32(22, data.length, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true);
+    ch.setUint16(10, 0, true); ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true); ch.setUint32(16, crc, true);
+    ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, name.length, true);
+    ch.setUint32(42, off, true);
+    cd.push(new Uint8Array(ch.buffer), name);
+    off += 30 + name.length + data.length;
+  });
+  const cdSize = cd.reduce((s, a) => s + a.length, 0), end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, off, true);
+  return new Blob([...parts, ...cd, new Uint8Array(end.buffer)], { type: mime });
+}
+
+/* ---------- 系統：備份／還原／清除 ---------- */
+async function backup() {
+  const data = { app: 'LotteryTicketTool', version: 2, storage: 'IndexedDB', exportedAt: nowIso(), currentEvent: S.cur, events: S.events, people: S.people, tickets: S.allTickets };
+  download(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }), `摸彩券備份_${stamp()}.json`);
+}
+async function restore() {
+  const f = $('sysFile').files[0]; if (!f) return toast('請選擇備份檔');
+  let d;
+  try { d = JSON.parse(await f.text()); } catch { return toast('檔案不是有效的 JSON'); }
+  if (!Array.isArray(d.events) || !Array.isArray(d.people) || !Array.isArray(d.tickets)) return toast('備份檔格式不正確');
+  const mode = $('sysMode').value;
+  if (mode === 'replace' && !confirm('覆蓋模式會先清空現有全部資料，確定繼續？')) return;
+  const events = d.events.filter(e => e && e.id && e.name), people = d.people.filter(p => p && p.id && p.name);
+  const seen = new Set(mode === 'merge' ? S.allTickets.map(t => t.eventId + '|' + t.ticketNo) : []);
+  const existIds = new Map(mode === 'merge' ? S.allTickets.map(t => [t.id, t]) : []);
+  let skip = 0; const tickets = [];
+  d.tickets.forEach(t => {
+    if (!t || !t.id || !t.eventId || !NO_RE.test(t.ticketNo || '')) { skip++; return; }
+    const k = t.eventId + '|' + t.ticketNo, ex = existIds.get(t.id);
+    if (ex && ex.eventId + '|' + ex.ticketNo === k) { tickets.push(t); return; }
+    if (seen.has(k)) { skip++; return; }
+    seen.add(k); tickets.push(t);
+  });
+  try {
+    await txRun(['events', 'people', 'tickets'], tx => {
+      const E = tx.objectStore('events'), P = tx.objectStore('people'), T = tx.objectStore('tickets');
+      if (mode === 'replace') { E.clear(); P.clear(); T.clear(); }
+      events.forEach(x => E.put(x)); people.forEach(x => P.put(x)); tickets.forEach(x => T.put(x));
+    });
+    if (d.currentEvent && events.some(e => e.id === d.currentEvent) && (mode === 'replace' || !S.cur)) { S.cur = d.currentEvent; await setMeta('currentEvent', S.cur); }
+    $('sysFile').value = ''; await refresh();
+    toast(`匯入完成：期別 ${events.length}、人員 ${people.length}、摸彩券 ${tickets.length}（略過 ${skip}）`);
+  } catch (e) { alert('匯入失敗：' + (e.message || e)); }
+}
+async function clearAll() {
+  if (prompt('此動作會刪除所有期別、人員與摸彩券，且無法復原。\n請輸入「清除」確認：') !== '清除') return;
+  await txRun(['events', 'people', 'tickets', 'meta'], tx => ['events', 'people', 'tickets', 'meta'].forEach(s => tx.objectStore(s).clear()));
+  S.cur = ''; await setMeta('currentEvent', ''); S.selected.clear(); await refresh(); toast('已清除全部資料');
+}
+
+/* ---------- 事件綁定 ---------- */
+function bind() {
+  document.querySelectorAll('nav button').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+    document.querySelectorAll('main section').forEach(s => s.classList.toggle('active', s.id === 'sec-' + b.dataset.tab));
+    if (b.dataset.tab === 'report') renderReport();
+  }));
+  $('curEvent').addEventListener('change', e => setCurrent(e.target.value));
+  $('evSave').onclick = saveEvent; $('evReset').onclick = resetEventForm;
+  $('evBody').addEventListener('click', e => { const b = e.target.closest('#evBody button[data-ev-act]'); if (!b) return; e.stopPropagation(); eventAction(b.dataset.evAct, b.dataset.id); });
+  $('pSave').onclick = savePerson; $('pReset').onclick = resetPersonForm; $('pBulkBtn').onclick = bulkImportPeople;
+  $('pSearch').addEventListener('input', renderPeople);
+  $('pBody').addEventListener('click', e => { const b = e.target.closest('#pBody button[data-pp-act]'); if (!b) return; e.stopPropagation(); personAction(b.dataset.ppAct, b.dataset.id); });
+
+  document.querySelectorAll('input[name=tMode]').forEach(r => r.addEventListener('change', () => {
+    const range = document.querySelector('input[name=tMode]:checked').value === 'range';
+    $('tEndWrap').style.display = range ? '' : 'none';
+    $('tStartLbl').textContent = range ? '起號 *' : '摸彩券編號 *';
+    hideMsg($('tMsg'));
+  }));
+  document.querySelectorAll('input.num').forEach(i => {
+    i.addEventListener('input', () => { i.value = i.value.replace(/\D/g, '').slice(0, NO_LEN); });
+    if (i.id !== 'fNo') i.addEventListener('blur', () => { i.value = pad(i.value.trim()); });
+  });
+  $('tPreview').onclick = previewTickets; $('tAdd').onclick = addTickets;
+  ['fNo', 'fStub', 'fProxy'].forEach(id => $(id).addEventListener(id === 'fNo' ? 'input' : 'change', () => { S.page = 1; renderTickets(); }));
+  $('fClear').onclick = () => { $('fNo').value = ''; $('fStub').value = ''; $('fProxy').value = ''; S.page = 1; renderTickets(); };
+  $('tBody').addEventListener('click', async e => {
+    const b = e.target.closest('#tBody button[data-tk-act]');
+    if (!b) return;
+    e.stopPropagation();
+    if (b.dataset.tkAct === 'edit') openEdit(b.dataset.id);
+    if (b.dataset.tkAct === 'del') {
+      const t = S.tickets.find(x => x.id === b.dataset.id);
+      if (!t) return toast('找不到這張摸彩券，請重新整理');
+      if (!confirm(`確定刪除摸彩券 ${t.ticketNo}？\n（只刪除這一張，期別與人員資料不受影響）`)) return;
+      try { const n = await deleteTickets([t.id]); S.selected.delete(t.id); await refresh(); toast(`已刪除摸彩券 ${t.ticketNo}（${n} 張）`); }
+      catch (err) { alert('刪除失敗：' + (err.message || err)); }
+    }
+  });
+  $('tBody').addEventListener('change', e => {
+    if (!e.target.classList.contains('rowChk')) return;
+    e.target.checked ? S.selected.add(e.target.dataset.id) : S.selected.delete(e.target.dataset.id);
+    renderTickets();
+  });
+  $('chkAll').addEventListener('change', e => {
+    document.querySelectorAll('#tBody .rowChk').forEach(c => e.target.checked ? S.selected.add(c.dataset.id) : S.selected.delete(c.dataset.id));
+    renderTickets();
+  });
+  $('tPager').addEventListener('click', e => {
+    const b = e.target.closest('button[data-pg]'); if (!b) return;
+    const pages = +$('tPager').dataset.pages;
+    S.page = { first: 1, prev: S.page - 1, next: S.page + 1, last: pages }[b.dataset.pg];
+    renderTickets();
+  });
+  $('bApply').onclick = batchApply; $('bDel').onclick = batchDelete; $('rdBtn').onclick = rangeDelete;
+  $('bNone').onclick = () => { S.selected.clear(); renderTickets(); };
+  $('dCancel').onclick = () => $('dlg').close(); $('dSave').onclick = saveEdit;
+  $('rGen').onclick = renderReport; $('rCsv').onclick = exportCsv; $('rXlsx').onclick = exportXlsx;
+  $('rEvent').addEventListener('change', renderReport);
+  $('sysBackup').onclick = backup; $('sysImport').onclick = restore; $('sysClear').onclick = clearAll;
+}
+
+(async () => {
+  try {
+    if (!window.indexedDB) throw new Error('此瀏覽器不支援 IndexedDB');
+    db = await openDB(); await migrateLocalStorage(); await requestPersist();
+    S.cur = await getMeta('currentEvent', ''); bind(); await refresh();
+  }
+  catch (e) { document.querySelector('main').innerHTML = `<div class="card empty">無法開啟本機資料庫（IndexedDB）：${esc(e.message || e)}<br>請改用 Edge／Chrome 開啟，並確認未使用無痕模式限制。</div>`; }
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

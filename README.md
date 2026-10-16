@@ -1,6 +1,6 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供三十五個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程（動態甘特圖與 WBS 甘特排程器）、專案時程與處理流程紀錄（事件、流程紀錄、附件與到期提醒）、會議人力成本即時看板（燃燒速率與產出 vs 成本評估卡）、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、大額曝險與關聯戶圖譜速算、金融金額中文大寫轉換、核心主機固定長度電文解析與規格管理、核心系統與電文錯誤碼排查對照、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、文件字數與閱讀時間統計、資料夾路徑轉目錄樹與格式輸出（Unicode／ASCII 樹狀文字、Markdown 清單、對齊註解與 JSON）、規格書版本比對與審查、離線速記便箋、色彩故事盤、狀態機與業務流程拓撲建模與模擬、表格矩陣轉置與格式轉換、CSV 格式清理（支援 Big5／CP950 讀寫）、API Mock 與 cURL 雙向轉換、資料品質稽核（CSV／Excel 匯入、欄位剖析與六構面規則檢核）、資料關聯探索（CSV／TSV 匯入、自動推測主外鍵與 ER 圖）、截圖 OCR 知識庫（截圖貼上、Tesseract OCR 與全文檢索），以及 SQL 目錄、比對、格式化、個資清除、欄位血緣分析、SQL 沙箱測試與 SQL 欄位映射。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
+本專案提供三十六個可在瀏覽器中直接使用的單頁網頁工具，涵蓋 AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程（動態甘特圖與 WBS 甘特排程器）、專案時程與處理流程紀錄（事件、流程紀錄、附件與到期提醒）、會議人力成本即時看板（燃燒速率與產出 vs 成本評估卡）、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、大額曝險與關聯戶圖譜速算、金融金額中文大寫轉換、核心主機固定長度電文解析與規格管理、核心系統與電文錯誤碼排查對照、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、文件字數與閱讀時間統計、資料夾路徑轉目錄樹與格式輸出（Unicode／ASCII 樹狀文字、Markdown 清單、對齊註解與 JSON）、規格書版本比對與審查、園遊會摸彩券管理（期別、人員與券號維護及報表匯出）、離線速記便箋、色彩故事盤、狀態機與業務流程拓撲建模與模擬、表格矩陣轉置與格式轉換、CSV 格式清理（支援 Big5／CP950 讀寫）、API Mock 與 cURL 雙向轉換、資料品質稽核（CSV／Excel 匯入、欄位剖析與六構面規則檢核）、資料關聯探索（CSV／TSV 匯入、自動推測主外鍵與 ER 圖）、截圖 OCR 知識庫（截圖貼上、Tesseract OCR 與全文檢索），以及 SQL 目錄、比對、格式化、個資清除、欄位血緣分析、SQL 沙箱測試與 SQL 欄位映射。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
 
 ## 目錄
 
@@ -41,6 +41,7 @@
 - [會議燃燒成本看板](#會議燃燒成本看板)
 - [SpecDiff 規格書比對工具](#specdiff-規格書比對工具)
 - [FolderTree Architect 路徑轉樹狀結構](#foldertree-architect-路徑轉樹狀結構)
+- [園遊會摸彩券管理工具](#園遊會摸彩券管理工具)
 - [Palette Lore 色彩故事盤](#palette-lore-色彩故事盤)
 - [StateFlow 動態狀態機與業務流程拓撲模擬器](#stateflow-動態狀態機與業務流程拓撲模擬器)
 - [資料保存、匯出與隱私](#資料保存匯出與隱私)
@@ -85,6 +86,7 @@
    - [`docs/meeting-burn-rate/meeting-burn-rate.html`](./docs/meeting-burn-rate/meeting-burn-rate.html)
    - [`docs/spec-diff/SpecDiff.html`](./docs/spec-diff/SpecDiff.html)
    - [`docs/folder-tree-architect/folder-tree-architect.html`](./docs/folder-tree-architect/folder-tree-architect.html)
+   - [`docs/lottery-ticket-manager/lottery-ticket-manager.html`](./docs/lottery-ticket-manager/lottery-ticket-manager.html)
    - [`design/palette-lore/palette-lore.html`](./design/palette-lore/palette-lore.html)
    - [`diagram/stateflow/stateflow.html`](./diagram/stateflow/stateflow.html)
 3. 使用瀏覽器頁面中的表單、按鈕與分頁完成操作。
@@ -142,7 +144,8 @@ my-spa-tools/
 │  ├─ scratchpad/                離線速記便箋（Markdown 便箋、標籤與回收筒）
 │  ├─ meeting-burn-rate/         會議燃燒成本看板（即時人力成本與產出評估卡）
 │  ├─ spec-diff/                 SpecDiff 規格書比對工具（版本比對與審查標註）
-│  └─ folder-tree-architect/     FolderTree Architect 路徑轉樹狀結構（Unicode／ASCII／Markdown／JSON 目錄樹）
+│  ├─ folder-tree-architect/     FolderTree Architect 路徑轉樹狀結構（Unicode／ASCII／Markdown／JSON 目錄樹）
+│  └─ lottery-ticket-manager/   園遊會摸彩券管理工具（期別、人員、券號與報表匯出）
 ├─ design/                       設計工具
 │  └─ palette-lore/
 └─ diagram/                      流程與圖表建模
@@ -186,6 +189,7 @@ flowchart TD
     B -->|字數統計與閱讀時間| WC[貼上或匯入純文字檔並選擇編碼]
     B -->|規格書版本比對| SD[匯入舊版與新版規格書]
     B -->|路徑轉目錄樹| FT[貼上或拖曳資料夾掃描路徑]
+    B -->|摸彩券管理| LT[建立期別 人員與摸彩券號]
     B -->|會議成本看板| MC[設定人數 時薪級距 預計時長與議程檢核]
     B -->|配色設計| W[輸入意境文字生成色盤]
     B -->|狀態機與流程拓撲建模| HG[以 DSL 定義狀態 轉換 動作與條件]
@@ -222,6 +226,7 @@ flowchart TD
     WC --> WD[檢視中英字數 段落句數 閱讀時間與高頻詞]
     SD --> SE[檢視差異並逐筆標註審查狀態 影響模組與備註]
     FT --> FU[檢視樹狀結構並複製 Markdown 純文字或下載檔案]
+    LT --> LU[篩選 批次修改或範圍刪除 並匯出報表 CSV Excel 或備份 JSON]
     MC --> MC2[開始計時 即時累積成本並勾選議程產出]
     MC2 --> MC3[產生評估卡 PNG 與文字摘要並寫入歷史]
 ```
@@ -263,6 +268,7 @@ flowchart TD
 | 會議燃燒成本看板 | [`docs/meeting-burn-rate/meeting-burn-rate.html`](./docs/meeting-burn-rate/meeting-burn-rate.html) | 依與會者人數與時薪級距即時累積會議人力成本，搭配議程產出檢核，會後產生「產出 vs 成本」PNG 評估卡與歷史比較 | 設定與常用組合使用 `localStorage`；會議紀錄使用瀏覽器 IndexedDB（`MeetingBurnRateDB`：`meetings`），並可匯出 CSV／JSON 備份 |
 | SpecDiff 規格書比對工具 | [`docs/spec-diff/SpecDiff.html`](./docs/spec-diff/SpecDiff.html) | 匯入 docx／txt／Markdown 規格書的舊版與新版，比對新增、修改、刪除與搬移的段落，逐筆標註審查狀態、影響模組與備註，並匯出 HTML 差異報告與 CSV | 瀏覽器 IndexedDB（`SpecDiffDB`：`documents`、`projects`、`reviews`、`settings`）；無法使用時退回記憶體，並提供整庫備份 JSON 匯出／還原 |
 | FolderTree Architect 路徑轉樹狀結構 | [`docs/folder-tree-architect/folder-tree-architect.html`](./docs/folder-tree-architect/folder-tree-architect.html) | 貼上路徑清單或拖入資料夾掃描，產生 Unicode／ASCII 目錄樹、Markdown 清單、對齊註解或 JSON 樹，並可設定忽略樣式、深度與排序 | 內容與輸出只保留在目前頁面記憶體；主題與 `file://` 提示偏好使用 `localStorage`（鍵值 `fta-theme`、`fta-file-hint`） |
+| 園遊會摸彩券管理工具 | [`docs/lottery-ticket-manager/lottery-ticket-manager.html`](./docs/lottery-ticket-manager/lottery-ticket-manager.html) | 以「期別 → 人員 → 摸彩券」管理 5 位數摸彩券編號與存根人／代抽人，支援單筆與起訖批次新增、篩選、批次修改與範圍刪除，並匯出 CSV／Excel 報表與 JSON 備份還原 | 瀏覽器 IndexedDB（`LotteryTicketDB`：`meta`、`events`、`people`、`tickets`）；提供整庫 JSON 備份匯出／匯入 |
 | Palette Lore 色彩故事盤 | [`design/palette-lore/palette-lore.html`](./design/palette-lore/palette-lore.html) | 以抽象意境文字生成五色配色盤，附實境 UI 模擬、WCAG 對比評測與 CSS／Tailwind／JSON 匯出 | 瀏覽器 IndexedDB（`PaletteLoreDB`：`palettes` 典藏與 `app_state` 工作階段／主題） |
 | StateFlow 動態狀態機與業務流程拓撲模擬器 | [`diagram/stateflow/stateflow.html`](./diagram/stateflow/stateflow.html) | 以極簡 DSL 定義狀態、轉換、動作與條件，繪製可分層佈局的流程拓撲圖，執行互動式流程模擬並診斷死胡同、孤島與黑洞循環，匯出 SVG 向量圖 | 編輯中的 DSL 草稿與自訂範本使用瀏覽器 `localStorage`；提供範本庫 JSON 匯出／匯入 |
 
@@ -1774,6 +1780,46 @@ flowchart TD
 
 本工具完全離線，不使用任何 CDN 或外部函式庫；路徑清單與輸出只保留在目前頁面記憶體，不會上傳。深／淺色主題與 `file://` 提示偏好以 `localStorage`（鍵值 `fta-theme`、`fta-file-hint`）記憶在目前瀏覽器。拖曳資料夾掃描依賴瀏覽器 File System API，在 `file://` 模式或部分瀏覽器會自動改用資料夾選擇器；掃描大量檔案時需要較長處理時間。目錄樹為文字呈現輔助，實際檔案結構仍應以檔案系統為準。
 
+## 園遊會摸彩券管理工具
+
+園遊會摸彩券管理工具是單檔、純離線的摸彩券造冊工具，以「期別 → 人員 → 摸彩券」三層結構管理活動摸彩券。每一張摸彩券是一組 5 位數編號，可指定「存根人」與「代抽人」，並以單筆或起訖範圍批次新增；列表支援篩選、批次修改與依範圍刪除，最後可依合併規則匯出 CSV／Excel 報表。所有資料都存放在瀏覽器的 IndexedDB，不會上傳。
+
+### 建立期別與人員
+
+1. 開啟 [`lottery-ticket-manager.html`](./docs/lottery-ticket-manager/lottery-ticket-manager.html)；頁首「目前期別」下拉選單會顯示目前作用中的期別。
+2. 在「期別管理」填寫園遊會名稱（必填）、民國年度、活動日期、地點與備註後按「儲存」；民國年度留空時會自動從名稱中的「○○○ 年度」帶入。列表可編輯或刪除期別，並顯示各期別的摸彩券張數。
+3. 切換到「人員管理」新增人員（姓名必填，可填員編與單位，並設定啟用／停用）；也可在「批次匯入人員」以每行一人的格式（`姓名,員編,單位`，支援逗號或 Tab、可直接貼上 Excel）批次新增，名單中已存在的人員會略過。
+4. 人員列表可依姓名／員編／單位搜尋，並顯示每人的存根人張數與代抽人張數。
+
+### 新增與維護摸彩券
+
+1. 切換到「摸彩券管理」，先在上方選擇目前期別（尚未建立期別時畫面會提示先建立）。
+2. 選擇「單筆」或「起訖」模式：單筆輸入一組編號；起訖輸入起號與訖號一次新增連續編號（單次最多 5,000 張）。編號為 5 位純數字，不足 5 位會自動補 0（例如 `101` → `00101`）。
+3. 指定「存根人」（必填，可輸入姓名或從下拉選單選擇）與「代抽人」（可空白）；號碼重複時可選擇「跳過重複號碼」或「覆蓋存根人／代抽人」。按「預覽」可先確認編號範圍，再按「新增」寫入。
+4. 列表可用「號碼包含」、存根人與代抽人篩選；勾選多筆後可「批次修改」存根人／代抽人或「清空代抽人」，也可「刪除勾選」；另可用「依範圍刪除」刪除一段編號。每一列也可個別編輯編號、存根人與代抽人。
+
+### 報表匯出與備份
+
+- 在「報表匯出」選擇期別後按「產生預覽」；合併規則為依「期別＋存根人＋代抽人」分組，組內號碼連續才合併為一列，號碼不連續時另起一列，單一號碼的起號與訖號相同。
+- 「匯出 CSV」（含 BOM）與「匯出 Excel (.xlsx)」可下載固定欄位報表（園遊會名稱｜存根人姓名｜代抽人姓名｜摸彩券編號起號｜摸彩券編號訖號）；`.xlsx` 由內建產生器輸出，不使用外部套件 (SheetJS)。
+- 「系統」分頁可查看儲存狀態統計、將所有期別／人員／摸彩券「匯出備份 (JSON)」，或以「合併」（相同 ID 覆蓋、同期別重複號碼略過）／「覆蓋」（先清空現有資料）模式「匯入」備份；「清除全部資料」會永久刪除所有資料，執行前請先備份。
+
+```mermaid
+flowchart TD
+    A[建立期別] --> B[建立或批次匯入人員]
+    B --> C[選擇目前期別]
+    C --> D{新增方式}
+    D -->|單筆| E[輸入一組編號與存根人 代抽人]
+    D -->|起訖| F[輸入起號與訖號批次新增]
+    E --> G[篩選 批次修改或範圍刪除]
+    F --> G
+    G --> H{輸出方式}
+    H -->|報表| I[匯出 CSV 或 Excel]
+    H -->|備份| J[匯出 JSON 並可匯入還原]
+```
+
+本工具完全離線，不使用任何 CDN 或外部函式庫（Excel 匯出為內建產生器）；資料保存在目前瀏覽器的 IndexedDB（資料庫名稱 `LotteryTicketDB`，object stores：`meta`、`events`、`people`、`tickets`），目前期別設定亦存於其中的 `meta`。請固定用同一個瀏覽器、同一個檔案路徑開啟，並避免使用無痕模式或預覽視窗；換瀏覽器或清除網站資料後資料可能無法取得，建議定期以「匯出備份 (JSON)」保存備份。
+
 ## Palette Lore 色彩故事盤
 
 Palette Lore 是單檔的「意境色彩演算器」：輸入抽象意境文字（例如「北歐晨霧」「賽博初雪」），工具會依內建色相／飽和度／明度公式生成一組五色配色盤，並即時套用到實境 UI 元件模擬、WCAG 2.1 對比評測與工程端格式匯出。收藏的色盤會保存在瀏覽器 IndexedDB 典藏庫。
@@ -1901,6 +1947,7 @@ flowchart LR
     B -->|會議成本看板| CB[IndexedDB 會議紀錄與 localStorage 設定]
     B -->|規格書比對| SD2[IndexedDB 專案 版本 審查標註與設定]
     B -->|路徑轉目錄樹| FT3[目前頁面記憶體與 localStorage 主題]
+    B -->|摸彩券管理| LT3[IndexedDB 期別 人員 摸彩券與目前期別設定]
     B -->|色彩故事盤| AA[IndexedDB 典藏與工作階段]
     B -->|狀態機與流程拓撲建模| SF[localStorage 草稿 範本與主題]
     C --> F[JSON 備份或 YAML ZIP]
@@ -1932,6 +1979,7 @@ flowchart LR
     CB --> CS[匯出 CSV 或 JSON 備份]
     SD2 --> SW[匯出 HTML 差異報告 CSV 或整庫 JSON]
     FT3 --> FU3[複製 Markdown 或純文字 或下載 txt md json]
+    LT3 --> LU3[匯出報表 CSV Excel 或備份 JSON]
     AA --> AB[複製 CSS Tailwind JSON 或收藏]
     SF --> ST[複製 DSL 或匯出 SVG 與範本庫 JSON]
     AE --> AF[複製提示詞]
@@ -1961,6 +2009,7 @@ flowchart LR
 - 會議燃燒成本看板會將級距組合、常用組合（Preset）、議程檢核清單、會議參數與評等標準保存在目前瀏覽器的 `localStorage`（鍵值 `meeting_burn_rate_settings_v1`），並將每場會議的紀錄保存在 IndexedDB（`MeetingBurnRateDB`，object store `meetings`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得，請以「匯出 CSV」或「備份 JSON」保存。若瀏覽器無法使用 IndexedDB（例如部分 `file://` 環境），紀錄僅保留於本次頁面，評估卡 PNG 仍需自行下載保存。
 - SpecDiff 規格書比對工具會將專案、版本文件、審查標註與設定保存在目前瀏覽器的 IndexedDB（`SpecDiffDB`，object stores：`documents`、`projects`、`reviews`、`settings`）；若瀏覽器無法使用 IndexedDB（例如部分 `file://` 環境），會改用記憶體儲存並在畫面提示，關閉頁面後資料即遺失。請以「整庫備份 JSON」保存、用「還原／合併 JSON」帶回；匯出的 HTML 差異報告與 CSV 都是由使用者主動下載的檔案。
 - FolderTree Architect 路徑轉樹狀結構不使用 IndexedDB，路徑清單與輸出只在目前頁面記憶體處理，深／淺色主題與 `file://` 提示偏好以 `localStorage`（鍵值 `fta-theme`、`fta-file-hint`）記憶；輸出為複製到剪貼簿的 Markdown／純文字或使用者主動下載的 `.txt`／`.md`／`.json` 檔，關閉或重新整理後需重新貼上或掃描。
+- 園遊會摸彩券管理工具會將期別、人員、摸彩券與目前期別設定保存在目前瀏覽器的 IndexedDB（`LotteryTicketDB`，object stores：`meta`、`events`、`people`、`tickets`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得，請以「匯出備份 (JSON)」保存、用「匯入」還原（可選合併或覆蓋）。報表 CSV 與 Excel 都是使用者主動下載的檔案。
 - 離線速記便箋會將所有便箋與介面設定（含深／淺色主題）保存在目前瀏覽器的 IndexedDB（`OfflineScratchpadDB`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得，重要內容請以「匯出備份 (JSON)」或匯出 Markdown 保存。
 - CSV 格式清理器不使用 IndexedDB 或 `localStorage`，讀入的內容與清理結果只在目前頁面記憶體處理，輸出為使用者主動下載的 CSV 檔。
 - MatrixPivot 表格矩陣轉置器不使用 IndexedDB 或 `localStorage`，貼上的表格、轉置結果與格式輸出只在目前頁面記憶體處理；輸出為複製到剪貼簿的代碼或使用者主動下載的 CSV 檔，重新整理或關閉頁面後需重新輸入。
@@ -2007,7 +2056,8 @@ flowchart LR
 - Schema Studio — SQL 欄位映射：純離線，樣式與邏輯皆已內嵌於單一 HTML，不使用任何外部資源。
 - SpecDiff 規格書比對工具：純離線，不使用任何外部資源（`.docx` 解析與差異比對皆以原生 JavaScript 實作）。
 - FolderTree Architect 路徑轉樹狀結構：純離線，樣式與邏輯皆已內嵌於單一 HTML，不使用任何外部資源。
-- 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；金融金額中文大寫轉換器、Schema Studio — SQL 欄位映射、SQL Column Lineage Analyzer、WBS 甘特排程器、專案時程暨處理流程紀錄系統、資料品質稽核中心、資料關聯探索器、離線速記便箋、文件字數與閱讀時間統計、會議燃燒成本看板、StateFlow 動態狀態機與業務流程拓撲模擬器、截圖 OCR 知識庫、FolderTree Architect 路徑轉樹狀結構與 SpecDiff 規格書比對工具也不依賴外部 CDN。
+- 園遊會摸彩券管理工具：純離線，樣式、邏輯與 Excel（`.xlsx`）匯出皆已內嵌於單一 HTML，不使用任何外部資源。
+- 其他入口的主要邏輯在瀏覽器執行，不依賴上述共用外部函式庫；金融金額中文大寫轉換器、Schema Studio — SQL 欄位映射、SQL Column Lineage Analyzer、WBS 甘特排程器、專案時程暨處理流程紀錄系統、資料品質稽核中心、資料關聯探索器、離線速記便箋、文件字數與閱讀時間統計、會議燃燒成本看板、StateFlow 動態狀態機與業務流程拓撲模擬器、截圖 OCR 知識庫、FolderTree Architect 路徑轉樹狀結構、園遊會摸彩券管理工具與 SpecDiff 規格書比對工具也不依賴外部 CDN。
 
 Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝險與關聯戶圖譜速算器、銀行核心系統固定長度電文解析與管理中心、核心系統與電文錯誤碼排查對照台、Markdown 卡片簡報工具、公文簽／函排版工具、剪貼簿洗滌器、MatrixPivot 表格矩陣轉置器、CSV 格式清理器（Big5／CP950 功能）、API Mock Studio、色彩故事盤與 SQL Lab（SQLite 引擎）若無法取得 CDN 資源，可能出現樣式、圖示、圖表或相關功能缺漏；SQL Lab 的內建引擎不受影響，仍可正常使用。其他工具的本機功能可在無網路時使用，但選取資料夾、讀寫檔案等能力仍受瀏覽器支援與 `file://` 安全限制影響；SQL Catalog、SQL Formatter 與個資清除工具建議使用 Chrome 或 Edge，並依畫面提示授權資料夾。
 
@@ -2043,6 +2093,7 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 - Schema Studio — SQL 欄位映射僅以 `localStorage`（鍵值 `schema-studio-state-v1`）保存來源與目標結構、欄位映射、轉換規則、方言與顯示選項及主題偏好；不使用 IndexedDB。
 - SpecDiff 規格書比對工具使用 IndexedDB（資料庫名稱 `SpecDiffDB`；object stores：`documents`、`projects`、`reviews`、`settings`）保存版本文件、專案、審查標註與設定；IndexedDB 無法使用時退回記憶體儲存，並提供整庫備份 JSON 匯出／還原。
 - FolderTree Architect 路徑轉樹狀結構不使用 IndexedDB 或外部函式庫；僅以 `localStorage`（鍵值 `fta-theme`、`fta-file-hint`）記憶深／淺色主題與 `file://` 提示偏好，路徑清單與輸出只在目前頁面處理。
+- 園遊會摸彩券管理工具使用 IndexedDB（資料庫名稱 `LotteryTicketDB`；object stores：`meta`、`events`、`people`、`tickets`）保存期別、人員、摸彩券與目前期別設定，並提供整庫 JSON 備份匯出／匯入。
 
 本機處理表示主要計算與檔案操作在瀏覽器端執行，不代表每個入口都能完全離線啟動，也不代表瀏覽器資料會自動同步或備份。重要資料請使用各工具提供的匯出功能另存檔案。
 
@@ -2224,4 +2275,4 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟三十五個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、WBS 甘特排程器可設定專案起日與 WBS 任務／前置相依並檢視工作天與甘特圖／匯出 CSV 與 JSON、專案時程暨處理流程紀錄系統可新增專案與事件並設定狀態／優先度／期限與人員／新增處理流程紀錄與附件（含路徑連結）／切換列表、甘特與月曆檢視並以狀態、處理人員與關鍵字篩選／匯出專案或整庫 JSON 並匯入還原／匯出 `.ics` 提醒與維護人員 CSV、離線速記便箋可新增便箋與標籤／切換 Markdown 預覽與雙欄模式／搜尋與置頂／匯出與匯入 JSON 並匯出 Markdown、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、大額曝險與關聯戶圖譜速算器可設定淨值與集團／新增關聯戶與股權連結／檢視圖譜與法定門檻檢核／執行 What-If 壓力試算並複製底稿或匯出案卷 JSON、金融金額中文大寫轉換器可切換幣別抬頭與「結尾加整」／「顯示英文金額」選項／輸入金額檢視中文大寫、純中文大寫與英文大寫輸出並複製、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、SQL Lab 可新增與切換工作區／在編輯器執行查詢與檢視結果並匯出 CSV／以結構樹插入查詢與檢視資料庫結構並下載 SQL Dump／以 CSV、SQL 腳本或 SQLite 檔匯入資料／保存與搜尋片段及查詢歷史／建立含預期結果的測試案例並執行套件與匯出報告 CSV／重新整理後確認工作區與設定仍在、MatrixPivot 表格矩陣轉置器可貼上或匯入表格／執行行列轉置／切換 Markdown、JSON、SQL、HTML 與 CSV 輸出並複製或下載 CSV、API Mock Studio 可切換端點／貼上 cURL 解析／執行 Mock 模擬與延遲測試／產生 Dummy 假資料／匯出 OpenAPI 3.0 與 Postman Collection、CSV 格式清理器可讀入 UTF-8 與 Big5 檔案／切換清理規則並檢視預覽／匯出 CP950 時確認無法對應字元的提示，Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、文件字數與閱讀時間統計可貼上文字或匯入 UTF-8／Big5 等多編碼檔案／檢視中英字數、段落句數與閱讀時間／設定目標字數並複製統計摘要、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏、StateFlow 動態狀態機與業務流程拓撲模擬器可切換內建與自訂範本／以 DSL 定義狀態、動作與條件並即時繪製拓撲圖／拖曳節點、縮放畫布與重整佈局／執行流程模擬並使用「上一步」「隨機探索」「重新開始」／切換拓撲診斷確認死胡同、孤島、黑洞循環與自環等問題並顯示問題數／新增、編輯、複製與刪除範本並匯出與匯入範本庫 JSON／匯出 SVG 與複製 DSL／重新整理後確認草稿與自訂範本仍在、銀行核心系統固定長度電文解析與管理中心可選擇電文規格／貼上多筆電文解析並匯出 JSON 與 CSV／切換反向組裝產生固定長度電文／新增或匯入多編碼 CSV 規格並保存解析歷程、核心系統與電文錯誤碼排查對照台可搜尋與篩選錯誤碼／新增編輯與刪除代碼／維護系統類別／匯入 Excel 並匯出完整資料、會議燃燒成本看板可設定人數與時薪級距（含新增與刪除級距、儲存與套用常用組合）／開始、暫停與結束計時並檢視超時加碼／勾選議程產出率／下載 PNG 評估卡與複製文字摘要／調整評等標準（產出權重、超時容忍、容忍與門檻）並確認提示文字、卡片與歷史分數同步更新且「回預設」可還原／重新整理後確認設定與 IndexedDB 紀錄仍在，並匯出 CSV 與 JSON 後再匯入還原（確認匯入後評等與分數依現行標準重算）、截圖 OCR 知識庫可先至「⚙ OCR 引擎設定」匯入主程式、Worker、核心與語言檔並執行 OCR 測試／以 `Ctrl`+`V` 貼上或匯入截圖（確認完全相同的圖片會自動略過）並辨識文字／以關鍵字、`#標籤` 與 `-排除` 語法搜尋並在檢視器確認命中高亮／編輯標題、分類、標籤與備註並加入集合／框選區域 OCR、文字標註、遮蔽區域與匯出分享圖／建立操作流程並下載 Word 或列印 PDF／匯出 ZIP 備份後再還原／重新整理後確認 IndexedDB（`snap-ocr-kb`）資料仍在、資料品質稽核中心可拖曳或選擇 CSV／TSV／TXT／XLSX 匯入並以自動偵測的編碼與分隔符號預覽確認／查看欄位剖析的型態、空值與分布／建立範本與規則（含必填、唯一、型別、範例清單、正規式、跨欄比較、檢查碼、日期缺口與跨資料集參照）並加入例外／執行稽核時可顯示進度與取消並產生總分、維度分數與 A–E 評等／在問題明細篩選分頁並點選列檢視原始資料／匯出問題明細 CSV、問題列原始資料、HTML 報告與清理後資料 CSV／以批次比對檢視分數趨勢與兩批次差異／匯出完整備份 JSON 後再匯入還原、資料關聯探索器可匯入多個 CSV／TSV 並逐檔確認編碼與分隔符號／按分析後檢視主鍵候選、外鍵關聯（信心、包含率與孤兒值）與欄位相依／在 ER 圖標示關聯並匯出 SVG 或 PNG／產生 JOIN SQL 與孤兒值查詢 SQL 並匯出孤兒值 CSV／以路徑查詢與影響分析追蹤欄位並匯出清單／匯出 Mermaid、DDL（Oracle、SQL Server、SQLite）、Excel、Markdown 與 HTML 報告／匯出工作區 JSON 後再匯入還原、SpecDiff 規格書比對工具可新增專案與匯入 docx／txt／Markdown 多個版本（或貼上文字）／選擇舊版與新版比對並切換左右並排、合併檢視、變更清單與需求編號四種檢視／依類型、審查狀態與模組篩選並批次套用狀態／逐筆設定審查狀態、影響模組與備註並以 F7／F8 導覽／調整比對選項（正規化、修改門檻、搬移偵測）後重新比對／匯出 HTML 差異報告與變更清單／影響清單 CSV／匯出整庫 JSON 後還原，並確認 IndexedDB 無法使用時會退回記憶體儲存並提示、FolderTree Architect 路徑轉樹狀結構可貼上路徑清單或拖曳資料夾掃描／切換 Raw Paths 與 Indented 輸入／切換 Unicode、ASCII、Markdown、Annotated 與 JSON 輸出並調整深度、忽略樣式與排序選項／在 Preview 分頁檢視色彩樹狀圖／複製 Markdown、純文字或下載檔案、Schema Studio — SQL 欄位映射可貼上 DDL／JSON／JSON Schema 解析來源與目標欄位／以點選、拖曳或自動配對建立欄位映射並設定轉換規則與樣板／切換 SQL SELECT、Target DDL、Pandas、dbt 與 MyBatis 分頁檢視輸出／切換方言與引用識別字、關鍵字大寫與補齊稽核欄位選項／複製或下載程式碼並匯出與匯入 JSON 設定且重新整理後仍保留。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
+若修改網頁程式，請分別在現代瀏覽器開啟三十六個入口，至少確認：Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、WBS 甘特排程器可設定專案起日與 WBS 任務／前置相依並檢視工作天與甘特圖／匯出 CSV 與 JSON、專案時程暨處理流程紀錄系統可新增專案與事件並設定狀態／優先度／期限與人員／新增處理流程紀錄與附件（含路徑連結）／切換列表、甘特與月曆檢視並以狀態、處理人員與關鍵字篩選／匯出專案或整庫 JSON 並匯入還原／匯出 `.ics` 提醒與維護人員 CSV、離線速記便箋可新增便箋與標籤／切換 Markdown 預覽與雙欄模式／搜尋與置頂／匯出與匯入 JSON 並匯出 Markdown、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、大額曝險與關聯戶圖譜速算器可設定淨值與集團／新增關聯戶與股權連結／檢視圖譜與法定門檻檢核／執行 What-If 壓力試算並複製底稿或匯出案卷 JSON、金融金額中文大寫轉換器可切換幣別抬頭與「結尾加整」／「顯示英文金額」選項／輸入金額檢視中文大寫、純中文大寫與英文大寫輸出並複製、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、SQL Lab 可新增與切換工作區／在編輯器執行查詢與檢視結果並匯出 CSV／以結構樹插入查詢與檢視資料庫結構並下載 SQL Dump／以 CSV、SQL 腳本或 SQLite 檔匯入資料／保存與搜尋片段及查詢歷史／建立含預期結果的測試案例並執行套件與匯出報告 CSV／重新整理後確認工作區與設定仍在、MatrixPivot 表格矩陣轉置器可貼上或匯入表格／執行行列轉置／切換 Markdown、JSON、SQL、HTML 與 CSV 輸出並複製或下載 CSV、API Mock Studio 可切換端點／貼上 cURL 解析／執行 Mock 模擬與延遲測試／產生 Dummy 假資料／匯出 OpenAPI 3.0 與 Postman Collection、CSV 格式清理器可讀入 UTF-8 與 Big5 檔案／切換清理規則並檢視預覽／匯出 CP950 時確認無法對應字元的提示，Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、文件字數與閱讀時間統計可貼上文字或匯入 UTF-8／Big5 等多編碼檔案／檢視中英字數、段落句數與閱讀時間／設定目標字數並複製統計摘要、Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏、StateFlow 動態狀態機與業務流程拓撲模擬器可切換內建與自訂範本／以 DSL 定義狀態、動作與條件並即時繪製拓撲圖／拖曳節點、縮放畫布與重整佈局／執行流程模擬並使用「上一步」「隨機探索」「重新開始」／切換拓撲診斷確認死胡同、孤島、黑洞循環與自環等問題並顯示問題數／新增、編輯、複製與刪除範本並匯出與匯入範本庫 JSON／匯出 SVG 與複製 DSL／重新整理後確認草稿與自訂範本仍在、銀行核心系統固定長度電文解析與管理中心可選擇電文規格／貼上多筆電文解析並匯出 JSON 與 CSV／切換反向組裝產生固定長度電文／新增或匯入多編碼 CSV 規格並保存解析歷程、核心系統與電文錯誤碼排查對照台可搜尋與篩選錯誤碼／新增編輯與刪除代碼／維護系統類別／匯入 Excel 並匯出完整資料、會議燃燒成本看板可設定人數與時薪級距（含新增與刪除級距、儲存與套用常用組合）／開始、暫停與結束計時並檢視超時加碼／勾選議程產出率／下載 PNG 評估卡與複製文字摘要／調整評等標準（產出權重、超時容忍、容忍與門檻）並確認提示文字、卡片與歷史分數同步更新且「回預設」可還原／重新整理後確認設定與 IndexedDB 紀錄仍在，並匯出 CSV 與 JSON 後再匯入還原（確認匯入後評等與分數依現行標準重算）、截圖 OCR 知識庫可先至「⚙ OCR 引擎設定」匯入主程式、Worker、核心與語言檔並執行 OCR 測試／以 `Ctrl`+`V` 貼上或匯入截圖（確認完全相同的圖片會自動略過）並辨識文字／以關鍵字、`#標籤` 與 `-排除` 語法搜尋並在檢視器確認命中高亮／編輯標題、分類、標籤與備註並加入集合／框選區域 OCR、文字標註、遮蔽區域與匯出分享圖／建立操作流程並下載 Word 或列印 PDF／匯出 ZIP 備份後再還原／重新整理後確認 IndexedDB（`snap-ocr-kb`）資料仍在、資料品質稽核中心可拖曳或選擇 CSV／TSV／TXT／XLSX 匯入並以自動偵測的編碼與分隔符號預覽確認／查看欄位剖析的型態、空值與分布／建立範本與規則（含必填、唯一、型別、範例清單、正規式、跨欄比較、檢查碼、日期缺口與跨資料集參照）並加入例外／執行稽核時可顯示進度與取消並產生總分、維度分數與 A–E 評等／在問題明細篩選分頁並點選列檢視原始資料／匯出問題明細 CSV、問題列原始資料、HTML 報告與清理後資料 CSV／以批次比對檢視分數趨勢與兩批次差異／匯出完整備份 JSON 後再匯入還原、資料關聯探索器可匯入多個 CSV／TSV 並逐檔確認編碼與分隔符號／按分析後檢視主鍵候選、外鍵關聯（信心、包含率與孤兒值）與欄位相依／在 ER 圖標示關聯並匯出 SVG 或 PNG／產生 JOIN SQL 與孤兒值查詢 SQL 並匯出孤兒值 CSV／以路徑查詢與影響分析追蹤欄位並匯出清單／匯出 Mermaid、DDL（Oracle、SQL Server、SQLite）、Excel、Markdown 與 HTML 報告／匯出工作區 JSON 後再匯入還原、SpecDiff 規格書比對工具可新增專案與匯入 docx／txt／Markdown 多個版本（或貼上文字）／選擇舊版與新版比對並切換左右並排、合併檢視、變更清單與需求編號四種檢視／依類型、審查狀態與模組篩選並批次套用狀態／逐筆設定審查狀態、影響模組與備註並以 F7／F8 導覽／調整比對選項（正規化、修改門檻、搬移偵測）後重新比對／匯出 HTML 差異報告與變更清單／影響清單 CSV／匯出整庫 JSON 後還原，並確認 IndexedDB 無法使用時會退回記憶體儲存並提示、FolderTree Architect 路徑轉樹狀結構可貼上路徑清單或拖曳資料夾掃描／切換 Raw Paths 與 Indented 輸入／切換 Unicode、ASCII、Markdown、Annotated 與 JSON 輸出並調整深度、忽略樣式與排序選項／在 Preview 分頁檢視色彩樹狀圖／複製 Markdown、純文字或下載檔案、Schema Studio — SQL 欄位映射可貼上 DDL／JSON／JSON Schema 解析來源與目標欄位／以點選、拖曳或自動配對建立欄位映射並設定轉換規則與樣板／切換 SQL SELECT、Target DDL、Pandas、dbt 與 MyBatis 分頁檢視輸出／切換方言與引用識別字、關鍵字大寫與補齊稽核欄位選項／複製或下載程式碼並匯出與匯入 JSON 設定且重新整理後仍保留、園遊會摸彩券管理工具可建立期別與人員／以單筆與起訖批次新增摸彩券並設定存根人與代抽人／以號碼、存根人與代抽人篩選並批次修改或依範圍刪除／產生報表並匯出 CSV 與 Excel（`.xlsx`）／匯出 JSON 備份後再匯入還原且重新整理後資料仍在。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。
