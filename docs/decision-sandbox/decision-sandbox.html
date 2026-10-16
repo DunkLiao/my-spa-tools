@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>決策沙盤推演系統 V3 | Decision Simulation Lab</title>
+<style>
+:root{--pri:#2563eb;--pri-d:#1d4ed8;--bg:#f1f5f9;--card:#fff;--bd:#e2e8f0;--tx:#0f172a;--mu:#64748b;--ok:#10b981;--warn:#f59e0b;--bad:#ef4444;--side:#0f172a}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.5}
+header{height:58px;background:linear-gradient(90deg,#1e3a8a,#2563eb);color:#fff;display:flex;align-items:center;gap:10px;padding:0 16px;position:sticky;top:0;z-index:30;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+header .logo{font-weight:700;font-size:17px;margin-right:10px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+header .logo small{font-weight:400;opacity:.75;font-size:12px}
+header select{min-width:260px;max-width:380px;padding:7px 10px;border-radius:6px;border:none;font:inherit}
+header .sp{flex:1}
+header .btn{background:rgba(255,255,255,.15);color:#fff;border-color:rgba(255,255,255,.3)}
+header .btn:hover{background:rgba(255,255,255,.28)}
+.layout{display:flex;min-height:calc(100vh - 58px)}
+nav{width:196px;background:var(--side);color:#cbd5e1;padding:12px 0;flex-shrink:0;position:sticky;top:58px;height:calc(100vh - 58px);overflow:auto}
+nav a{display:flex;gap:10px;align-items:center;padding:10px 20px;color:inherit;text-decoration:none;cursor:pointer;border-left:3px solid transparent;user-select:none}
+nav a:hover{background:#1e293b;color:#fff}
+nav a.active{background:#1e293b;color:#fff;border-left-color:#60a5fa;font-weight:600}
+nav .sec{font-size:11px;color:#64748b;padding:14px 20px 4px;letter-spacing:1px}
+main{flex:1;padding:20px 24px 60px;min-width:0}
+h2.pt{margin:0 0 4px;font-size:21px}
+.sub{color:var(--mu);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:16px 18px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.card h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card h3 .r{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.grid{display:grid;gap:16px}.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.g2>.card,.g3>.card,.g4>.card{margin-bottom:0}
+@media(max-width:1150px){.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:repeat(2,1fr)}}
+.btn{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border:1px solid #cbd5e1;background:#fff;color:var(--tx);border-radius:6px;cursor:pointer;font:inherit;font-size:13px;white-space:nowrap}
+.btn:hover{background:#f8fafc;border-color:#94a3b8}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}.btn.pri:hover{background:var(--pri-d)}
+.btn.danger{color:var(--bad);border-color:#fecaca}.btn.danger:hover{background:#fef2f2}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+table.tb{width:100%;border-collapse:collapse;font-size:13px}
+.tb th,.tb td{padding:8px 10px;border-bottom:1px solid var(--bd);text-align:left;vertical-align:middle}
+.tb th{background:#f8fafc;color:#475569;font-weight:600;white-space:nowrap;position:sticky;top:0}
+.tb tr:hover td{background:#fafcff}
+.tb td.n,.tb th.n{text-align:right;font-variant-numeric:tabular-nums}
+.tb td.c,.tb th.c{text-align:center}
+.tbw{overflow:auto;max-width:100%}
+input,select,textarea{font:inherit;padding:6px 8px;border:1px solid #cbd5e1;border-radius:6px;background:#fff;color:var(--tx)}
+input:focus,select:focus,textarea:focus{outline:2px solid #93c5fd;border-color:var(--pri)}
+textarea{width:100%;min-height:70px;resize:vertical}
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.b-ok{background:#d1fae5;color:#047857}.b-warn{background:#fef3c7;color:#b45309}.b-bad{background:#fee2e2;color:#b91c1c}.b-info{background:#dbeafe;color:#1d4ed8}.b-gray{background:#e2e8f0;color:#475569}.b-pur{background:#ede9fe;color:#6d28d9}
+.stat{background:#fff;border:1px solid var(--bd);border-radius:10px;padding:14px 16px}
+.stat .l{color:var(--mu);font-size:12px}.stat .v{font-size:26px;font-weight:700;margin-top:2px}.stat .d{font-size:12px;color:var(--mu)}
+.muted{color:var(--mu)}.small{font-size:12px}.bold{font-weight:700}
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);display:none;align-items:center;justify-content:center;z-index:100}
+.modal-bg.show{display:flex}
+.modal{background:#fff;border-radius:12px;width:min(640px,94vw);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+.modal.wide{width:min(1060px,96vw)}
+.modal-h{padding:14px 18px;border-bottom:1px solid var(--bd);font-weight:700;font-size:16px;display:flex;align-items:center}
+.modal-h .x{margin-left:auto;cursor:pointer;font-size:20px;color:var(--mu);border:none;background:none}
+.modal-b{padding:16px 18px;overflow:auto}
+.modal-f{padding:12px 18px;border-top:1px solid var(--bd);display:flex;gap:8px;justify-content:flex-end}
+.fr{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:start;margin-bottom:10px}
+.fr>label{padding-top:6px;color:#334155;font-weight:600;font-size:13px}
+.fr input:not([type=checkbox]):not([type=radio]),.fr select{width:100%}
+.req::after{content:" *";color:var(--bad)}
+#toast{position:fixed;right:20px;bottom:20px;z-index:200;display:flex;flex-direction:column;gap:8px}
+#toast div{background:#0f172a;color:#fff;padding:10px 16px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.25);animation:fi .2s}
+#toast div.err{background:#b91c1c}#toast div.warn{background:#b45309}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--bd);margin-bottom:16px;flex-wrap:wrap}
+.tabs button{border:none;background:none;padding:9px 16px;font:inherit;cursor:pointer;color:var(--mu);border-bottom:2px solid transparent;margin-bottom:-2px;font-weight:600}
+.tabs button.active{color:var(--pri);border-bottom-color:var(--pri)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.chip{padding:5px 12px;border-radius:999px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;font-size:13px}
+.chip.active{background:var(--pri);color:#fff;border-color:var(--pri)}
+.mx td{padding:6px 8px}
+.mx input.cell{width:84px;text-align:right;padding:4px 6px}
+.mx input.rg{width:58px;text-align:right;padding:2px 4px;font-size:11px;color:#475569;background:#f8fafc}
+.rgw{display:flex;gap:2px;margin-top:3px;align-items:center;font-size:11px;color:var(--mu)}
+.cell-div{background:#fef3c7!important}.cell-elim{background:#fee2e2!important}
+.chart{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;margin-top:6px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.sl{display:grid;grid-template-columns:150px 1fr 56px 64px;gap:10px;align-items:center;padding:6px 0;border-bottom:1px dashed var(--bd)}
+.sl input[type=range]{width:100%}
+.sl .pct{font-weight:700;text-align:right;color:var(--pri)}
+.alert{padding:10px 14px;border-radius:8px;margin-bottom:8px;display:flex;gap:8px;align-items:flex-start}
+.a-warn{background:#fffbeb;border:1px solid #fde68a}.a-bad{background:#fef2f2;border:1px solid #fecaca}.a-ok{background:#ecfdf5;border:1px solid #a7f3d0}.a-info{background:#eff6ff;border:1px solid #bfdbfe}
+.empty{text-align:center;padding:50px 20px;color:var(--mu)}
+.hero{text-align:center;padding:60px 20px}
+.hero h1{font-size:30px;margin:0 0 8px}.hero p{color:var(--mu);max-width:640px;margin:0 auto 24px}
+.winner{background:linear-gradient(135deg,#eff6ff,#ecfdf5);border:1px solid #bfdbfe}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 12px;font-size:13px}.kv b{color:#475569;font-weight:600}
+.rk{display:inline-flex;width:24px;height:24px;border-radius:50%;align-items:center;justify-content:center;font-weight:700;font-size:12px;background:#e2e8f0}
+.rk1{background:#fbbf24;color:#fff}.rk2{background:#94a3b8;color:#fff}.rk3{background:#d97706;color:#fff}
+.help h3{margin-top:22px}.help li{margin-bottom:4px}.help code{background:#f1f5f9;padding:1px 6px;border-radius:4px}
+.att{display:flex;gap:6px;align-items:center;font-size:12px;padding:3px 0}
+#printArea{display:none}
+@media print{
+  body{background:#fff}
+  body>*:not(#printArea){display:none!important}
+  #printArea{display:block;padding:0 6mm;font-size:12px}
+  #printArea .card{box-shadow:none;break-inside:avoid;border:1px solid #cbd5e1}
+  #printArea h1{font-size:22px;margin:0 0 4px}
+  #printArea .pb{page-break-before:always}
+  .tb th{position:static}
+  @page{size:A4;margin:12mm}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">🎯 決策沙盤推演系統 <small>Decision Simulation Lab V3</small></div>
+  <select id="topicSel" onchange="selectTopic(this.value)"></select>
+  <button class="btn" onclick="topicModal()">＋ 新增議題</button>
+  <button class="btn" onclick="topicModal(cur.topicId)" id="btnEditTopic">✎ 編輯議題</button>
+  <div class="sp"></div>
+  <button class="btn" onclick="triggerImport()">⤒ 匯入</button>
+  <button class="btn" onclick="exportJSON(false)">⤓ 匯出議題</button>
+  <button class="btn" onclick="printReport()">🖨 決策報告</button>
+</header>
+<div class="layout">
+  <nav id="nav"></nav>
+  <main id="main"></main>
+</div>
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+<div id="printArea"></div>
+<input type="file" id="fileImport" accept=".json,application/json" hidden onchange="handleImport(this)">
+<script>
+'use strict';
+/* =========================================================
+   決策沙盤推演系統 V3 — 核心：資料庫、工具、計分引擎、圖表
+   ========================================================= */
+const DB_NAME = 'DecisionLabDB', DB_VER = 1;
+const STORES = ['topics','options','criteria','reviewers','scores','scenarios','decisions','attachments'];
+const PALETTE = ['#2563eb','#f59e0b','#10b981','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#64748b','#0ea5e9','#a855f7'];
+const CATS = ['成本','效益','風險','時程','人力','品質','自訂'];
+const STATUS = ['草稿','評估中','待決議','已決議','取消'];
+const STATUS_CLS = {'草稿':'b-gray','評估中':'b-info','待決議':'b-warn','已決議':'b-ok','取消':'b-bad'};
+const DIV_CV = 0.25;           // 評審分歧門檻（變異係數）
+const S = {}; STORES.forEach(s => S[s] = []);
+let db;
+const cur = { topicId: null, view: 'overview' };
+const UI = { scoreRev: '__agg', showRange: false, sandTab: 'scenario', sensW: null, sensTopic: null, sensCrit: null, mc: {} };
+
+/* ---------- IndexedDB ---------- */
+function openDB(){
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      STORES.forEach(s => {
+        if (!d.objectStoreNames.contains(s)) {
+          const os = d.createObjectStore(s, { keyPath: 'id' });
+          if (s !== 'topics') os.createIndex('topicId', 'topicId');
+        }
+      });
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+const p = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const store = (s, mode = 'readonly') => db.transaction(s, mode).objectStore(s);
+async function loadAll(){ for (const s of STORES) S[s] = await p(store(s).getAll()); }
+async function put(s, obj){
+  await p(store(s, 'readwrite').put(obj));
+  const i = S[s].findIndex(x => x.id === obj.id);
+  if (i >= 0) S[s][i] = obj; else S[s].push(obj);
+  return obj;
+}
+async function del(s, id){ await p(store(s, 'readwrite').delete(id)); S[s] = S[s].filter(x => x.id !== id); }
+function bulk(s, arr, mode = 'put'){
+  return new Promise((res, rej) => {
+    if (!arr.length) return res();
+    const t = db.transaction(s, 'readwrite'); const os = t.objectStore(s);
+    arr.forEach(x => mode === 'put' ? os.put(x) : os.delete(x));
+    t.oncomplete = () => {
+      if (mode === 'put') arr.forEach(o => { const i = S[s].findIndex(x => x.id === o.id); if (i >= 0) S[s][i] = o; else S[s].push(o); });
+      else { const set = new Set(arr); S[s] = S[s].filter(x => !set.has(x.id)); }
+      res();
+    };
+    t.onerror = () => rej(t.error);
+  });
+}
+async function clearStore(s){ await p(store(s, 'readwrite').clear()); S[s] = []; }
+
+/* ---------- 工具 ---------- */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 9);
+const num = v => { if (v === '' || v == null) return null; const n = Number(v); return isFinite(n) ? n : null; };
+const fmt = (n, d = 1) => (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString('zh-TW', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const fix = (n, d = 1) => (n == null || isNaN(n)) ? '—' : Number(n).toFixed(d);
+const pct = (n, d = 1) => (n == null || isNaN(n)) ? '—' : (n * 100).toFixed(d) + '%';
+const today = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const addDays = n => { const d = new Date(Date.now() + n * 864e5); return new Date(d - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10); };
+const color = i => PALETTE[i % PALETTE.length];
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0) || (a.createdAt || 0) - (b.createdAt || 0);
+const mean = a => a.length ? a.reduce((s, v) => s + v, 0) / a.length : null;
+const std = a => { if (a.length < 2) return 0; const m = mean(a); return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / a.length); };
+const quant = (sorted, q) => { if (!sorted.length) return null; const i = (sorted.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i); return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo); };
+const fmtSize = b => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : (b / 1024).toFixed(1) + ' KB';
+
+function toast(msg, type = ''){
+  const d = document.createElement('div'); d.className = type; d.textContent = msg;
+  $('#toast').appendChild(d); setTimeout(() => d.remove(), 2800);
+}
+function download(name, content, mime = 'application/octet-stream'){
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mime });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+const safeName = s => String(s || '未命名').replace(/[\\/:*?"<>|]/g, '_').slice(0, 60);
+
+/* ---------- Modal ---------- */
+let _mBtns = [];
+function openModal(title, body, buttons = [], wide = false){
+  _mBtns = buttons;
+  const m = $('#modal'); m.className = 'modal' + (wide ? ' wide' : '');
+  m.innerHTML = `<div class="modal-h">${esc(title)}<button class="x" onclick="closeModal()">×</button></div>
+    <div class="modal-b">${body}</div>
+    <div class="modal-f">${buttons.map((b, i) => `<button class="btn ${b.cls || ''}" onclick="_mClick(${i})">${esc(b.text)}</button>`).join('')}</div>`;
+  $('#modalBg').classList.add('show');
+  setTimeout(() => { const f = m.querySelector('.modal-b input:not([type=checkbox]),.modal-b select,.modal-b textarea'); if (f) f.focus(); }, 30);
+}
+async function _mClick(i){ const b = _mBtns[i]; if (!b) return; if (b.onClick) { const r = await b.onClick(); if (r === false) return; } closeModal(); }
+function closeModal(){ $('#modalBg').classList.remove('show'); if (_mResolve) { _mResolve(null); _mResolve = null; } }
+let _mResolve = null;
+function choice(title, msg, choices){
+  return new Promise(res => {
+    openModal(title, `<div style="white-space:pre-wrap">${esc(msg)}</div>`, choices.map(c => ({ text: c.text, cls: c.cls, onClick: () => { const r = _mResolve; _mResolve = null; r && r(c.value); } })));
+    _mResolve = res;
+  });
+}
+const confirmBox = (msg, title = '請確認') => choice(title, msg, [{ text: '取消', value: false }, { text: '確定', cls: 'danger', value: true }]);
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && $('#modalBg').classList.contains('show')) closeModal(); });
+
+/* ---------- 取資料 ---------- */
+const T = () => S.topics.find(t => t.id === cur.topicId);
+const OPTS = (tid = cur.topicId) => S.options.filter(x => x.topicId === tid).sort(byOrder);
+const CRITS = (tid = cur.topicId) => S.criteria.filter(x => x.topicId === tid).sort(byOrder);
+const REVS = (tid = cur.topicId) => S.reviewers.filter(x => x.topicId === tid).sort(byOrder);
+const SCENS = (tid = cur.topicId) => S.scenarios.filter(x => x.topicId === tid).sort(byOrder);
+const DECS = (tid = cur.topicId) => S.decisions.filter(x => x.topicId === tid).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+const ATTS = (refType, refId) => S.attachments.filter(a => a.refType === refType && a.refId === refId);
+const scoreKey = (o, c, r) => `${o}|${c}|${r}`;
+const nameOf = (arr, id) => (arr.find(x => x.id === id) || {}).name || '（已刪除）';
+
+/* ---------- 評分彙總 ---------- */
+function aggregate(tid = cur.topicId){
+  const m = {};
+  const ok = { o: new Set(OPTS(tid).map(x => x.id)), c: new Set(CRITS(tid).map(x => x.id)), r: new Set(REVS(tid).map(x => x.id)) };
+  for (const s of S.scores) {
+    if (s.topicId !== tid || s.value == null || !ok.o.has(s.optionId) || !ok.c.has(s.criteriaId) || !ok.r.has(s.reviewerId)) continue;
+    m[s.optionId] ??= {};
+    const c = m[s.optionId][s.criteriaId] ??= { vals: [], mins: [], maxs: [], by: [] };
+    c.vals.push(s.value); c.mins.push(s.min ?? s.value); c.maxs.push(s.max ?? s.value); c.by.push({ r: s.reviewerId, v: s.value });
+  }
+  for (const o in m) for (const k in m[o]) {
+    const c = m[o][k];
+    c.mean = mean(c.vals); c.std = std(c.vals); c.n = c.vals.length;
+    c.min = Math.min(mean(c.mins), c.mean); c.max = Math.max(mean(c.maxs), c.mean);
+    c.cv = Math.abs(c.mean) > 1e-9 ? c.std / Math.abs(c.mean) : c.std;
+    c.diverge = c.n >= 2 && c.cv >= DIV_CV;
+    c.hasRange = c.max > c.min;
+  }
+  return m;
+}
+const meanMatrix = agg => { const m = {}; for (const o in agg) { m[o] = {}; for (const c in agg[o]) m[o][c] = agg[o][c].mean; } return m; };
+const baseWeights = (tid = cur.topicId) => { const w = {}; CRITS(tid).forEach(c => w[c.id] = Number(c.weight) || 0); return w; };
+const sumW = w => Object.values(w).reduce((s, v) => s + (Number(v) || 0), 0);
+
+function ctx(weights, tid = cur.topicId){
+  const t = S.topics.find(x => x.id === tid) || {};
+  return { options: OPTS(tid), criteria: CRITS(tid), matrix: meanMatrix(aggregate(tid)), weights: weights || baseWeights(tid), method: t.method || 'wsm', applyThreshold: t.applyThreshold !== false };
+}
+
+/* ---------- 計分引擎：WSM / TOPSIS / 門檻淘汰 ---------- */
+function compute({ options, criteria, matrix, weights, method = 'wsm', applyThreshold = true }){
+  const tw = criteria.reduce((s, c) => s + Math.max(0, Number(weights[c.id]) || 0), 0);
+  const W = {}; criteria.forEach(c => W[c.id] = tw > 0 ? Math.max(0, Number(weights[c.id]) || 0) / tw : 1 / (criteria.length || 1));
+  const rows = options.map(o => {
+    const reasons = [], missing = [];
+    criteria.forEach(c => {
+      const v = matrix[o.id]?.[c.id];
+      if (v == null) { missing.push(c.name); return; }
+      if (applyThreshold && c.threshold != null && c.threshold !== '') {
+        const t = Number(c.threshold);
+        if (c.direction === 'cost' ? v > t : v < t) reasons.push(`${c.name} ${fmt(v, 2)} ${c.direction === 'cost' ? '>' : '<'} 門檻 ${fmt(t, 2)}`);
+      }
+    });
+    return { id: o.id, name: o.name, eliminated: reasons.length > 0, reasons, missing, contrib: {}, norm: {}, score: 0, wsm: 0, rank: null };
+  });
+  const act = rows.filter(r => !r.eliminated);
+  criteria.forEach(c => {
+    const vals = act.map(r => matrix[r.id]?.[c.id]).filter(v => v != null);
+    const mn = Math.min(...vals), mx = Math.max(...vals);
+    act.forEach(r => {
+      const v = matrix[r.id]?.[c.id]; let n;
+      if (v == null) n = 0; else if (mx === mn) n = 1; else n = c.direction === 'cost' ? (mx - v) / (mx - mn) : (v - mn) / (mx - mn);
+      r.norm[c.id] = n; r.contrib[c.id] = W[c.id] * n; r.wsm += W[c.id] * n;
+    });
+  });
+  if (method === 'topsis' && act.length) {
+    const dp = {}, dm = {}; act.forEach(r => { dp[r.id] = 0; dm[r.id] = 0; });
+    criteria.forEach(c => {
+      const xs = act.map(r => matrix[r.id]?.[c.id] ?? 0);
+      const den = Math.sqrt(xs.reduce((s, v) => s + v * v, 0)) || 1;
+      const vs = xs.map(x => W[c.id] * x / den);
+      const best = c.direction === 'cost' ? Math.min(...vs) : Math.max(...vs);
+      const worst = c.direction === 'cost' ? Math.max(...vs) : Math.min(...vs);
+      act.forEach((r, i) => { dp[r.id] += (vs[i] - best) ** 2; dm[r.id] += (vs[i] - worst) ** 2; });
+    });
+    act.forEach(r => { const a = Math.sqrt(dp[r.id]), b = Math.sqrt(dm[r.id]); r.score = (a + b) > 0 ? b / (a + b) : 1; r.dPlus = a; r.dMinus = b; });
+  } else act.forEach(r => r.score = r.wsm);
+  act.sort((a, b) => b.score - a.score);
+  act.forEach((r, i) => r.rank = (i > 0 && Math.abs(r.score - act[i - 1].score) < 1e-12) ? act[i - 1].rank : i + 1);
+  return { rows: [...act, ...rows.filter(r => r.eliminated)], W, method };
+}
+const leaderOf = res => (res.rows[0] && !res.rows[0].eliminated) ? res.rows[0] : null;
+
+/* ---------- 敏感度分析 ---------- */
+function sensitivity(base, critId, step = 1){
+  const others = base.criteria.filter(c => c.id !== critId);
+  const sO = others.reduce((s, c) => s + (Number(base.weights[c.id]) || 0), 0);
+  const xs = [], series = {}, leaders = [];
+  base.options.forEach(o => series[o.id] = []);
+  for (let x = 0; x <= 100 + 1e-9; x += step) {
+    const w = { [critId]: x };
+    others.forEach(c => w[c.id] = sO > 0 ? (Number(base.weights[c.id]) || 0) * (100 - x) / sO : (100 - x) / (others.length || 1));
+    const r = compute({ ...base, weights: w });
+    xs.push(x);
+    r.rows.forEach(row => series[row.id].push(row.eliminated ? null : row.score * 100));
+    const l = leaderOf(r); leaders.push(l ? l.id : null);
+  }
+  const wAt = x => { const w = { [critId]: x }; others.forEach(c => w[c.id] = sO > 0 ? (Number(base.weights[c.id]) || 0) * (100 - x) / sO : (100 - x) / (others.length || 1)); return w; };
+  const leadAt = x => { const l = leaderOf(compute({ ...base, weights: wAt(x) })); return l ? l.id : null; };
+  const flips = [];
+  for (let i = 1; i < leaders.length; i++) if (leaders[i] !== leaders[i - 1]) {
+    let lo = xs[i - 1], hi = xs[i];
+    for (let k = 0; k < 14; k++) { const m = (lo + hi) / 2; if (leadAt(m) === leaders[i - 1]) lo = m; else hi = m; }
+    flips.push({ at: Math.round(hi * 10) / 10, from: leaders[i - 1], to: leaders[i] });
+  }
+  const tot = sumW(base.weights); const curPct = tot > 0 ? (Number(base.weights[critId]) || 0) / tot * 100 : 0;
+  return { xs, series, flips, curPct };
+}
+
+/* ---------- 蒙地卡羅模擬 ---------- */
+function tri(a, c, b){
+  if (b <= a) return c;
+  const u = Math.random(), f = (c - a) / (b - a);
+  return u < f ? a + Math.sqrt(u * (b - a) * (c - a)) : b - Math.sqrt((1 - u) * (b - a) * (b - c));
+}
+function monteCarlo(iter, wPert, weights){
+  const base = ctx(weights); const agg = aggregate();
+  const st = {}; base.options.forEach(o => st[o.id] = { win: 0, rankSum: 0, scores: [], elim: 0, ranks: {} });
+  for (let k = 0; k < iter; k++) {
+    const m = {};
+    base.options.forEach(o => { m[o.id] = {}; base.criteria.forEach(c => { const a = agg[o.id]?.[c.id]; if (a) m[o.id][c.id] = tri(a.min, a.mean, a.max); }); });
+    const w = {};
+    base.criteria.forEach(c => { const b = Number(base.weights[c.id]) || 0; w[c.id] = Math.max(0, b * (1 + (Math.random() * 2 - 1) * wPert / 100)); });
+    const r = compute({ ...base, matrix: m, weights: w });
+    r.rows.forEach(x => {
+      const s = st[x.id];
+      if (x.eliminated) { s.elim++; return; }
+      s.rankSum += x.rank; s.scores.push(x.score * 100); s.ranks[x.rank] = (s.ranks[x.rank] || 0) + 1;
+      if (x.rank === 1) s.win++;
+    });
+  }
+  const rows = base.options.map(o => {
+    const s = st[o.id]; const sc = s.scores.slice().sort((a, b) => a - b);
+    return { id: o.id, name: o.name, winP: s.win / iter, elimP: s.elim / iter, avgRank: sc.length ? s.rankSum / sc.length : null,
+      mean: mean(sc), p5: quant(sc, .05), p50: quant(sc, .5), p95: quant(sc, .95), ranks: s.ranks };
+  }).sort((a, b) => b.winP - a.winP || (a.avgRank ?? 99) - (b.avgRank ?? 99));
+  return { iter, wPert, rows, at: Date.now(), method: base.method };
+}
+
+/* ---------- SVG 圖表 ---------- */
+const legend = items => `<div class="legend">${items.map(i => `<span><i style="background:${i.color}"></i>${esc(i.name)}</span>`).join('')}</div>`;
+const TXT = 'font-family="Microsoft JhengHei,PingFang TC,sans-serif"';
+
+function barH(items, { max = null, unit = '', dec = 1, w = 560 } = {}){
+  if (!items.length) return '<div class="empty">尚無資料</div>';
+  const lw = 130, bh = 26, gap = 10, h = items.length * (bh + gap) + 10;
+  const mx = max ?? Math.max(...items.map(i => i.value || 0), 1e-9);
+  let s = `<svg class="chart" viewBox="0 0 ${w} ${h}" ${TXT} font-size="12">`;
+  items.forEach((it, i) => {
+    const y = 5 + i * (bh + gap), bw = Math.max(0, (w - lw - 70) * (it.value || 0) / mx);
+    s += `<text x="${lw - 8}" y="${y + bh / 2 + 4}" text-anchor="end" fill="#334155">${esc(it.label.length > 12 ? it.label.slice(0, 12) + '…' : it.label)}</text>
+      <rect x="${lw}" y="${y}" width="${w - lw - 70}" height="${bh}" rx="4" fill="#f1f5f9"/>
+      <rect x="${lw}" y="${y}" width="${bw}" height="${bh}" rx="4" fill="${it.color}"><title>${esc(it.label)}：${fmt(it.value, dec)}${unit}</title></rect>
+      <text x="${lw + bw + 6}" y="${y + bh / 2 + 4}" fill="#0f172a" font-weight="700">${it.text ?? (fmt(it.value, dec) + unit)}</text>`;
+  });
+  return s + '</svg>';
+}
+
+function radar(axes, series, size = 400){
+  const n = axes.length;
+  if (n < 3) return '<div class="empty">雷達圖需要至少 3 個評估因子</div>';
+  if (!series.length) return '<div class="empty">尚無有效方案</div>';
+  const cx = size / 2, cy = size / 2, R = size / 2 - 70;
+  const xy = (i, r) => { const a = -Math.PI / 2 + 2 * Math.PI * i / n; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+  let s = `<svg class="chart" viewBox="0 0 ${size} ${size}" ${TXT} font-size="12" style="max-width:${size + 40}px;margin:auto">`;
+  for (let l = 1; l <= 5; l++) s += `<polygon points="${axes.map((_, i) => xy(i, R * l / 5).join(',')).join(' ')}" fill="${l % 2 ? '#f8fafc' : '#fff'}" stroke="#e2e8f0"/>`;
+  axes.forEach((a, i) => {
+    const [x, y] = xy(i, R), [lx, ly] = xy(i, R + 16);
+    const anc = Math.abs(lx - cx) < 5 ? 'middle' : lx > cx ? 'start' : 'end';
+    s += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#cbd5e1"/><text x="${lx}" y="${ly + 4}" text-anchor="${anc}" fill="#334155">${esc(a)}</text>`;
+  });
+  series.forEach(se => {
+    const pts = se.values.map((v, i) => xy(i, R * Math.max(0, Math.min(1, v || 0))));
+    s += `<polygon points="${pts.map(p => p.join(',')).join(' ')}" fill="${se.color}" fill-opacity=".13" stroke="${se.color}" stroke-width="2"/>`;
+    pts.forEach((p, i) => s += `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="${se.color}"><title>${esc(se.name)} / ${esc(axes[i])}：${fix((se.values[i] || 0) * 100, 0)}</title></circle>`);
+  });
+  return s + '</svg>' + legend(series);
+}
+
+function stackH(rows, segs, w = 820){
+  if (!rows.length || !segs.length) return '<div class="empty">尚無資料</div>';
+  const lw = 130, bh = 26, gap = 10, h = rows.length * (bh + gap) + 10, cw = w - lw - 60;
+  let s = `<svg class="chart" viewBox="0 0 ${w} ${h}" ${TXT} font-size="12">`;
+  rows.forEach((r, i) => {
+    const y = 5 + i * (bh + gap); let x = lw;
+    s += `<text x="${lw - 8}" y="${y + bh / 2 + 4}" text-anchor="end" fill="#334155">${esc(r.label.length > 12 ? r.label.slice(0, 12) + '…' : r.label)}</text><rect x="${lw}" y="${y}" width="${cw}" height="${bh}" rx="4" fill="#f1f5f9"/>`;
+    segs.forEach(sg => { const v = r.values[sg.id] || 0, bw = cw * v; if (bw > 0) s += `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${sg.color}"><title>${esc(r.label)} / ${esc(sg.name)}：${fix(v * 100, 1)} 分</title></rect>`; x += bw; });
+    s += `<text x="${x + 6}" y="${y + bh / 2 + 4}" font-weight="700">${fix(r.total * 100, 1)}</text>`;
+  });
+  return s + '</svg>' + legend(segs);
+}
+
+function lineChart(xs, series, { markX = null, flips = [], w = 900, h = 380, xLabel = '', yLabel = '' } = {}){
+  const L = 46, Rr = 16, Tt = 14, B = 40, cw = w - L - Rr, ch = h - Tt - B;
+  const all = series.flatMap(s => s.values).filter(v => v != null);
+  if (!all.length) return '<div class="empty">尚無資料</div>';
+  let mn = Math.min(...all), mx = Math.max(...all); const pad = (mx - mn) * .08 || 5; mn = Math.max(0, mn - pad); mx = Math.min(100, mx + pad); if (mx - mn < 1) { mx = mn + 1; }
+  const X = v => L + cw * (v - xs[0]) / ((xs[xs.length - 1] - xs[0]) || 1), Y = v => Tt + ch * (1 - (v - mn) / (mx - mn));
+  let s = `<svg class="chart" viewBox="0 0 ${w} ${h}" ${TXT} font-size="11">`;
+  for (let i = 0; i <= 5; i++) { const v = mn + (mx - mn) * i / 5, y = Y(v); s += `<line x1="${L}" x2="${w - Rr}" y1="${y}" y2="${y}" stroke="#eef2f7"/><text x="${L - 6}" y="${y + 4}" text-anchor="end" fill="#64748b">${v.toFixed(0)}</text>`; }
+  for (let i = 0; i <= 10; i++) { const v = xs[0] + (xs[xs.length - 1] - xs[0]) * i / 10, x = X(v); s += `<text x="${x}" y="${h - B + 16}" text-anchor="middle" fill="#64748b">${v.toFixed(0)}</text>`; }
+  flips.forEach(f => s += `<line x1="${X(f.at)}" x2="${X(f.at)}" y1="${Tt}" y2="${Tt + ch}" stroke="#ef4444" stroke-dasharray="3 3"/><text x="${X(f.at) + 3}" y="${Tt + 10}" fill="#ef4444">翻盤 ${f.at}%</text>`);
+  if (markX != null) s += `<line x1="${X(markX)}" x2="${X(markX)}" y1="${Tt}" y2="${Tt + ch}" stroke="#0f172a" stroke-width="1.5"/><text x="${X(markX) + 3}" y="${Tt + ch - 4}" fill="#0f172a" font-weight="700">目前 ${markX.toFixed(1)}%</text>`;
+  series.forEach(se => {
+    let d = '', pen = false;
+    se.values.forEach((v, i) => { if (v == null) { pen = false; return; } d += (pen ? 'L' : 'M') + X(xs[i]).toFixed(1) + ',' + Y(v).toFixed(1); pen = true; });
+    s += `<path d="${d}" fill="none" stroke="${se.color}" stroke-width="2.2"/>`;
+  });
+  s += `<text x="${L + cw / 2}" y="${h - 6}" text-anchor="middle" fill="#334155">${esc(xLabel)}</text><text x="12" y="${Tt + ch / 2}" transform="rotate(-90 12 ${Tt + ch / 2})" text-anchor="middle" fill="#334155">${esc(yLabel)}</text>`;
+  return s + '</svg>' + legend(series);
+}
+
+function groupBar(groups, series, { w = 960, h = 340, max = 100 } = {}){
+  if (!groups.length || !series.length) return '<div class="empty">尚無資料</div>';
+  const L = 40, B = 46, Tt = 10, cw = w - L - 10, ch = h - B - Tt, gw = cw / groups.length, bw = Math.min(28, (gw - 16) / series.length);
+  let s = `<svg class="chart" viewBox="0 0 ${w} ${h}" ${TXT} font-size="11">`;
+  for (let i = 0; i <= 4; i++) { const y = Tt + ch * (1 - i / 4); s += `<line x1="${L}" x2="${w - 10}" y1="${y}" y2="${y}" stroke="#eef2f7"/><text x="${L - 6}" y="${y + 4}" text-anchor="end" fill="#64748b">${(max * i / 4).toFixed(0)}</text>`; }
+  groups.forEach((g, gi) => {
+    const x0 = L + gi * gw + (gw - bw * series.length) / 2;
+    series.forEach((se, si) => { const v = se.values[gi]; if (v == null) return; const bh = ch * Math.max(0, v) / max; s += `<rect x="${x0 + si * bw}" y="${Tt + ch - bh}" width="${bw - 3}" height="${bh}" rx="2" fill="${se.color}"><title>${esc(g)} / ${esc(se.name)}：${fix(v, 1)}</title></rect>`; });
+    s += `<text x="${L + gi * gw + gw / 2}" y="${h - B + 18}" text-anchor="middle" fill="#334155">${esc(g.length > 10 ? g.slice(0, 10) + '…' : g)}</text>`;
+  });
+  return s + '</svg>' + legend(series);
+}
+
+function rangeH(items, w = 620){
+  if (!items.length) return '<div class="empty">尚無資料</div>';
+  const lw = 130, bh = 26, gap = 10, h = items.length * (bh + gap) + 34, cw = w - lw - 20;
+  const vals = items.flatMap(i => [i.p5, i.p95]).filter(v => v != null);
+  const mn = Math.max(0, Math.floor(Math.min(...vals) / 10) * 10), mx = Math.min(100, Math.ceil(Math.max(...vals) / 10) * 10 || 100);
+  const X = v => lw + cw * (v - mn) / ((mx - mn) || 1);
+  let s = `<svg class="chart" viewBox="0 0 ${w} ${h}" ${TXT} font-size="11">`;
+  for (let i = 0; i <= 5; i++) { const v = mn + (mx - mn) * i / 5; s += `<line x1="${X(v)}" x2="${X(v)}" y1="0" y2="${h - 24}" stroke="#eef2f7"/><text x="${X(v)}" y="${h - 8}" text-anchor="middle" fill="#64748b">${v.toFixed(0)}</text>`; }
+  items.forEach((it, i) => {
+    const y = 5 + i * (bh + gap), cy = y + bh / 2;
+    s += `<text x="${lw - 8}" y="${cy + 4}" text-anchor="end" fill="#334155" font-size="12">${esc(it.label)}</text>`;
+    if (it.p5 == null) { s += `<text x="${lw}" y="${cy + 4}" fill="#ef4444">全數被淘汰</text>`; return; }
+    s += `<line x1="${X(it.p5)}" x2="${X(it.p95)}" y1="${cy}" y2="${cy}" stroke="${it.color}" stroke-width="3"/>
+      <line x1="${X(it.p5)}" x2="${X(it.p5)}" y1="${cy - 7}" y2="${cy + 7}" stroke="${it.color}" stroke-width="2"/>
+      <line x1="${X(it.p95)}" x2="${X(it.p95)}" y1="${cy - 7}" y2="${cy + 7}" stroke="${it.color}" stroke-width="2"/>
+      <circle cx="${X(it.p50)}" cy="${cy}" r="6" fill="#fff" stroke="${it.color}" stroke-width="3"><title>${esc(it.label)} P5 ${fix(it.p5)} / P50 ${fix(it.p50)} / P95 ${fix(it.p95)}</title></circle>`;
+  });
+  return s + '</svg>';
+}
+
+/* =========================================================
+   導覽與議題管理
+   ========================================================= */
+const NAV = [
+  ['sec', '決策工作台'], ['overview', '📊', '總覽儀表板'], ['options', '🧩', '方案管理'], ['criteria', '⚖️', '評估因子'], ['scores', '📝', '評分矩陣'],
+  ['sec', '分析與推演'], ['ranking', '🏆', '排名分析'], ['sandbox', '🎲', '沙盤推演'],
+  ['sec', '紀錄與資料'], ['decision', '✅', '決議紀錄'], ['data', '💾', '資料管理'], ['help', '📖', '使用手冊']
+];
+function renderNav(){
+  $('#nav').innerHTML = NAV.map(n => n[0] === 'sec' ? `<div class="sec">${n[1]}</div>` : `<a class="${cur.view === n[0] ? 'active' : ''}" onclick="go('${n[0]}')">${n[1]} ${n[2]}</a>`).join('');
+}
+function renderTopicSel(){
+  const ts = S.topics.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  $('#topicSel').innerHTML = ts.length ? ts.map(t => `<option value="${t.id}" ${t.id === cur.topicId ? 'selected' : ''}>【${esc(t.status || '草稿')}】${esc(t.name)}</option>`).join('') : '<option value="">（尚無議題）</option>';
+  $('#btnEditTopic').disabled = !T();
+}
+function go(v){ cur.view = v; localStorage.setItem('dl_view', v); render(); window.scrollTo(0, 0); }
+function selectTopic(id){ cur.topicId = id || null; localStorage.setItem('dl_topic', id || ''); UI.scoreRev = '__agg'; UI.sensW = null; render(); }
+function render(){
+  renderNav(); renderTopicSel();
+  const V = { overview: vOverview, options: vOptions, criteria: vCriteria, scores: vScores, ranking: vRanking, sandbox: vSandbox, decision: vDecision, data: vData, help: vHelp };
+  const needTopic = !['data', 'help'].includes(cur.view);
+  $('#main').innerHTML = (needTopic && !T()) ? vWelcome() : (V[cur.view] || vOverview)();
+  if (cur.view === 'sandbox' && T()) afterSandbox();
+}
+function vWelcome(){
+  return `<div class="hero"><h1>🎯 決策沙盤推演系統</h1>
+    <p>透過多因子、加權計分、TOPSIS、情境模擬、敏感度分析和蒙地卡羅模擬，讓每一次決策都可量化、可模擬、可追溯。所有資料只存在你的瀏覽器（IndexedDB），可離線使用。</p>
+    <button class="btn pri" onclick="topicModal()">＋ 建立第一個決策議題</button>
+    <button class="btn" onclick="loadDemo()">✨ 載入範例資料</button>
+    <button class="btn" onclick="triggerImport()">⤒ 匯入 JSON</button></div>`;
+}
+
+function topicModal(id){
+  const t = id ? S.topics.find(x => x.id === id) : null;
+  openModal(t ? '編輯決策議題' : '新增決策議題', `
+    <div class="fr"><label class="req">議題名稱</label><input id="f_name" value="${esc(t?.name)}" placeholder="例如：核心系統報表平台選型"></div>
+    <div class="fr"><label>說明</label><textarea id="f_desc" placeholder="決策背景、目的與範圍">${esc(t?.desc)}</textarea></div>
+    <div class="fr"><label>決策負責人</label><input id="f_owner" value="${esc(t?.owner)}"></div>
+    <div class="fr"><label>決策截止日</label><input type="date" id="f_due" value="${esc(t?.dueDate)}"></div>
+    <div class="fr"><label>狀態</label><select id="f_status">${STATUS.map(s => `<option ${(t?.status || '草稿') === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+    ${t ? `<div class="fr"><label>其他操作</label><div><button class="btn sm" onclick="dupTopic('${t.id}')">⧉ 複製此議題</button> <button class="btn sm danger" onclick="deleteTopic('${t.id}')">🗑 刪除此議題</button></div></div>` : ''}`,
+    [{ text: '取消' }, { text: '儲存', cls: 'pri', onClick: async () => {
+      const name = $('#f_name').value.trim(); if (!name) { toast('請輸入議題名稱', 'err'); return false; }
+      const o = t ? { ...t } : { id: uid(), createdAt: Date.now(), method: 'wsm', applyThreshold: true };
+      Object.assign(o, { name, desc: $('#f_desc').value.trim(), owner: $('#f_owner').value.trim(), dueDate: $('#f_due').value, status: $('#f_status').value, updatedAt: Date.now() });
+      await put('topics', o); if (!t) selectTopic(o.id); else render(); toast('議題已儲存');
+    } }]);
+}
+async function deleteTopic(id){
+  closeModal();
+  const t = S.topics.find(x => x.id === id);
+  if (!await confirmBox(`確定刪除議題「${t.name}」？\n其下所有方案、因子、評審、評分、情境、決議與附件都會一併刪除，且無法復原。`)) return;
+  for (const s of STORES.slice(1)) await bulk(s, S[s].filter(x => x.topicId === id).map(x => x.id), 'delete');
+  await del('topics', id);
+  selectTopic(S.topics[0]?.id || null); toast('議題已刪除');
+}
+function topicData(tid){
+  const d = {}; d.topics = S.topics.filter(x => x.id === tid);
+  STORES.slice(1).forEach(s => d[s] = S[s].filter(x => x.topicId === tid));
+  return JSON.parse(JSON.stringify(d, (k, v) => v instanceof Blob ? undefined : v));
+}
+function remap(data, suffix = '（複本）'){
+  const map = {}; const nid = o => o == null ? o : (map[o] ??= uid());
+  data.topics.forEach(t => { t.id = nid(t.id); t.name += suffix; t.createdAt = Date.now(); });
+  ['options', 'criteria', 'reviewers'].forEach(s => (data[s] || []).forEach(x => { x.id = nid(x.id); x.topicId = nid(x.topicId); }));
+  (data.scores || []).forEach(x => { x.topicId = nid(x.topicId); x.optionId = nid(x.optionId); x.criteriaId = nid(x.criteriaId); x.reviewerId = nid(x.reviewerId); x.id = scoreKey(x.optionId, x.criteriaId, x.reviewerId); });
+  (data.scenarios || []).forEach(x => { x.id = nid(x.id); x.topicId = nid(x.topicId); const w = {}; for (const k in x.weights || {}) w[nid(k)] = x.weights[k]; x.weights = w; });
+  (data.decisions || []).forEach(x => {
+    x.id = nid(x.id); x.topicId = nid(x.topicId); x.optionId = nid(x.optionId);
+    if (x.snapshot) {
+      (x.snapshot.criteria || []).forEach(c => { c.id = nid(c.id); });
+      (x.snapshot.options || []).forEach(o => { o.id = nid(o.id); });
+      (x.snapshot.matrix || []).forEach(o => { o.id = nid(o.id); });
+      (x.snapshot.ranking || []).forEach(o => { o.id = nid(o.id); });
+    }
+  });
+  (data.attachments || []).forEach(x => { x.id = nid(x.id); x.topicId = nid(x.topicId); x.refId = nid(x.refId); });
+  return data;
+}
+async function dupTopic(id){
+  closeModal();
+  const d = topicData(id);
+  const blobs = {}; S.attachments.filter(a => a.topicId === id).forEach(a => blobs[a.id] = a.blob);
+  d.attachments.forEach(a => a._old = a.id);
+  remap(d);
+  d.attachments.forEach(a => { a.blob = blobs[a._old]; delete a._old; });
+  for (const s of STORES) await bulk(s, d[s] || []);
+  selectTopic(d.topics[0].id); toast('已複製議題');
+}
+async function saveTopicSetting(k, v){ const t = { ...T(), [k]: v }; await put('topics', t); UI.mc = {}; render(); }
+
+/* =========================================================
+   總覽儀表板
+   ========================================================= */
+function vOverview(){
+  const t = T(), O = OPTS(), C = CRITS(), R = REVS(), agg = aggregate(), w = baseWeights(), sw = sumW(w);
+  const res = compute(ctx()); const lead = leaderOf(res);
+  const total = O.length * C.length * R.length;
+  const filled = S.scores.filter(s => s.topicId === t.id && s.value != null && O.some(o => o.id === s.optionId) && C.some(c => c.id === s.criteriaId) && R.some(r => r.id === s.reviewerId)).length;
+  const alerts = [];
+  if (!O.length) alerts.push(['bad', '尚未建立任何方案。', 'options']);
+  if (!C.length) alerts.push(['bad', '尚未建立任何評估因子。', 'criteria']);
+  if (!R.length) alerts.push(['warn', '尚未建立評審，請在「評分矩陣」新增評審。', 'scores']);
+  if (C.length && Math.abs(sw - 100) > 0.01) alerts.push(['warn', `權重合計為 ${fmt(sw, 2)}%（非 100%）。計算時會自動等比例換算，建議正規化。`, 'criteria']);
+  if (total && filled < total) alerts.push(['warn', `評分完成率 ${pct(filled / total, 0)}，仍有 ${total - filled} 格未評分。`, 'scores']);
+  const div = []; O.forEach(o => C.forEach(c => { const a = agg[o.id]?.[c.id]; if (a?.diverge) div.push(`${o.name} × ${c.name}（CV ${pct(a.cv, 0)}）`); }));
+  if (div.length) alerts.push(['warn', `評審意見分歧 ${div.length} 處：${div.slice(0, 4).join('、')}${div.length > 4 ? '…' : ''}`, 'scores']);
+  res.rows.filter(r => r.eliminated).forEach(r => alerts.push(['bad', `方案「${r.name}」因門檻被淘汰：${r.reasons.join('；')}`, 'ranking']));
+  if (lead && C.length > 1) {
+    const base = ctx(); let near = null;
+    C.forEach(c => { const sv = sensitivity(base, c.id, 1); sv.flips.forEach(f => { const d = Math.abs(f.at - sv.curPct); if (!near || d < near.d) near = { d, c, f, cur: sv.curPct }; }); });
+    if (near && near.d <= 10) alerts.push(['warn', `排名敏感：「${near.c.name}」權重由 ${fix(near.cur)}% 調整到 ${near.f.at}% 時，第一名會由「${nameOf(O, near.f.from)}」變為「${nameOf(O, near.f.to)}」。`, 'sandbox']);
+    else if (near) alerts.push(['ok', `排名穩定：最接近的翻盤點距目前權重 ${fix(near.d)} 個百分點以上。`, 'sandbox']);
+    else alerts.push(['ok', '排名穩定：單一因子權重在 0–100% 間變動都不會改變第一名。', 'sandbox']);
+  }
+  const dec = DECS()[0];
+  const act = res.rows.filter(r => !r.eliminated);
+  return `<h2 class="pt">${esc(t.name)} <span class="badge ${STATUS_CLS[t.status] || 'b-gray'}">${esc(t.status)}</span></h2>
+  <p class="sub">${esc(t.desc || '（無說明）')}</p>
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="stat"><div class="l">方案數</div><div class="v">${O.length}</div><div class="d">淘汰 ${res.rows.filter(r => r.eliminated).length} 個</div></div>
+    <div class="stat"><div class="l">評估因子</div><div class="v">${C.length}</div><div class="d">權重合計 ${fmt(sw, 2)}%</div></div>
+    <div class="stat"><div class="l">評審人數</div><div class="v">${R.length}</div><div class="d">分歧 ${div.length} 處</div></div>
+    <div class="stat"><div class="l">評分完成率</div><div class="v">${total ? pct(filled / total, 0) : '—'}</div><div class="d">${filled} / ${total} 格</div></div>
+  </div>
+  <div class="grid g2" style="margin-bottom:16px">
+    <div class="card ${lead ? 'winner' : ''}"><h3>🏆 目前建議方案 <span class="r"><span class="badge b-pur">${t.method === 'topsis' ? 'TOPSIS' : '加權總分法'}</span></span></h3>
+      ${lead ? `<div style="font-size:26px;font-weight:800;color:#1d4ed8">${esc(lead.name)}</div>
+        <div class="muted">分數 ${fix(lead.score * 100, 1)}${act[1] ? `，領先第二名「${esc(act[1].name)}」${fix((lead.score - act[1].score) * 100, 1)} 分` : ''}</div>
+        <div class="kv" style="margin-top:12px"><b>決策負責人</b><span>${esc(t.owner || '—')}</span><b>截止日</b><span>${esc(t.dueDate || '—')}${t.dueDate ? ` <span class="badge ${t.dueDate < today() ? 'b-bad' : 'b-gray'}">${t.dueDate < today() ? '已逾期' : '剩 ' + Math.ceil((new Date(t.dueDate) - new Date(today())) / 864e5) + ' 天'}</span>` : ''}</span>
+        <b>最新決議</b><span>${dec ? `${esc(nameOf(O, dec.optionId) || dec.snapshot?.optionName)}（${esc(dec.date)}）` : '尚未決議'}</span></div>` : '<div class="empty">尚無可排名的方案</div>'}
+    </div>
+    <div class="card"><h3>🔔 提醒事項</h3>${alerts.length ? alerts.map(a => `<div class="alert a-${a[0]}" style="cursor:pointer" onclick="go('${a[2]}')">${a[0] === 'ok' ? '✅' : a[0] === 'bad' ? '⛔' : '⚠️'} <span>${esc(a[1])}</span></div>`).join('') : '<div class="alert a-ok">✅ 一切就緒</div>'}</div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h3>總分排名</h3>${barH(act.map(r => ({ label: r.name, value: r.score * 100, color: color(O.findIndex(o => o.id === r.id)) })), { max: 100 })}</div>
+    <div class="card"><h3>各因子表現（正規化）</h3>${radar(C.map(c => c.name), act.map(r => ({ name: r.name, color: color(O.findIndex(o => o.id === r.id)), values: C.map(c => r.norm[c.id]) })), 380)}</div>
+  </div>`;
+}
+
+/* =========================================================
+   方案管理
+   ========================================================= */
+function vOptions(){
+  const O = OPTS();
+  return `<h2 class="pt">🧩 方案管理</h2><p class="sub">建立要比較的候選方案。成本與時程欄位是參考資訊，實際計分以「評分矩陣」為準。</p>
+  <div class="card"><h3>方案清單（${O.length}）<span class="r"><button class="btn pri" onclick="optionModal()">＋ 新增方案</button></span></h3>
+  ${O.length ? `<div class="tbw"><table class="tb"><tr><th>#</th><th>方案名稱</th><th>說明</th><th class="n">預估成本</th><th class="n">預估時程</th><th>參考資料</th><th class="c">附件</th><th class="c">操作</th></tr>
+  ${O.map((o, i) => `<tr><td><span class="rk" style="background:${color(i)};color:#fff">${i + 1}</span></td><td class="bold">${esc(o.name)}</td><td class="small">${esc(o.desc)}</td>
+    <td class="n">${o.cost != null ? fmt(o.cost, 2) : '—'}</td><td class="n">${o.duration != null ? fmt(o.duration, 1) : '—'}</td>
+    <td class="small">${linkify(o.link)}</td><td class="c">${attList('option', o.id, true)}</td>
+    <td class="c" style="white-space:nowrap"><button class="btn sm" onclick="moveItem('options','${o.id}',-1)" ${i ? '' : 'disabled'}>↑</button><button class="btn sm" onclick="moveItem('options','${o.id}',1)" ${i < O.length - 1 ? '' : 'disabled'}>↓</button>
+    <button class="btn sm" onclick="optionModal('${o.id}')">✎ 編輯</button><button class="btn sm" onclick="copyOption('${o.id}')">⧉ 複製</button><button class="btn sm danger" onclick="deleteOption('${o.id}')">🗑</button></td></tr>`).join('')}
+  </table></div>` : '<div class="empty">尚無方案，按「新增方案」開始。</div>'}</div>`;
+}
+function linkify(s){
+  return (s || '').split(/\n/).filter(Boolean).map(l => /^https?:\/\//i.test(l.trim()) ? `<a href="${esc(l.trim())}" target="_blank" rel="noopener">${esc(l.trim().slice(0, 40))}</a>` : `<span title="本機路徑">📁 ${esc(l)}</span>`).join('<br>') || '—';
+}
+function attList(refType, refId, compact){
+  const a = ATTS(refType, refId);
+  if (compact) return a.length ? `<span class="badge b-info" title="${esc(a.map(x => x.fileName).join('\n'))}">📎 ${a.length}</span>` : '—';
+  return a.map(x => `<div class="att">📎 <a href="#" onclick="dlAtt('${x.id}');return false">${esc(x.fileName)}</a> <span class="muted">${fmtSize(x.size || 0)}</span> <button class="btn sm danger" onclick="delAtt('${x.id}',this)">刪除</button></div>`).join('') || '<span class="muted small">無附件</span>';
+}
+function dlAtt(id){ const a = S.attachments.find(x => x.id === id); if (a?.blob) download(a.fileName, a.blob); }
+async function delAtt(id, btn){ await del('attachments', id); btn.closest('.att').remove(); toast('附件已刪除'); }
+async function saveFiles(input, refType, refId){
+  for (const f of input?.files || []) await put('attachments', { id: uid(), topicId: cur.topicId, refType, refId, fileName: f.name, size: f.size, type: f.type, blob: f, createdAt: Date.now() });
+}
+function optionModal(id){
+  const o = id ? S.options.find(x => x.id === id) : null;
+  openModal(o ? '編輯方案' : '新增方案', `
+    <div class="fr"><label class="req">方案名稱</label><input id="f_name" value="${esc(o?.name)}"></div>
+    <div class="fr"><label>說明</label><textarea id="f_desc">${esc(o?.desc)}</textarea></div>
+    <div class="fr"><label>預估成本</label><input type="number" step="any" id="f_cost" value="${o?.cost ?? ''}"></div>
+    <div class="fr"><label>預估時程</label><input type="number" step="any" id="f_dur" value="${o?.duration ?? ''}" placeholder="月"></div>
+    <div class="fr"><label>參考連結／路徑</label><textarea id="f_link" placeholder="一行一筆，可填網址或本機路徑，例如 \\\\fileserver\\RFP\\A.pdf">${esc(o?.link)}</textarea></div>
+    <div class="fr"><label>附件</label><div>${o ? attList('option', o.id) : ''}<input type="file" id="f_files" multiple style="margin-top:6px"><div class="small muted">檔案會存進瀏覽器 IndexedDB。</div></div></div>`,
+    [{ text: '取消' }, { text: '儲存', cls: 'pri', onClick: async () => {
+      const name = $('#f_name').value.trim(); if (!name) { toast('請輸入方案名稱', 'err'); return false; }
+      const n = o ? { ...o } : { id: uid(), topicId: cur.topicId, createdAt: Date.now(), order: OPTS().length };
+      Object.assign(n, { name, desc: $('#f_desc').value.trim(), cost: num($('#f_cost').value), duration: num($('#f_dur').value), link: $('#f_link').value.trim() });
+      await put('options', n); await saveFiles($('#f_files'), 'option', n.id); UI.mc = {}; render(); toast('方案已儲存');
+    } }]);
+}
+async function copyOption(id){
+  const o = S.options.find(x => x.id === id); const n = { ...o, id: uid(), name: o.name + '（複本）', createdAt: Date.now(), order: OPTS().length };
+  await put('options', n);
+  await bulk('scores', S.scores.filter(s => s.optionId === id).map(s => ({ ...s, optionId: n.id, id: scoreKey(n.id, s.criteriaId, s.reviewerId) })));
+  render(); toast('已複製方案（含評分）');
+}
+async function deleteOption(id){
+  const o = S.options.find(x => x.id === id);
+  if (!await confirmBox(`確定刪除方案「${o.name}」？\n只會一併刪除此方案的評分與附件，其他資料不受影響。`)) return;
+  await bulk('scores', S.scores.filter(s => s.optionId === id).map(s => s.id), 'delete');
+  await bulk('attachments', ATTS('option', id).map(a => a.id), 'delete');
+  await del('options', id); UI.mc = {}; render(); toast('方案已刪除');
+}
+async function moveItem(st, id, dir){
+  const list = st === 'options' ? OPTS() : st === 'criteria' ? CRITS() : st === 'reviewers' ? REVS() : SCENS();
+  const i = list.findIndex(x => x.id === id), j = i + dir; if (j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  await bulk(st, list.map((x, k) => ({ ...x, order: k }))); render();
+}
+
+/* =========================================================
+   評估因子
+   ========================================================= */
+function vCriteria(){
+  const C = CRITS(), sw = sumW(baseWeights());
+  return `<h2 class="pt">⚖️ 評估因子</h2><p class="sub">設定因子的方向、權重與淘汰門檻。效益型數值越高越好，成本型（成本、風險、時程…）數值越低越好。</p>
+  <div class="card"><h3>因子清單（${C.length}）
+    <span class="badge ${Math.abs(sw - 100) < .01 ? 'b-ok' : 'b-warn'}">權重合計 ${fmt(sw, 2)}%</span>
+    <span class="r"><button class="btn" onclick="normalizeWeights()">⚖ 正規化至 100%</button><button class="btn" onclick="equalWeights()">＝ 平均分配</button><button class="btn pri" onclick="critModal()">＋ 新增因子</button></span></h3>
+  ${C.length ? `<div class="tbw"><table class="tb"><tr><th>#</th><th>因子名稱</th><th>分類</th><th>方向</th><th>單位／尺度</th><th class="n">權重</th><th style="width:180px">占比</th><th>淘汰門檻</th><th class="c">操作</th></tr>
+  ${C.map((c, i) => { const pc = sw > 0 ? (Number(c.weight) || 0) / sw : 0; return `<tr><td>${i + 1}</td><td class="bold">${esc(c.name)}<div class="small muted">${esc(c.note || '')}</div></td>
+    <td><span class="badge b-gray">${esc(c.category)}</span></td>
+    <td>${c.direction === 'cost' ? '<span class="badge b-warn">▼ 越低越好</span>' : '<span class="badge b-ok">▲ 越高越好</span>'}</td><td>${esc(c.unit || '')}</td>
+    <td class="n"><input type="number" min="0" step="any" value="${c.weight ?? 0}" style="width:80px;text-align:right" onchange="setWeight('${c.id}',this.value)"></td>
+    <td><div style="background:#f1f5f9;border-radius:4px;height:10px"><div style="width:${pc * 100}%;height:10px;border-radius:4px;background:${color(i)}"></div></div><span class="small">${pct(pc)}</span></td>
+    <td>${c.threshold != null && c.threshold !== '' ? `<span class="badge b-bad">${c.direction === 'cost' ? '>' : '<'} ${fmt(c.threshold, 2)} 淘汰</span>` : '<span class="muted">—</span>'}</td>
+    <td class="c" style="white-space:nowrap"><button class="btn sm" onclick="moveItem('criteria','${c.id}',-1)" ${i ? '' : 'disabled'}>↑</button><button class="btn sm" onclick="moveItem('criteria','${c.id}',1)" ${i < C.length - 1 ? '' : 'disabled'}>↓</button>
+      <button class="btn sm" onclick="critModal('${c.id}')">✎ 編輯</button><button class="btn sm danger" onclick="deleteCrit('${c.id}')">🗑</button></td></tr>`; }).join('')}
+  </table></div>` : '<div class="empty">尚無因子。建議從成本、效益、風險、時程、人力開始。</div>'}</div>
+  <div class="card"><h3>權重分布</h3>${C.length ? barH(C.map((c, i) => ({ label: c.name, value: sw > 0 ? (Number(c.weight) || 0) / sw * 100 : 0, color: color(i) })), { max: 100, unit: '%' }) : '<div class="empty">—</div>'}</div>`;
+}
+function critModal(id){
+  const c = id ? S.criteria.find(x => x.id === id) : null;
+  openModal(c ? '編輯評估因子' : '新增評估因子', `
+    <div class="fr"><label class="req">因子名稱</label><input id="f_name" value="${esc(c?.name)}"></div>
+    <div class="fr"><label>分類</label><select id="f_cat">${CATS.map(x => `<option ${c?.category === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+    <div class="fr"><label>方向</label><select id="f_dir"><option value="benefit" ${c?.direction !== 'cost' ? 'selected' : ''}>▲ 效益型：越高越好</option><option value="cost" ${c?.direction === 'cost' ? 'selected' : ''}>▼ 成本型：越低越好</option></select></div>
+    <div class="fr"><label class="req">權重</label><input type="number" min="0" step="any" id="f_w" value="${c?.weight ?? 10}"></div>
+    <div class="fr"><label>單位／尺度</label><input id="f_unit" value="${esc(c?.unit)}" placeholder="例如：萬元、月、分(1-10)"></div>
+    <div class="fr"><label>淘汰門檻</label><div><input type="number" step="any" id="f_th" value="${c?.threshold ?? ''}" placeholder="留白代表不設門檻"><div class="small muted">成本型：數值大於門檻即淘汰；效益型：數值小於門檻即淘汰（以評審平均值判斷）。</div></div></div>
+    <div class="fr"><label>評分說明</label><textarea id="f_note" placeholder="給評審看的評分標準">${esc(c?.note)}</textarea></div>`,
+    [{ text: '取消' }, { text: '儲存', cls: 'pri', onClick: async () => {
+      const name = $('#f_name').value.trim(); if (!name) { toast('請輸入因子名稱', 'err'); return false; }
+      const w = num($('#f_w').value); if (w == null || w < 0) { toast('權重須為 0 以上的數字', 'err'); return false; }
+      const n = c ? { ...c } : { id: uid(), topicId: cur.topicId, createdAt: Date.now(), order: CRITS().length };
+      Object.assign(n, { name, category: $('#f_cat').value, direction: $('#f_dir').value, weight: w, unit: $('#f_unit').value.trim(), threshold: num($('#f_th').value), note: $('#f_note').value.trim() });
+      await put('criteria', n); UI.mc = {}; UI.sensW = null; render(); toast('因子已儲存');
+    } }]);
+}
+async function setWeight(id, v){ const c = S.criteria.find(x => x.id === id); const w = num(v); if (w == null || w < 0) { toast('權重須為 0 以上的數字', 'err'); render(); return; } await put('criteria', { ...c, weight: w }); UI.mc = {}; UI.sensW = null; render(); }
+async function normalizeWeights(){
+  const C = CRITS(), s = sumW(baseWeights()); if (!s) return toast('權重合計為 0，無法正規化', 'err');
+  await bulk('criteria', C.map(c => ({ ...c, weight: Math.round((Number(c.weight) || 0) / s * 10000) / 100 }))); UI.sensW = null; render(); toast('已正規化至 100%');
+}
+async function equalWeights(){ const C = CRITS(); if (!C.length) return; await bulk('criteria', C.map(c => ({ ...c, weight: Math.round(10000 / C.length) / 100 }))); UI.sensW = null; render(); toast('已平均分配權重'); }
+async function deleteCrit(id){
+  const c = S.criteria.find(x => x.id === id);
+  if (!await confirmBox(`確定刪除因子「${c.name}」？\n此因子的所有評分會一併刪除，情境中的對應權重也會移除。`)) return;
+  await bulk('scores', S.scores.filter(s => s.criteriaId === id).map(s => s.id), 'delete');
+  await bulk('scenarios', SCENS().filter(s => s.weights && id in s.weights).map(s => { const w = { ...s.weights }; delete w[id]; return { ...s, weights: w }; }));
+  await del('criteria', id); UI.mc = {}; UI.sensW = null; render(); toast('因子已刪除');
+}
+
+/* =========================================================
+   評分矩陣（多評審）
+   ========================================================= */
+function vScores(){
+  const O = OPTS(), C = CRITS(), R = REVS();
+  if (UI.scoreRev !== '__agg' && !R.some(r => r.id === UI.scoreRev)) UI.scoreRev = '__agg';
+  const head = `<h2 class="pt">📝 評分矩陣</h2><p class="sub">每位評審各自評分，可直接填 1–10 分或實際數值（例如成本萬元、時程月數）。「區間」用於蒙地卡羅模擬（最小值／最大值）。</p>`;
+  const revCard = `<div class="card"><h3>評審名單（${R.length}）<span class="r"><button class="btn pri" onclick="revModal()">＋ 新增評審</button></span></h3>
+    ${R.length ? `<div class="chips" style="margin:0">${R.map((r, i) => `<span class="chip" style="cursor:default">👤 ${esc(r.name)}${r.role ? `<span class="muted small">（${esc(r.role)}）</span>` : ''}
+      <a href="#" onclick="revModal('${r.id}');return false" title="編輯">✎</a> <a href="#" onclick="moveItem('reviewers','${r.id}',-1);return false" title="前移">←</a> <a href="#" style="color:#ef4444" onclick="deleteRev('${r.id}');return false" title="刪除">✕</a></span>`).join('')}</div>` : '<div class="muted">尚無評審。至少要有一位評審才能評分。</div>'}</div>`;
+  if (!O.length || !C.length) return head + revCard + '<div class="card empty">請先建立方案與評估因子。</div>';
+  const tabs = `<div class="chips"><span class="chip ${UI.scoreRev === '__agg' ? 'active' : ''}" onclick="UI.scoreRev='__agg';render()">📊 彙總（平均）</span>
+    ${R.map(r => { const n = S.scores.filter(s => s.reviewerId === r.id && s.value != null && O.some(o => o.id === s.optionId) && C.some(c => c.id === s.criteriaId)).length; return `<span class="chip ${UI.scoreRev === r.id ? 'active' : ''}" onclick="UI.scoreRev='${r.id}';render()">👤 ${esc(r.name)} <small>${n}/${O.length * C.length}</small></span>`; }).join('')}
+    <label style="margin-left:auto;display:flex;gap:6px;align-items:center"><input type="checkbox" ${UI.showRange ? 'checked' : ''} onchange="UI.showRange=this.checked;render()"> 顯示區間（最小／最大）</label></div>`;
+  const ch = C.map(c => `<th class="c" title="${esc(c.note || '')}">${esc(c.name)}<div class="small muted" style="font-weight:400">${c.direction === 'cost' ? '▼' : '▲'} ${esc(c.unit || '')} · ${fmt(c.weight, 2)}</div></th>`).join('');
+  let grid;
+  if (UI.scoreRev === '__agg') {
+    const agg = aggregate(); const res = compute(ctx());
+    grid = `<div class="tbw"><table class="tb mx"><tr><th>方案 ＼ 因子</th>${ch}<th class="c">狀態</th></tr>
+    ${O.map(o => { const row = res.rows.find(r => r.id === o.id); return `<tr><td class="bold">${esc(o.name)}</td>${C.map(c => { const a = agg[o.id]?.[c.id];
+      if (!a) return '<td class="c muted">—</td>';
+      const th = c.threshold != null && c.threshold !== '' && (c.direction === 'cost' ? a.mean > c.threshold : a.mean < c.threshold);
+      const tip = a.by.map(b => `${nameOf(R, b.r)}：${b.v}`).join('\n');
+      return `<td class="c ${th ? 'cell-elim' : a.diverge ? 'cell-div' : ''}" title="${esc(tip)}"><b>${fmt(a.mean, 2)}</b><div class="small muted">±${fmt(a.std, 2)} · n=${a.n}${a.hasRange ? ` · [${fmt(a.min, 1)}~${fmt(a.max, 1)}]` : ''}</div>${a.diverge ? '<span class="badge b-warn">分歧</span>' : ''}</td>`; }).join('')}
+      <td class="c">${row?.eliminated ? '<span class="badge b-bad">淘汰</span>' : row?.missing.length ? '<span class="badge b-warn">缺漏</span>' : '<span class="badge b-ok">完整</span>'}</td></tr>`; }).join('')}
+    </table></div><div class="legend" style="margin-top:10px"><span><i style="background:#fef3c7"></i>評審意見分歧（變異係數 ≥ ${DIV_CV * 100}%）</span><span><i style="background:#fee2e2"></i>觸發淘汰門檻</span><span>滑鼠移到格子上可看各評審分數</span></div>`;
+  } else {
+    const rid = UI.scoreRev;
+    grid = `<div class="toolbar"><button class="btn sm" onclick="copyRevScores('${rid}')">⧉ 從其他評審複製分數</button><button class="btn sm danger" onclick="clearRevScores('${rid}')">清空此評審的評分</button><span class="small muted">輸入後自動儲存；清空數值即刪除該格評分。</span></div>
+    <div class="tbw"><table class="tb mx"><tr><th>方案 ＼ 因子</th>${ch}</tr>
+    ${O.map(o => `<tr><td class="bold">${esc(o.name)}</td>${C.map(c => { const s = S.scores.find(x => x.id === scoreKey(o.id, c.id, rid)) || {};
+      return `<td class="c"><input class="cell" type="number" step="any" value="${s.value ?? ''}" onchange="setScore('${o.id}','${c.id}','${rid}','value',this.value)">
+      ${UI.showRange ? `<div class="rgw">低<input class="rg" type="number" step="any" placeholder="min" value="${s.min ?? ''}" onchange="setScore('${o.id}','${c.id}','${rid}','min',this.value)">高<input class="rg" type="number" step="any" placeholder="max" value="${s.max ?? ''}" onchange="setScore('${o.id}','${c.id}','${rid}','max',this.value)"></div>` : ''}</td>`; }).join('')}</tr>`).join('')}
+    </table></div>`;
+  }
+  return head + revCard + `<div class="card"><h3>評分<span class="r"><button class="btn sm" onclick="exportCSV('detail')">⤓ 明細 CSV</button><button class="btn sm" onclick="exportCSV('matrix')">⤓ 彙總 CSV</button><button class="btn sm" onclick="exportExcel()">⤓ Excel</button></span></h3>${R.length ? tabs + grid : '<div class="empty">請先新增評審。</div>'}</div>`;
+}
+async function setScore(o, c, r, field, v){
+  const id = scoreKey(o, c, r); const s = S.scores.find(x => x.id === id);
+  const val = num(v);
+  if (field === 'value' && val == null) { if (s) await del('scores', id); UI.mc = {}; return toast('已清除該格評分'); }
+  if (!s && field !== 'value') { toast('請先輸入分數再設定區間', 'warn'); render(); return; }
+  const n = s ? { ...s } : { id, topicId: cur.topicId, optionId: o, criteriaId: c, reviewerId: r };
+  n[field] = val; n.updatedAt = Date.now();
+  if (n.min != null && n.max != null && n.min > n.max) { toast('最小值不可大於最大值', 'err'); render(); return; }
+  await put('scores', n); UI.mc = {};
+}
+function revModal(id){
+  const r = id ? S.reviewers.find(x => x.id === id) : null;
+  openModal(r ? '編輯評審' : '新增評審', `<div class="fr"><label class="req">姓名</label><input id="f_name" value="${esc(r?.name)}"></div><div class="fr"><label>角色／單位</label><input id="f_role" value="${esc(r?.role)}" placeholder="例如：PM、資安、使用單位"></div>`,
+    [{ text: '取消' }, { text: '儲存', cls: 'pri', onClick: async () => {
+      const name = $('#f_name').value.trim(); if (!name) { toast('請輸入姓名', 'err'); return false; }
+      const n = r ? { ...r } : { id: uid(), topicId: cur.topicId, createdAt: Date.now(), order: REVS().length };
+      Object.assign(n, { name, role: $('#f_role').value.trim() }); await put('reviewers', n);
+      if (!r) UI.scoreRev = n.id; render(); toast('評審已儲存');
+    } }]);
+}
+async function deleteRev(id){
+  const r = S.reviewers.find(x => x.id === id);
+  if (!await confirmBox(`確定刪除評審「${r.name}」及其所有評分？`)) return;
+  await bulk('scores', S.scores.filter(s => s.reviewerId === id).map(s => s.id), 'delete'); await del('reviewers', id); UI.mc = {}; render(); toast('評審已刪除');
+}
+async function copyRevScores(rid){
+  const others = REVS().filter(r => r.id !== rid); if (!others.length) return toast('沒有其他評審可以複製', 'warn');
+  const src = await choice('從其他評審複製分數', '選擇來源評審（會覆蓋目前評審的同格分數）：', [{ text: '取消', value: null }, ...others.map(r => ({ text: r.name, cls: 'pri', value: r.id }))]);
+  if (!src) return;
+  await bulk('scores', S.scores.filter(s => s.reviewerId === src && s.topicId === cur.topicId).map(s => ({ ...s, reviewerId: rid, id: scoreKey(s.optionId, s.criteriaId, rid) })));
+  UI.mc = {}; render(); toast('已複製分數');
+}
+async function clearRevScores(rid){
+  if (!await confirmBox('確定清空此評審的所有評分？')) return;
+  await bulk('scores', S.scores.filter(s => s.reviewerId === rid).map(s => s.id), 'delete'); UI.mc = {}; render();
+}
+
+/* =========================================================
+   排名分析
+   ========================================================= */
+function vRanking(){
+  const t = T(), O = OPTS(), C = CRITS(), agg = aggregate();
+  const res = compute(ctx()); const act = res.rows.filter(r => !r.eliminated); const top = act[0];
+  const oc = id => color(O.findIndex(o => o.id === id));
+  return `<h2 class="pt">🏆 排名分析</h2><p class="sub">依目前權重與評審平均分數計算排名。可切換演算法與是否套用淘汰門檻。</p>
+  <div class="card"><h3>計分設定</h3><div class="toolbar" style="margin:0">
+    <label>演算法：<select onchange="saveTopicSetting('method',this.value)"><option value="wsm" ${t.method !== 'topsis' ? 'selected' : ''}>加權總分法（WSM）</option><option value="topsis" ${t.method === 'topsis' ? 'selected' : ''}>TOPSIS 理想解相似度</option></select></label>
+    <label style="display:flex;gap:6px;align-items:center"><input type="checkbox" ${t.applyThreshold !== false ? 'checked' : ''} onchange="saveTopicSetting('applyThreshold',this.checked)"> 套用淘汰門檻（先淘汰再排名）</label>
+  </div></div>
+  <div class="card"><h3>排名結果</h3>${O.length && C.length ? `<div class="tbw"><table class="tb"><tr><th class="c">名次</th><th>方案</th><th class="n">${t.method === 'topsis' ? 'TOPSIS 相似度' : '加權總分'}</th><th class="n">與第一名差距</th>${t.method === 'topsis' ? '<th class="n">D⁺（距理想解）</th><th class="n">D⁻（距負理想解）</th><th class="n">WSM 參考分</th>' : ''}<th>狀態</th></tr>
+  ${res.rows.map(r => `<tr style="${r.eliminated ? 'opacity:.6' : ''}"><td class="c">${r.eliminated ? '—' : `<span class="rk rk${r.rank}">${r.rank}</span>`}</td><td class="bold"><span style="color:${oc(r.id)}">●</span> ${esc(r.name)}</td>
+    <td class="n bold">${r.eliminated ? '—' : fix(r.score * 100, 2)}</td><td class="n">${r.eliminated || !top ? '—' : r === top ? '—' : '-' + fix((top.score - r.score) * 100, 2)}</td>
+    ${t.method === 'topsis' ? `<td class="n">${r.eliminated ? '—' : fix(r.dPlus, 4)}</td><td class="n">${r.eliminated ? '—' : fix(r.dMinus, 4)}</td><td class="n">${r.eliminated ? '—' : fix(r.wsm * 100, 2)}</td>` : ''}
+    <td>${r.eliminated ? `<span class="badge b-bad">淘汰</span> <span class="small">${esc(r.reasons.join('；'))}</span>` : r.missing.length ? `<span class="badge b-warn">缺漏</span> <span class="small">${esc(r.missing.join('、'))} 未評分（以 0 計）</span>` : '<span class="badge b-ok">有效</span>'}</td></tr>`).join('')}
+  </table></div>` : '<div class="empty">請先建立方案與因子並完成評分。</div>'}</div>
+  <div class="grid g2" style="margin-bottom:16px">
+    <div class="card"><h3>總分排名</h3>${barH(act.map(r => ({ label: r.name, value: r.score * 100, color: oc(r.id) })), { max: 100 })}</div>
+    <div class="card"><h3>雷達圖比較</h3>${radar(C.map(c => c.name), act.map(r => ({ name: r.name, color: oc(r.id), values: C.map(c => r.norm[c.id]) })), 380)}</div>
+  </div>
+  <div class="card"><h3>因子貢獻分析（加權總分拆解）</h3><p class="small muted" style="margin-top:-6px">每段長度 = 因子權重 × 正規化分數，可看出各方案的分數來自哪些因子。</p>
+    ${stackH(act.map(r => ({ label: r.name, values: r.contrib, total: r.wsm })), C.map((c, i) => ({ id: c.id, name: c.name, color: color(i) })))}</div>
+  <div class="card"><h3>計算明細（原始平均值 → 正規化 → 加權）</h3><div class="tbw"><table class="tb"><tr><th>方案</th>${C.map(c => `<th class="c">${esc(c.name)}<div class="small muted" style="font-weight:400">權重 ${pct(res.W[c.id])} · ${c.direction === 'cost' ? '▼' : '▲'}</div></th>`).join('')}<th class="n">WSM 合計</th></tr>
+    ${act.map(r => `<tr><td class="bold">${esc(r.name)}</td>${C.map(c => `<td class="c small">${fmt(agg[r.id]?.[c.id]?.mean, 2)} → <b>${fix(r.norm[c.id], 3)}</b> → ${fix(r.contrib[c.id] * 100, 2)}</td>`).join('')}<td class="n bold">${fix(r.wsm * 100, 2)}</td></tr>`).join('')}
+  </table></div></div>
+  <div class="card"><h3>📐 演算法說明</h3><div class="small">
+    <p><b>正規化（Min-Max）</b>：效益型 r = (x − min) / (max − min)；成本型 r = (max − x) / (max − min)。所有方案數值相同時 r = 1。只計入未被淘汰的方案。</p>
+    <p><b>加權總分法（WSM）</b>：總分 = Σ（權重 × r）× 100。權重會自動換算成合計 100%。</p>
+    <p><b>TOPSIS</b>：向量正規化後乘上權重，計算各方案與「理想解」距離 D⁺、與「負理想解」距離 D⁻，相似度 = D⁻ / (D⁺ + D⁻)。越接近 100 越好。</p>
+    <p><b>淘汰門檻</b>：成本型平均值大於門檻、效益型平均值小於門檻時直接淘汰，不參與排名與正規化。</p></div></div>`;
+}
+
+/* =========================================================
+   沙盤推演：情境比較 / 敏感度 / 蒙地卡羅
+   ========================================================= */
+function ensureSens(){ if (!UI.sensW || UI.sensTopic !== cur.topicId) { UI.sensW = baseWeights(); UI.sensTopic = cur.topicId; } const C = CRITS(); C.forEach(c => { if (!(c.id in UI.sensW)) UI.sensW[c.id] = Number(c.weight) || 0; }); if (!C.some(c => c.id === UI.sensCrit)) UI.sensCrit = C[0]?.id; }
+function vSandbox(){
+  const O = OPTS(), C = CRITS();
+  const head = `<h2 class="pt">🎲 沙盤推演</h2><p class="sub">用不同權重情境、權重敏感度與不確定性模擬，檢驗決策是否穩健。</p>`;
+  if (!O.length || !C.length) return head + '<div class="card empty">請先建立方案、因子並完成評分。</div>';
+  const tabs = `<div class="tabs">${[['scenario', '🗂 情境比較（What-if）'], ['sens', '🎚 權重敏感度'], ['mc', '🎲 蒙地卡羅模擬']].map(t => `<button class="${UI.sandTab === t[0] ? 'active' : ''}" onclick="UI.sandTab='${t[0]}';render()">${t[1]}</button>`).join('')}</div>`;
+  ensureSens();
+  return head + tabs + (UI.sandTab === 'sens' ? sbSens() : UI.sandTab === 'mc' ? sbMC() : sbScenario());
+}
+function afterSandbox(){ if (UI.sandTab === 'sens' && T() && OPTS().length && CRITS().length) { updateSensLive(); updateSensCurve(); updateFlipTable(); } }
+
+function scenarioResults(){
+  const SC = SCENS(); const cols = [{ id: '__base', name: '正式權重', weights: baseWeights() }, ...SC.map(s => ({ id: s.id, name: s.name, weights: s.weights || {} }))];
+  return cols.map(c => ({ ...c, res: compute(ctx(c.weights)) }));
+}
+function sbScenario(){
+  const O = OPTS(), C = CRITS(), SC = SCENS(); const cols = scenarioResults();
+  const oc = id => color(O.findIndex(o => o.id === id));
+  const winners = cols.map(c => leaderOf(c.res)?.id);
+  const uniq = new Set(winners.filter(Boolean));
+  return `<div class="card"><h3>情境清單（${SC.length}）<span class="r"><button class="btn" onclick="presetScenarios()">✨ 依分類快速產生</button><button class="btn" onclick="scenarioModal(null,true)">⧉ 以目前權重建立</button><button class="btn pri" onclick="scenarioModal()">＋ 新增情境</button></span></h3>
+  ${SC.length ? `<div class="tbw"><table class="tb"><tr><th>情境名稱</th><th>說明</th>${C.map(c => `<th class="n">${esc(c.name)}</th>`).join('')}<th class="c">操作</th></tr>
+  ${SC.map((s, i) => { const t = sumW(Object.fromEntries(C.map(c => [c.id, s.weights?.[c.id] || 0]))); return `<tr><td class="bold">${esc(s.name)}</td><td class="small">${esc(s.desc || '')}</td>${C.map(c => `<td class="n">${t ? pct((s.weights?.[c.id] || 0) / t, 0) : '—'}</td>`).join('')}
+    <td class="c" style="white-space:nowrap"><button class="btn sm" onclick="moveItem('scenarios','${s.id}',-1)" ${i ? '' : 'disabled'}>↑</button><button class="btn sm" onclick="scenarioModal('${s.id}')">✎</button><button class="btn sm" onclick="applyWeights(SCENS().find(x=>x.id==='${s.id}').weights)">套用為正式權重</button><button class="btn sm danger" onclick="deleteScenario('${s.id}')">🗑</button></td></tr>`; }).join('')}
+  </table></div>` : '<div class="empty">尚無情境。可建立「成本優先」、「品質優先」、「時程優先」等權重組合來比較。</div>'}</div>
+  <div class="card"><h3>情境排名對照 ${SC.length ? (uniq.size <= 1 ? '<span class="badge b-ok">所有情境第一名一致，決策穩健</span>' : `<span class="badge b-warn">不同情境出現 ${uniq.size} 個不同的第一名</span>`) : ''}</h3>
+  <div class="tbw"><table class="tb"><tr><th>方案</th>${cols.map(c => `<th class="c">${esc(c.name)}</th>`).join('')}<th class="c">平均名次</th><th class="c">奪冠次數</th></tr>
+  ${O.map(o => { const rs = cols.map(c => c.res.rows.find(r => r.id === o.id)); const valid = rs.filter(r => r && !r.eliminated);
+    return `<tr><td class="bold"><span style="color:${oc(o.id)}">●</span> ${esc(o.name)}</td>${rs.map((r, i) => { const b = cols[0].res.rows.find(x => x.id === o.id); const d = i && r && b && !r.eliminated && !b.eliminated ? b.rank - r.rank : 0;
+      return `<td class="c">${!r || r.eliminated ? '<span class="badge b-bad">淘汰</span>' : `<span class="rk rk${r.rank}">${r.rank}</span> <span class="small">${fix(r.score * 100, 1)}</span>${d > 0 ? ` <span style="color:#10b981">▲${d}</span>` : d < 0 ? ` <span style="color:#ef4444">▼${-d}</span>` : ''}`}</td>`; }).join('')}
+      <td class="c bold">${valid.length ? fix(mean(valid.map(r => r.rank)), 2) : '—'}</td><td class="c bold">${winners.filter(w => w === o.id).length}</td></tr>`; }).join('')}
+  </table></div></div>
+  <div class="card"><h3>各情境分數比較</h3>${groupBar(cols.map(c => c.name), O.map(o => ({ name: o.name, color: oc(o.id), values: cols.map(c => { const r = c.res.rows.find(x => x.id === o.id); return r && !r.eliminated ? r.score * 100 : null; }) })))}</div>`;
+}
+function scenarioModal(id, fromBase){
+  const s = id ? S.scenarios.find(x => x.id === id) : null; const C = CRITS();
+  const w = s ? s.weights || {} : fromBase ? baseWeights() : baseWeights();
+  openModal(s ? '編輯情境' : '新增情境', `
+    <div class="fr"><label class="req">情境名稱</label><input id="f_name" value="${esc(s?.name || (fromBase ? '目前權重 ' + today() : ''))}" placeholder="例如：成本優先"></div>
+    <div class="fr"><label>說明</label><input id="f_desc" value="${esc(s?.desc)}"></div>
+    <div class="fr"><label>各因子權重</label><div>${C.map(c => `<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><span style="width:140px">${esc(c.name)}</span><input type="number" min="0" step="any" class="f_w" data-id="${c.id}" value="${w[c.id] ?? 0}" style="width:100px" oninput="scSum()"></div>`).join('')}
+      <div class="small">合計：<b id="scSum"></b>（計算時會自動換算為 100%）</div></div></div>`,
+    [{ text: '取消' }, { text: '儲存', cls: 'pri', onClick: async () => {
+      const name = $('#f_name').value.trim(); if (!name) { toast('請輸入情境名稱', 'err'); return false; }
+      const weights = {}; $$('.f_w').forEach(i => weights[i.dataset.id] = Math.max(0, num(i.value) || 0));
+      if (!sumW(weights)) { toast('權重合計不可為 0', 'err'); return false; }
+      const n = s ? { ...s } : { id: uid(), topicId: cur.topicId, createdAt: Date.now(), order: SCENS().length };
+      Object.assign(n, { name, desc: $('#f_desc').value.trim(), weights }); await put('scenarios', n); render(); toast('情境已儲存');
+    } }]);
+  scSum();
+}
+function scSum(){ const el = $('#scSum'); if (el) el.textContent = fmt($$('.f_w').reduce((s, i) => s + (num(i.value) || 0), 0), 2); }
+async function presetScenarios(){
+  const C = CRITS(), base = baseWeights(), tot = sumW(base) || 1; const cats = [...new Set(C.map(c => c.category))]; const SC = SCENS(); let n = 0;
+  for (const cat of cats) {
+    const name = `${cat}優先`; if (SC.some(s => s.name === name)) continue;
+    const inC = C.filter(c => c.category === cat), outC = C.filter(c => c.category !== cat);
+    const sIn = inC.reduce((s, c) => s + (base[c.id] || 0), 0), sOut = outC.reduce((s, c) => s + (base[c.id] || 0), 0);
+    const w = {};
+    inC.forEach(c => w[c.id] = Math.round((sIn ? (base[c.id] || 0) / sIn : 1 / inC.length) * 50 * 100) / 100);
+    outC.forEach(c => w[c.id] = Math.round((sOut ? (base[c.id] || 0) / sOut : 1 / outC.length) * (outC.length ? 50 : 0) * 100) / 100);
+    if (!outC.length) inC.forEach(c => w[c.id] = Math.round((base[c.id] || 0) / tot * 10000) / 100);
+    await put('scenarios', { id: uid(), topicId: cur.topicId, name, desc: `「${cat}」類因子合計 50%，其餘因子依原比例分配 50%`, weights: w, createdAt: Date.now(), order: SCENS().length }); n++;
+  }
+  render(); toast(n ? `已產生 ${n} 個情境` : '情境已存在，未新增', n ? '' : 'warn');
+}
+async function deleteScenario(id){ if (!await confirmBox('確定刪除此情境？')) return; await del('scenarios', id); render(); }
+async function applyWeights(w){
+  if (!await confirmBox('確定將這組權重套用為正式權重？（會覆寫評估因子的權重）', '套用權重')) return;
+  const t = sumW(w) || 1;
+  await bulk('criteria', CRITS().map(c => ({ ...c, weight: Math.round((Number(w[c.id]) || 0) / t * 10000) / 100 })));
+  UI.sensW = null; UI.mc = {}; render(); toast('已套用為正式權重');
+}
+
+function sbSens(){
+  const C = CRITS();
+  return `<div class="grid g2" style="margin-bottom:16px">
+    <div class="card"><h3>🎚 權重滑桿（即時推演）<span class="r"><button class="btn sm" onclick="UI.sensW=null;render()">↺ 重設</button><button class="btn sm" onclick="saveSensScenario()">💾 存成情境</button><button class="btn sm pri" onclick="applyWeights(UI.sensW)">套用為正式權重</button></span></h3>
+      <p class="small muted" style="margin-top:-6px">拖動滑桿即時重算排名；百分比為自動換算後的實際占比。</p>
+      ${C.map((c, i) => `<div class="sl"><span class="bold" style="color:${color(i)}">${esc(c.name)}</span><input type="range" min="0" max="100" step="0.5" value="${UI.sensW[c.id]}" oninput="UI.sensW['${c.id}']=Number(this.value);updateSensLive()" onchange="updateSensCurve();updateFlipTable()"><span class="small muted">${fmt(UI.sensW[c.id], 1)}</span><span class="pct" id="sp_${c.id}"></span></div>`).join('')}
+    </div>
+    <div class="card"><h3>即時排名 <span class="r" id="sensBadge"></span></h3><div id="sensLive"></div></div>
+  </div>
+  <div class="card"><h3>📈 單一因子敏感度曲線 <span class="r"><select onchange="UI.sensCrit=this.value;updateSensCurve()">${C.map(c => `<option value="${c.id}" ${UI.sensCrit === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></span></h3>
+    <p class="small muted" style="margin-top:-6px">X 軸為所選因子的權重（0–100%），其他因子依目前比例分配剩餘權重；紅色虛線為翻盤點。</p><div id="sensCurve"></div></div>
+  <div class="card"><h3>🔁 翻盤點總表</h3><div id="flipTable"></div></div>`;
+}
+function updateSensLive(){
+  const O = OPTS(), C = CRITS(), t = sumW(UI.sensW) || 1;
+  C.forEach(c => { const el = $('#sp_' + c.id); if (el) el.textContent = pct((UI.sensW[c.id] || 0) / t); const lab = el?.previousElementSibling; if (lab) lab.textContent = fmt(UI.sensW[c.id], 1); });
+  const res = compute(ctx(UI.sensW)), base = compute(ctx());
+  const act = res.rows.filter(r => !r.eliminated);
+  const l1 = leaderOf(res), l0 = leaderOf(base);
+  $('#sensBadge').innerHTML = l1 && l0 && l1.id !== l0.id ? `<span class="badge b-bad">已翻盤：${esc(l0.name)} → ${esc(l1.name)}</span>` : '<span class="badge b-ok">第一名未改變</span>';
+  $('#sensLive').innerHTML = barH(act.map(r => { const b = base.rows.find(x => x.id === r.id); const d = b && !b.eliminated ? b.rank - r.rank : 0; return { label: `${r.rank}. ${r.name}`, value: r.score * 100, color: color(O.findIndex(o => o.id === r.id)), text: fix(r.score * 100, 1) + (d > 0 ? ` ▲${d}` : d < 0 ? ` ▼${-d}` : '') }; }), { max: 100 });
+}
+function updateSensCurve(){
+  const el = $('#sensCurve'); if (!el) return; const O = OPTS(); const c = CRITS().find(x => x.id === UI.sensCrit); if (!c) return;
+  const sv = sensitivity(ctx(UI.sensW), c.id, 1);
+  el.innerHTML = lineChart(sv.xs, O.map((o, i) => ({ name: o.name, color: color(i), values: sv.series[o.id] })), { markX: sv.curPct, flips: sv.flips, xLabel: `「${c.name}」權重（%）`, yLabel: '分數' }) +
+    (sv.flips.length ? `<div style="margin-top:8px">${sv.flips.map(f => `<div class="alert a-warn">🔁 當「${esc(c.name)}」權重為 <b>${f.at}%</b> 時，第一名由「${esc(nameOf(O, f.from))}」變為「${esc(nameOf(O, f.to))}」</div>`).join('')}</div>` : `<div class="alert a-ok" style="margin-top:8px">✅ 「${esc(c.name)}」權重在 0–100% 間變動，第一名都不會改變。</div>`);
+}
+function flipData(weights){
+  const base = ctx(weights);
+  return CRITS().map(c => { const sv = sensitivity(base, c.id, 1); const near = sv.flips.reduce((m, f) => (!m || Math.abs(f.at - sv.curPct) < Math.abs(m.at - sv.curPct)) ? f : m, null); return { c, sv, near, dist: near ? Math.abs(near.at - sv.curPct) : null }; });
+}
+function updateFlipTable(){
+  const el = $('#flipTable'); if (!el) return; const O = OPTS();
+  const fd = flipData(UI.sensW);
+  el.innerHTML = `<div class="tbw"><table class="tb"><tr><th>因子</th><th class="n">目前占比</th><th>翻盤點</th><th class="n">最近翻盤距離</th><th>穩定度</th></tr>
+  ${fd.map(d => `<tr><td class="bold">${esc(d.c.name)}</td><td class="n">${fix(d.sv.curPct)}%</td>
+    <td class="small">${d.sv.flips.length ? d.sv.flips.map(f => `${f.at}%：${esc(nameOf(O, f.from))} → ${esc(nameOf(O, f.to))}`).join('<br>') : '<span class="muted">無</span>'}</td>
+    <td class="n">${d.dist != null ? fix(d.dist) + ' 個百分點' : '—'}</td>
+    <td>${d.dist == null ? '<span class="badge b-ok">非常穩定</span>' : d.dist <= 5 ? '<span class="badge b-bad">高度敏感</span>' : d.dist <= 15 ? '<span class="badge b-warn">中度敏感</span>' : '<span class="badge b-info">穩定</span>'}</td></tr>`).join('')}
+  </table></div><p class="small muted">穩定度判斷：最近翻盤點距離 ≤ 5 個百分點為高度敏感、≤ 15 為中度敏感。</p>`;
+}
+async function saveSensScenario(){
+  const name = `沙盤推演 ${new Date().toLocaleString('zh-TW', { hour12: false })}`;
+  await put('scenarios', { id: uid(), topicId: cur.topicId, name, desc: '由權重滑桿建立', weights: { ...UI.sensW }, createdAt: Date.now(), order: SCENS().length });
+  toast('已存成情境：' + name);
+}
+
+function sbMC(){
+  const O = OPTS(), agg = aggregate(); let cells = 0, ranged = 0;
+  O.forEach(o => CRITS().forEach(c => { const a = agg[o.id]?.[c.id]; if (a) { cells++; if (a.hasRange) ranged++; } }));
+  const r = UI.mc[cur.topicId]; const oc = id => color(O.findIndex(o => o.id === id));
+  return `<div class="card"><h3>模擬設定</h3>
+    <div class="toolbar"><label>模擬次數 <input type="number" id="mcN" value="${r?.iter || 1000}" min="100" max="20000" step="100" style="width:100px"></label>
+    <label>權重擾動 ± <input type="number" id="mcW" value="${r?.wPert ?? 10}" min="0" max="100" step="1" style="width:70px"> %</label>
+    <button class="btn pri" onclick="runMC()">▶ 執行模擬</button></div>
+    <div class="alert ${ranged ? 'a-info' : 'a-warn'}">ℹ️ 共 ${cells} 個評分格，其中 ${ranged} 格有設定區間（最小值／最大值）。每次模擬以三角分布（最小、平均、最大）抽樣分數${ranged ? '' : '；目前沒有區間，請到「評分矩陣」勾選「顯示區間」填寫，或提高權重擾動'}，並依權重擾動比例隨機調整權重。</div></div>
+  ${r ? `<div class="card winner"><h3>📌 模擬結論</h3><div style="font-size:16px">${r.rows.filter(x => x.winP > 0).map(x => `<b>${esc(x.name)}</b> 勝出機率 <b style="color:${oc(x.id)}">${pct(x.winP, 1)}</b>`).join('、')}</div>
+    <div class="muted" style="margin-top:6px">${r.rows[0].winP >= .8 ? '✅ 第一名在不確定性下仍相當穩定（≥ 80%）。' : r.rows[0].winP >= .6 ? '⚠️ 第一名具優勢，但仍有一定翻盤機率，建議補強關鍵評分。' : '⛔ 勝負未明（< 60%），建議收斂評分區間或釐清權重後再決議。'}　模擬 ${fmt(r.iter, 0)} 次・權重擾動 ±${r.wPert}%・${r.method === 'topsis' ? 'TOPSIS' : 'WSM'}・${new Date(r.at).toLocaleString('zh-TW', { hour12: false })}</div></div>
+  <div class="grid g2" style="margin-bottom:16px"><div class="card"><h3>勝出機率</h3>${barH(r.rows.map(x => ({ label: x.name, value: x.winP * 100, color: oc(x.id) })), { max: 100, unit: '%' })}</div>
+    <div class="card"><h3>分數分布（P5 ─ 中位數 ─ P95）</h3>${rangeH(r.rows.map(x => ({ label: x.name, p5: x.p5, p50: x.p50, p95: x.p95, color: oc(x.id) })))}</div></div>
+  <div class="card"><h3>模擬統計表</h3><div class="tbw"><table class="tb"><tr><th>方案</th><th class="n">勝出機率</th><th class="n">平均名次</th><th class="n">平均分數</th><th class="n">P5</th><th class="n">中位數</th><th class="n">P95</th><th class="n">淘汰機率</th><th>名次分布</th></tr>
+  ${r.rows.map(x => `<tr><td class="bold"><span style="color:${oc(x.id)}">●</span> ${esc(x.name)}</td><td class="n bold">${pct(x.winP)}</td><td class="n">${fix(x.avgRank, 2)}</td><td class="n">${fix(x.mean)}</td><td class="n">${fix(x.p5)}</td><td class="n">${fix(x.p50)}</td><td class="n">${fix(x.p95)}</td><td class="n">${pct(x.elimP)}</td>
+    <td class="small">${Object.keys(x.ranks).sort((a, b) => a - b).map(k => `第${k}名 ${pct(x.ranks[k] / r.iter, 0)}`).join('、') || '—'}</td></tr>`).join('')}</table></div></div>` : '<div class="card empty">設定完成後按「執行模擬」。</div>'}`;
+}
+function runMC(){
+  const n = Math.min(20000, Math.max(100, Math.round(num($('#mcN').value) || 1000))), w = Math.min(100, Math.max(0, num($('#mcW').value) ?? 10));
+  const t0 = performance.now(); UI.mc[cur.topicId] = monteCarlo(n, w); render(); toast(`模擬完成（${fmt(n, 0)} 次，${fmt(performance.now() - t0, 0)} ms）`);
+}
+
+/* =========================================================
+   決議紀錄
+   ========================================================= */
+function makeSnapshot(){
+  const O = OPTS(), C = CRITS(), R = REVS(), agg = aggregate(), res = compute(ctx()), w = baseWeights(), t = sumW(w) || 1, mc = UI.mc[cur.topicId];
+  return { method: T().method || 'wsm', applyThreshold: T().applyThreshold !== false,
+    criteria: C.map(c => ({ id: c.id, name: c.name, category: c.category, direction: c.direction, weight: c.weight, pct: (Number(c.weight) || 0) / t, threshold: c.threshold })),
+    options: O.map(o => ({ id: o.id, name: o.name })), reviewers: R.map(r => r.name),
+    matrix: O.map(o => ({ id: o.id, name: o.name, vals: C.map(c => agg[o.id]?.[c.id]?.mean ?? null) })),
+    ranking: res.rows.map(r => ({ id: r.id, name: r.name, score: r.score, rank: r.rank, eliminated: r.eliminated, reasons: r.reasons })),
+    mc: mc ? { iter: mc.iter, wPert: mc.wPert, rows: mc.rows.map(x => ({ name: x.name, winP: x.winP })) } : null };
+}
+function vDecision(){
+  const t = T(), O = OPTS(), D = DECS(), lead = leaderOf(compute(ctx()));
+  const last = D[0]; let diff = '';
+  if (last?.snapshot) {
+    const now = makeSnapshot(); const sig = s => JSON.stringify([s.criteria.map(c => [c.id, c.pct.toFixed(4)]), s.matrix.map(m => [m.id, m.vals.map(v => v == null ? null : +v.toFixed(4))]), s.method, s.applyThreshold]);
+    diff = sig(now) !== sig(last.snapshot) ? `<div class="alert a-warn">⚠️ 決議後評分、權重或計分設定已變動。${lead && lead.id !== last.optionId ? `目前排名第一為「${esc(lead.name)}」，與決議方案不同。` : '目前排名第一仍與決議方案相同。'}</div>` : '<div class="alert a-ok">✅ 目前資料與決議當下的快照一致。</div>';
+  }
+  return `<h2 class="pt">✅ 決議紀錄</h2><p class="sub">記錄最終決議與理由；系統會鎖定決議當下的權重、分數與排名做為快照，方便事後追溯。</p>
+  ${last ? `<div class="card winner"><h3>最新決議 <span class="r"><span class="badge b-ok">${esc(last.date)}</span></span></h3>
+    <div style="font-size:24px;font-weight:800;color:#047857">${esc(last.snapshot?.ranking?.find(r => r.id === last.optionId)?.name || nameOf(O, last.optionId))}</div>
+    <div class="kv" style="margin:10px 0"><b>決議理由</b><span style="white-space:pre-wrap">${esc(last.reason || '—')}</span><b>與會人員</b><span>${esc(last.attendees || '—')}</span><b>當時名次</b><span>${(() => { const r = last.snapshot?.ranking?.find(x => x.id === last.optionId); return r ? (r.eliminated ? '已淘汰' : `第 ${r.rank} 名（${fix(r.score * 100, 1)} 分）`) : '—'; })()}</span><b>附件</b><span>${attList('decision', last.id)}</span></div>${diff}</div>` : ''}
+  <div class="card"><h3>決議歷史（${D.length}）<span class="r"><button class="btn pri" onclick="decisionModal()">＋ 記錄決議</button></span></h3>
+  ${D.length ? `<div class="tbw"><table class="tb"><tr><th>決議日期</th><th>決議方案</th><th>當時名次</th><th>決議理由</th><th>與會人員</th><th class="c">附件</th><th class="c">操作</th></tr>
+  ${D.map(d => { const r = d.snapshot?.ranking?.find(x => x.id === d.optionId); return `<tr><td>${esc(d.date)}</td><td class="bold">${esc(r?.name || nameOf(O, d.optionId))}</td><td>${r ? (r.eliminated ? '<span class="badge b-bad">淘汰</span>' : `<span class="rk rk${r.rank}">${r.rank}</span>`) : '—'}${r && r.rank !== 1 && !r.eliminated ? ' <span class="badge b-warn">非第一名</span>' : ''}</td>
+    <td class="small" style="max-width:320px;white-space:pre-wrap">${esc(d.reason)}</td><td class="small">${esc(d.attendees)}</td><td class="c">${attList('decision', d.id, true)}</td>
+    <td class="c" style="white-space:nowrap"><button class="btn sm" onclick="viewSnapshot('${d.id}')">🔍 快照</button><button class="btn sm" onclick="decisionModal('${d.id}')">✎</button><button class="btn sm danger" onclick="deleteDecision('${d.id}')">🗑</button></td></tr>`; }).join('')}
+  </table></div>` : '<div class="empty">尚無決議紀錄。</div>'}</div>`;
+}
+function decisionModal(id){
+  const d = id ? S.decisions.find(x => x.id === id) : null, O = OPTS(), lead = leaderOf(compute(ctx()));
+  openModal(d ? '編輯決議（快照不變）' : '記錄決議', `
+    <div class="fr"><label class="req">決議方案</label><select id="f_opt">${O.map(o => `<option value="${o.id}" ${(d ? d.optionId : lead?.id) === o.id ? 'selected' : ''}>${esc(o.name)}${lead?.id === o.id ? '（目前第一名）' : ''}</option>`).join('')}</select></div>
+    <div class="fr"><label class="req">決議日期</label><input type="date" id="f_date" value="${esc(d?.date || today())}"></div>
+    <div class="fr"><label>決議理由</label><textarea id="f_reason" placeholder="為何選擇此方案？若未選第一名請說明原因">${esc(d?.reason)}</textarea></div>
+    <div class="fr"><label>與會人員</label><input id="f_att" value="${esc(d?.attendees || REVS().map(r => r.name).join('、'))}"></div>
+    <div class="fr"><label>附件</label><div>${d ? attList('decision', d.id) : ''}<input type="file" id="f_files" multiple style="margin-top:6px"><div class="small muted">例如會議紀錄、簽呈。</div></div></div>
+    ${d ? '' : `<div class="fr"><label>議題狀態</label><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="f_close" checked> 同時將議題狀態設為「已決議」</label></div>
+    <div class="alert a-info">📸 儲存時會鎖定目前的權重、評分彙總、排名${UI.mc[cur.topicId] ? '與蒙地卡羅結果' : ''}做為快照。</div>`}`,
+    [{ text: '取消' }, { text: '儲存', cls: 'pri', onClick: async () => {
+      const date = $('#f_date').value; if (!date) { toast('請選擇日期', 'err'); return false; }
+      const n = d ? { ...d } : { id: uid(), topicId: cur.topicId, createdAt: Date.now(), snapshot: makeSnapshot() };
+      Object.assign(n, { optionId: $('#f_opt').value, date, reason: $('#f_reason').value.trim(), attendees: $('#f_att').value.trim() });
+      await put('decisions', n); await saveFiles($('#f_files'), 'decision', n.id);
+      if (!d && $('#f_close')?.checked) await put('topics', { ...T(), status: '已決議' });
+      render(); toast('決議已儲存');
+    } }]);
+}
+async function deleteDecision(id){ if (!await confirmBox('確定刪除此決議紀錄與其附件？')) return; await bulk('attachments', ATTS('decision', id).map(a => a.id), 'delete'); await del('decisions', id); render(); }
+function viewSnapshot(id){
+  const d = S.decisions.find(x => x.id === id), s = d.snapshot; if (!s) return toast('此決議沒有快照', 'warn');
+  openModal(`決策快照：${d.date}`, `<div class="kv" style="margin-bottom:12px"><b>演算法</b><span>${s.method === 'topsis' ? 'TOPSIS' : '加權總分法'}${s.applyThreshold ? '・套用淘汰門檻' : ''}</span><b>評審</b><span>${esc(s.reviewers.join('、') || '—')}</span></div>
+    <h4>權重</h4><table class="tb"><tr><th>因子</th><th>方向</th><th class="n">權重</th><th class="n">占比</th><th class="n">門檻</th></tr>${s.criteria.map(c => `<tr><td>${esc(c.name)}</td><td>${c.direction === 'cost' ? '▼' : '▲'}</td><td class="n">${fmt(c.weight, 2)}</td><td class="n">${pct(c.pct)}</td><td class="n">${c.threshold ?? '—'}</td></tr>`).join('')}</table>
+    <h4>評分彙總（平均）</h4><div class="tbw"><table class="tb"><tr><th>方案</th>${s.criteria.map(c => `<th class="n">${esc(c.name)}</th>`).join('')}</tr>${s.matrix.map(m => `<tr><td>${esc(m.name)}</td>${m.vals.map(v => `<td class="n">${fmt(v, 2)}</td>`).join('')}</tr>`).join('')}</table></div>
+    <h4>排名</h4><table class="tb"><tr><th>名次</th><th>方案</th><th class="n">分數</th><th>備註</th></tr>${s.ranking.map(r => `<tr style="${r.id === d.optionId ? 'background:#ecfdf5;font-weight:700' : ''}"><td>${r.eliminated ? '—' : r.rank}</td><td>${esc(r.name)}${r.id === d.optionId ? ' ✅ 決議' : ''}</td><td class="n">${r.eliminated ? '—' : fix(r.score * 100, 2)}</td><td class="small">${esc(r.reasons.join('；'))}</td></tr>`).join('')}</table>
+    ${s.mc ? `<h4>蒙地卡羅（${fmt(s.mc.iter, 0)} 次，權重擾動 ±${s.mc.wPert}%）</h4><p>${s.mc.rows.map(x => `${esc(x.name)} ${pct(x.winP)}`).join('、')}</p>` : ''}`, [{ text: '關閉' }], true);
+}
+
+/* =========================================================
+   資料管理：匯入 / 匯出 / 報告
+   ========================================================= */
+function vData(){
+  const cnt = STORES.map(s => `<tr><td>${s}</td><td class="n">${S[s].length}</td></tr>`).join('');
+  setTimeout(async () => { if (navigator.storage?.estimate) { const e = await navigator.storage.estimate(); const el = $('#quota'); if (el) el.textContent = `已使用 ${fmtSize(e.usage || 0)} / 可用約 ${fmtSize(e.quota || 0)}`; } }, 0);
+  return `<h2 class="pt">💾 資料管理</h2><p class="sub">資料儲存在本機瀏覽器 IndexedDB；清除瀏覽器資料會遺失，請定期匯出備份。</p>
+  <div class="grid g2" style="margin-bottom:16px">
+    <div class="card"><h3>⤓ 匯出</h3><div class="toolbar">
+      <button class="btn pri" onclick="exportJSON(false)" ${T() ? '' : 'disabled'}>目前議題 JSON</button><button class="btn" onclick="exportJSON(true)">全部資料 JSON（備份）</button></div>
+      <div class="toolbar"><button class="btn" onclick="exportCSV('detail')" ${T() ? '' : 'disabled'}>評分明細 CSV</button><button class="btn" onclick="exportCSV('matrix')" ${T() ? '' : 'disabled'}>彙總矩陣與排名 CSV</button><button class="btn" onclick="exportExcel()" ${T() ? '' : 'disabled'}>Excel 活頁簿（多工作表）</button></div>
+      <div class="toolbar"><button class="btn" onclick="printReport()" ${T() ? '' : 'disabled'}>🖨 決策報告（列印／另存 PDF）</button></div>
+      <p class="small muted">JSON 會連同附件一起匯出（Base64）。Excel 檔為 XML 試算表格式，開啟時若出現格式提示，選擇「是」即可。</p></div>
+    <div class="card"><h3>⤒ 匯入</h3><div class="toolbar"><button class="btn pri" onclick="triggerImport('merge')">匯入 JSON（合併）</button><button class="btn danger" onclick="triggerImport('replace')">還原備份（清空後匯入）</button></div>
+      <p class="small muted">合併時若議題已存在，可選擇覆蓋或以複本匯入。</p>
+      <h3 style="margin-top:16px">✨ 範例與維護</h3><div class="toolbar"><button class="btn" onclick="loadDemo()">載入範例議題</button>${T() ? `<button class="btn" onclick="dupTopic('${cur.topicId}')">複製目前議題</button>` : ''}<button class="btn danger" onclick="clearAll()">清除全部資料</button></div></div>
+  </div>
+  <div class="card"><h3>儲存狀態 <span class="r small muted" id="quota"></span></h3><table class="tb" style="max-width:360px"><tr><th>資料表</th><th class="n">筆數</th></tr>${cnt}</table></div>`;
+}
+const blobToDataURL = b => new Promise(r => { const f = new FileReader(); f.onload = () => r(f.result); f.readAsDataURL(b); });
+async function exportJSON(all){
+  if (!all && !T()) return toast('請先選擇議題', 'err');
+  const data = {}; const tid = cur.topicId;
+  STORES.forEach(s => data[s] = all ? S[s] : s === 'topics' ? S.topics.filter(t => t.id === tid) : S[s].filter(x => x.topicId === tid));
+  const out = JSON.parse(JSON.stringify(data, (k, v) => v instanceof Blob ? undefined : v));
+  for (const a of out.attachments) { const src = S.attachments.find(x => x.id === a.id); if (src?.blob) a.dataURL = await blobToDataURL(src.blob); }
+  download(`${all ? '決策沙盤_全部備份' : '決策沙盤_' + safeName(T().name)}_${today()}.json`, JSON.stringify({ app: 'DecisionLab', version: 3, exportedAt: new Date().toISOString(), scope: all ? 'all' : 'topic', data: out }, null, 2), 'application/json');
+  toast('已匯出 JSON');
+}
+let importMode = 'merge';
+function triggerImport(mode = 'merge'){ importMode = mode; $('#fileImport').value = ''; $('#fileImport').click(); }
+async function handleImport(input){
+  const f = input.files[0]; if (!f) return;
+  let j; try { j = JSON.parse(await f.text()); } catch { return toast('檔案不是有效的 JSON', 'err'); }
+  const d = j.data || j; if (!Array.isArray(d.topics)) return toast('檔案格式不符（缺少 topics）', 'err');
+  STORES.forEach(s => d[s] = Array.isArray(d[s]) ? d[s] : []);
+  for (const a of d.attachments) { if (a.dataURL) { a.blob = await (await fetch(a.dataURL)).blob(); delete a.dataURL; } }
+  if (importMode === 'replace') {
+    if (!await confirmBox(`將清空目前所有資料，並匯入 ${d.topics.length} 個議題。確定還原？`)) return;
+    for (const s of STORES) await clearStore(s);
+  } else {
+    const dup = d.topics.filter(t => S.topics.some(x => x.id === t.id));
+    if (dup.length) {
+      const c = await choice('議題已存在', `下列議題已存在：\n${dup.map(t => '・' + t.name).join('\n')}\n\n要如何處理？`, [{ text: '取消', value: null }, { text: '以複本匯入', cls: 'pri', value: 'copy' }, { text: '覆蓋', cls: 'danger', value: 'over' }]);
+      if (!c) return;
+      if (c === 'copy') remap(d, '（匯入）');
+      else for (const t of dup) for (const s of STORES.slice(1)) await bulk(s, S[s].filter(x => x.topicId === t.id).map(x => x.id), 'delete');
+    }
+  }
+  for (const s of STORES) await bulk(s, d[s]);
+  UI.mc = {}; UI.sensW = null; selectTopic(d.topics[0]?.id || S.topics[0]?.id); toast(`已匯入 ${d.topics.length} 個議題`);
+}
+async function clearAll(){
+  if (!await confirmBox('確定清除全部資料？此動作無法復原，建議先匯出備份。')) return;
+  for (const s of STORES) await clearStore(s); UI.mc = {}; selectTopic(null); toast('已清除全部資料');
+}
+const csvCell = v => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+const toCSV = rows => '\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+function matrixRows(){
+  const O = OPTS(), C = CRITS(), agg = aggregate(), res = compute(ctx());
+  return [['方案', ...C.map(c => `${c.name}(${c.direction === 'cost' ? '越低越好' : '越高越好'})`), '分數', '名次', '狀態'],
+    ...O.map(o => { const r = res.rows.find(x => x.id === o.id); return [o.name, ...C.map(c => agg[o.id]?.[c.id] ? +agg[o.id][c.id].mean.toFixed(4) : ''), r.eliminated ? '' : +(r.score * 100).toFixed(2), r.eliminated ? '' : r.rank, r.eliminated ? '淘汰：' + r.reasons.join('；') : '有效']; }),
+    ['權重', ...C.map(c => Number(c.weight) || 0), '', '', '']];
+}
+function detailRows(){
+  const O = OPTS(), C = CRITS(), R = REVS();
+  const rows = [['方案', '因子', '方向', '評審', '分數', '最小值', '最大值']];
+  O.forEach(o => C.forEach(c => R.forEach(r => { const s = S.scores.find(x => x.id === scoreKey(o.id, c.id, r.id)); if (s && s.value != null) rows.push([o.name, c.name, c.direction === 'cost' ? '成本型' : '效益型', r.name, s.value, s.min ?? '', s.max ?? '']); })));
+  return rows;
+}
+function exportCSV(kind){
+  if (!T()) return toast('請先選擇議題', 'err');
+  download(`決策沙盤_${safeName(T().name)}_${kind === 'detail' ? '評分明細' : '彙總矩陣'}_${today()}.csv`, toCSV(kind === 'detail' ? detailRows() : matrixRows()), 'text/csv;charset=utf-8');
+  toast('已匯出 CSV');
+}
+function exportExcel(){
+  const t = T(); if (!t) return toast('請先選擇議題', 'err');
+  const x = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const cell = (v, h) => `<Cell${h ? ' ss:StyleID="h"' : ''}><Data ss:Type="${typeof v === 'number' && isFinite(v) ? 'Number' : 'String'}">${x(v)}</Data></Cell>`;
+  const sheet = (name, rows) => `<Worksheet ss:Name="${x(name)}"><Table>${rows.map((r, i) => `<Row>${r.map(v => cell(v, i === 0)).join('')}</Row>`).join('')}</Table></Worksheet>`;
+  const O = OPTS(), C = CRITS(), sc = scenarioResults(), mc = UI.mc[t.id];
+  const sheets = [
+    sheet('議題資訊', [['項目', '內容'], ['議題名稱', t.name], ['說明', t.desc || ''], ['決策負責人', t.owner || ''], ['截止日', t.dueDate || ''], ['狀態', t.status], ['演算法', t.method === 'topsis' ? 'TOPSIS' : '加權總分法'], ['套用淘汰門檻', t.applyThreshold !== false ? '是' : '否'], ['匯出時間', new Date().toLocaleString('zh-TW', { hour12: false })]]),
+    sheet('方案', [['方案', '說明', '預估成本', '預估時程', '參考資料'], ...O.map(o => [o.name, o.desc || '', o.cost ?? '', o.duration ?? '', o.link || ''])]),
+    sheet('評估因子', [['因子', '分類', '方向', '權重', '單位', '淘汰門檻', '評分說明'], ...C.map(c => [c.name, c.category, c.direction === 'cost' ? '成本型' : '效益型', Number(c.weight) || 0, c.unit || '', c.threshold ?? '', c.note || ''])]),
+    sheet('評分明細', detailRows()), sheet('彙總矩陣與排名', matrixRows()),
+    sheet('情境比較', [['方案', ...sc.map(c => c.name + ' 名次'), ...sc.map(c => c.name + ' 分數')], ...O.map(o => { const rs = sc.map(c => c.res.rows.find(r => r.id === o.id)); return [o.name, ...rs.map(r => r.eliminated ? '淘汰' : r.rank), ...rs.map(r => r.eliminated ? '' : +(r.score * 100).toFixed(2))]; })]),
+    sheet('翻盤點', [['因子', '目前占比(%)', '翻盤點(%)', '原第一名', '新第一名'], ...flipData().flatMap(d => d.sv.flips.length ? d.sv.flips.map(f => [d.c.name, +d.sv.curPct.toFixed(2), f.at, nameOf(O, f.from), nameOf(O, f.to)]) : [[d.c.name, +d.sv.curPct.toFixed(2), '無', '', '']])]),
+  ];
+  if (mc) sheets.push(sheet('蒙地卡羅', [['方案', '勝出機率(%)', '平均名次', '平均分數', 'P5', '中位數', 'P95', '淘汰機率(%)'], ...mc.rows.map(r => [r.name, +(r.winP * 100).toFixed(2), r.avgRank != null ? +r.avgRank.toFixed(3) : '', r.mean != null ? +r.mean.toFixed(2) : '', r.p5 != null ? +r.p5.toFixed(2) : '', r.p50 != null ? +r.p50.toFixed(2) : '', r.p95 != null ? +r.p95.toFixed(2) : '', +(r.elimP * 100).toFixed(2)])]));
+  sheets.push(sheet('決議紀錄', [['決議日期', '決議方案', '決議理由', '與會人員'], ...DECS().map(d => [d.date, d.snapshot?.ranking?.find(r => r.id === d.optionId)?.name || nameOf(O, d.optionId), d.reason || '', d.attendees || ''])]));
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Styles><Style ss:ID="h"><Font ss:Bold="1"/><Interior ss:Color="#DBEAFE" ss:Pattern="Solid"/></Style></Styles>${sheets.join('')}</Workbook>`;
+  download(`決策沙盤_${safeName(t.name)}_${today()}.xls`, xml, 'application/vnd.ms-excel'); toast('已匯出 Excel');
+}
+
+function printReport(){
+  const t = T(); if (!t) return toast('請先選擇議題', 'err');
+  const O = OPTS(), C = CRITS(), R = REVS(), res = compute(ctx()), act = res.rows.filter(r => !r.eliminated), agg = aggregate(), sw = sumW(baseWeights()) || 1;
+  const oc = id => color(O.findIndex(o => o.id === id)); const sc = scenarioResults(); const fd = flipData(); const mc = UI.mc[t.id]; const D = DECS();
+  $('#printArea').innerHTML = `<h1>決策報告：${esc(t.name)}</h1><p class="muted">產出時間：${new Date().toLocaleString('zh-TW', { hour12: false })}　|　狀態：${esc(t.status)}　|　負責人：${esc(t.owner || '—')}　|　截止日：${esc(t.dueDate || '—')}</p>
+  <div class="card"><h3>一、決策摘要</h3><p>${esc(t.desc || '')}</p>
+    <p>依 <b>${t.method === 'topsis' ? 'TOPSIS' : '加權總分法'}</b> 計算，目前建議方案為 <b>${esc(act[0]?.name || '—')}</b>（${act[0] ? fix(act[0].score * 100, 1) : '—'} 分）${act[1] ? `，領先「${esc(act[1].name)}」${fix((act[0].score - act[1].score) * 100, 1)} 分` : ''}。
+    ${sc.length > 1 ? `在 ${sc.length} 組權重情境中，該方案奪冠 ${sc.filter(c => leaderOf(c.res)?.id === act[0]?.id).length} 次。` : ''}
+    ${mc ? `蒙地卡羅模擬 ${fmt(mc.iter, 0)} 次的勝出機率：${mc.rows.filter(x => x.winP > 0).map(x => `${esc(x.name)} ${pct(x.winP)}`).join('、')}。` : ''}</p>
+    ${D[0] ? `<p><b>最終決議：</b>${esc(D[0].snapshot?.ranking?.find(r => r.id === D[0].optionId)?.name || nameOf(O, D[0].optionId))}（${esc(D[0].date)}）。理由：${esc(D[0].reason || '—')}</p>` : '<p><b>最終決議：</b>尚未決議。</p>'}</div>
+  <div class="card"><h3>二、候選方案</h3><table class="tb"><tr><th>方案</th><th>說明</th><th class="n">預估成本</th><th class="n">預估時程</th></tr>${O.map(o => `<tr><td>${esc(o.name)}</td><td>${esc(o.desc || '')}</td><td class="n">${fmt(o.cost, 2)}</td><td class="n">${fmt(o.duration, 1)}</td></tr>`).join('')}</table></div>
+  <div class="card"><h3>三、評估因子與權重</h3><table class="tb"><tr><th>因子</th><th>分類</th><th>方向</th><th class="n">權重占比</th><th>淘汰門檻</th></tr>${C.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.category)}</td><td>${c.direction === 'cost' ? '越低越好' : '越高越好'}</td><td class="n">${pct((Number(c.weight) || 0) / sw)}</td><td>${c.threshold ?? '—'}</td></tr>`).join('')}</table>
+    <p class="small">評審：${esc(R.map(r => r.name + (r.role ? `（${r.role}）` : '')).join('、') || '—')}</p></div>
+  <div class="card"><h3>四、評分彙總（評審平均）</h3><table class="tb"><tr><th>方案</th>${C.map(c => `<th class="n">${esc(c.name)}</th>`).join('')}</tr>${O.map(o => `<tr><td>${esc(o.name)}</td>${C.map(c => { const a = agg[o.id]?.[c.id]; return `<td class="n">${a ? fmt(a.mean, 2) + (a.diverge ? ' ⚠' : '') : '—'}</td>`; }).join('')}</tr>`).join('')}</table><p class="small muted">⚠ 表示評審意見分歧。</p></div>
+  <div class="card pb"><h3>五、排名結果</h3><table class="tb"><tr><th>名次</th><th>方案</th><th class="n">分數</th><th>備註</th></tr>${res.rows.map(r => `<tr><td>${r.eliminated ? '—' : r.rank}</td><td>${esc(r.name)}</td><td class="n">${r.eliminated ? '—' : fix(r.score * 100, 2)}</td><td class="small">${r.eliminated ? '淘汰：' + esc(r.reasons.join('；')) : ''}</td></tr>`).join('')}</table>
+    <div class="grid g2" style="margin-top:10px"><div>${barH(act.map(r => ({ label: r.name, value: r.score * 100, color: oc(r.id) })), { max: 100 })}</div><div>${radar(C.map(c => c.name), act.map(r => ({ name: r.name, color: oc(r.id), values: C.map(c => r.norm[c.id]) })), 340)}</div></div>
+    <h4>因子貢獻</h4><div style="max-width:80%">${stackH(act.map(r => ({ label: r.name, values: r.contrib, total: r.wsm })), C.map((c, i) => ({ id: c.id, name: c.name, color: color(i) })))}</div></div>
+  <div class="card"><h3>六、情境比較</h3><table class="tb"><tr><th>方案</th>${sc.map(c => `<th class="c">${esc(c.name)}</th>`).join('')}</tr>${O.map(o => `<tr><td>${esc(o.name)}</td>${sc.map(c => { const r = c.res.rows.find(x => x.id === o.id); return `<td class="c">${r.eliminated ? '淘汰' : `#${r.rank}（${fix(r.score * 100, 1)}）`}</td>`; }).join('')}</tr>`).join('')}</table></div>
+  <div class="card"><h3>七、權重敏感度（翻盤點）</h3><table class="tb"><tr><th>因子</th><th class="n">目前占比</th><th>翻盤點</th></tr>${fd.map(d => `<tr><td>${esc(d.c.name)}</td><td class="n">${fix(d.sv.curPct)}%</td><td>${d.sv.flips.map(f => `${f.at}%：${esc(nameOf(O, f.from))} → ${esc(nameOf(O, f.to))}`).join('；') || '無（第一名不變）'}</td></tr>`).join('')}</table></div>
+  ${mc ? `<div class="card"><h3>八、蒙地卡羅模擬（${fmt(mc.iter, 0)} 次・權重擾動 ±${mc.wPert}%）</h3><table class="tb"><tr><th>方案</th><th class="n">勝出機率</th><th class="n">平均名次</th><th class="n">P5</th><th class="n">中位數</th><th class="n">P95</th></tr>${mc.rows.map(x => `<tr><td>${esc(x.name)}</td><td class="n">${pct(x.winP)}</td><td class="n">${fix(x.avgRank, 2)}</td><td class="n">${fix(x.p5)}</td><td class="n">${fix(x.p50)}</td><td class="n">${fix(x.p95)}</td></tr>`).join('')}</table></div>` : ''}
+  ${D.length ? `<div class="card"><h3>${mc ? '九' : '八'}、決議紀錄</h3><table class="tb"><tr><th>日期</th><th>決議方案</th><th>理由</th><th>與會人員</th></tr>${D.map(d => `<tr><td>${esc(d.date)}</td><td>${esc(d.snapshot?.ranking?.find(r => r.id === d.optionId)?.name || nameOf(O, d.optionId))}</td><td style="white-space:pre-wrap">${esc(d.reason || '')}</td><td>${esc(d.attendees || '')}</td></tr>`).join('')}</table></div>` : ''}
+  <p class="small muted">本報告由「決策沙盤推演系統 V3」產出。</p>`;
+  setTimeout(() => window.print(), 100);
+}
+
+/* =========================================================
+   使用手冊
+   ========================================================= */
+function vHelp(){
+  return `<h2 class="pt">📖 使用手冊</h2><div class="card help">
+  <h3>快速開始</h3><ol><li>按上方「＋ 新增議題」，或在「資料管理」載入範例議題。</li><li>到「方案管理」建立候選方案。</li><li>到「評估因子」設定因子、方向、權重與淘汰門檻。</li><li>到「評分矩陣」新增評審，每位評審各自填分。</li><li>到「排名分析」查看結果，再到「沙盤推演」檢驗穩健度。</li><li>在「決議紀錄」記錄最終決議，系統會自動保存快照。</li></ol>
+  <h3>評分方式</h3><ul><li>可填 1–10 分，也可直接填實際數值（成本萬元、時程月數）；系統會依因子做 Min-Max 正規化。</li><li>勾選「顯示區間」可填最小值與最大值，供蒙地卡羅模擬使用。</li><li>多位評審的分數取平均；變異係數 ≥ 25% 時標示「分歧」。</li><li>可用「從其他評審複製分數」快速建立初稿。</li></ul>
+  <h3>演算法</h3><ul><li><b>加權總分法（WSM）</b>：正規化分數 × 權重後加總，最直觀。</li><li><b>TOPSIS</b>：依方案與理想解、負理想解的距離排名，適合因子多、彼此取捨明顯時。</li><li><b>淘汰門檻</b>：先淘汰不合格方案，再排名其餘方案。</li></ul>
+  <h3>沙盤推演</h3><ul><li><b>情境比較</b>：建立多組權重（例如成本優先、品質優先），並排比較排名。「依分類快速產生」會讓每個分類各自占 50%。</li><li><b>權重敏感度</b>：拖動滑桿即時看排名變化；翻盤點表會列出每個因子權重調到多少時第一名會易主。</li><li><b>蒙地卡羅</b>：依評分區間（三角分布）與權重擾動隨機模擬，統計各方案勝出機率與分數分布。</li></ul>
+  <h3>資料與備份</h3><ul><li>資料只存在本機瀏覽器（IndexedDB），不會上傳。</li><li>可匯出單一議題或全部資料 JSON（含附件），以及 CSV、Excel、列印報告（可另存 PDF）。</li><li>刪除方案或因子時，只會刪除相關評分，不影響議題其他資料。</li></ul>
+  <h3>小技巧</h3><ul><li>總覽儀表板的提醒事項可點擊，直接跳到對應頁面。</li><li>若決議方案不是第一名，請在決議理由中說明，報告會完整呈現。</li><li>按 <code>Esc</code> 可關閉對話框。</li></ul></div>`;
+}
+
+/* =========================================================
+   範例資料與啟動
+   ========================================================= */
+async function loadDemo(){
+  const tid = uid(), now = Date.now();
+  const topic = { id: tid, name: '核心系統報表平台選型', desc: '現行報表系統老舊、維護成本高，需在年底前決定新報表平台的建置方式。', owner: '資訊處 林副理', dueDate: addDays(45), status: '評估中', method: 'wsm', applyThreshold: true, createdAt: now };
+  const opts = [['A 自建', '內部團隊以開源報表框架自行開發，彈性最高', 420, 12], ['B 套裝軟體', '採購商用 BI 套裝軟體並客製', 450, 6], ['C 雲端 SaaS', '訂閱雲端報表服務，快速上線', 200, 3]]
+    .map((x, i) => ({ id: uid(), topicId: tid, name: x[0], desc: x[1], cost: x[2], duration: x[3], link: '', order: i, createdAt: now + i }));
+  const crits = [['建置成本', '成本', 30, 'cost', 500, '萬元', '5 年總持有成本估算'], ['功能符合度', '效益', 25, 'benefit', 5, '分(1-10)', '對照需求清單的符合程度'], ['資安風險', '風險', 20, 'cost', 8, '分(1-10)', '分數越高代表風險越大'], ['導入時程', '時程', 15, 'cost', null, '月', '從簽約到正式上線'], ['維運人力', '人力', 10, 'cost', null, '人', '上線後每年所需維運人力']]
+    .map((x, i) => ({ id: uid(), topicId: tid, name: x[0], category: x[1], weight: x[2], direction: x[3], threshold: x[4], unit: x[5], note: x[6], order: i, createdAt: now + i }));
+  const revs = [['王經理', 'PM'], ['李架構師', 'SA'], ['陳資安', '資安']].map((x, i) => ({ id: uid(), topicId: tid, name: x[0], role: x[1], order: i, createdAt: now + i }));
+  const base = [[420, 9, 3, 12, 4], [450, 7, 4, 6, 2], [200, 6, 6, 3, 1]];
+  const delta = [[[0, 0, 0, 0, 0], [20, -1, 1, 2, 0], [-10, 0, 0, 1, 1]], [[0, 0, 0, 0, 0], [-20, 1, 0, -1, 0], [30, 0, 1, 0, 0]], [[0, 0, 0, 0, 0], [10, 1, -2, 1, 0], [-10, -1, 2, 0, 0]]];
+  const rngPct = [.15, .15, .25, .3, .25];
+  const scores = [];
+  opts.forEach((o, oi) => crits.forEach((c, ci) => revs.forEach((r, ri) => {
+    const v = base[oi][ci] + delta[oi][ri][ci]; const sp = Math.max(1, Math.round(Math.abs(v) * rngPct[ci]));
+    scores.push({ id: scoreKey(o.id, c.id, r.id), topicId: tid, optionId: o.id, criteriaId: c.id, reviewerId: r.id, value: v, min: Math.max(0, v - sp), max: v + sp + (oi === 0 && ci === 3 ? 4 : 0) });
+  })));
+  const W = a => Object.fromEntries(crits.map((c, i) => [c.id, a[i]]));
+  const scen = [['成本優先', '預算吃緊時的考量', [50, 15, 15, 10, 10]], ['品質優先', '重視功能與資安', [15, 45, 25, 10, 5]], ['時程優先', '需在半年內上線', [20, 20, 15, 35, 10]]]
+    .map((x, i) => ({ id: uid(), topicId: tid, name: x[0], desc: x[1], weights: W(x[2]), order: i, createdAt: now + i }));
+  await put('topics', topic);
+  await bulk('options', opts); await bulk('criteria', crits); await bulk('reviewers', revs); await bulk('scores', scores); await bulk('scenarios', scen);
+  cur.view = 'overview'; selectTopic(tid); toast('已載入範例議題');
+}
+
+(async function init(){
+  try { db = await openDB(); await loadAll(); }
+  catch (e) { $('#main').innerHTML = `<div class="card alert a-bad">無法開啟 IndexedDB：${esc(e?.message || e)}。請確認瀏覽器未封鎖本機儲存（例如無痕模式）。</div>`; return; }
+  const saved = localStorage.getItem('dl_topic');
+  cur.topicId = S.topics.some(t => t.id === saved) ? saved : (S.topics.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))[0]?.id || null);
+  cur.view = localStorage.getItem('dl_view') || 'overview';
+  render();
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
