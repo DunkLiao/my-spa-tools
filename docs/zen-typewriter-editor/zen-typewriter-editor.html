@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zen Typewriter Editor</title>
+  <style>
+    :root {
+      --bg: #F7F4EB;
+      --text: #2D2926;
+      --muted: #8C827A;
+      --caret: #C0392B;
+      --surface: #EFECE1;
+      --border: rgba(45, 41, 38, 0.12);
+      --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Courier New", Consolas, "PingFang TC", "Noto Sans TC", monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Noto Sans TC", sans-serif;
+      --ui-opacity: 1;
+      --transition: 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* 1. 羊皮古紙 (Paper) */
+    [data-theme="paper"] {
+      --bg: #F7F4EB;
+      --text: #2D2926;
+      --muted: #8C827A;
+      --caret: #C0392B;
+      --surface: #EFECE1;
+      --border: rgba(45, 41, 38, 0.12);
+    }
+
+    /* 2. 象牙初白 (Ivory) */
+    [data-theme="ivory"] {
+      --bg: #FAF9F5;
+      --text: #1F1F1F;
+      --muted: #8F8C85;
+      --caret: #E74C3C;
+      --surface: #F0EEE6;
+      --border: rgba(30, 30, 30, 0.1);
+    }
+
+    /* 3. 復古牛皮紙 (Kraft) */
+    [data-theme="kraft"] {
+      --bg: #D9C3A5;
+      --text: #3B2A1A;
+      --muted: #6B5542;
+      --caret: #8B0000;
+      --surface: #CCAFA0;
+      --border: rgba(59, 42, 26, 0.18);
+    }
+
+    /* 4. 抹茶茶室 (Matcha) */
+    [data-theme="matcha"] {
+      --bg: #ECEEE4;
+      --text: #263321;
+      --muted: #697864;
+      --caret: #406336;
+      --surface: #DFE3D5;
+      --border: rgba(38, 51, 33, 0.14);
+    }
+
+    /* 5. 暮靄晨曦 (Blush) */
+    [data-theme="blush"] {
+      --bg: #F5EBEA;
+      --text: #3D282E;
+      --muted: #8A6D74;
+      --caret: #A83E58;
+      --surface: #ECDCDA;
+      --border: rgba(61, 40, 46, 0.13);
+    }
+
+    /* 6. 靜謐薰衣草 (Lavender) */
+    [data-theme="lavender"] {
+      --bg: #EDEAF2;
+      --text: #2B2636;
+      --muted: #746E82;
+      --caret: #6B4C9A;
+      --surface: #E0DBE8;
+      --border: rgba(43, 38, 54, 0.13);
+    }
+
+    /* 7. 水洗單寧 (Denim) */
+    [data-theme="denim"] {
+      --bg: #E7EEF4;
+      --text: #1E2D3D;
+      --muted: #5C7085;
+      --caret: #1D5E9E;
+      --surface: #D8E3ED;
+      --border: rgba(30, 45, 61, 0.14);
+    }
+
+    /* 8. 鑄鐵灰打字機 (Slate) */
+    [data-theme="slate"] {
+      --bg: #E2E4E6;
+      --text: #22252A;
+      --muted: #616771;
+      --caret: #2C3E50;
+      --surface: #D1D5D9;
+      --border: rgba(34, 37, 42, 0.15);
+    }
+
+    /* 9. 深夜墨黑 (Dark) */
+    [data-theme="dark"] {
+      --bg: #1A1A1C;
+      --text: #DCD8D0;
+      --muted: #757472;
+      --caret: #E67E22;
+      --surface: #262629;
+      --border: rgba(220, 216, 208, 0.12);
+    }
+
+    /* 10. 終端螢光綠 (Terminal) */
+    [data-theme="terminal"] {
+      --bg: #0A0F0A;
+      --text: #4AF626;
+      --muted: #206E1B;
+      --caret: #4AF626;
+      --surface: #121A12;
+      --border: rgba(74, 246, 38, 0.22);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 19px;
+      line-height: 2.1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      overflow-y: scroll;
+      transition: background-color var(--transition), color var(--transition);
+      cursor: text;
+    }
+
+    .chrome-layer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 100;
+      transition: opacity 0.6s ease;
+      opacity: var(--ui-opacity);
+    }
+
+    .interactive {
+      pointer-events: auto;
+      cursor: default;
+    }
+
+    header.top-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(180deg, var(--bg) 65%, transparent 100%);
+      backdrop-filter: blur(4px);
+    }
+
+    .brand-title {
+      font-size: 14px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--muted);
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .toolbar-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button.icon-btn, select.custom-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 13px;
+      padding: 7px 12px;
+      border-radius: 6px;
+      outline: none;
+      transition: all var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+    }
+
+    button.icon-btn:hover, select.custom-select:hover {
+      border-color: var(--caret);
+    }
+
+    button.icon-btn.active {
+      background: var(--caret);
+      color: #fff;
+      border-color: var(--caret);
+    }
+
+    .app-workspace {
+      display: flex;
+      width: 100%;
+      min-height: 100vh;
+      transition: all 0.3s ease;
+    }
+
+    main.editor-stage {
+      flex: 1;
+      max-width: 760px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 42vh 24px 50vh;
+      position: relative;
+      transition: max-width 0.3s ease, margin 0.3s ease;
+    }
+
+    /* 雙欄並列預覽時版面自動微調 */
+    body.split-preview-active .app-workspace {
+      max-width: 1540px;
+      margin: 0 auto;
+      padding: 0 16px;
+      gap: 32px;
+    }
+
+    body.split-preview-active main.editor-stage {
+      max-width: 50%;
+      margin: 0;
+      padding: 42vh 16px 50vh;
+      border-right: 1px dashed var(--border);
+    }
+
+    #editor {
+      min-height: 200px;
+      outline: none;
+      border: none;
+      caret-color: var(--caret);
+      word-break: break-word;
+      white-space: pre-wrap;
+      tab-size: 4;
+    }
+
+    #editor:empty::before {
+      content: attr(data-placeholder);
+      color: var(--muted);
+      opacity: 0.6;
+      cursor: text;
+    }
+
+    .md-line {
+      min-height: 1.8em;
+      position: relative;
+    }
+
+    .md-marker {
+      color: var(--muted);
+      opacity: 0.45;
+      font-weight: normal;
+      user-select: none;
+    }
+
+    .md-h1 {
+      font-size: 1.55em;
+      font-weight: 800;
+      line-height: 1.4;
+      color: var(--text);
+      border-bottom: 1px dashed var(--border);
+      padding-bottom: 4px;
+      margin-bottom: 4px;
+    }
+
+    .md-h2 {
+      font-size: 1.3em;
+      font-weight: 700;
+      line-height: 1.5;
+      color: var(--text);
+    }
+
+    .md-h3 {
+      font-size: 1.15em;
+      font-weight: 700;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .md-blockquote {
+      border-left: 3px solid var(--caret);
+      padding-left: 12px;
+      margin-left: 2px;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .md-list-item {
+      padding-left: 6px;
+    }
+
+    .md-bold {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .md-italic {
+      font-style: italic;
+    }
+
+    .md-strike {
+      text-decoration: line-through;
+      opacity: 0.65;
+    }
+
+    .md-inline-code {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      color: var(--caret);
+    }
+
+    body.focus-mode #editor p,
+    body.focus-mode #editor div,
+    body.focus-mode #editor .md-line {
+      opacity: 0.28;
+      transition: opacity 0.3s ease;
+    }
+
+    body.focus-mode #editor .active-paragraph {
+      opacity: 1;
+    }
+
+    .preview-pane {
+      display: none;
+      flex: 1;
+      max-width: 50%;
+      height: 100vh;
+      overflow-y: auto;
+      padding: 90px 32px 100px;
+      cursor: auto;
+      background: var(--bg);
+      font-family: var(--font-sans);
+    }
+
+    body.split-preview-active .preview-pane {
+      display: block;
+    }
+
+    /* 浮窗獨立預覽彈出層 (Modal) */
+    .preview-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(6px);
+      z-index: 250;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+    }
+
+    .preview-modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .preview-modal {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 100%;
+      max-width: 900px;
+      height: 88vh;
+      border-radius: 12px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateY(20px);
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .preview-modal-overlay.open .preview-modal {
+      transform: translateY(0);
+    }
+
+    .preview-modal-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .preview-modal-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .preview-modal-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 36px 40px;
+      font-family: var(--font-sans);
+    }
+
+    /* Markdown 預覽精緻排版視覺 (HTML 預覽層) */
+    .rendered-markdown {
+      line-height: 1.85;
+      font-size: 16.5px;
+      color: var(--text);
+    }
+
+    .rendered-markdown h1,
+    .rendered-markdown h2,
+    .rendered-markdown h3,
+    .rendered-markdown h4 {
+      color: var(--text);
+      font-weight: 700;
+      line-height: 1.4;
+      margin-top: 1.6em;
+      margin-bottom: 0.6em;
+    }
+
+    .rendered-markdown h1:first-child {
+      margin-top: 0;
+    }
+
+    .rendered-markdown h1 {
+      font-size: 2.1em;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0.3em;
+    }
+
+    .rendered-markdown h2 {
+      font-size: 1.6em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.25em;
+    }
+
+    .rendered-markdown h3 {
+      font-size: 1.3em;
+    }
+
+    .rendered-markdown p {
+      margin-bottom: 1.25em;
+    }
+
+    .rendered-markdown blockquote {
+      border-left: 4px solid var(--caret);
+      padding: 8px 18px;
+      margin: 1.2em 0;
+      background: var(--surface);
+      border-radius: 0 6px 6px 0;
+      color: var(--muted);
+      font-style: italic;
+    }
+
+    .rendered-markdown ul,
+    .rendered-markdown ol {
+      padding-left: 28px;
+      margin-bottom: 1.25em;
+    }
+
+    .rendered-markdown li {
+      margin-bottom: 0.35em;
+    }
+
+    .rendered-markdown hr {
+      border: 0;
+      height: 1px;
+      background: var(--border);
+      margin: 2em 0;
+    }
+
+    .rendered-markdown code {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 0.88em;
+      color: var(--caret);
+    }
+
+    .rendered-markdown pre {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 16px 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      margin: 1.3em 0;
+    }
+
+    .rendered-markdown pre code {
+      background: transparent;
+      border: none;
+      padding: 0;
+      font-size: 0.9em;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .rendered-markdown table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.4em 0;
+      font-size: 0.95em;
+    }
+
+    .rendered-markdown th,
+    .rendered-markdown td {
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      text-align: left;
+    }
+
+    .rendered-markdown th {
+      background: var(--surface);
+      font-weight: 700;
+    }
+
+    .rendered-markdown a {
+      color: var(--caret);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    footer.bottom-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 14px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      background: linear-gradient(0deg, var(--bg) 65%, transparent 100%);
+      backdrop-filter: blur(4px);
+      user-select: none;
+    }
+
+    .metric-pill {
+      display: inline-flex;
+      gap: 16px;
+    }
+
+    .drawer {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 320px;
+      height: 100%;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      z-index: 200;
+      transform: translateX(-100%);
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      box-shadow: 20px 0 50px rgba(0,0,0,0.1);
+    }
+
+    .drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .doc-item {
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all var(--transition);
+    }
+
+    .doc-item:hover {
+      background: var(--bg);
+    }
+
+    .doc-item.active {
+      border-color: var(--caret);
+      background: var(--bg);
+      font-weight: bold;
+    }
+
+    .doc-title-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+      font-size: 13px;
+    }
+
+    .doc-del-btn {
+      opacity: 0.4;
+      border: none;
+      background: none;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 6px;
+    }
+
+    .doc-del-btn:hover {
+      opacity: 1;
+      color: #E74C3C;
+    }
+
+    .drawer-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.3);
+      z-index: 199;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .drawer-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .notification {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      z-index: 300;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.08);
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body data-theme="paper">
+
+  <div class="drawer-overlay" id="drawerOverlay"></div>
+
+  <!-- 草稿抽屜 -->
+  <aside class="drawer" id="draftDrawer">
+    <div class="drawer-header">
+      <span style="font-size: 14px; font-weight: bold; text-transform: uppercase;">文稿庫</span>
+      <button class="icon-btn interactive" id="newDocBtn">+ 新草稿</button>
+    </div>
+    <div class="drawer-body" id="draftList"></div>
+  </aside>
+
+  <div class="chrome-layer" id="chromeLayer">
+    <header class="top-bar">
+      <div class="brand-title">
+        <span>⌨️</span>
+        <span>Zen Typewriter</span>
+      </div>
+      <div class="toolbar-actions">
+        <select class="custom-select interactive" id="soundSelect" title="聲效模式">
+          <option value="typewriter">復古打字機 (Vintage)</option>
+          <option value="blue">段落青軸 (Blue Switch)</option>
+          <option value="brown">輕音茶軸 (Brown Switch)</option>
+        </select>
+
+        <select class="custom-select interactive" id="themeSelect" title="切換紙張色彩">
+          <option value="paper">📜 羊皮古紙 (Paper)</option>
+          <option value="ivory">🥛 象牙初白 (Ivory)</option>
+          <option value="kraft">📦 復古牛皮 (Kraft)</option>
+          <option value="matcha">🍵 抹茶茶室 (Matcha)</option>
+          <option value="blush">🌸 暮靄晨曦 (Blush)</option>
+          <option value="lavender">🪻 靜謐薰衣 (Lavender)</option>
+          <option value="denim">🌊 水洗單寧 (Denim)</option>
+          <option value="slate">⌨️ 鑄鐵機灰 (Slate)</option>
+          <option value="dark">🌑 深夜墨黑 (Dark)</option>
+          <option value="terminal">📟 終端螢綠 (Terminal)</option>
+        </select>
+
+        <button class="icon-btn interactive" id="previewModalBtn" title="預覽視窗 (Ctrl+P)">👁️ 預覽</button>
+        <button class="icon-btn interactive" id="splitPreviewBtn" title="左右雙欄對照">◫ 雙欄</button>
+        <button class="icon-btn interactive" id="focusModeBtn" title="段落聚焦 (Ctrl+Shift+F)">聚焦</button>
+        <button class="icon-btn interactive" id="manualBtn" title="使用手冊 (F1 / ?)">📖 手冊</button>
+        <button class="icon-btn interactive" id="muteBtn" title="靜音 (Ctrl+M)">🔊</button>
+        <button class="icon-btn interactive" id="openDrawerBtn" title="檔案庫 (Esc)">📁</button>
+        <button class="icon-btn interactive" id="exportBtn" title="匯出 Markdown (Ctrl+E)">匯出</button>
+      </div>
+    </header>
+
+    <footer class="bottom-bar">
+      <div class="metric-pill">
+        <span id="metricWords">0 字</span>
+        <span id="metricChars">0 字符</span>
+        <span id="metricReadTime">約 0 分鐘閱讀</span>
+      </div>
+      <div class="metric-pill">
+        <span id="saveStatus">已自動保存</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- 使用手冊彈窗 Modal -->
+  <div class="preview-modal-overlay" id="manualModalOverlay">
+    <div class="preview-modal" style="max-width: 780px;">
+      <div class="preview-modal-header">
+        <div class="preview-modal-title">
+          <span>📖</span>
+          <span>Zen Typewriter 使用手冊與指南</span>
+        </div>
+        <button class="icon-btn" id="closeManualBtn">✕ 關閉</button>
+      </div>
+      <div class="preview-modal-body" style="font-family: var(--font-sans); line-height: 1.8;">
+        <section style="margin-bottom: 24px;">
+          <h3 style="margin-bottom: 8px; color: var(--caret); font-size: 1.2em;">⌨️ 鍵盤快捷鍵一覽</h3>
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+              <tr style="background: var(--surface); text-align: left;">
+                <th style="padding: 8px 12px; border: 1px solid var(--border);">快捷鍵</th>
+                <th style="padding: 8px 12px; border: 1px solid var(--border);">功能說明</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding: 8px 12px; border: 1px solid var(--border);"><code>Ctrl / Cmd + P</code></td><td style="padding: 8px 12px; border: 1px solid var(--border);">開啟 / 關閉 Markdown 排版預覽視窗</td></tr>
+              <tr><td style="padding: 8px 12px; border: 1px solid var(--border);"><code>Ctrl / Cmd + S</code></td><td style="padding: 8px 12px; border: 1px solid var(--border);">手動立即儲存文稿至本機 IndexedDB</td></tr>
+              <tr><td style="padding: 8px 12px; border: 1px solid var(--border);"><code>Ctrl / Cmd + E</code></td><td style="padding: 8px 12px; border: 1px solid var(--border);">匯出當前文稿為 <code>.md</code> 檔案</td></tr>
+              <tr><td style="padding: 8px 12px; border: 1px solid var(--border);"><code>Ctrl / Cmd + M</code></td><td style="padding: 8px 12px; border: 1px solid var(--border);">快速開啟 / 關閉打字機敲擊音效（靜音）</td></tr>
+              <tr><td style="padding: 8px 12px; border: 1px solid var(--border);"><code>Ctrl / Cmd + Shift + F</code></td><td style="padding: 8px 12px; border: 1px solid var(--border);">切換段落聚焦模式（非當前段落半透明淡化）</td></tr>
+              <tr><td style="padding: 8px 12px; border: 1px solid var(--border);"><code>F1</code> 或 <code>?</code></td><td style="padding: 8px 12px; border: 1px solid var(--border);">隨時喚起或關閉本使用手冊</td></tr>
+              <tr><td style="padding: 8px 12px; border: 1px solid var(--border);"><code>Esc</code></td><td style="padding: 8px 12px; border: 1px solid var(--border);">關閉開啟的彈窗，或喚起左側文稿庫抽屜</td></tr>
+            </tbody>
+          </table>
+        </section>
+
+        <section style="margin-bottom: 24px;">
+          <h3 style="margin-bottom: 8px; color: var(--caret); font-size: 1.2em;">📝 Markdown 支援語法速查</h3>
+          <ul style="padding-left: 20px; font-size: 14.5px;">
+            <li><code># 標題一</code>、<code>## 標題二</code>、<code>### 標題三</code>：階層標題</li>
+            <li><code>**粗體文字**</code>、<code>*斜體文字*</code>、<code>~~刪除線~~</code>：文字強調</li>
+            <li><code>> 引言文字</code>：經典打字機引文區塊</li>
+            <li><code>- 項目</code> 或 <code>1. 項目</code>：清單項目</li>
+            <li><code>`code`</code> 與 <code>```</code>：行內代碼與多行程式碼區塊</li>
+            <li><code>| 欄位 | 欄位 |</code>：表格語法（可在預覽視窗完整呈現）</li>
+          </ul>
+        </section>
+
+        <section style="margin-bottom: 24px;">
+          <h3 style="margin-bottom: 8px; color: var(--caret); font-size: 1.2em;">✨ 核心特色功能介紹</h3>
+          <ul style="padding-left: 20px; font-size: 14.5px;">
+            <li><strong>打字機視線置中 (Typewriter Scrolling)</strong>：鍵入與換行時畫面自動平滑捲動，讓游標與編輯行恆定保留在視野正中央，減輕頸部負擔。</li>
+            <li><strong>三款擬真音效合成</strong>：基於 Web Audio API 即時運算，提供復古金屬打字機（含換行回車鈴鐺聲）、段落青軸、輕音茶軸，完全無外部音效檔依賴。</li>
+            <li><strong>十款紙張色彩主題</strong>：包含羊皮古紙、抹茶茶室、深夜墨黑、水洗單寧等，切換即刻生效並記憶於瀏覽器。</li>
+            <li><strong>左右雙欄即時對照 (◫ 雙欄)</strong>：打字與排版結果並排展示，並支援一鍵複製編譯後的 HTML。</li>
+          </ul>
+        </section>
+
+        <section>
+          <h3 style="margin-bottom: 8px; color: var(--caret); font-size: 1.2em;">🔒 本地隱私與安全儲存</h3>
+          <p style="font-size: 14px; color: var(--muted);">
+            所有書寫草稿皆透過瀏覽器原生 <code>IndexedDB</code> 儲存於您的本機電腦中，不經過任何遠端伺服器，具備完整的私密性與離線可用性。
+          </p>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <!-- Markdown 獨立預覽視窗 Modal -->
+  <div class="preview-modal-overlay" id="previewModalOverlay">
+    <div class="preview-modal">
+      <div class="preview-modal-header">
+        <div class="preview-modal-title">
+          <span>📖</span>
+          <span>Markdown 排版預覽視窗</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="icon-btn" id="copyHtmlBtn" title="複製已編譯 HTML">複製 HTML</button>
+          <button class="icon-btn" id="closePreviewBtn">✕ 關閉</button>
+        </div>
+      </div>
+      <div class="preview-modal-body">
+        <div class="rendered-markdown" id="modalRenderedMarkdown"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notification" id="toast">通知訊息</div>
+
+  <div class="app-workspace">
+    <main class="editor-stage">
+      <div id="editor" contenteditable="true" spellcheck="false" data-placeholder="按鍵敲擊以啟動打字機，開始你的心流創作...支援 Markdown 語法 (# 標題、**粗體**、- 清單、> 引用、```代碼區塊)"></div>
+    </main>
+
+    <!-- 側邊即時雙欄預覽區 -->
+    <section class="preview-pane" id="splitPreviewPane">
+      <div class="rendered-markdown" id="splitRenderedMarkdown"></div>
+    </section>
+  </div>
+
+  <script>
+    const DB_NAME = 'ZenTypewriterDB';
+    const DB_VERSION = 1;
+    let db = null;
+    let currentDocId = null;
+    let isMuted = false;
+    let soundProfile = 'typewriter';
+    let isFocusMode = false;
+    let isComposing = false;
+    let isSplitPreview = false;
+    let hideUiTimer = null;
+    let saveDebounceTimer = null;
+
+    const editorEl = document.getElementById('editor');
+    const chromeLayer = document.getElementById('chromeLayer');
+    const toastEl = document.getElementById('toast');
+    const drawerEl = document.getElementById('draftDrawer');
+    const drawerOverlay = document.getElementById('drawerOverlay');
+    const previewModalOverlay = document.getElementById('previewModalOverlay');
+    const manualModalOverlay = document.getElementById('manualModalOverlay');
+    const modalRenderedMarkdown = document.getElementById('modalRenderedMarkdown');
+    const splitRenderedMarkdown = document.getElementById('splitRenderedMarkdown');
+
+    class AudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.noiseBuffer = null;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+          this.generateNoiseBuffer();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      generateNoiseBuffer() {
+        const bufferSize = this.ctx.sampleRate;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const output = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = Math.random() * 2 - 1;
+        }
+        this.noiseBuffer = buffer;
+      }
+
+      playKeySound(type) {
+        if (isMuted) return;
+        this.init();
+        const now = this.ctx.currentTime;
+        const pitchMod = 1 + (Math.random() * 0.08 - 0.04);
+        const gainMod = 1 + (Math.random() * 0.1 - 0.05);
+
+        if (soundProfile === 'typewriter') {
+          this.playTypewriterSound(type, now, pitchMod, gainMod);
+        } else if (soundProfile === 'blue') {
+          this.playMechanicalBlue(type, now, pitchMod, gainMod);
+        } else if (soundProfile === 'brown') {
+          this.playMechanicalBrown(type, now, pitchMod, gainMod);
+        }
+      }
+
+      playTypewriterSound(type, now, pitchMod, gainMod) {
+        if (type === 'enter') {
+          this.playTypewriterBell(now);
+          this.playCarriageSlide(now + 0.08);
+          return;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = this.noiseBuffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(3200 * pitchMod, now);
+        filter.Q.setValueAtTime(4.0, now);
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.4 * gainMod, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + (type === 'space' ? 0.04 : 0.025));
+
+        noise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+
+        noise.start(now);
+        noise.stop(now + 0.05);
+
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+        osc.type = 'triangle';
+        const baseFreq = (type === 'space' ? 85 : 120) * pitchMod;
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(35, now + 0.06);
+
+        oscGain.gain.setValueAtTime(0.5 * gainMod, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+
+        osc.connect(oscGain);
+        oscGain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.07);
+      }
+
+      playTypewriterBell(now) {
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const bellGain = this.ctx.createGain();
+
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(2048, now);
+
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(4096, now);
+
+        bellGain.gain.setValueAtTime(0.28, now);
+        bellGain.gain.exponentialRampToValueAtTime(0.0001, now + 1.1);
+
+        osc1.connect(bellGain);
+        osc2.connect(bellGain);
+        bellGain.connect(this.ctx.destination);
+
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 1.2);
+        osc2.stop(now + 1.2);
+      }
+
+      playCarriageSlide(now) {
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = this.noiseBuffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1400, now);
+        filter.frequency.linearRampToValueAtTime(600, now + 0.22);
+        filter.Q.setValueAtTime(2.5, now);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.18, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        noise.start(now);
+        noise.stop(now + 0.25);
+      }
+
+      playMechanicalBlue(type, now, pitchMod, gainMod) {
+        const clickOsc = this.ctx.createOscillator();
+        const clickGain = this.ctx.createGain();
+        clickOsc.type = 'square';
+        clickOsc.frequency.setValueAtTime((type === 'enter' ? 2400 : 3800) * pitchMod, now);
+
+        clickGain.gain.setValueAtTime(0.15 * gainMod, now);
+        clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+
+        clickOsc.connect(clickGain);
+        clickGain.connect(this.ctx.destination);
+        clickOsc.start(now);
+        clickOsc.stop(now + 0.02);
+
+        const botOsc = this.ctx.createOscillator();
+        const botGain = this.ctx.createGain();
+        botOsc.type = 'triangle';
+        botOsc.frequency.setValueAtTime(220 * pitchMod, now);
+        botOsc.exponentialRampToValueAtTime(70, now + 0.04);
+
+        botGain.gain.setValueAtTime(0.2 * gainMod, now);
+        botGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+
+        botOsc.connect(botGain);
+        botGain.connect(this.ctx.destination);
+        botOsc.start(now);
+        botOsc.stop(now + 0.05);
+      }
+
+      playMechanicalBrown(type, now, pitchMod, gainMod) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime((type === 'space' ? 140 : 190) * pitchMod, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.05);
+
+        gain.gain.setValueAtTime(0.35 * gainMod, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.06);
+      }
+    }
+
+    const audio = new AudioEngine();
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    // 1. 打字機編輯器內行內預覽處理
+    function formatMarkdownLine(rawText) {
+      if (!rawText) return '<div class="md-line"><br></div>';
+
+      let lineClass = 'md-line';
+      let content = escapeHtml(rawText);
+
+      const h1Match = content.match(/^(#{1})\s+(.*)$/);
+      const h2Match = content.match(/^(#{2})\s+(.*)$/);
+      const h3Match = content.match(/^(#{3})\s+(.*)$/);
+      const bqMatch = content.match(/^(&gt;)\s+(.*)$/);
+      const listMatch = content.match(/^([-*+])\s+(.*)$/);
+
+      if (h1Match) {
+        lineClass += ' md-h1';
+        content = `<span class="md-marker">${h1Match[1]} </span>${h1Match[2] || '<br>'}`;
+      } else if (h2Match) {
+        lineClass += ' md-h2';
+        content = `<span class="md-marker">${h2Match[1]} </span>${h2Match[2] || '<br>'}`;
+      } else if (h3Match) {
+        lineClass += ' md-h3';
+        content = `<span class="md-marker">${h3Match[1]} </span>${h3Match[2] || '<br>'}`;
+      } else if (bqMatch) {
+        lineClass += ' md-blockquote';
+        content = `<span class="md-marker">&gt; </span>${bqMatch[2] || '<br>'}`;
+      } else if (listMatch) {
+        lineClass += ' md-list-item';
+        content = `<span class="md-marker">${listMatch[1]} </span>${listMatch[2] || '<br>'}`;
+      }
+
+      content = content.replace(/(`)([^`]+)(`)/g, '<span class="md-inline-code"><span class="md-marker">$1</span>$2<span class="md-marker">$3</span></span>');
+      content = content.replace(/(\*\*)([^\*]+)(\*\*)/g, '<span class="md-bold"><span class="md-marker">$1</span>$2<span class="md-marker">$3</span></span>');
+      content = content.replace(/(?<!\*)(\*)([^\*]+)(\*)(?!\*)/g, '<span class="md-italic"><span class="md-marker">$1</span>$2<span class="md-marker">$3</span></span>');
+      content = content.replace(/(~~)([^~]+)(~~)/g, '<span class="md-strike"><span class="md-marker">$1</span>$2<span class="md-marker">$3</span></span>');
+
+      return `<div class="${lineClass}">${content}</div>`;
+    }
+
+    function markdownToHtml(text) {
+      if (!text) return '<div class="md-line"><br></div>';
+      const lines = text.split('\n');
+      return lines.map(line => formatMarkdownLine(line)).join('');
+    }
+
+    // 2. 完整獨立預覽視窗 Markdown -> HTML 轉譯器
+    function renderFullMarkdown(rawText) {
+      if (!rawText.trim()) {
+        return '<p style="color: var(--muted); font-style: italic;">目前尚無書寫內容...</p>';
+      }
+
+      const lines = rawText.split('\n');
+      let html = '';
+      let inCodeBlock = false;
+      let codeBlockContent = '';
+      let inList = false;
+      let listType = 'ul';
+      let inTable = false;
+      let tableRows = [];
+
+      function closeListIfNeeded() {
+        if (inList) {
+          html += `</${listType}>\n`;
+          inList = false;
+        }
+      }
+
+      function closeTableIfNeeded() {
+        if (inTable) {
+          html += '<table><tbody>';
+          tableRows.forEach((row, idx) => {
+            const tag = idx === 0 ? 'th' : 'td';
+            html += '<tr>' + row.map(cell => `<${tag}>${formatInlineMd(cell.trim())}</${tag}>`).join('') + '</tr>';
+          });
+          html += '</tbody></table>\n';
+          inTable = false;
+          tableRows = [];
+        }
+      }
+
+      function formatInlineMd(str) {
+        let text = escapeHtml(str);
+        // Code
+        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+        // Bold
+        text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        // Italic
+        text = text.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, '<em>$1</em>');
+        // Strike
+        text = text.replace(/~~([^~]+)~~/g, '<del>$1</del>');
+        // Link
+        text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        return text;
+      }
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // 處理多行程式碼塊 (Code Block ```)
+        if (line.trim().startsWith('```')) {
+          if (inCodeBlock) {
+            html += `<pre><code>${escapeHtml(codeBlockContent.replace(/\n$/, ''))}</code></pre>\n`;
+            codeBlockContent = '';
+            inCodeBlock = false;
+          } else {
+            closeListIfNeeded();
+            closeTableIfNeeded();
+            inCodeBlock = true;
+            codeBlockContent = '';
+          }
+          continue;
+        }
+
+        if (inCodeBlock) {
+          codeBlockContent += line + '\n';
+          continue;
+        }
+
+        // 處理表格 (| a | b |)
+        if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
+          closeListIfNeeded();
+          // 忽略分割線 | --- | --- |
+          if (/^\|(\s*[-:]+[-| :]*)\|$/.test(line.trim())) {
+            continue;
+          }
+          const cells = line.trim().slice(1, -1).split('|');
+          if (!inTable) {
+            inTable = true;
+            tableRows = [];
+          }
+          tableRows.push(cells);
+          continue;
+        } else {
+          closeTableIfNeeded();
+        }
+
+        // 處理水平線
+        if (/^(---|\*\*\*|___)\s*$/.test(line.trim())) {
+          closeListIfNeeded();
+          html += '<hr>\n';
+          continue;
+        }
+
+        // 處理標題
+        const headingMatch = line.match(/^(#{1,6})\s+(.*)$/);
+        if (headingMatch) {
+          closeListIfNeeded();
+          const level = headingMatch[1].length;
+          const text = formatInlineMd(headingMatch[2]);
+          html += `<h${level}>${text}</h${level}>\n`;
+          continue;
+        }
+
+        // 處理引用區塊
+        const bqMatch = line.match(/^>\s?(.*)$/);
+        if (bqMatch) {
+          closeListIfNeeded();
+          html += `<blockquote><p>${formatInlineMd(bqMatch[1])}</p></blockquote>\n`;
+          continue;
+        }
+
+        // 處理清單 (無序與有序)
+        const ulMatch = line.match(/^[-*+]\s+(.*)$/);
+        const olMatch = line.match(/^(\d+)\.\s+(.*)$/);
+
+        if (ulMatch) {
+          if (!inList || listType !== 'ul') {
+            closeListIfNeeded();
+            html += '<ul>\n';
+            inList = true;
+            listType = 'ul';
+          }
+          html += `<li>${formatInlineMd(ulMatch[1])}</li>\n`;
+          continue;
+        } else if (olMatch) {
+          if (!inList || listType !== 'ol') {
+            closeListIfNeeded();
+            html += '<ol>\n';
+            inList = true;
+            listType = 'ol';
+          }
+          html += `<li>${formatInlineMd(olMatch[2])}</li>\n`;
+          continue;
+        } else {
+          closeListIfNeeded();
+        }
+
+        // 空白行
+        if (!line.trim()) {
+          continue;
+        }
+
+        // 一般段落
+        html += `<p>${formatInlineMd(line)}</p>\n`;
+      }
+
+      closeListIfNeeded();
+      closeTableIfNeeded();
+
+      return html;
+    }
+
+    function getCaretCharacterOffsetWithin(element) {
+      let caretOffset = 0;
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const preCaretRange = range.cloneRange();
+        preCaretRange.selectNodeContents(element);
+        preCaretRange.setEnd(range.endContainer, range.endOffset);
+        caretOffset = preCaretRange.toString().length;
+      }
+      return caretOffset;
+    }
+
+    function setCaretCharacterOffsetWithin(element, offset) {
+      let currentOffset = 0;
+      const range = document.createRange();
+      range.selectNodeContents(element);
+
+      let found = false;
+      function traverseNodes(node) {
+        if (found) return;
+        if (node.nodeType === Node.TEXT_NODE) {
+          const nextOffset = currentOffset + node.nodeValue.length;
+          if (offset >= currentOffset && offset <= nextOffset) {
+            range.setStart(node, offset - currentOffset);
+            range.setEnd(node, offset - currentOffset);
+            found = true;
+            return;
+          }
+          currentOffset = nextOffset;
+        } else if (node.nodeName === 'BR') {
+          if (offset === currentOffset || offset === currentOffset + 1) {
+            range.setStartBefore(node);
+            range.setEndBefore(node);
+            found = true;
+            return;
+          }
+          currentOffset += 1;
+        } else {
+          for (let i = 0; i < node.childNodes.length; i++) {
+            traverseNodes(node.childNodes[i]);
+            if (found) return;
+          }
+        }
+      }
+
+      traverseNodes(element);
+
+      if (found) {
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+
+    function applyMarkdownHighlighting() {
+      if (isComposing) return;
+      const caretOffset = getCaretCharacterOffsetWithin(editorEl);
+      const rawText = getEditorText();
+
+      editorEl.innerHTML = markdownToHtml(rawText);
+      setCaretCharacterOffsetWithin(editorEl, caretOffset);
+    }
+
+    function getEditorText() {
+      const lines = [];
+      const lineElements = editorEl.querySelectorAll('.md-line');
+      if (lineElements.length > 0) {
+        lineElements.forEach(lineEl => {
+          lines.push(lineEl.innerText.replace(/\r/g, ''));
+        });
+        return lines.join('\n');
+      }
+      return editorEl.innerText.replace(/\r/g, '');
+    }
+
+    function initDatabase() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const dbInstance = e.target.result;
+          if (!dbInstance.objectStoreNames.contains('documents')) {
+            dbInstance.createObjectStore('documents', { keyPath: 'id' });
+          }
+        };
+        req.onsuccess = (e) => {
+          db = e.target.result;
+          resolve(db);
+        };
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function saveDocumentToDB(doc) {
+      if (!db) return;
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('documents', 'readwrite');
+        const store = tx.objectStore('documents');
+        const req = store.put(doc);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function getAllDocuments() {
+      if (!db) return [];
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('documents', 'readonly');
+        const store = tx.objectStore('documents');
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    async function deleteDocumentFromDB(id) {
+      if (!db) return;
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction('documents', 'readwrite');
+        const store = tx.objectStore('documents');
+        const req = store.delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = (e) => reject(e);
+      });
+    }
+
+    function keepCaretCentered() {
+      const selection = window.getSelection();
+      if (!selection || !selection.rangeCount) return;
+
+      const range = selection.getRangeAt(0).cloneRange();
+      const rect = range.getBoundingClientRect();
+
+      if (rect.top !== 0 || rect.bottom !== 0) {
+        const targetY = window.innerHeight * 0.46;
+        const diff = rect.top - targetY;
+        if (Math.abs(diff) > 3) {
+          window.scrollBy({
+            top: diff,
+            behavior: 'smooth'
+          });
+        }
+      }
+
+      if (isFocusMode) {
+        updateFocusParagraph();
+      }
+    }
+
+    function updateFocusParagraph() {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+      let node = selection.anchorNode;
+      if (node && node.nodeType === Node.TEXT_NODE) {
+        node = node.parentElement;
+      }
+      
+      const paragraphs = editorEl.querySelectorAll('.md-line, p, div');
+      paragraphs.forEach(p => p.classList.remove('active-paragraph'));
+
+      if (node && node !== editorEl) {
+        const target = node.closest('#editor > *') || node;
+        target.classList.add('active-paragraph');
+      }
+    }
+
+    function updateMetrics() {
+      const text = getEditorText();
+      const cleanText = text.replace(/[*#>`~_-]/g, ' ');
+      const cjkChars = (cleanText.match(/[\u4e00-\u9fa5\u3040-\u30ff]/g) || []).length;
+      const englishWords = (cleanText.replace(/[\u4e00-\u9fa5\u3040-\u30ff]/g, ' ').match(/[a-zA-Z0-9_\-]+/g) || []).length;
+      const totalWords = cjkChars + englishWords;
+      const charCount = text.length;
+      const readMinutes = Math.max(1, Math.ceil(cjkChars / 400 + englishWords / 200));
+
+      document.getElementById('metricWords').textContent = `${totalWords} 字`;
+      document.getElementById('metricChars').textContent = `${charCount} 字符`;
+      document.getElementById('metricReadTime').textContent = `約 ${totalWords === 0 ? 0 : readMinutes} 分鐘閱讀`;
+
+      // 同步更新雙欄預覽
+      if (isSplitPreview) {
+        updateSplitPreview();
+      }
+    }
+
+    function updateSplitPreview() {
+      const text = getEditorText();
+      splitRenderedMarkdown.innerHTML = renderFullMarkdown(text);
+    }
+
+    function resetUiFadeTimer() {
+      document.documentElement.style.setProperty('--ui-opacity', '1');
+      clearTimeout(hideUiTimer);
+      hideUiTimer = setTimeout(() => {
+        // 如果雙欄、預覽彈窗或手冊開啟中，不隱藏介面
+        if (!isSplitPreview && !previewModalOverlay.classList.contains('open') && !manualModalOverlay.classList.contains('open')) {
+          document.documentElement.style.setProperty('--ui-opacity', '0.04');
+        }
+      }, 2500);
+    }
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      setTimeout(() => {
+        toastEl.classList.remove('show');
+      }, 1800);
+    }
+
+    async function triggerAutoSave() {
+      document.getElementById('saveStatus').textContent = '儲存中...';
+      const content = getEditorText();
+      let title = content.trim().split('\n')[0] || '無標題草稿';
+      title = title.replace(/^[#\s\-\*\>]+/, '');
+      if (!title) title = '無標題草稿';
+      if (title.length > 25) title = title.substring(0, 25) + '...';
+
+      const doc = {
+        id: currentDocId,
+        title: title,
+        content: content,
+        updatedAt: Date.now()
+      };
+
+      await saveDocumentToDB(doc);
+      document.getElementById('saveStatus').textContent = '已保存';
+    }
+
+    function scheduleSave() {
+      clearTimeout(saveDebounceTimer);
+      document.getElementById('saveStatus').textContent = '有未儲存更動';
+      saveDebounceTimer = setTimeout(() => {
+        triggerAutoSave();
+      }, 600);
+    }
+
+    async function loadDocument(id) {
+      const docs = await getAllDocuments();
+      const target = docs.find(d => d.id === id);
+      if (target) {
+        currentDocId = target.id;
+        editorEl.innerHTML = markdownToHtml(target.content);
+        updateMetrics();
+        keepCaretCentered();
+        closeDrawer();
+      }
+    }
+
+    async function createNewDocument() {
+      const newId = 'doc_' + Date.now();
+      const newDoc = {
+        id: newId,
+        title: '新草稿',
+        content: '',
+        updatedAt: Date.now()
+      };
+      await saveDocumentToDB(newDoc);
+      currentDocId = newId;
+      editorEl.innerHTML = '';
+      updateMetrics();
+      closeDrawer();
+      editorEl.focus();
+      showToast('已建立新草稿');
+    }
+
+    async function renderDrawerList() {
+      const listEl = document.getElementById('draftList');
+      listEl.innerHTML = '';
+      const docs = await getAllDocuments();
+      docs.sort((a, b) => b.updatedAt - a.updatedAt);
+
+      docs.forEach(d => {
+        const item = document.createElement('div');
+        item.className = `doc-item ${d.id === currentDocId ? 'active' : ''}`;
+        
+        const span = document.createElement('span');
+        span.className = 'doc-title-text';
+        span.textContent = d.title;
+        span.onclick = () => loadDocument(d.id);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'doc-del-btn';
+        delBtn.innerHTML = '✕';
+        delBtn.title = '刪除草稿';
+        delBtn.onclick = async (e) => {
+          e.stopPropagation();
+          if (docs.length <= 1) {
+            showToast('請至少保留一份文稿');
+            return;
+          }
+          await deleteDocumentFromDB(d.id);
+          if (d.id === currentDocId) {
+            const remaining = docs.filter(item => item.id !== d.id);
+            loadDocument(remaining[0].id);
+          }
+          renderDrawerList();
+        };
+
+        item.appendChild(span);
+        item.appendChild(delBtn);
+        listEl.appendChild(item);
+      });
+    }
+
+    function openDrawer() {
+      renderDrawerList();
+      drawerEl.classList.add('open');
+      drawerOverlay.classList.add('active');
+    }
+
+    function closeDrawer() {
+      drawerEl.classList.remove('open');
+      drawerOverlay.classList.remove('active');
+    }
+
+    function openPreviewModal() {
+      const text = getEditorText();
+      modalRenderedMarkdown.innerHTML = renderFullMarkdown(text);
+      previewModalOverlay.classList.add('open');
+      resetUiFadeTimer();
+    }
+
+    function closePreviewModal() {
+      previewModalOverlay.classList.remove('open');
+      editorEl.focus();
+    }
+
+    function openManualModal() {
+      manualModalOverlay.classList.add('open');
+      resetUiFadeTimer();
+    }
+
+    function closeManualModal() {
+      manualModalOverlay.classList.remove('open');
+      editorEl.focus();
+    }
+
+    function toggleSplitPreview() {
+      isSplitPreview = !isSplitPreview;
+      document.body.classList.toggle('split-preview-active', isSplitPreview);
+      document.getElementById('splitPreviewBtn').classList.toggle('active', isSplitPreview);
+      
+      if (isSplitPreview) {
+        updateSplitPreview();
+        showToast('已開啟左右雙欄預覽');
+      } else {
+        showToast('已切換回單欄打字機模式');
+      }
+      resetUiFadeTimer();
+    }
+
+    function copyRenderedHtml() {
+      const text = getEditorText();
+      const compiledHtml = renderFullMarkdown(text);
+      
+      const tempTextArea = document.createElement('textarea');
+      tempTextArea.value = compiledHtml;
+      document.body.appendChild(tempTextArea);
+      tempTextArea.select();
+      try {
+        document.execCommand('copy');
+        showToast('已複製編譯後 HTML 原始碼！');
+      } catch (err) {
+        showToast('複製失敗，請手動複製');
+      }
+      document.body.removeChild(tempTextArea);
+    }
+
+    editorEl.addEventListener('compositionstart', () => {
+      isComposing = true;
+    });
+
+    editorEl.addEventListener('compositionend', () => {
+      isComposing = false;
+      applyMarkdownHighlighting();
+      keepCaretCentered();
+      updateMetrics();
+      scheduleSave();
+    });
+
+    editorEl.addEventListener('keydown', (e) => {
+      resetUiFadeTimer();
+
+      if (e.key === 'Enter') {
+        audio.playKeySound('enter');
+
+        if (!isComposing) {
+          e.preventDefault();
+
+          const sel = window.getSelection();
+          if (sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            range.deleteContents();
+
+            const newLine = document.createElement('div');
+            newLine.className = 'md-line';
+            newLine.innerHTML = '<br>';
+
+            let currentLine = range.startContainer;
+            while (currentLine && currentLine.parentNode !== editorEl) {
+              currentLine = currentLine.parentNode;
+            }
+
+            if (currentLine && currentLine.parentNode === editorEl) {
+              currentLine.insertAdjacentElement('afterend', newLine);
+            } else {
+              editorEl.appendChild(newLine);
+            }
+
+            const newRange = document.createRange();
+            newRange.setStart(newLine, 0);
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+
+            keepCaretCentered();
+            updateMetrics();
+            scheduleSave();
+          }
+          return;
+        }
+      } else if (e.key === ' ') {
+        audio.playKeySound('space');
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        audio.playKeySound('backspace');
+      } else if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
+        audio.playKeySound('char');
+      }
+
+      scheduleSave();
+    });
+
+    editorEl.addEventListener('input', (e) => {
+      if (!isComposing && e.inputType !== 'insertParagraph') {
+        applyMarkdownHighlighting();
+      }
+      keepCaretCentered();
+      updateMetrics();
+      scheduleSave();
+    });
+
+    editorEl.addEventListener('keyup', keepCaretCentered);
+    editorEl.addEventListener('mouseup', keepCaretCentered);
+    window.addEventListener('mousemove', resetUiFadeTimer);
+
+    // 全域快捷鍵
+    window.addEventListener('keydown', (e) => {
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+
+      if (isCmdOrCtrl && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        triggerAutoSave();
+        showToast('文稿已手動儲存');
+      } else if (isCmdOrCtrl && e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        if (previewModalOverlay.classList.contains('open')) {
+          closePreviewModal();
+        } else {
+          openPreviewModal();
+        }
+      } else if (isCmdOrCtrl && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        toggleMute();
+      } else if (isCmdOrCtrl && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        exportMarkdown();
+      } else if (isCmdOrCtrl && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        toggleFocusMode();
+      } else if (e.key === 'F1' || (!isCmdOrCtrl && e.key === '?' && document.activeElement !== editorEl)) {
+        e.preventDefault();
+        if (manualModalOverlay.classList.contains('open')) {
+          closeManualModal();
+        } else {
+          openManualModal();
+        }
+      } else if (e.key === 'Escape') {
+        if (manualModalOverlay.classList.contains('open')) {
+          closeManualModal();
+        } else if (previewModalOverlay.classList.contains('open')) {
+          closePreviewModal();
+        } else if (drawerEl.classList.contains('open')) {
+          closeDrawer();
+        } else {
+          openDrawer();
+        }
+      }
+    });
+
+    function exportMarkdown() {
+      const content = getEditorText();
+      const blob = new Blob([content], { type: 'text/markdown;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Zen_${new Date().toISOString().slice(0,10)}.md`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('已匯出 Markdown 檔案');
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      document.getElementById('muteBtn').textContent = isMuted ? '🔇' : '🔊';
+      showToast(isMuted ? '已靜音' : '已開啟音效');
+    }
+
+    function toggleFocusMode() {
+      isFocusMode = !isFocusMode;
+      document.body.classList.toggle('focus-mode', isFocusMode);
+      document.getElementById('focusModeBtn').classList.toggle('active', isFocusMode);
+      if (isFocusMode) updateFocusParagraph();
+      showToast(isFocusMode ? '已進入段落聚焦模式' : '已退出段落聚焦模式');
+    }
+
+    document.getElementById('muteBtn').onclick = toggleMute;
+    document.getElementById('exportBtn').onclick = exportMarkdown;
+    document.getElementById('focusModeBtn').onclick = toggleFocusMode;
+    document.getElementById('manualBtn').onclick = openManualModal;
+    document.getElementById('closeManualBtn').onclick = closeManualModal;
+    document.getElementById('openDrawerBtn').onclick = openDrawer;
+    document.getElementById('drawerOverlay').onclick = closeDrawer;
+    document.getElementById('newDocBtn').onclick = createNewDocument;
+
+    document.getElementById('previewModalBtn').onclick = openPreviewModal;
+    document.getElementById('splitPreviewBtn').onclick = toggleSplitPreview;
+    document.getElementById('closePreviewBtn').onclick = closePreviewModal;
+    document.getElementById('copyHtmlBtn').onclick = copyRenderedHtml;
+
+    previewModalOverlay.addEventListener('click', (e) => {
+      if (e.target === previewModalOverlay) {
+        closePreviewModal();
+      }
+    });
+
+    manualModalOverlay.addEventListener('click', (e) => {
+      if (e.target === manualModalOverlay) {
+        closeManualModal();
+      }
+    });
+
+    document.getElementById('soundSelect').onchange = (e) => {
+      soundProfile = e.target.value;
+      audio.init();
+      audio.playKeySound('char');
+    };
+
+    document.getElementById('themeSelect').onchange = (e) => {
+      const selectedTheme = e.target.value;
+      document.body.setAttribute('data-theme', selectedTheme);
+      try {
+        localStorage.setItem('zen_typewriter_theme', selectedTheme);
+      } catch (err) {}
+    };
+
+    (async function initApp() {
+      const savedTheme = localStorage.getItem('zen_typewriter_theme') || 'paper';
+      document.body.setAttribute('data-theme', savedTheme);
+      const themeSelect = document.getElementById('themeSelect');
+      if (themeSelect) themeSelect.value = savedTheme;
+
+      await initDatabase();
+      const docs = await getAllDocuments();
+
+      if (docs.length === 0) {
+        currentDocId = 'doc_welcome';
+        const welcomeDoc = {
+          id: currentDocId,
+          title: '歡迎使用 Zen Typewriter',
+          content: '# 歡迎使用 Zen Typewriter\n\n這是一座專注於打字節奏與字句的安靜書房。\n\n## 支援的 Markdown 語法\n- 敲擊 `#`、`##` 產生階層標題\n- 輸入 `**粗體文字**` 與 `*斜體*`\n- 使用 `> 引言標記` 沉澱經典語錄\n- 行內程式碼使用 `console.log()` 包裹\n\n### 即時預覽功能\n- 點擊右上角 **「👁️ 預覽」**（或按 `Ctrl+P`）可開啟閱讀預覽視窗\n- 點擊 **「◫ 雙欄」** 即可切換為左右對照編寫模式\n- 在預覽視窗中還能**一鍵複製完整 HTML** 格式！',
+          updatedAt: Date.now()
+        };
+        await saveDocumentToDB(welcomeDoc);
+        editorEl.innerHTML = markdownToHtml(welcomeDoc.content);
+      } else {
+        docs.sort((a, b) => b.updatedAt - a.updatedAt);
+        currentDocId = docs[0].id;
+        editorEl.innerHTML = markdownToHtml(docs[0].content);
+      }
+
+      updateMetrics();
+      resetUiFadeTimer();
+    })();
+  </script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
