@@ -54,7 +54,8 @@ my-spa-tools/
 ├─ design/                       設計工具
 │  └─ palette-lore/
 └─ diagram/                      流程與圖表建模
-   └─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器
+   ├─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器
+   └─ vba-dependency-explorer/   VBA Dependency Explorer 依賴關係分析與視覺化
 ```
 
 分類層固定為七類：`agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`。每個工具自成一層子資料夾，HTML 檔名沿用工具原名。**所有工具頁面都位於根目錄下兩層**（`<類別>/<工具>/<檔名>.html`）。
@@ -121,7 +122,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 41 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 42 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

@@ -1,0 +1,2337 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VBA Dependency Explorer - 依賴關係分析與視覺化工具</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #334155;
+      --surface-active: #475569;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-hover: #0284c7;
+      --accent: #818cf8;
+      --danger: #f87171;
+      --warning: #fbbf24;
+      --success: #34d399;
+      --radius: 8px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.4);
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    [data-theme="light"] {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface-hover: #e2e8f0;
+      --surface-active: #cbd5e1;
+      --border: #cbd5e1;
+      --text: #0f172a;
+      --text-muted: #475569;
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --accent: #4f46e5;
+      --danger: #dc2626;
+      --warning: #d97706;
+      --success: #059669;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header & Navigation */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.5rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      z-index: 20;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .brand svg {
+      width: 24px;
+      height: 24px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Buttons & Inputs */
+    button, .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.825rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    button:hover, .btn:hover {
+      background: var(--surface-hover);
+      border-color: var(--text-muted);
+    }
+
+    button.btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      font-weight: 600;
+    }
+
+    button.btn-primary:hover {
+      background: var(--primary-hover);
+      color: #ffffff;
+    }
+
+    button.btn-accent {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    button.btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    input, select, textarea {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius);
+      padding: 0.4rem 0.65rem;
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+    }
+
+    /* Main Workspace Layout */
+    .app-body {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* Sidebar - Left */
+    .sidebar {
+      width: 320px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .sidebar-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .tab-bar {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .tab-btn {
+      flex: 1;
+      text-align: center;
+      padding: 0.5rem 0.25rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-radius: 0;
+      border: none;
+      background: transparent;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: var(--surface);
+    }
+
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+
+    /* Module and Tree List */
+    .module-item {
+      margin-bottom: 0.25rem;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      background: transparent;
+    }
+
+    .module-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.4rem 0.6rem;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.825rem;
+      border-radius: var(--radius);
+    }
+
+    .module-header:hover {
+      background: var(--surface-hover);
+    }
+
+    .module-header.selected {
+      background: var(--surface-active);
+      color: var(--primary);
+    }
+
+    .proc-list {
+      padding-left: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.15rem;
+    }
+
+    .proc-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.78rem;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .proc-item:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+    }
+
+    .proc-item.selected {
+      background: var(--primary);
+      color: #ffffff !important;
+      font-weight: 600;
+    }
+
+    .proc-item.selected .badge {
+      background: rgba(255, 255, 255, 0.25) !important;
+      color: #ffffff !important;
+      border-color: rgba(255, 255, 255, 0.4) !important;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.45rem;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      background: var(--surface-hover);
+      color: var(--text-muted);
+    }
+
+    .badge-sub { background: #0284c718; color: #0284c7; border: 1px solid #0284c755; }
+    .badge-func { background: #05966918; color: #059669; border: 1px solid #05966955; }
+    .badge-prop { background: #7c3aed18; color: #7c3aed; border: 1px solid #7c3aed55; }
+    .badge-declare { background: #d9770618; color: #d97706; border: 1px solid #d9770655; }
+    .badge-cycle { background: #dc262618; color: #dc2626; border: 1px solid #dc262655; }
+    .badge-dead { background: #47556920; color: #475569; border: 1px solid #47556955; }
+
+    /* Center Stage - Graph Area */
+    .stage {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: var(--bg);
+      overflow: hidden;
+    }
+
+    .stage-toolbar {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      z-index: 10;
+      display: flex;
+      gap: 0.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0.35rem 0.5rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      align-items: center;
+    }
+
+    .stage-legend {
+      position: absolute;
+      bottom: 1rem;
+      left: 1rem;
+      z-index: 10;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius);
+      font-size: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      pointer-events: none;
+    }
+
+    .legend-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .graph-container {
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .graph-container:active {
+      cursor: grabbing;
+    }
+
+    svg.network-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* Right Panel - Inspector */
+    .inspector {
+      width: 360px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+      transition: width 0.2s ease;
+    }
+
+    .inspector.collapsed {
+      width: 0;
+      border-left: none;
+    }
+
+    .inspector-header {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .inspector-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .section-title {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .code-preview {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.65rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 250px;
+      overflow-y: auto;
+      color: var(--text);
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .chip {
+      background: var(--surface-hover);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      border: 1px solid var(--border);
+    }
+
+    .chip:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Modal / Dialog */
+    dialog {
+      margin: auto;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 1.5rem;
+      max-width: 650px;
+      width: 90%;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+    }
+
+    .dialog-header {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* File Drop Zone */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--bg);
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--primary);
+      background: var(--surface-hover);
+    }
+
+    /* Toast Container */
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 9999;
+    }
+
+    .toast {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      font-size: 0.85rem;
+      animation: toastIn 0.2s ease-out forwards;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* SVG Elements Styling */
+    .node-group { cursor: pointer; transition: opacity 0.15s; }
+    .node-group:hover circle { stroke-width: 3.5px; stroke: #ffffff; }
+    .node-label {
+      font-size: 11px;
+      font-weight: 600;
+      fill: var(--text);
+      pointer-events: none;
+      paint-order: stroke fill;
+      stroke: var(--surface);
+      stroke-width: 3.5px;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .edge-line {
+      stroke: var(--border);
+      stroke-width: 1.8px;
+      fill: none;
+      transition: stroke 0.15s, stroke-width 0.15s;
+      marker-end: url(#arrow);
+    }
+    .edge-line.highlighted { stroke: var(--primary); stroke-width: 2.8px; marker-end: url(#arrow-primary); }
+    .edge-line.cycle-edge { stroke: var(--danger); stroke-width: 2.4px; stroke-dasharray: 5, 3; marker-end: url(#arrow-danger); }
+    .node-group.dimmed, .edge-line.dimmed { opacity: 0.12; }
+    .node-group.upstream circle { stroke: #0284c7 !important; stroke-width: 4px; }
+    .node-group.downstream circle { stroke: #059669 !important; stroke-width: 4px; }
+
+    /* Footer status */
+    footer {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 0.25rem 1rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header Navigation -->
+  <header>
+    <div class="brand">
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      <span>VBA Dependency Explorer</span>
+      <span style="font-size: 0.7rem; font-weight: 400; padding: 2px 6px; border-radius: 4px; background: var(--surface-hover); color: var(--text-muted);">SPA v1.0</span>
+    </div>
+
+    <div class="header-actions">
+      <div style="display: flex; align-items: center; gap: 0.35rem;">
+        <select id="project-selector" style="max-width: 200px;"></select>
+        <button id="btn-edit-project" class="btn-sm" title="重新命名目前專案">✏️</button>
+        <button id="btn-delete-project" class="btn-sm" title="刪除目前專案" style="color: var(--danger);">🗑️</button>
+      </div>
+      <button id="btn-new-project" title="新建工作區">＋ 新增專案</button>
+      <button id="btn-import-source" class="btn-primary" title="匯入 VBA 程式碼檔案">📥 匯入程式碼</button>
+      <button id="btn-load-sample" class="btn-accent" title="載入範例專案">💡 載入範例</button>
+      <button id="btn-export-json" title="匯出專案備份 JSON">💾 匯出</button>
+      <button id="btn-import-json" title="從 JSON 還原專案">📂 還原</button>
+      <input type="file" id="input-restore-json" accept=".json" style="display: none;">
+      <button id="btn-toggle-theme" title="切換深淺色彩主題">🌓</button>
+    </div>
+  </header>
+
+  <!-- Application Body -->
+  <div class="app-body">
+
+    <!-- Left Sidebar: Modules & Procedures Hierarchy -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="filter-input" placeholder="🔍 搜尋模組、程序或函式..." style="flex: 1;">
+          <button id="btn-clear-filter" class="btn-sm" title="清除搜尋">✕</button>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab-btn active" data-tab="tab-catalog">模組架構</button>
+        <button class="tab-btn" data-tab="tab-cycles">循環依賴 (<span id="cycle-count">0</span>)</button>
+        <button class="tab-btn" data-tab="tab-dead">孤島函式 (<span id="dead-count">0</span>)</button>
+      </div>
+
+      <!-- Tab 1: Module & Procedure Catalog -->
+      <div id="tab-catalog" class="tab-content">
+        <div id="catalog-list"></div>
+      </div>
+
+      <!-- Tab 2: Circular Dependencies -->
+      <div id="tab-cycles" class="tab-content" style="display: none;">
+        <div id="cycle-list" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+      </div>
+
+      <!-- Tab 3: Dead Code Candidates -->
+      <div id="tab-dead" class="tab-content" style="display: none;">
+        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+          以下程序未偵測到任何顯式呼叫端（可能為入口巨集、事件處理常式或潛在無用程式碼）：
+        </p>
+        <div id="dead-list" style="display: flex; flex-direction: column; gap: 0.25rem;"></div>
+      </div>
+    </aside>
+
+    <!-- Center Stage: Network Canvas (SVG Interactive Graph) -->
+    <main class="stage">
+      <div class="stage-toolbar">
+        <select id="view-mode-selector">
+          <option value="procedure">程序級別依賴 (Procedure Call Graph)</option>
+          <option value="module">模組級別依賴 (Module Dependency Graph)</option>
+        </select>
+        <button id="btn-fit-view" class="btn-sm" title="置中還原檢視">🎯 置中</button>
+        <button id="btn-re-layout" class="btn-sm" title="重新計算力導向排版">⚡ 重排</button>
+        <button id="btn-export-svg" class="btn-sm" title="下載目前 SVG 向量圖">🖼️ 匯出 SVG</button>
+        <button id="btn-export-mermaid" class="btn-sm" title="複製 Mermaid 圖表語法">📋 複製 Mermaid</button>
+      </div>
+
+      <div class="stage-legend">
+        <div class="legend-row"><span class="legend-dot" style="background: #0284c7;"></span><span>Sub 子程序</span></div>
+        <div class="legend-row"><span class="legend-dot" style="background: #059669;"></span><span>Function 函式</span></div>
+        <div class="legend-row"><span class="legend-dot" style="background: #7c3aed;"></span><span>Property 屬性</span></div>
+        <div class="legend-row"><span class="legend-dot" style="background: #d97706;"></span><span>Declare API</span></div>
+        <div class="legend-row"><span class="legend-dot" style="background: #dc2626;"></span><span>循環呼叫路徑</span></div>
+      </div>
+
+      <div class="graph-container" id="graph-container">
+        <svg class="network-canvas" id="network-canvas">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#64748b" />
+            </marker>
+            <marker id="arrow-primary" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+            </marker>
+            <marker id="arrow-danger" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444" />
+            </marker>
+          </defs>
+          <g id="viewport-group">
+            <g id="edges-layer"></g>
+            <g id="nodes-layer"></g>
+          </g>
+        </svg>
+      </div>
+    </main>
+
+    <!-- Right Panel: Inspector & Code Viewer -->
+    <aside class="inspector" id="inspector-panel">
+      <div class="inspector-header">
+        <div style="font-weight: 700; font-size: 0.9rem;" id="inspector-title">屬性與呼叫檢查器</div>
+        <button id="btn-close-inspector" class="btn-sm">✕</button>
+      </div>
+
+      <div class="inspector-body" id="inspector-content">
+        <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 2rem;">
+          在左側清單或中間拓撲圖中點選節點以檢視詳細呼叫關係與原始程式碼。
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Bottom Status Bar -->
+  <footer>
+    <div id="status-stats">準備就緒</div>
+    <div>純用戶端本機執行 · 資料由 IndexedDB 離線安全保障</div>
+  </footer>
+
+  <!-- Modal: Import Source Files / Paste Code -->
+  <dialog id="modal-import">
+    <div class="dialog-header">
+      <span>匯入 VBA 原始程式碼</span>
+      <button type="button" class="btn-sm" id="btn-close-import-dialog">✕</button>
+    </div>
+
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; background: var(--bg); padding: 0.5rem 0.75rem; border-radius: var(--radius); border: 1px solid var(--border);">
+        <label for="select-file-encoding" style="font-size: 0.8rem; font-weight: 600;">檔案文字編碼 (Encoding)：</label>
+        <select id="select-file-encoding" style="font-size: 0.8rem; padding: 0.25rem 0.5rem;">
+          <option value="auto" selected>✨ 自動偵測 (UTF-8 / Big5 / UTF-16)</option>
+          <option value="big5">Big5 / CP950 (繁體中文 ANSI)</option>
+          <option value="utf-8">UTF-8</option>
+          <option value="utf-16le">UTF-16LE (Unicode / Windows)</option>
+          <option value="gb18030">GB18030 / GBK (簡體相容)</option>
+        </select>
+      </div>
+
+      <div class="drop-zone" id="drop-zone">
+        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
+        <div style="font-weight: 600; margin-bottom: 0.25rem;">拖曳 VBA 檔案至此處，或點擊瀏覽選取</div>
+        <div style="font-size: 0.75rem; color: var(--text-muted);">
+          支援 .bas (標準模組)、.cls (類別模組)、.frm (表單)、.vba、.txt（可同時選取多檔）
+        </div>
+        <input type="file" id="file-input-multiple" multiple accept=".bas,.cls,.frm,.vba,.txt" style="display: none;">
+      </div>
+
+      <div style="text-align: center; font-size: 0.8rem; color: var(--text-muted);">- 或直接貼上程式碼 -</div>
+
+      <div>
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.4rem;">
+          <input type="text" id="paste-module-name" placeholder="模組名稱 (例: Module1)" style="flex: 1;" value="CustomModule">
+          <select id="paste-module-type">
+            <option value="Standard">標準模組 (Standard)</option>
+            <option value="Class">類別模組 (Class)</option>
+            <option value="Form">使用者表單 (Form)</option>
+          </select>
+        </div>
+        <textarea id="paste-code-area" rows="6" placeholder="在此貼上 VBA 原始程式碼 (Sub/Function/Property 等)..." style="width: 100%; font-family: var(--font-mono); font-size: 0.75rem;"></textarea>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button type="button" id="btn-cancel-import">取消</button>
+        <button type="button" class="btn-primary" id="btn-confirm-import">開始分析並載入</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Modal: New Project Prompt -->
+  <dialog id="modal-new-project">
+    <div class="dialog-header">
+      <span>新建分析專案</span>
+      <button type="button" class="btn-sm" id="btn-close-new-project">✕</button>
+    </div>
+    <form id="form-new-project" style="display: flex; flex-direction: column; gap: 1rem;">
+      <div>
+        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.4rem;">專案名稱</label>
+        <input type="text" id="new-project-name" required placeholder="如：ERP財務巨集分析" style="width: 100%;">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button type="button" id="btn-cancel-new-project">取消</button>
+        <button type="submit" class="btn-primary">建立專案</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Edit Project Prompt -->
+  <dialog id="modal-edit-project">
+    <div class="dialog-header">
+      <span>重新命名專案</span>
+      <button type="button" class="btn-sm" id="btn-close-edit-project">✕</button>
+    </div>
+    <form id="form-edit-project" style="display: flex; flex-direction: column; gap: 1rem;">
+      <div>
+        <label style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.4rem;">專案新名稱</label>
+        <input type="text" id="edit-project-name" required placeholder="輸入新名稱" style="width: 100%;">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+        <button type="button" id="btn-cancel-edit-project">取消</button>
+        <button type="submit" class="btn-primary">儲存變更</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- Application Logic -->
+  <script>
+    /* ==========================================================================
+       1. IndexedDB Helper (MiniDB)
+       ========================================================================== */
+    class MiniDB {
+      constructor(dbName = 'VBADepExplorerDB', version = 1) {
+        this.dbName = dbName;
+        this.version = version;
+        this.db = null;
+      }
+
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(this.dbName, this.version);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('projects')) {
+              db.createObjectStore('projects', { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve(this.db);
+          };
+          req.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async getAll(storeName = 'projects') {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readonly');
+          const req = tx.objectStore(storeName).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async get(id, storeName = 'projects') {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readonly');
+          const req = tx.objectStore(storeName).get(id);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async put(item, storeName = 'projects') {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readwrite');
+          const req = tx.objectStore(storeName).put(item);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async delete(id, storeName = 'projects') {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readwrite');
+          const req = tx.objectStore(storeName).delete(id);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+    }
+
+    /* ==========================================================================
+       2. VBA Static Parser & Dependency Analyzer
+       ========================================================================== */
+    class VBAParser {
+      static INTRINSIC_KEYWORDS = new Set([
+        'if', 'then', 'else', 'elseif', 'end', 'select', 'case', 'for', 'to', 'each',
+        'in', 'next', 'step', 'while', 'wend', 'do', 'loop', 'until', 'with', 'dim',
+        'redim', 'set', 'let', 'get', 'const', 'public', 'private', 'friend', 'static',
+        'sub', 'function', 'property', 'declare', 'ptrsafe', 'type', 'enum', 'exit',
+        'goto', 'on', 'error', 'resume', 'call', 'as', 'new', 'byval', 'byref', 'optional',
+        'paramarray', 'true', 'false', 'nothing', 'null', 'empty', 'and', 'or', 'not',
+        'xor', 'eqv', 'imp', 'is', 'like', 'mod', 'msgbox', 'inputbox', 'debug', 'print',
+        'doevents', 'len', 'left', 'right', 'mid', 'trim', 'ltrim', 'rtrim', 'ucase',
+        'lcase', 'instr', 'instrrev', 'replace', 'split', 'join', 'cbool', 'cbyte', 'ccur',
+        'cdate', 'cdbl', 'cdec', 'cint', 'clng', 'csng', 'cstr', 'cvar', 'val', 'str',
+        'format', 'now', 'date', 'time', 'timer', 'year', 'month', 'day', 'hour', 'minute',
+        'second', 'ubound', 'lbound', 'array', 'isnumeric', 'isdate', 'isempty', 'isnull',
+        'isarray', 'isobject', 'createobject', 'getobject', 'dir', 'kill', 'mkdir', 'rmdir',
+        'getattr', 'setattr', 'filelen', 'filedatetime', 'freefile', 'open', 'close', 'line',
+        'input', 'write', 'seek', 'loc', 'eof', 'lof', 'environ', 'shell', 'beep', 'appactivate'
+      ]);
+
+      /**
+       * Parse an array of VBA modules into procedure definitions and dependency graph
+       * @param {Array<{name: string, type: string, code: string}>} modules
+       */
+      static analyze(modules) {
+        const procedures = [];
+        const procLookup = new Map(); // "procName" or "module.procName" -> proc
+
+        // 1. First Pass: Detect all procedures and declarations in each module
+        for (const mod of modules) {
+          const modName = mod.name.trim();
+          const cleanLines = this.preprocessLines(mod.code);
+
+          let currentProc = null;
+
+          for (let lineIdx = 0; lineIdx < cleanLines.length; lineIdx++) {
+            const line = cleanLines[lineIdx].trim();
+            if (!line) continue;
+
+            // Check API Declare (e.g. Win32 / Win64 Conditional Compilation)
+            const declareMatch = line.match(/^(?:Public\s+|Private\s+)?Declare\s+(?:PtrSafe\s+)?(Sub|Function)\s+([a-zA-Z0-9_]+)/i);
+            if (declareMatch) {
+              const procName = declareMatch[2];
+              const procId = `${modName}.${procName}`;
+
+              // Check if already declared in this module (e.g. #If Win64 Then Declare ... Else Declare ...)
+              const existingIdx = procedures.findIndex(p => p.id === procId);
+              if (existingIdx >= 0) {
+                // Merge raw lines into the existing definition instead of duplicate node
+                procedures[existingIdx].rawLines.push(cleanLines[lineIdx]);
+                continue;
+              }
+
+              const proc = {
+                id: procId,
+                name: procName,
+                rawName: procName,
+                moduleName: modName,
+                type: 'Declare',
+                scope: /^Private/i.test(line) ? 'Private' : 'Public',
+                startLine: lineIdx + 1,
+                endLine: lineIdx + 1,
+                rawLines: [cleanLines[lineIdx]],
+                calls: new Set()
+              };
+              procedures.push(proc);
+              procLookup.set(proc.id.toLowerCase(), proc);
+              continue;
+            }
+
+            // Check Sub / Function / Property Entry
+            const headerMatch = line.match(/^(?:(?:Public|Private|Friend|Static)\s+)?(?:Default\s+)?(Sub|Function|Property\s+Get|Property\s+Let|Property\s+Set)\s+([a-zA-Z0-9_]+)/i);
+            if (headerMatch && !currentProc) {
+              const kindStr = headerMatch[1].replace(/\s+/g, ' ');
+              let type = 'Sub';
+              let accessor = '';
+              let displayName = headerMatch[2];
+              let procId = `${modName}.${headerMatch[2]}`;
+
+              if (/^Function/i.test(kindStr)) {
+                type = 'Function';
+              } else if (/^Property/i.test(kindStr)) {
+                type = 'Property';
+                if (/Get$/i.test(kindStr)) accessor = 'Get';
+                else if (/Let$/i.test(kindStr)) accessor = 'Let';
+                else if (/Set$/i.test(kindStr)) accessor = 'Set';
+
+                if (accessor) {
+                  displayName = `${headerMatch[2]} [${accessor}]`;
+                  procId = `${modName}.${headerMatch[2]}:${accessor.toLowerCase()}`;
+                }
+              }
+
+              // Check if duplicate procId already in procedures (e.g. duplicate or conditional sub)
+              const existingIdx = procedures.findIndex(p => p.id === procId);
+              if (existingIdx >= 0) {
+                // If duplicate, append accessor/index or skip
+                continue;
+              }
+
+              currentProc = {
+                id: procId,
+                name: displayName,
+                rawName: headerMatch[2],
+                accessor: accessor,
+                moduleName: modName,
+                type: type,
+                scope: /^Private/i.test(line) ? 'Private' : 'Public',
+                startLine: lineIdx + 1,
+                endLine: lineIdx + 1,
+                rawLines: [cleanLines[lineIdx]],
+                calls: new Set()
+              };
+              continue;
+            }
+
+            // In procedure body
+            if (currentProc) {
+              currentProc.rawLines.push(cleanLines[lineIdx]);
+
+              // Check procedure exit
+              if (/^End\s+(?:Sub|Function|Property)/i.test(line)) {
+                currentProc.endLine = lineIdx + 1;
+                procedures.push(currentProc);
+                procLookup.set(currentProc.id.toLowerCase(), currentProc);
+                currentProc = null;
+              }
+            }
+          }
+
+          if (currentProc) {
+            currentProc.endLine = cleanLines.length;
+            procedures.push(currentProc);
+            procLookup.set(currentProc.id.toLowerCase(), currentProc);
+          }
+        }
+
+        // 2. Second Pass: Scan procedure bodies for invocations
+        const edges = [];
+        const moduleDeps = new Map(); // "sourceMod->targetMod" -> count
+
+        // Build list of all defined proc names for fuzzy matching
+        const allProcNames = new Map();
+        for (const p of procedures) {
+          const lowerId = p.id.toLowerCase();
+          procLookup.set(lowerId, p);
+
+          // Support raw name (e.g. "title") matching
+          const lowerRaw = (p.rawName || p.name).toLowerCase();
+          if (!allProcNames.has(lowerRaw)) allProcNames.set(lowerRaw, []);
+          allProcNames.get(lowerRaw).push(p);
+
+          // Also support "modName.rawName" in procLookup
+          const qualifiedRaw = `${p.moduleName}.${p.rawName || p.name}`.toLowerCase();
+          if (!procLookup.has(qualifiedRaw)) procLookup.set(qualifiedRaw, p);
+        }
+
+        for (const caller of procedures) {
+          // Tokenize the procedure body
+          const bodyText = caller.rawLines.slice(1).join('\n');
+          const tokens = this.extractCallableTokens(bodyText);
+
+          for (const token of tokens) {
+            const lowerToken = token.toLowerCase();
+
+            // Case A: Qualified Call: ModuleName.ProcName
+            if (lowerToken.includes('.')) {
+              const candidate = procLookup.get(lowerToken);
+              if (candidate && candidate.id !== caller.id) {
+                caller.calls.add(candidate.id);
+              }
+              continue;
+            }
+
+            // Case B: Direct Name Call
+            if (allProcNames.has(lowerToken)) {
+              const targets = allProcNames.get(lowerToken);
+              for (const target of targets) {
+                // If private, only same module
+                if (target.scope === 'Private' && target.moduleName !== caller.moduleName) {
+                  continue;
+                }
+                if (target.id !== caller.id) {
+                  caller.calls.add(target.id);
+                }
+              }
+            }
+          }
+        }
+
+        // Build inverted calledBy and clean calls arrays
+        const callerMap = new Map();
+        for (const p of procedures) {
+          callerMap.set(p.id, new Set());
+        }
+
+        for (const p of procedures) {
+          p.callsArray = Array.from(p.calls);
+          for (const targetId of p.callsArray) {
+            if (callerMap.has(targetId)) {
+              callerMap.get(targetId).add(p.id);
+            }
+            edges.push({ source: p.id, target: targetId });
+
+            // Module aggregation
+            const targetProc = procedures.find(x => x.id === targetId);
+            if (targetProc && targetProc.moduleName !== p.moduleName) {
+              const key = `${p.moduleName}->${targetProc.moduleName}`;
+              moduleDeps.set(key, (moduleDeps.get(key) || 0) + 1);
+            }
+          }
+        }
+
+        for (const p of procedures) {
+          p.calledByArray = Array.from(callerMap.get(p.id) || []);
+        }
+
+        // 3. Third Pass: Cycle Detection (Tarjan / DFS cycle detection)
+        const cycles = this.detectCycles(procedures);
+
+        // 4. Fourth Pass: Dead Code Candidates (0 incoming callers, not an event or entry macro)
+        const deadCodeCandidates = procedures.filter(p => {
+          if (p.calledByArray.length > 0) return false;
+          // Exclude typical event handlers (e.g., Workbook_Open, UserForm_Initialize, Worksheet_Change, CommandButton1_Click)
+          if (/_Click$|_Initialize$|_Change$|_Activate$|_Open$|_Terminate$/i.test(p.name)) return false;
+          return true;
+        }).map(p => p.id);
+
+        return {
+          procedures,
+          edges,
+          cycles,
+          deadCodeCandidates,
+          moduleDependencies: Array.from(moduleDeps.entries()).map(([k, count]) => {
+            const [source, target] = k.split('->');
+            return { source, target, count };
+          })
+        };
+      }
+
+      /**
+       * Normalize lines and strip comments / strings
+       */
+      static preprocessLines(sourceCode) {
+        const rawLines = (sourceCode || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+        const processed = [];
+        let buffer = '';
+
+        for (let i = 0; i < rawLines.length; i++) {
+          let line = rawLines[i];
+
+          // Check line continuation before comment, or after comment
+          // In VBA: line continuation is an underscore preceded by whitespace
+          // e.g.: Declare PtrSafe Function ... _ ' comment
+          const commentIdx = this.findCommentIndex(line);
+          let codePart = commentIdx >= 0 ? line.substring(0, commentIdx) : line;
+          codePart = codePart.replace(/\s+$/, '');
+
+          if (/\s+_\s*$/.test(codePart)) {
+            buffer += (buffer ? ' ' : '') + codePart.replace(/\s+_\s*$/, '').trim();
+          } else {
+            buffer += (buffer ? ' ' : '') + codePart.trim();
+            if (buffer) {
+              processed.push(buffer);
+            }
+            buffer = '';
+          }
+        }
+        if (buffer) processed.push(buffer);
+        return processed;
+      }
+
+      static findCommentIndex(line) {
+        let inString = false;
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inString = !inString;
+          } else if (!inString) {
+            if (char === '\'') return i;
+            if (line.substr(i, 4).toLowerCase() === 'rem ' && (i === 0 || /\s/.test(line[i - 1]))) return i;
+          }
+        }
+        return -1;
+      }
+
+      static stripComments(line) {
+        let inString = false;
+        let result = '';
+        for (let i = 0; i < line.length; i++) {
+          const char = line[i];
+          if (char === '"') {
+            inString = !inString;
+            result += char;
+          } else if (!inString && (char === '\'' || (line.substr(i, 4).toLowerCase() === 'rem ' && (i === 0 || /\s/.test(line[i - 1]))))) {
+            break; // Comment starts here
+          } else {
+            result += char;
+          }
+        }
+        return result;
+      }
+
+      /**
+       * Extract identifier tokens while ignoring strings and numbers
+       */
+      static extractCallableTokens(code) {
+        const tokens = new Set();
+        // Regex matches identifier or module.identifier
+        const matches = code.match(/\b[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)?\b/g) || [];
+        for (const m of matches) {
+          if (!this.INTRINSIC_KEYWORDS.has(m.toLowerCase()) && !/^[0-9]+$/.test(m)) {
+            tokens.add(m);
+          }
+        }
+        return Array.from(tokens);
+      }
+
+      /**
+       * DFS Cycle Detection for Directed Graph
+       */
+      static detectCycles(procedures) {
+        const adj = new Map();
+        for (const p of procedures) {
+          adj.set(p.id, p.callsArray || []);
+        }
+
+        const visited = new Set();
+        const recStack = new Set();
+        const path = [];
+        const detectedCycles = [];
+        const seenCycleSignatures = new Set();
+
+        const dfs = (node) => {
+          visited.add(node);
+          recStack.add(node);
+          path.push(node);
+
+          const neighbors = adj.get(node) || [];
+          for (const next of neighbors) {
+            if (!visited.has(next)) {
+              dfs(next);
+            } else if (recStack.has(next)) {
+              // Found cycle! Extract loop from `next` to end of path
+              const loopStartIndex = path.indexOf(next);
+              if (loopStartIndex !== -1) {
+                const cycle = path.slice(loopStartIndex).concat([next]);
+                // Create normalized canonical representation to avoid duplicate rotation
+                const cycleNodes = path.slice(loopStartIndex);
+                const minNode = [...cycleNodes].sort()[0];
+                const minIdx = cycleNodes.indexOf(minNode);
+                const rotated = cycleNodes.slice(minIdx).concat(cycleNodes.slice(0, minIdx));
+                const sig = rotated.join('->');
+                if (!seenCycleSignatures.has(sig)) {
+                  seenCycleSignatures.add(sig);
+                  detectedCycles.push(cycle);
+                }
+              }
+            }
+          }
+
+          path.pop();
+          recStack.delete(node);
+        };
+
+        for (const p of procedures) {
+          if (!visited.has(p.id)) {
+            dfs(p.id);
+          }
+        }
+
+        return detectedCycles;
+      }
+    }
+
+    /* ==========================================================================
+       3. Sample VBA Project Template
+       ========================================================================== */
+    const SAMPLE_MODULES = [
+      {
+        id: 'mod_main',
+        name: 'modMain',
+        type: 'Standard',
+        code: `' Standard Module: modMain\nOption Explicit\n\nPublic Sub RunDataPipeline()\n    Call Logger.LogMessage("Starting Pipeline")\n    Dim report As New clsReportGenerator\n    Call report.BuildMonthlyReport\n    Call SyncDatabase\n    Call Logger.LogMessage("Pipeline Done")\nEnd Sub\n\nPublic Sub SyncDatabase()\n    Dim ret As Boolean\n    ret = modAPI.FetchRemoteRecords()\n    If ret Then\n        Call ProcessBatch\n    End If\nEnd Sub\n\nPrivate Sub ProcessBatch()\n    Call Logger.LogMessage("Processing batch...")\n    Call modAPI.PostStatusUpdate\nEnd Sub\n\n' Dead code candidate\nPublic Sub LegacyExportCSV()\n    Call Logger.LogMessage("Exporting legacy CSV...")\nEnd Sub`
+      },
+      {
+        id: 'mod_api',
+        name: 'modAPI',
+        type: 'Standard',
+        code: `' Standard Module: modAPI\nOption Explicit\n\nPublic Declare PtrSafe Function GetTickCount Lib "kernel32" () As Long\n\nPublic Function FetchRemoteRecords() As Boolean\n    Call Logger.LogMessage("Calling external endpoint...")\n    FetchRemoteRecords = True\nEnd Function\n\nPublic Sub PostStatusUpdate()\n    Call Logger.LogMessage("Posting status update...")\n    ' Intentional circular call for demonstration:\n    Call modMain.SyncDatabase\nEnd Sub`
+      },
+      {
+        id: 'cls_report',
+        name: 'clsReportGenerator',
+        type: 'Class',
+        code: `' Class Module: clsReportGenerator\nOption Explicit\n\nPrivate mTitle As String\n\nPublic Property Get Title() As String\n    Title = mTitle\nEnd Property\n\nPublic Property Let Title(val As String)\n    mTitle = val\nEnd Property\n\nPublic Sub BuildMonthlyReport()\n    Call Logger.LogMessage("Building report...")\n    Call CalculateTotals\nEnd Sub\n\nPrivate Sub CalculateTotals()\n    Call Logger.LogMessage("Calculated metrics")\nEnd Sub`
+      },
+      {
+        id: 'mod_logger',
+        name: 'Logger',
+        type: 'Standard',
+        code: `' Standard Module: Logger\nOption Explicit\n\nPublic Sub LogMessage(ByVal msg As String)\n    Debug.Print "[LOG " & Now & "] " & msg\nEnd Sub\n\nPublic Sub ClearLog()\n    Debug.Print "Log cleared"\nEnd Sub`
+      }
+    ];
+
+    /* ==========================================================================
+       4. Graph Visualizer (Native Interactive SVG & Force Simulation)
+       ========================================================================== */
+    class GraphVisualizer {
+      constructor(canvasEl, containerEl, onSelectNode) {
+        this.canvas = canvasEl;
+        this.container = containerEl;
+        this.onSelectNode = onSelectNode;
+        this.viewportGroup = canvasEl.querySelector('#viewport-group');
+        this.edgesLayer = canvasEl.querySelector('#edges-layer');
+        this.nodesLayer = canvasEl.querySelector('#nodes-layer');
+
+        this.nodes = [];
+        this.edges = [];
+        this.cycles = [];
+        this.viewMode = 'procedure'; // 'procedure' or 'module'
+
+        // Transform (Pan & Zoom)
+        this.zoom = 1;
+        this.panX = 0;
+        this.panY = 0;
+        this.isPanning = false;
+        this.dragNode = null;
+        this.selectedNodeId = null;
+
+        this.initEvents();
+      }
+
+      initEvents() {
+        // Pan
+        this.container.addEventListener('mousedown', (e) => {
+          if (e.target.closest('.node-group')) return;
+          this.isPanning = true;
+          this.startX = e.clientX - this.panX;
+          this.startY = e.clientY - this.panY;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+          if (this.isPanning) {
+            this.panX = e.clientX - this.startX;
+            this.panY = e.clientY - this.startY;
+            this.updateTransform();
+          } else if (this.dragNode) {
+            const rect = this.canvas.getBoundingClientRect();
+            this.dragNode.x = (e.clientX - rect.left - this.panX) / this.zoom;
+            this.dragNode.y = (e.clientY - rect.top - this.panY) / this.zoom;
+            this.renderPositions();
+          }
+        });
+
+        window.addEventListener('mouseup', () => {
+          this.isPanning = false;
+          this.dragNode = null;
+        });
+
+        // Zoom (Mouse Wheel)
+        this.container.addEventListener('wheel', (e) => {
+          e.preventDefault();
+          const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+          const rect = this.canvas.getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
+
+          const newZoom = Math.min(Math.max(0.2, this.zoom * zoomFactor), 4);
+          this.panX = mouseX - (mouseX - this.panX) * (newZoom / this.zoom);
+          this.panY = mouseY - (mouseY - this.panY) * (newZoom / this.zoom);
+          this.zoom = newZoom;
+          this.updateTransform();
+        }, { passive: false });
+      }
+
+      updateTransform() {
+        this.viewportGroup.setAttribute('transform', `translate(${this.panX}, ${this.panY}) scale(${this.zoom})`);
+      }
+
+      setData(analysisResult, mode = 'procedure') {
+        this.viewMode = mode;
+        this.cycles = analysisResult.cycles || [];
+
+        if (mode === 'procedure') {
+          this.nodes = (analysisResult.procedures || []).map((p, idx) => ({
+            id: p.id,
+            label: p.name,
+            subLabel: p.moduleName,
+            type: p.type,
+            scope: p.scope,
+            calls: p.callsArray || [],
+            calledBy: p.calledByArray || [],
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0
+          }));
+
+          const nodeMap = new Map(this.nodes.map(n => [n.id, n]));
+          this.edges = [];
+          for (const e of analysisResult.edges || []) {
+            if (nodeMap.has(e.source) && nodeMap.has(e.target)) {
+              this.edges.push({
+                source: nodeMap.get(e.source),
+                target: nodeMap.get(e.target),
+                isCycle: this.isEdgeInCycle(e.source, e.target)
+              });
+            }
+          }
+        } else {
+          // Module Mode
+          const modulesSet = new Set();
+          (analysisResult.procedures || []).forEach(p => modulesSet.add(p.moduleName));
+          this.nodes = Array.from(modulesSet).map(name => ({
+            id: name,
+            label: name,
+            subLabel: 'Module',
+            type: 'Module',
+            x: 0,
+            y: 0,
+            vx: 0,
+            vy: 0
+          }));
+
+          const nodeMap = new Map(this.nodes.map(n => [n.id, n]));
+          this.edges = (analysisResult.moduleDependencies || []).map(dep => ({
+            source: nodeMap.get(dep.source),
+            target: nodeMap.get(dep.target),
+            count: dep.count,
+            isCycle: false
+          })).filter(e => e.source && e.target);
+        }
+
+        this.arrangeNodes();
+        this.renderElements();
+        this.fitView();
+      }
+
+      isEdgeInCycle(sourceId, targetId) {
+        for (const cycle of this.cycles) {
+          for (let i = 0; i < cycle.length - 1; i++) {
+            if (cycle[i] === sourceId && cycle[i + 1] === targetId) return true;
+          }
+        }
+        return false;
+      }
+
+      arrangeNodes() {
+        const width = this.container.clientWidth || 800;
+        const height = this.container.clientHeight || 600;
+        const n = this.nodes.length;
+        if (n === 0) return;
+
+        // Circular initial placement grouped by module
+        const radius = Math.min(width, height) * 0.35 + (n * 8);
+        this.nodes.forEach((node, i) => {
+          const angle = (i / n) * Math.PI * 2;
+          node.x = width / 2 + Math.cos(angle) * radius;
+          node.y = height / 2 + Math.sin(angle) * radius;
+        });
+
+        // Simple force layout relaxation iterations
+        for (let iter = 0; iter < 45; iter++) {
+          // Repulsion
+          for (let i = 0; i < n; i++) {
+            for (let j = i + 1; j < n; j++) {
+              const dx = this.nodes[j].x - this.nodes[i].x;
+              const dy = this.nodes[j].y - this.nodes[i].y;
+              const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+              if (dist < 220) {
+                const force = (220 - dist) / dist * 0.4;
+                this.nodes[i].x -= dx * force;
+                this.nodes[i].y -= dy * force;
+                this.nodes[j].x += dx * force;
+                this.nodes[j].y += dy * force;
+              }
+            }
+          }
+
+          // Edge attraction
+          for (const edge of this.edges) {
+            const dx = edge.target.x - edge.source.x;
+            const dy = edge.target.y - edge.source.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const force = (dist - 140) * 0.035;
+            edge.source.x += (dx / dist) * force;
+            edge.source.y += (dy / dist) * force;
+            edge.target.x -= (dx / dist) * force;
+            edge.target.y -= (dy / dist) * force;
+          }
+        }
+      }
+
+      renderElements() {
+        this.edgesLayer.innerHTML = '';
+        this.nodesLayer.innerHTML = '';
+
+        // Edges
+        this.edges.forEach(e => {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.classList.add('edge-line');
+          if (e.isCycle) path.classList.add('cycle-edge');
+          path.dataset.source = e.source.id;
+          path.dataset.target = e.target.id;
+          this.edgesLayer.appendChild(path);
+        });
+
+        // Nodes
+        this.nodes.forEach(n => {
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.classList.add('node-group');
+          g.dataset.id = n.id;
+
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('r', this.viewMode === 'module' ? '22' : '16');
+          circle.setAttribute('fill', this.getNodeColor(n));
+          circle.setAttribute('stroke', '#ffffff');
+          circle.setAttribute('stroke-width', '2.5');
+          circle.setAttribute('filter', 'drop-shadow(0px 2px 4px rgba(0,0,0,0.18))');
+
+          const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          label.classList.add('node-label');
+          label.setAttribute('text-anchor', 'middle');
+          label.setAttribute('dy', this.viewMode === 'module' ? '36' : '28');
+          label.textContent = n.label;
+
+          g.appendChild(circle);
+          g.appendChild(label);
+
+          // Interaction
+          g.addEventListener('mousedown', (e) => {
+            e.stopPropagation();
+            this.dragNode = n;
+          });
+
+          g.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.selectNode(n.id);
+          });
+
+          this.nodesLayer.appendChild(g);
+        });
+
+        this.renderPositions();
+      }
+
+      getNodeColor(node) {
+        if (node.type === 'Sub') return '#0284c7';       // Clear Blue
+        if (node.type === 'Function') return '#059669';  // Clear Emerald Green
+        if (node.type === 'Property') return '#7c3aed';  // Clear Purple
+        if (node.type === 'Declare') return '#d97706';   // Vivid Amber
+        return '#4f46e5';                                // Module: Indigo
+      }
+
+      renderPositions() {
+        // Update nodes
+        const nodeEls = this.nodesLayer.querySelectorAll('.node-group');
+        nodeEls.forEach(el => {
+          const node = this.nodes.find(n => n.id === el.dataset.id);
+          if (node) {
+            el.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+          }
+        });
+
+        // Update edges with curved lines
+        const edgeEls = this.edgesLayer.querySelectorAll('.edge-line');
+        edgeEls.forEach(el => {
+          const srcNode = this.nodes.find(n => n.id === el.dataset.source);
+          const tgtNode = this.nodes.find(n => n.id === el.dataset.target);
+          if (srcNode && tgtNode) {
+            const dx = tgtNode.x - srcNode.x;
+            const dy = tgtNode.y - srcNode.y;
+            const dr = Math.sqrt(dx * dx + dy * dy);
+            // Arc path
+            el.setAttribute('d', `M${srcNode.x},${srcNode.y}A${dr * 1.2},${dr * 1.2} 0 0,1 ${tgtNode.x},${tgtNode.y}`);
+          }
+        });
+      }
+
+      selectNode(nodeId) {
+        this.selectedNodeId = nodeId;
+        const allNodes = this.nodesLayer.querySelectorAll('.node-group');
+        const allEdges = this.edgesLayer.querySelectorAll('.edge-line');
+
+        if (!nodeId) {
+          allNodes.forEach(n => {
+            n.classList.remove('dimmed', 'upstream', 'downstream');
+          });
+          allEdges.forEach(e => {
+            e.classList.remove('dimmed', 'highlighted');
+          });
+          return;
+        }
+
+        const selectedNode = this.nodes.find(n => n.id === nodeId);
+        const upstreams = new Set(selectedNode?.calledBy || []);
+        const downstreams = new Set(selectedNode?.calls || []);
+
+        allNodes.forEach(el => {
+          const id = el.dataset.id;
+          el.classList.remove('dimmed', 'upstream', 'downstream');
+          if (id === nodeId) {
+            // Keep active
+          } else if (upstreams.has(id)) {
+            el.classList.add('upstream');
+          } else if (downstreams.has(id)) {
+            el.classList.add('downstream');
+          } else {
+            el.classList.add('dimmed');
+          }
+        });
+
+        allEdges.forEach(el => {
+          const s = el.dataset.source;
+          const t = el.dataset.target;
+          el.classList.remove('dimmed', 'highlighted');
+          if (s === nodeId || t === nodeId) {
+            el.classList.add('highlighted');
+          } else {
+            el.classList.add('dimmed');
+          }
+        });
+
+        if (this.onSelectNode) {
+          this.onSelectNode(nodeId);
+        }
+      }
+
+      fitView() {
+        if (this.nodes.length === 0) return;
+        const width = this.container.clientWidth || 800;
+        const height = this.container.clientHeight || 600;
+
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        this.nodes.forEach(n => {
+          if (n.x < minX) minX = n.x;
+          if (n.x > maxX) maxX = n.x;
+          if (n.y < minY) minY = n.y;
+          if (n.y > maxY) maxY = n.y;
+        });
+
+        const graphW = (maxX - minX) + 120;
+        const graphH = (maxY - minY) + 120;
+        const midX = (minX + maxX) / 2;
+        const midY = (minY + maxY) / 2;
+
+        this.zoom = Math.min(width / graphW, height / graphH, 1.2);
+        this.panX = width / 2 - midX * this.zoom;
+        this.panY = height / 2 - midY * this.zoom;
+        this.updateTransform();
+      }
+    }
+
+    /* ==========================================================================
+       5. Main Application Controller
+       ========================================================================== */
+    class App {
+      constructor() {
+        this.db = new MiniDB();
+        this.currentProject = null;
+        this.analysisResult = null;
+        this.selectedEntity = null;
+
+        this.initDOM();
+        this.initVisualizer();
+        this.bindEvents();
+        this.loadInitialData();
+      }
+
+      initDOM() {
+        this.projectSelect = document.getElementById('project-selector');
+        this.catalogList = document.getElementById('catalog-list');
+        this.cycleList = document.getElementById('cycle-list');
+        this.deadList = document.getElementById('dead-list');
+        this.cycleCountEl = document.getElementById('cycle-count');
+        this.deadCountEl = document.getElementById('dead-count');
+        this.inspectorTitle = document.getElementById('inspector-title');
+        this.inspectorContent = document.getElementById('inspector-content');
+        this.statusStats = document.getElementById('status-stats');
+        this.modalImport = document.getElementById('modal-import');
+        this.modalNewProject = document.getElementById('modal-new-project');
+        this.modalEditProject = document.getElementById('modal-edit-project');
+        this.filterInput = document.getElementById('filter-input');
+      }
+
+      initVisualizer() {
+        const canvas = document.getElementById('network-canvas');
+        const container = document.getElementById('graph-container');
+        this.visualizer = new GraphVisualizer(canvas, container, (nodeId) => {
+          this.inspectNode(nodeId);
+        });
+      }
+
+      async loadInitialData() {
+        // Theme
+        const savedTheme = localStorage.getItem('vba_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        const projects = await this.db.getAll();
+        if (projects.length === 0) {
+          // Create default sample project
+          await this.loadSampleProject();
+        } else {
+          this.renderProjectOptions(projects);
+          await this.switchProject(projects[0].id);
+        }
+      }
+
+      renderProjectOptions(projects) {
+        this.projectSelect.innerHTML = projects.map(p => `
+          <option value="${p.id}" ${this.currentProject?.id === p.id ? 'selected' : ''}>${this.escapeHTML(p.name)}</option>
+        `).join('');
+      }
+
+      async switchProject(projectId) {
+        const project = await this.db.get(projectId);
+        if (!project) return;
+        this.currentProject = project;
+        this.runAnalysis();
+        this.renderProjectOptions(await this.db.getAll());
+        this.showToast(`已載入專案: ${project.name}`);
+      }
+
+      runAnalysis() {
+        if (!this.currentProject || !this.currentProject.modules) return;
+        this.analysisResult = VBAParser.analyze(this.currentProject.modules);
+
+        // Update UI Tabs
+        this.renderCatalog();
+        this.renderCycles();
+        this.renderDeadCode();
+        this.updateStatusBar();
+
+        // Feed to visualizer
+        const mode = document.getElementById('view-mode-selector').value;
+        this.visualizer.setData(this.analysisResult, mode);
+      }
+
+      renderCatalog() {
+        const query = (this.filterInput.value || '').toLowerCase().trim();
+        const modules = this.currentProject.modules || [];
+        const procs = this.analysisResult?.procedures || [];
+
+        let html = '';
+        for (const mod of modules) {
+          const modProcs = procs.filter(p => p.moduleName === mod.name);
+          const filteredProcs = modProcs.filter(p => 
+            !query || p.name.toLowerCase().includes(query) || mod.name.toLowerCase().includes(query)
+          );
+
+          if (query && filteredProcs.length === 0 && !mod.name.toLowerCase().includes(query)) {
+            continue;
+          }
+
+          html += `
+            <div class="module-item">
+              <div class="module-header" data-module="${this.escapeHTML(mod.name)}">
+                <span>📦 ${this.escapeHTML(mod.name)}</span>
+                <span class="badge">${mod.type || 'Standard'}</span>
+              </div>
+              <div class="proc-list">
+                ${filteredProcs.map(p => `
+                  <div class="proc-item ${this.selectedEntity?.id === p.id ? 'selected' : ''}" data-id="${p.id}">
+                    <span>${this.escapeHTML(p.name)}</span>
+                    <span class="badge badge-${p.type.toLowerCase()}">${p.type}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+
+        this.catalogList.innerHTML = html || '<div style="color:var(--text-muted);font-size:0.75rem;padding:0.5rem;">未找到相符模組或程序</div>';
+      }
+
+      renderCycles() {
+        const cycles = this.analysisResult?.cycles || [];
+        this.cycleCountEl.textContent = cycles.length;
+
+        if (cycles.length === 0) {
+          this.cycleList.innerHTML = '<div style="color:var(--success);font-size:0.75rem;padding:0.5rem;">🎉 太棒了！未偵測到循環依賴。</div>';
+          return;
+        }
+
+        this.cycleList.innerHTML = cycles.map((cycle, idx) => `
+          <div style="background:var(--surface-hover);padding:0.5rem;border-radius:var(--radius);border:1px solid #ef444455;font-size:0.75rem;">
+            <div style="font-weight:600;color:var(--danger);margin-bottom:0.3rem;">環路 #${idx + 1} (${cycle.length - 1} 步跳轉)</div>
+            <div style="font-family:var(--font-mono);font-size:0.7rem;line-height:1.4;">
+              ${cycle.map((node, i) => `
+                <span class="chip" data-node="${node}" style="margin:2px;display:inline-block;">
+                  ${i > 0 ? '➔ ' : ''}${node.split('.').pop()}
+                </span>
+              `).join('')}
+            </div>
+          </div>
+        `).join('');
+      }
+
+      renderDeadCode() {
+        const dead = this.analysisResult?.deadCodeCandidates || [];
+        this.deadCountEl.textContent = dead.length;
+
+        if (dead.length === 0) {
+          this.deadList.innerHTML = '<div style="color:var(--text-muted);font-size:0.75rem;padding:0.5rem;">未偵測到孤島函式。</div>';
+          return;
+        }
+
+        this.deadList.innerHTML = dead.map(id => {
+          const proc = this.analysisResult.procedures.find(p => p.id === id);
+          return `
+            <div class="proc-item" data-id="${id}">
+              <span>${this.escapeHTML(proc?.name || id)}</span>
+              <span class="badge badge-dead">${proc?.moduleName || ''}</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      inspectNode(nodeId) {
+        const proc = this.analysisResult?.procedures.find(p => p.id === nodeId);
+        if (!proc) {
+          // Might be module in module-view
+          this.inspectModule(nodeId);
+          return;
+        }
+
+        this.selectedEntity = proc;
+        this.inspectorTitle.textContent = `${proc.name} (${proc.type})`;
+
+        const callers = proc.calledByArray || [];
+        const callees = proc.callsArray || [];
+
+        this.inspectorContent.innerHTML = `
+          <div>
+            <div class="section-title">基本資訊</div>
+            <div style="font-size:0.8rem;display:flex;flex-direction:column;gap:0.35rem;">
+              <div><strong>所屬模組：</strong> ${this.escapeHTML(proc.moduleName)}</div>
+              <div><strong>修飾範圍：</strong> ${proc.scope}</div>
+              <div><strong>起訖行數：</strong> 第 ${proc.startLine} 行 ~ 第 ${proc.endLine} 行 (${proc.endLine - proc.startLine + 1} 行)</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">
+              <span>呼叫它的來源 (Callers)</span>
+              <span class="badge">${callers.length}</span>
+            </div>
+            <div class="chip-list">
+              ${callers.length > 0 ? callers.map(c => `<div class="chip" data-jump="${c}">⬆️ ${c.split('.').pop()}</div>`).join('') : '<span style="font-size:0.75rem;color:var(--text-muted);">無上游呼叫端</span>'}
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">
+              <span>呼叫的目標 (Callees)</span>
+              <span class="badge">${callees.length}</span>
+            </div>
+            <div class="chip-list">
+              ${callees.length > 0 ? callees.map(c => `<div class="chip" data-jump="${c}">⬇️ ${c.split('.').pop()}</div>`).join('') : '<span style="font-size:0.75rem;color:var(--text-muted);">無下游呼叫</span>'}
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">原始程式碼預覽</div>
+            <pre class="code-preview">${this.escapeHTML((proc.rawLines || []).join('\n'))}</pre>
+          </div>
+        `;
+
+        // Update selected state in catalog list
+        const items = this.catalogList.querySelectorAll('.proc-item');
+        items.forEach(it => {
+          if (it.dataset.id === nodeId) it.classList.add('selected');
+          else it.classList.remove('selected');
+        });
+      }
+
+      inspectModule(moduleName) {
+        const mod = this.currentProject.modules.find(m => m.name === moduleName);
+        if (!mod) return;
+
+        const modProcs = this.analysisResult?.procedures.filter(p => p.moduleName === moduleName) || [];
+        this.inspectorTitle.textContent = `模組: ${mod.name}`;
+
+        this.inspectorContent.innerHTML = `
+          <div>
+            <div class="section-title">模組概況</div>
+            <div style="font-size:0.8rem;display:flex;flex-direction:column;gap:0.35rem;">
+              <div><strong>類型：</strong> ${mod.type}</div>
+              <div><strong>程序數量：</strong> ${modProcs.length} 個</div>
+            </div>
+          </div>
+          <div>
+            <div class="section-title">包含程序</div>
+            <div class="chip-list">
+              ${modProcs.map(p => `<div class="chip" data-jump="${p.id}">${p.name} (${p.type})</div>`).join('')}
+            </div>
+          </div>
+          <div>
+            <div class="section-title">
+              <span>完整模組源碼</span>
+              <button class="btn-sm btn-delete-module" data-module="${this.escapeHTML(mod.name)}" style="color:var(--danger);border-color:var(--danger);">🗑️ 刪除此模組</button>
+            </div>
+            <pre class="code-preview">${this.escapeHTML(mod.code || '')}</pre>
+          </div>
+        `;
+      }
+
+      updateStatusBar() {
+        const modCount = this.currentProject?.modules?.length || 0;
+        const procCount = this.analysisResult?.procedures?.length || 0;
+        const edgeCount = this.analysisResult?.edges?.length || 0;
+        const cycleCount = this.analysisResult?.cycles?.length || 0;
+
+        this.statusStats.textContent = `📦 ${modCount} 個模組 | ⚡ ${procCount} 個程序 | 🔗 ${edgeCount} 條呼叫依賴 | ⚠️ ${cycleCount} 個環路`;
+      }
+
+      async loadSampleProject() {
+        const sample = {
+          id: 'proj_sample',
+          name: '範例專案 (Enterprise Data Suite)',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          modules: JSON.parse(JSON.stringify(SAMPLE_MODULES))
+        };
+        await this.db.put(sample);
+        await this.switchProject(sample.id);
+      }
+
+      bindEvents() {
+        // Theme Toggle
+        document.getElementById('btn-toggle-theme').addEventListener('click', () => {
+          const current = document.documentElement.getAttribute('data-theme');
+          const target = current === 'light' ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', target);
+          localStorage.setItem('vba_theme', target);
+        });
+
+        // Tab Switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+            btn.classList.add('active');
+            document.getElementById(btn.dataset.tab).style.display = 'block';
+          });
+        });
+
+        // Search & Filter
+        this.filterInput.addEventListener('input', () => this.renderCatalog());
+        document.getElementById('btn-clear-filter').addEventListener('click', () => {
+          this.filterInput.value = '';
+          this.renderCatalog();
+        });
+
+        // Project Selector
+        this.projectSelect.addEventListener('change', (e) => {
+          this.switchProject(e.target.value);
+        });
+
+        // Edit Project (Rename)
+        document.getElementById('btn-edit-project').addEventListener('click', () => {
+          if (!this.currentProject) return;
+          document.getElementById('edit-project-name').value = this.currentProject.name;
+          this.modalEditProject.showModal();
+        });
+        document.getElementById('btn-close-edit-project').addEventListener('click', () => this.modalEditProject.close());
+        document.getElementById('btn-cancel-edit-project').addEventListener('click', () => this.modalEditProject.close());
+
+        document.getElementById('form-edit-project').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (!this.currentProject) return;
+          const newName = document.getElementById('edit-project-name').value.trim();
+          if (!newName) return;
+          this.currentProject.name = newName;
+          this.currentProject.updatedAt = Date.now();
+          await this.db.put(this.currentProject);
+          this.modalEditProject.close();
+          this.renderProjectOptions(await this.db.getAll());
+          this.showToast(`專案已重新命名為: ${newName}`);
+        });
+
+        // Delete Project
+        document.getElementById('btn-delete-project').addEventListener('click', async () => {
+          if (!this.currentProject) return;
+          const confirmMsg = `確定要永久刪除專案「${this.currentProject.name}」及其所有包含的模組嗎？此動作無法復原。`;
+          if (!confirm(confirmMsg)) return;
+
+          const deleteId = this.currentProject.id;
+          await this.db.delete(deleteId);
+          this.showToast('專案已成功刪除');
+
+          const remaining = await this.db.getAll();
+          if (remaining.length > 0) {
+            await this.switchProject(remaining[0].id);
+          } else {
+            // If all deleted, reload default sample
+            await this.loadSampleProject();
+          }
+        });
+
+        // New Project Dialog
+        document.getElementById('btn-new-project').addEventListener('click', () => {
+          document.getElementById('form-new-project').reset();
+          this.modalNewProject.showModal();
+        });
+        document.getElementById('btn-close-new-project').addEventListener('click', () => this.modalNewProject.close());
+        document.getElementById('btn-cancel-new-project').addEventListener('click', () => this.modalNewProject.close());
+
+        document.getElementById('form-new-project').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const name = document.getElementById('new-project-name').value.trim();
+          if (!name) return;
+          const newProj = {
+            id: 'proj_' + Date.now(),
+            name,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            modules: []
+          };
+          await this.db.put(newProj);
+          this.modalNewProject.close();
+          await this.switchProject(newProj.id);
+          this.modalImport.showModal();
+        });
+
+        // Load Sample Button
+        document.getElementById('btn-load-sample').addEventListener('click', async () => {
+          await this.loadSampleProject();
+        });
+
+        // Import Dialog
+        document.getElementById('btn-import-source').addEventListener('click', () => {
+          this.modalImport.showModal();
+        });
+        document.getElementById('btn-close-import-dialog').addEventListener('click', () => this.modalImport.close());
+        document.getElementById('btn-cancel-import').addEventListener('click', () => this.modalImport.close());
+
+        // File Drop Zone & Multi File Upload
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input-multiple');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('dragover');
+          if (e.dataTransfer.files?.length) {
+            await this.handleFilesUpload(e.dataTransfer.files);
+          }
+        });
+
+        fileInput.addEventListener('change', async (e) => {
+          if (e.target.files?.length) {
+            await this.handleFilesUpload(e.target.files);
+          }
+        });
+
+        // Paste Code Confirm
+        document.getElementById('btn-confirm-import').addEventListener('click', async () => {
+          const name = document.getElementById('paste-module-name').value.trim() || 'CustomModule';
+          const type = document.getElementById('paste-module-type').value;
+          const code = document.getElementById('paste-code-area').value.trim();
+
+          if (!code) {
+            this.showToast('請先選取檔案或貼上程式碼內容', 'warning');
+            return;
+          }
+
+          if (!this.currentProject) {
+            const p = { id: 'proj_' + Date.now(), name: '我的VBA分析', modules: [] };
+            await this.db.put(p);
+            this.currentProject = p;
+          }
+
+          const existingModIdx = this.currentProject.modules.findIndex(m => m.name.toLowerCase() === name.toLowerCase());
+          if (existingModIdx >= 0) {
+            this.currentProject.modules[existingModIdx].code = code;
+            this.currentProject.modules[existingModIdx].type = type;
+          } else {
+            this.currentProject.modules.push({
+              id: 'mod_' + Date.now(),
+              name,
+              type,
+              code
+            });
+          }
+
+          await this.db.put(this.currentProject);
+          this.modalImport.close();
+          document.getElementById('paste-code-area').value = '';
+          this.runAnalysis();
+          this.showToast(`已匯入模組: ${name}`);
+        });
+
+        // View Mode Toggle (Procedure vs Module)
+        document.getElementById('view-mode-selector').addEventListener('change', (e) => {
+          if (this.analysisResult) {
+            this.visualizer.setData(this.analysisResult, e.target.value);
+          }
+        });
+
+        // Stage Controls
+        document.getElementById('btn-fit-view').addEventListener('click', () => this.visualizer.fitView());
+        document.getElementById('btn-re-layout').addEventListener('click', () => {
+          this.visualizer.arrangeNodes();
+          this.visualizer.renderElements();
+          this.visualizer.fitView();
+        });
+
+        // Export SVG
+        document.getElementById('btn-export-svg').addEventListener('click', () => {
+          const svg = document.getElementById('network-canvas');
+          const serializer = new XMLSerializer();
+          let source = serializer.serializeToString(svg);
+          const blob = new Blob([source], { type: 'image/svg+xml;charset=utf-8' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${this.currentProject?.name || 'vba-dependency'}-graph.svg`;
+          a.click();
+          URL.revokeObjectURL(url);
+          this.showToast('已匯出 SVG 向量圖');
+        });
+
+        // Export Mermaid
+        document.getElementById('btn-export-mermaid').addEventListener('click', () => {
+          if (!this.analysisResult) return;
+          let m = 'graph TD\n';
+          for (const e of this.analysisResult.edges) {
+            const s = e.source.replace(/[^a-zA-Z0-9_]/g, '_');
+            const t = e.target.replace(/[^a-zA-Z0-9_]/g, '_');
+            m += `  ${s}["${e.source}"] --> ${t}["${e.target}"]\n`;
+          }
+          navigator.clipboard.writeText(m).then(() => {
+            this.showToast('已複製 Mermaid 程式碼至剪貼簿！');
+          }).catch(() => {
+            prompt('請手動複製 Mermaid 程式碼：', m);
+          });
+        });
+
+        // Export Project JSON
+        document.getElementById('btn-export-json').addEventListener('click', async () => {
+          if (!this.currentProject) return;
+          const blob = new Blob([JSON.stringify(this.currentProject, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${this.currentProject.name}-backup.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          this.showToast('已匯出專案備份 JSON');
+        });
+
+        // Restore Project JSON
+        const inputRestore = document.getElementById('input-restore-json');
+        document.getElementById('btn-import-json').addEventListener('click', () => inputRestore.click());
+        inputRestore.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            const text = await file.text();
+            const project = JSON.parse(text);
+            if (project.id && project.modules) {
+              await this.db.put(project);
+              await this.switchProject(project.id);
+              this.showToast('專案還原成功！');
+            } else {
+              this.showToast('JSON 格式無效', 'danger');
+            }
+          } catch (err) {
+            this.showToast('讀取備份失敗: ' + err.message, 'danger');
+          }
+          inputRestore.value = '';
+        });
+
+        // Catalog & Inspector Delegations
+        this.catalogList.addEventListener('click', (e) => {
+          const procItem = e.target.closest('.proc-item');
+          const modHeader = e.target.closest('.module-header');
+
+          if (procItem) {
+            const id = procItem.dataset.id;
+            this.visualizer.selectNode(id);
+            this.inspectNode(id);
+          } else if (modHeader) {
+            const modName = modHeader.dataset.module;
+            this.inspectModule(modName);
+          }
+        });
+
+        this.deadList.addEventListener('click', (e) => {
+          const item = e.target.closest('.proc-item');
+          if (item) {
+            const id = item.dataset.id;
+            this.visualizer.selectNode(id);
+            this.inspectNode(id);
+          }
+        });
+
+        this.cycleList.addEventListener('click', (e) => {
+          const chip = e.target.closest('.chip');
+          if (chip && chip.dataset.node) {
+            const id = chip.dataset.node;
+            this.visualizer.selectNode(id);
+            this.inspectNode(id);
+          }
+        });
+
+        this.inspectorContent.addEventListener('click', async (e) => {
+          const jumpChip = e.target.closest('[data-jump]');
+          const btnDelMod = e.target.closest('.btn-delete-module');
+
+          if (jumpChip) {
+            const targetId = jumpChip.dataset.jump;
+            this.visualizer.selectNode(targetId);
+            this.inspectNode(targetId);
+          } else if (btnDelMod) {
+            const modName = btnDelMod.dataset.module;
+            if (confirm(`確定要從專案中刪除模組「${modName}」嗎？`)) {
+              this.currentProject.modules = this.currentProject.modules.filter(m => m.name !== modName);
+              this.currentProject.updatedAt = Date.now();
+              await this.db.put(this.currentProject);
+              this.showToast(`已刪除模組: ${modName}`);
+              this.runAnalysis();
+              this.inspectorContent.innerHTML = `
+                <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 2rem;">
+                  模組已刪除。請從左側清單選擇其他模組。
+                </div>
+              `;
+              this.inspectorTitle.textContent = '屬性與呼叫檢查器';
+            }
+          }
+        });
+
+        // Close Inspector
+        document.getElementById('btn-close-inspector').addEventListener('click', () => {
+          this.visualizer.selectNode(null);
+          this.selectedEntity = null;
+          this.inspectorContent.innerHTML = `
+            <div style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 2rem;">
+              在左側清單或中間拓撲圖中點選節點以檢視詳細呼叫關係與原始程式碼。
+            </div>
+          `;
+          this.inspectorTitle.textContent = '屬性與呼叫檢查器';
+        });
+      }
+
+      /**
+       * Decode file binary buffer with auto-detection for Big5, UTF-8, UTF-16LE, UTF-16BE
+       * @param {File} file
+       * @param {string} forcedEncoding - 'auto', 'big5', 'utf-8', 'utf-16le', 'gb18030'
+       */
+      async decodeFileWithEncoding(file, forcedEncoding = 'auto') {
+        const buffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(buffer);
+
+        // 1. Check BOM header if auto
+        if (forcedEncoding === 'auto' || forcedEncoding === 'utf-8') {
+          if (bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+            return new TextDecoder('utf-8').decode(bytes.slice(3));
+          }
+        }
+        if (forcedEncoding === 'auto' || forcedEncoding === 'utf-16le') {
+          if (bytes[0] === 0xFF && bytes[1] === 0xFE) {
+            return new TextDecoder('utf-16le').decode(bytes.slice(2));
+          }
+        }
+        if (forcedEncoding === 'auto') {
+          if (bytes[0] === 0xFE && bytes[1] === 0xFF) {
+            return new TextDecoder('utf-16be').decode(bytes.slice(2));
+          }
+        }
+
+        // 2. Forced encoding
+        if (forcedEncoding !== 'auto') {
+          try {
+            return new TextDecoder(forcedEncoding).decode(bytes);
+          } catch (e) {
+            console.warn(`TextDecoder with ${forcedEncoding} failed, falling back:`, e);
+          }
+        }
+
+        // 3. Smart Auto Detection (UTF-8 strict first, fallback to Big5 / CP950)
+        try {
+          // If it's valid strict UTF-8 with non-ASCII or plain ASCII
+          const utf8Decoder = new TextDecoder('utf-8', { fatal: true });
+          return utf8Decoder.decode(bytes);
+        } catch (err) {
+          // Contains invalid UTF-8 byte sequences -> Standard Traditional Chinese Big5 (CP950)
+          try {
+            const big5Decoder = new TextDecoder('big5');
+            return big5Decoder.decode(bytes);
+          } catch (b5Err) {
+            // Ultimate fallback
+            return new TextDecoder('utf-8').decode(bytes);
+          }
+        }
+      }
+
+      async handleFilesUpload(fileList) {
+        if (!this.currentProject) {
+          const p = { id: 'proj_' + Date.now(), name: 'VBA匯入分析', modules: [] };
+          await this.db.put(p);
+          this.currentProject = p;
+        }
+
+        const encodingSelect = document.getElementById('select-file-encoding');
+        const selectedEncoding = encodingSelect ? encodingSelect.value : 'auto';
+
+        let loadedCount = 0;
+        for (let i = 0; i < fileList.length; i++) {
+          const file = fileList[i];
+          const ext = file.name.split('.').pop().toLowerCase();
+          const baseName = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+
+          let type = 'Standard';
+          if (ext === 'cls') type = 'Class';
+          else if (ext === 'frm') type = 'Form';
+
+          try {
+            const text = await this.decodeFileWithEncoding(file, selectedEncoding);
+            // Check if module with same name already exists in currentProject
+            const existingModIdx = this.currentProject.modules.findIndex(m => m.name.toLowerCase() === baseName.toLowerCase());
+            if (existingModIdx >= 0) {
+              this.currentProject.modules[existingModIdx].code = text;
+              this.currentProject.modules[existingModIdx].type = type;
+            } else {
+              this.currentProject.modules.push({
+                id: 'mod_' + Date.now() + '_' + i,
+                name: baseName,
+                type,
+                code: text
+              });
+            }
+            loadedCount++;
+          } catch (err) {
+            console.error('Error reading file:', file.name, err);
+          }
+        }
+
+        await this.db.put(this.currentProject);
+        this.modalImport.close();
+        this.runAnalysis();
+        this.showToast(`成功載入 ${loadedCount} 個模組檔案！`);
+      }
+
+      showToast(msg, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        let icon = 'ℹ️';
+        if (type === 'warning') icon = '⚠️';
+        if (type === 'danger') icon = '❌';
+        toast.innerHTML = `<span>${icon}</span><span>${this.escapeHTML(msg)}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 2800);
+      }
+
+      escapeHTML(str) {
+        if (!str) return '';
+        const p = document.createElement('p');
+        p.textContent = str;
+        return p.innerHTML;
+      }
+    }
+
+    // Initialize application when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      window.app = new App();
+    });
+  </script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
