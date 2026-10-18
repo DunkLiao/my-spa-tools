@@ -1,0 +1,2283 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>信用卡防阻詐騙異常模式沙盒 (Credit Card Fraud Sandbox)</title>
+<!--
+  單檔離線 SPA：零建置、零依賴、零外部請求。
+  對應 SPEC.md：§2.2 技術棧、§4.2 規則引擎、§4.4/§4.5 模板 CRUD、§6 演算、§7 非功能需求。
+-->
+<style>
+:root{
+  --bg:#0a1120; --bg2:#0e1728; --panel:#111c2e; --panel2:#16233a; --panel3:#1b2b45;
+  --border:#24344f; --text:#e6edf7; --muted:#93a4bf; --accent:#38bdf8; --accent2:#22d3ee;
+  --low:#22c55e; --medium:#f59e0b; --high:#f97316; --critical:#ef4444;
+  --shadow:0 8px 28px rgba(0,0,0,.45); --radius:10px;
+  --panel-trans:rgba(17,28,46,.88);
+  --map-ocean:#0b1526; --map-land:#233a5c; --map-line:#3d5b86;
+}
+body.light{
+  --bg:#eef2f9; --bg2:#e4eaf4; --panel:#ffffff; --panel2:#f5f8fd; --panel3:#eaf0fa;
+  --border:#d2dbeb; --text:#0f1b2d; --muted:#5b6b85; --shadow:0 8px 24px rgba(15,27,45,.12);
+  --panel-trans:rgba(255,255,255,.92);
+  --map-ocean:#dfe8f7; --map-land:#ffffff; --map-line:#b8c8de;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--bg); color:var(--text); font-size:13px;
+  font-family:"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;
+  overflow:hidden;
+}
+button{font-family:inherit;font-size:12px;cursor:pointer;color:var(--text);background:var(--panel2);
+  border:1px solid var(--border);border-radius:7px;padding:6px 10px;transition:.15s}
+button:hover{background:var(--panel3);border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.primary{background:linear-gradient(180deg,#0ea5e9,#0369a1);border-color:#0ea5e9;color:#fff;font-weight:600}
+button.danger{background:linear-gradient(180deg,#ef4444,#b91c1c);border-color:#ef4444;color:#fff;font-weight:600}
+button.ghost{background:transparent}
+button.sm{padding:3px 7px;font-size:11px}
+input,select,textarea{font-family:inherit;font-size:12px;color:var(--text);background:var(--bg2);
+  border:1px solid var(--border);border-radius:7px;padding:5px 8px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+h1,h2,h3,h4{margin:0;font-weight:600}
+.muted{color:var(--muted)}
+.mono{font-family:"Cascadia Code",Consolas,"Courier New",monospace}
+
+/* ---------- Header ---------- */
+.app-header{
+  display:flex;align-items:center;gap:14px;padding:8px 14px;height:54px;
+  background:linear-gradient(180deg,var(--panel2),var(--panel));border-bottom:1px solid var(--border);
+}
+.brand{display:flex;align-items:center;gap:9px;min-width:280px}
+.brand .logo{font-size:20px}
+.brand h1{font-size:14px;letter-spacing:.3px;white-space:nowrap}
+.header-stats{display:flex;align-items:center;gap:14px;flex:1;flex-wrap:wrap;font-size:12px}
+.header-stats .stat{display:flex;gap:6px;align-items:center;color:var(--muted)}
+.header-stats .stat b{color:var(--text);font-size:14px}
+.header-actions{display:flex;align-items:center;gap:8px}
+.badge{padding:3px 9px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--border);display:inline-flex;gap:5px;align-items:center}
+.badge.live{border-color:#22c55e;color:#4ade80}
+.badge.live .dot{width:7px;height:7px;border-radius:50%;background:#22c55e;animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.idb-status{font-size:11px;color:var(--muted);padding:3px 8px;border:1px solid var(--border);border-radius:999px}
+.idb-status.warn{color:#fbbf24;border-color:#fbbf24}
+
+/* ---------- Layout ---------- */
+.workspace{display:grid;grid-template-columns:326px minmax(0,1fr) 348px;gap:10px;padding:10px;
+  height:calc(100vh - 54px)}
+.col{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+  display:flex;flex-direction:column;min-height:0;overflow:hidden;box-shadow:var(--shadow)}
+.col-head{padding:9px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;
+  justify-content:space-between;gap:8px;background:var(--panel2)}
+.col-head h3{font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+.col-body{flex:1;overflow:auto;min-height:0;padding:10px}
+.section{margin-bottom:14px}
+.section-title{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);
+  margin:0 0 7px;display:flex;align-items:center;gap:6px}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.grow{flex:1;min-width:0}
+hr.sep{border:none;border-top:1px solid var(--border);margin:12px 0}
+
+/* ---------- Template manager ---------- */
+.tpl-toolbar{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:6px}
+.tpl-toolbar button{padding:5px 2px;font-size:11px}
+select.grow{max-width:100%}
+
+/* ---------- Sliders ---------- */
+.slider-row{margin:9px 0}
+.slider-row label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px}
+.slider-row label b{color:var(--accent2)}
+input[type=range]{width:100%;accent-color:var(--accent);background:transparent;border:none;padding:0}
+
+/* ---------- Case list ---------- */
+.case-item{display:flex;gap:9px;padding:8px 9px;border:1px solid var(--border);border-radius:8px;
+  margin-bottom:7px;cursor:pointer;background:var(--panel2);transition:.15s}
+.case-item:hover{border-color:var(--accent);transform:translateX(2px)}
+.case-item.active{border-color:var(--accent);background:var(--panel3);box-shadow:inset 3px 0 0 var(--accent)}
+.case-score{min-width:42px;height:42px;border-radius:8px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff}
+.case-meta{flex:1;min-width:0}
+.case-meta .card{font-size:12px;font-weight:600}
+.case-meta .name{font-size:11px;color:var(--muted)}
+.case-meta .reason{font-size:11px;margin-top:3px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 6px;border-radius:999px;
+  border:1px solid var(--border);background:var(--bg2);margin:2px 3px 0 0}
+.tag.lock{border-color:var(--critical);color:#fca5a5}
+.tag.wl{border-color:var(--low);color:#86efac}
+
+/* ---------- Center views ---------- */
+.view-tabs{display:flex;gap:6px}
+.view-tabs button.active{background:var(--accent);border-color:var(--accent);color:#04243a;font-weight:700}
+.view-stage{flex:1;min-height:0;position:relative;display:flex;flex-direction:column}
+.map-wrap{flex:1;min-height:0;position:relative;background:var(--map-ocean)}
+svg.world{width:100%;height:100%;display:block}
+.legend{position:absolute;left:10px;bottom:10px;background:var(--panel-trans);border:1px solid var(--border);
+  border-radius:8px;padding:7px 10px;font-size:11px;line-height:1.6;color:var(--text);
+  display:flex;gap:12px;flex-wrap:wrap;backdrop-filter:blur(6px);box-shadow:var(--shadow)}
+.legend span{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.legend .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.28)}
+.legend .dot.ok{background:var(--low)}
+.legend .dot.fail{background:var(--critical)}
+.legend .dot.warn{background:var(--high)}
+.legend .dot.alert{background:transparent;border:2px solid var(--critical);box-shadow:none;
+  animation:blink 1.1s ease-in-out infinite}
+.route-flash{stroke:#ef4444;stroke-width:2;fill:none;stroke-dasharray:7 6;animation:dash 1s linear infinite,blink 1.1s ease-in-out infinite}
+@keyframes dash{to{stroke-dashoffset:-26}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.route{stroke:#64748b;stroke-width:1.4;fill:none;opacity:.75}
+.node-label{font-size:9px;fill:var(--muted);pointer-events:none}
+
+.wave-wrap{flex:1;min-height:0;position:relative}
+canvas#wave{width:100%;height:100%;display:block}
+.wave-tip{position:absolute;pointer-events:none;background:rgba(3,12,24,.94);border:1px solid var(--accent);
+  border-radius:7px;padding:6px 8px;font-size:11px;display:none;z-index:5;max-width:240px;line-height:1.5}
+
+.tx-table{width:100%;border-collapse:collapse;font-size:11px}
+.tx-table th,.tx-table td{padding:5px 7px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.tx-table thead th{position:sticky;top:0;background:var(--panel2);z-index:1;color:var(--muted);font-size:10px;text-transform:uppercase}
+.tx-table tbody tr:hover{background:var(--panel2)}
+.tx-table tr.flagged{box-shadow:inset 3px 0 0 var(--high)}
+.tx-table tr.sel{background:var(--panel3)!important;box-shadow:inset 3px 0 0 var(--accent)}
+.tx-table td .rowbtn{padding:2px 7px;font-size:11px;line-height:1.4}
+.tx-table td{max-width:210px;overflow:hidden;text-overflow:ellipsis}
+.tx-table th:last-child,.tx-table td:last-child{position:sticky;right:0;background:var(--panel);
+  box-shadow:-8px 0 10px -8px rgba(0,0,0,.45);max-width:none;overflow:visible}
+.tx-table thead th:last-child{background:var(--panel2);z-index:4}
+.tx-table tbody tr:hover td:last-child{background:var(--panel2)}
+.list-toolbar{position:sticky;top:0;z-index:3;display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+  padding:8px 10px;background:var(--panel2);border-bottom:1px solid var(--border)}
+.list-toolbar .spacer{margin-left:auto}
+.list-toolbar .hint{font-size:11px;color:var(--muted)}
+.pill{padding:1px 6px;border-radius:999px;font-size:10px;font-weight:600;border:1px solid transparent}
+.pill.APPROVED{background:rgba(34,197,94,.16);color:#4ade80;border-color:rgba(34,197,94,.4)}
+.pill.DECLINED{background:rgba(239,68,68,.16);color:#fca5a5;border-color:rgba(239,68,68,.4)}
+.pill.TIMEOUT{background:rgba(148,163,184,.16);color:#cbd5e1;border-color:rgba(148,163,184,.4)}
+.pill.CHALLENGE_REQUIRED{background:rgba(249,115,22,.16);color:#fdba74;border-color:rgba(249,115,22,.4)}
+
+/* ---------- Timeline ---------- */
+.timeline{border-top:1px solid var(--border);background:var(--panel2);padding:8px 12px}
+.timeline .controls{display:flex;align-items:center;gap:8px}
+.timeline input[type=range]{flex:1}
+.time-readout{font-size:11px;color:var(--muted);min-width:190px;text-align:right}
+
+/* ---------- Right panel ---------- */
+.risk-hero{border-radius:var(--radius);padding:12px;text-align:center;border:1px solid var(--border);
+  background:var(--panel2);margin-bottom:12px}
+.risk-hero .lvl{font-size:22px;font-weight:800;letter-spacing:1px}
+.risk-hero .score{font-size:34px;font-weight:800;line-height:1.1}
+.risk-hero .sym{font-size:20px}
+.risk-bar{height:8px;border-radius:999px;background:var(--bg2);overflow:hidden;margin-top:9px}
+.risk-bar i{display:block;height:100%;transition:width .3s}
+.pattern-item{border:1px solid var(--border);border-left-width:3px;border-radius:8px;padding:8px;
+  margin-bottom:7px;background:var(--panel2)}
+.pattern-item.WARNING{border-left-color:var(--medium)}
+.pattern-item.DANGER{border-left-color:var(--critical)}
+.pattern-item .pt{font-size:12px;font-weight:600;display:flex;justify-content:space-between;gap:6px}
+.pattern-item .pd{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5}
+.action-grid{display:grid;gap:7px}
+.action-grid button{justify-content:flex-start;text-align:left;padding:9px 11px;font-size:12px;font-weight:600}
+.audit-list{font-size:11px}
+.audit-item{border-left:2px solid var(--accent);padding:4px 0 4px 8px;margin-bottom:6px;color:var(--muted)}
+.audit-item b{color:var(--text);font-weight:600}
+.empty{color:var(--muted);text-align:center;padding:22px 10px;font-size:12px}
+
+/* ---------- Modal ---------- */
+.modal-mask{position:fixed;inset:0;background:rgba(2,7,16,.72);display:none;align-items:center;
+  justify-content:center;z-index:50;padding:22px;backdrop-filter:blur(2px)}
+.modal-mask.show{display:flex}
+.modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);
+  width:min(1000px,96vw);max-height:92vh;display:flex;flex-direction:column}
+.modal.narrow{width:min(460px,94vw)}
+.modal-head{padding:12px 15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:14px 15px;overflow:auto;min-height:0}
+.modal-foot{padding:11px 15px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.field{margin-bottom:9px}
+.field label{display:block;font-size:11px;color:var(--muted);margin-bottom:3px}
+.field input,.field select,.field textarea{width:100%}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.edit-table{width:100%;border-collapse:collapse;font-size:11px}
+.edit-table th,.edit-table td{border:1px solid var(--border);padding:3px}
+.edit-table input,.edit-table select{width:100%;border:none;background:transparent;padding:3px 4px;font-size:11px}
+.edit-table thead th{background:var(--panel2);position:sticky;top:0;font-size:10px;color:var(--muted);z-index:2}
+.edit-wrap{overflow:auto;max-height:44vh;border:1px solid var(--border);border-radius:8px}
+.warn-box{border:1px solid #f59e0b;background:rgba(245,158,11,.1);color:#fbbf24;border-radius:8px;
+  padding:8px 10px;font-size:11px;margin-bottom:10px;display:none}
+.warn-box.show{display:block}
+
+/* ---------- Toast ---------- */
+.toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:80}
+.toast{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:8px;padding:9px 13px;font-size:12px;box-shadow:var(--shadow);min-width:230px;
+  animation:slidein .22s ease}
+.toast.ok{border-left-color:var(--low)}
+.toast.err{border-left-color:var(--critical)}
+.toast.warn{border-left-color:var(--medium)}
+@keyframes slidein{from{transform:translateX(30px);opacity:0}to{transform:none;opacity:1}}
+
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--panel3);border-radius:6px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <div class="brand"><span class="logo">🛡️</span><h1>信用卡防阻詐騙異常模式沙盒</h1></div>
+  <div class="header-stats">
+    <span class="stat">警示案件 <b id="statTotal">0</b></span>
+    <span class="stat">Critical <b id="statCritical" style="color:#fca5a5">0</b></span>
+    <span class="stat">High <b id="statHigh" style="color:#fdba74">0</b></span>
+    <span class="stat">交易筆數 <b id="statTx">0</b></span>
+    <span class="stat">專員 <b>F-8012</b></span>
+    <span class="badge live"><span class="dot"></span>即時監控中</span>
+  </div>
+  <div class="header-actions">
+    <span id="idbStatus" class="idb-status">IndexedDB</span>
+    <button id="btnTheme" title="切換深/淺色模式">☀️ 淺色</button>
+  </div>
+</header>
+
+<main class="workspace">
+
+  <!-- ============ LEFT ============ -->
+  <aside class="col">
+    <div class="col-head"><h3>案件清單與情境注入</h3></div>
+    <div class="col-body">
+
+      <div class="section">
+        <div class="section-title">📦 模板管理（CRUD / 匯入匯出）</div>
+        <select id="tplSelect" class="grow" style="width:100%"></select>
+        <div class="tpl-toolbar">
+          <button id="btnLoad" class="primary" title="載入所選模板到沙盒">⤓ 載入</button>
+          <button id="btnNew" title="新增空白模板">＋ 新增</button>
+          <button id="btnEdit" title="編輯所選模板">✎ 編輯</button>
+          <button id="btnDel" class="danger" title="刪除所選模板">🗑 刪除</button>
+          <button id="btnImport" title="匯入 JSON / CSV 模板">⇩ 匯入</button>
+          <button id="btnExport" title="匯出所有模板 JSON">⇧ 匯出</button>
+          <button id="btnSaveAs" title="把目前載入的案件另存為模板">⧉ 另存</button>
+          <button id="btnRestore" title="還原 10 個內建模板">↺ 還原</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">🎚️ 動態門檻調整器</div>
+        <div class="slider-row">
+          <label>警示敏感度分數 (Score Threshold) <b id="lblScore">70</b></label>
+          <input type="range" id="sliderScore" min="0" max="100" step="1" value="70" />
+        </div>
+        <div class="slider-row">
+          <label>不可能位移速度限制 (km/h) <b id="lblSpeed">800</b></label>
+          <input type="range" id="sliderSpeed" min="100" max="2000" step="50" value="800" />
+        </div>
+        <div class="row" style="margin-top:6px">
+          <button id="btnMock500" class="sm ghost">⚡ 載入 500 筆效能測試資料</button>
+        </div>
+      </div>
+
+      <hr class="sep" />
+
+      <div class="section">
+        <div class="section-title">🔍 案件搜尋</div>
+        <input id="caseSearch" class="grow" style="width:100%" placeholder="輸入遮罩卡號 / 姓名 / 案件編號" />
+      </div>
+
+      <div class="section">
+        <div class="section-title">📋 待審清單（按風險排序）<span id="caseCount" class="muted"></span></div>
+        <div id="caseList"></div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- ============ CENTER ============ -->
+  <section class="col">
+    <div class="col-head">
+      <h3>可視化沙盒核心工作區</h3>
+      <div class="view-tabs">
+        <button data-view="map" class="active">🗺️ 地圖軌跡</button>
+        <button data-view="wave">📊 時序波形</button>
+        <button data-view="list">📄 交易明細清單</button>
+      </div>
+    </div>
+    <div class="view-stage">
+      <div id="stageMap" class="map-wrap">
+        <svg class="world" id="worldSvg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="legend">
+          <span><i class="dot ok"></i>成功 APPROVED</span>
+          <span><i class="dot fail"></i>失敗 DECLINED</span>
+          <span><i class="dot warn"></i>3DS 攔截 / TIMEOUT</span>
+          <span><i class="dot alert"></i>不可能位移 Impossible Travel</span>
+        </div>
+      </div>
+      <div id="stageWave" class="wave-wrap" style="display:none">
+        <canvas id="wave"></canvas>
+        <div class="wave-tip" id="waveTip"></div>
+      </div>
+      <div id="stageList" style="display:none;flex:1;min-height:0;overflow:auto"></div>
+    </div>
+    <div class="timeline">
+      <div class="controls">
+        <button id="btnStepB" title="上一筆">◀◀</button>
+        <button id="btnPlay" title="播放 / 暫停">▶ 播放</button>
+        <button id="btnStepF" title="下一筆">▶▶</button>
+        <input type="range" id="scrubber" min="0" max="1000" step="1" value="1000" />
+        <span class="time-readout" id="timeReadout">—</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RIGHT ============ -->
+  <aside class="col">
+    <div class="col-head"><h3>風控診斷與處置面板</h3></div>
+    <div class="col-body">
+      <div id="riskHero" class="risk-hero"><div class="muted">請由左側載入案件或模板</div></div>
+
+      <div class="section">
+        <div class="section-title">🧠 偵測到的模式特徵</div>
+        <div id="patternList"><div class="empty">尚無資料</div></div>
+      </div>
+
+      <div class="section">
+        <div class="section-title">⚡ 快捷處置動作</div>
+        <div class="action-grid">
+          <button id="actLock" class="danger">🛑 一鍵立即鎖卡（STOP-90）</button>
+          <button id="actSms">📱 發送即時照會 SMS</button>
+          <button id="actWhite">🛡️ 解除並加入暫時白名單（24h）</button>
+          <button id="actReport">📋 正式立案通報（匯出稽核報告）</button>
+        </div>
+      </div>
+
+      <hr class="sep" />
+      <div class="section">
+        <div class="section-title">🧾 稽核軌跡（Audit Log）</div>
+        <div id="auditList" class="audit-list"><div class="empty">尚無紀錄</div></div>
+      </div>
+    </div>
+  </aside>
+</main>
+
+<!-- ============ MODALS ============ -->
+<div class="modal-mask" id="tplModal">
+  <div class="modal">
+    <div class="modal-head"><h3 id="tplModalTitle">模板編輯器</h3>
+      <button id="tplModalClose" class="ghost">✕</button></div>
+    <div class="modal-body">
+      <div class="warn-box" id="piiWarn"></div>
+      <div class="grid-3">
+        <div class="field"><label>模板 ID</label><input id="mId" /></div>
+        <div class="field"><label>模板名稱 *</label><input id="mName" /></div>
+        <div class="field"><label>群組</label>
+          <select id="mGroup"><option value="attack">攻擊情境 (attack)</option><option value="baseline">對照基線 (baseline)</option></select>
+        </div>
+      </div>
+      <div class="field"><label>說明</label><input id="mDesc" /></div>
+      <div class="field"><label>標籤（逗號分隔）</label><input id="mTags" placeholder="ImpossibleTravel, HighRiskMCC" /></div>
+
+      <div class="section-title" style="margin-top:12px">交易明細（TransactionRecord[]）
+        <span class="grow"></span>
+      </div>
+      <div class="row" style="margin-bottom:7px">
+        <button id="rowAdd" class="sm">＋ 新增交易列</button>
+        <button id="rowSort" class="sm">⇅ 依時間排序</button>
+        <span class="muted" id="rowCount"></span>
+      </div>
+      <div class="edit-wrap"><table class="edit-table" id="editTable"></table></div>
+    </div>
+    <div class="modal-foot">
+      <button id="tplCancel" class="ghost">取消</button>
+      <button id="tplSaveAs" >另存為新模板</button>
+      <button id="tplSave" class="primary">💾 儲存 (Ctrl+Enter)</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-mask" id="txModal">
+  <div class="modal" style="width:min(780px,96vw)">
+    <div class="modal-head"><h3 id="txModalTitle">新增交易</h3><button id="txClose" class="ghost">✕</button></div>
+    <div class="modal-body">
+      <div class="warn-box" id="txPiiWarn"></div>
+      <div class="grid-3" id="txFormGrid"></div>
+    </div>
+    <div class="modal-foot">
+      <button id="txCancel" class="ghost">取消</button>
+      <button id="txSave" class="primary">💾 儲存 (Ctrl+Enter)</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="txFile" accept=".csv,.json,.txt" style="display:none" />
+
+<div class="modal-mask" id="importModal">
+  <div class="modal narrow">
+    <div class="modal-head"><h3>匯入模板（JSON / CSV）</h3><button id="impClose" class="ghost">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>貼上 JSON（單一模板物件或陣列）或 CSV（含表頭）</label>
+        <textarea id="impText" rows="12" placeholder='[{"id":"tpl-x","name":"...","group":"attack","transactions":[...]}]'></textarea></div>
+      <div class="field"><label>ID 衝突處理</label>
+        <select id="impConflict"><option value="rename">另存新 ID（保留兩者）</option><option value="overwrite">覆蓋既有</option></select></div>
+      <div class="field"><label>或選擇檔案</label><input type="file" id="impFile" accept=".json,.csv,.txt" /></div>
+    </div>
+    <div class="modal-foot">
+      <button id="impCancel" class="ghost">取消</button>
+      <button id="impGo" class="primary">匯入</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-mask" id="confirmModal">
+  <div class="modal narrow">
+    <div class="modal-head"><h3 id="cfTitle">確認</h3></div>
+    <div class="modal-body"><div id="cfMsg" style="line-height:1.7"></div></div>
+    <div class="modal-foot">
+      <button id="cfCancel" class="ghost">取消</button>
+      <button id="cfOk" class="danger">確認執行</button>
+    </div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+(function () {
+'use strict';
+
+/* =====================================================================
+   0. 工具 (Utilities)
+   ===================================================================== */
+var $ = function (id) { return document.getElementById(id); };
+function el(tag, attrs, kids) {
+  var n = document.createElement(tag);
+  if (attrs) for (var k in attrs) {
+    if (k === 'class') n.className = attrs[k];
+    else if (k === 'text') n.textContent = attrs[k];
+    else if (k.indexOf('on') === 0) n[k.toLowerCase()] = attrs[k];
+    else n.setAttribute(k, attrs[k]);
+  }
+  if (kids) (Array.isArray(kids) ? kids : [kids]).forEach(function (c) {
+    if (c != null) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+  });
+  return n;
+}
+function uid(p) { _uidSeq++; return (p || '') + Date.now().toString(36) + _uidSeq.toString(36) + Math.random().toString(36).slice(2, 7); }
+var _uidSeq = 0;
+var ID_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+/* 以隨機字元產生短 ID（避免 Date.now() 前綴在同一秒內重複） */
+function shortId(n) {
+  n = n || 6; var s = '';
+  for (var i = 0; i < n; i++) s += ID_CHARS[Math.floor(Math.random() * ID_CHARS.length)];
+  return s;
+}
+function uniqueTxId() {
+  var id;
+  do { id = 'TX-' + shortId(6); } while (state.txs.some(function (t) { return t.txId === id; }));
+  return id;
+}
+function uniqueTemplateId() {
+  var id;
+  do { id = 'tpl-user-' + shortId(5); } while (state.templates.some(function (t) { return t.id === id; }));
+  return id;
+}
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function deep(o) { return JSON.parse(JSON.stringify(o)); }
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+  return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+
+/* --- PII 遮罩 (§2.1 / §7.2) --- */
+function maskPAN(pan) {
+  var d = String(pan).replace(/\D/g, '');
+  if (d.length < 10) return String(pan);
+  var f = d.slice(0, 6), l = d.slice(-4);
+  return f.slice(0, 4) + '-' + f.slice(4, 6) + '**-****-' + l;
+}
+function maskPhone(p) {
+  var d = String(p).replace(/\D/g, '');
+  if (d.length < 7) return String(p);
+  return d.slice(0, 4) + '-***-' + d.slice(-3);
+}
+function maskName(n) {
+  n = String(n);
+  if (n.length <= 1) return n;
+  if (n.length === 2) return n[0] + '*';
+  return n[0] + '*'.repeat(n.length - 2) + n[n.length - 1];
+}
+/* 掃描是否含未遮罩 PII（完整 PAN 13~19 連號數字） */
+function findUnmaskedPII(obj) {
+  var hits = [];
+  (function walk(o, path) {
+    if (o == null) return;
+    if (typeof o === 'string') {
+      if (/\d{13,19}/.test(o.replace(/[\s-]/g, ''))) hits.push(path + ' = ' + o);
+      return;
+    }
+    if (typeof o === 'object') for (var k in o) walk(o[k], path ? path + '.' + k : k);
+  })(obj, '');
+  return hits;
+}
+
+/* --- 格式化 --- */
+var TWD_FMT = new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 0 });
+function ntd(v) { return 'NT$' + TWD_FMT.format(Math.round(v || 0)); }
+function amtFmt(v, ccy) {
+  var n = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(v || 0);
+  return ccy + ' ' + n;
+}
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+/* 全系統統一以 UTC 評估與顯示，確保跨機器結果一致（SPEC §6.2 深夜時段判定） */
+function hourOf(iso) { return new Date(iso).getUTCHours(); }
+function fmtClock(iso) {
+  var d = new Date(iso); if (isNaN(d)) return '—';
+  return pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes()) + ':' + pad(d.getUTCSeconds());
+}
+function fmtFull(iso) {
+  var d = new Date(iso); if (isNaN(d)) return '—';
+  return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) + ' ' + fmtClock(iso);
+}
+
+/* --- Toast --- */
+function toast(msg, type, ms) {
+  var t = el('div', { class: 'toast ' + (type || ''), text: msg });
+  $('toasts').appendChild(t);
+  setTimeout(function () { t.style.opacity = '0'; t.style.transform = 'translateX(30px)';
+    setTimeout(function () { t.remove(); }, 240); }, ms || 3200);
+}
+
+/* --- Web Audio 警示音 (§2.2) --- */
+var AudioEngine = (function () {
+  var ctx = null;
+  function ensure() {
+    if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ctx = null; } }
+    if (ctx && ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  function tone(freq, dur, type, gain) {
+    var c = ensure(); if (!c) return;
+    var o = c.createOscillator(), g = c.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0, c.currentTime);
+    g.gain.linearRampToValueAtTime(gain == null ? 0.14 : gain, c.currentTime + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+    o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + dur + 0.02);
+  }
+  return {
+    unlock: ensure,
+    danger: function () { tone(880, 0.16, 'sawtooth', 0.16); setTimeout(function () { tone(620, 0.24, 'sawtooth', 0.16); }, 170); },
+    ok: function () { tone(660, 0.12, 'sine', 0.12); setTimeout(function () { tone(990, 0.16, 'sine', 0.12); }, 110); },
+    tap: function () { tone(520, 0.06, 'triangle', 0.08); }
+  };
+})();
+
+/* =====================================================================
+   1. 地理運算 (§6.1)
+   ===================================================================== */
+var Geo = {
+  R: 6371,
+  haversine: function (a, b) {
+    var toRad = function (d) { return d * Math.PI / 180; };
+    var dLat = toRad(b.lat - a.lat), dLng = toRad(b.lng - a.lng);
+    var la1 = toRad(a.lat), la2 = toRad(b.lat);
+    var h = Math.pow(Math.sin(dLat / 2), 2) + Math.cos(la1) * Math.cos(la2) * Math.pow(Math.sin(dLng / 2), 2);
+    return 2 * this.R * Math.asin(Math.min(1, Math.sqrt(h)));
+  },
+  speedKmh: function (a, b) {
+    var km = this.haversine(a, b);
+    var hours = Math.abs(new Date(b.timestamp) - new Date(a.timestamp)) / 3600000;
+    if (hours <= 0) return Infinity;
+    return km / hours;
+  },
+  /* Equirectangular 投影 → SVG 座標 (1000 x 500) */
+  proj: function (lat, lng) { return { x: (lng + 180) / 360 * 1000, y: (90 - lat) / 180 * 500 }; }
+};
+/* 常見城市座標（合成資料用） */
+var CITY = {
+  taipei:      { lat: 25.033,  lng: 121.565, city: 'Taipei',      ip: '203.75.121.10' },
+  kaohsiung:   { lat: 22.627,  lng: 120.301, city: 'Kaohsiung',   ip: '203.75.130.22' },
+  tokyo:       { lat: 35.676,  lng: 139.650, city: 'Tokyo',       ip: '133.11.20.51' },
+  seoul:       { lat: 37.566,  lng: 126.978, city: 'Seoul',       ip: '121.130.7.9' },
+  london:      { lat: 51.507,  lng: -0.128,  city: 'London',      ip: '81.132.44.7' },
+  frankfurt:   { lat: 50.110,  lng: 8.682,   city: 'Frankfurt',   ip: '85.10.200.14' },
+  newyork:     { lat: 40.713,  lng: -74.006, city: 'New York',    ip: '64.233.180.5' },
+  losangeles:  { lat: 34.052,  lng: -118.244, city: 'Los Angeles', ip: '72.14.201.33' },
+  hongkong:    { lat: 22.319,  lng: 114.169, city: 'Hong Kong',   ip: '203.198.10.7' },
+  macau:       { lat: 22.199,  lng: 113.544, city: 'Macau',       ip: '202.175.10.4' },
+  phnompenh:   { lat: 11.556,  lng: 104.928, city: 'Phnom Penh',  ip: '103.230.11.9' },
+  bangkok:     { lat: 13.756,  lng: 100.502, city: 'Bangkok',     ip: '171.100.4.8' },
+  singapore:   { lat: 1.352,   lng: 103.820, city: 'Singapore',   ip: '116.12.7.3' },
+  dubai:       { lat: 25.204,  lng: 55.271,  city: 'Dubai',       ip: '94.200.11.2' },
+  sydney:      { lat: -33.869, lng: 151.209, city: 'Sydney',      ip: '1.128.10.4' }
+};
+
+/* =====================================================================
+   2. 簡化世界地圖 (Equirectangular, lon/lat 多邊形)
+   ===================================================================== */
+var WORLD = [
+  /* 北美洲 */
+  [[-168,65],[-160,71],[-140,70],[-125,70],[-110,68],[-95,70],[-85,73],[-75,78],[-60,66],[-55,52],[-65,45],[-70,42],[-75,35],[-81,25],[-97,26],[-105,20],[-115,30],[-125,40],[-125,49],[-135,58],[-150,60]],
+  /* 中美洲 + 南美洲 */
+  [[-92,15],[-84,10],[-77,8],[-70,12],[-60,10],[-50,0],[-35,-5],[-38,-15],[-48,-25],[-58,-35],[-62,-42],[-68,-52],[-75,-50],[-73,-40],[-71,-30],[-70,-18],[-78,-8],[-80,0],[-78,8],[-85,13]],
+  /* 格陵蘭 */
+  [[-45,60],[-20,70],[-20,82],[-45,83],[-60,80],[-55,68]],
+  /* 歐亞大陸 */
+  [[-10,36],[-5,43],[-9,43],[-5,50],[2,51],[5,58],[10,58],[20,70],[30,70],[45,68],[60,70],[75,73],[95,78],[110,74],[130,72],[145,70],[160,68],[170,66],[180,65],[180,58],[160,56],[145,48],[140,44],[130,42],[122,38],[120,30],[110,20],[105,10],[100,5],[95,15],[90,22],[80,10],[72,20],[65,25],[58,25],[50,30],[45,38],[35,36],[28,38],[20,40],[12,38],[8,44],[3,42],[-6,36]],
+  /* 非洲 */
+  [[-17,15],[-10,5],[0,5],[9,4],[9,-1],[12,-6],[13,-17],[15,-28],[20,-35],[27,-34],[33,-26],[35,-20],[40,-15],[42,-2],[51,12],[43,12],[35,15],[33,22],[25,32],[10,37],[0,35],[-10,30],[-17,21]],
+  /* 澳洲 */
+  [[113,-22],[114,-35],[123,-34],[130,-31],[137,-35],[146,-39],[150,-37],[153,-28],[146,-19],[142,-11],[135,-12],[130,-11],[125,-14],[121,-19]],
+  /* 南極帶 */
+  [[-180,-70],[-100,-74],[-40,-70],[20,-70],[80,-68],[140,-70],[180,-72],[180,-86],[-180,-86]]
+];
+function worldPath(poly) {
+  return poly.map(function (p, i) {
+    var q = Geo.proj(p[1], p[0]);
+    return (i ? 'L' : 'M') + q.x.toFixed(1) + ' ' + q.y.toFixed(1);
+  }).join(' ') + ' Z';
+}
+
+/* =====================================================================
+   3. 規則引擎 (§4.2 / §6.2)
+   ===================================================================== */
+var HIGH_RISK_MCC = { '5816': '數位遊戲點數', '7995': '博弈投注', '6051': '虛擬資產/準現金', '4829': '匯款轉帳' };
+var GEO_SUPERMARKET = { '5411': 1, '5499': 1, '5422': 1, '5451': 1 };
+var PHYSICAL = { CHIP: 1, CONTACTLESS: 1, SWIPE: 1 };
+
+var Rules = {
+  /* 綜合風險分數（§6.2 權重表） */
+  score: function (txs, flags, th) {
+    var s = 0, reasons = [];
+    if (flags.impossibleTravel) { s += 45; reasons.push('Impossible Travel +45'); }
+    if (flags.microProbe) { s += 35; reasons.push('Micro Probe +35'); }
+    if (flags.highRiskMCC) { s += 20; reasons.push('High-Risk MCC +20'); }
+    if (flags.cvvMismatch) { s += 25; reasons.push('CVV Mismatch +25'); }
+    if (flags.non3dsCnpLarge) { s += 20; reasons.push('Non-3DS CNP +20'); }
+    if (flags.midnightBurst) { s += 15; reasons.push('Midnight Burst +15'); }
+    s = Math.min(100, s);
+    return { score: s, reasons: reasons };
+  },
+  level: function (s) {
+    if (s >= 85) return 'CRITICAL';
+    if (s >= 70) return 'HIGH';
+    if (s >= 40) return 'MEDIUM';
+    return 'LOW';
+  },
+  levelMeta: function (lvl) {
+    return {
+      LOW: { color: 'var(--low)', sym: '🟢', label: 'LOW 常規交易', desc: '常規交易，無需動作' },
+      MEDIUM: { color: 'var(--medium)', sym: '🟡', label: 'MEDIUM 加強監控', desc: '加強監控，背景通知' },
+      HIGH: { color: 'var(--high)', sym: '🟠', label: 'HIGH 立即驗證', desc: '立即觸發雙向簡訊驗證' },
+      CRITICAL: { color: 'var(--critical)', sym: '🔴', label: 'CRITICAL 建議鎖卡', desc: '系統建議強制暫時鎖卡，啟動人工照會' }
+    }[lvl];
+  },
+
+  /* 主分析：輸入一組交易，回傳 FraudAssessment */
+  analyze: function (txs, th) {
+    th = th || {};
+    var speedLimit = th.speed == null ? 800 : th.speed;
+    var sorted = txs.slice().sort(function (a, b) { return new Date(a.timestamp) - new Date(b.timestamp); });
+    var patterns = [], affected = {};
+    function mark(id, ids) { ids.forEach(function (t) { affected[t] = 1; }); }
+
+    /* --- 不可能位移 (§6.1) --- */
+    var itAlert = null;
+    for (var i = 1; i < sorted.length; i++) {
+      var a = sorted[i - 1], b = sorted[i];
+      var dist = Geo.haversine(a.location, b.location);
+      var hours = (new Date(b.timestamp) - new Date(a.timestamp)) / 3600000;
+      if (dist < 200) continue;                       /* 同城市不算位移 */
+      var v = hours > 0 ? dist / hours : Infinity;
+      if (v > speedLimit) {
+        itAlert = {
+          fromCity: a.location.city, toCity: b.location.city,
+          distanceKm: Math.round(dist), timeDeltaMinutes: Math.round(hours * 60),
+          impliedSpeedKmh: Math.round(v), fromTx: a.txId, toTx: b.txId
+        };
+        mark('IMPOSSIBLE_TRAVEL', [a.txId, b.txId]);
+        break;
+      }
+    }
+    if (itAlert) patterns.push({
+      patternId: 'IMPOSSIBLE_TRAVEL', patternName: '🚨 跨國不可能位移 (Impossible Travel)',
+      severity: 'DANGER',
+      description: itAlert.fromCity + ' → ' + itAlert.toCity + '，距離 ' + itAlert.distanceKm +
+        ' km 僅間隔 ' + itAlert.timeDeltaMinutes + ' 分，換算時速 ' + itAlert.impliedSpeedKmh + ' km/h（> ' + speedLimit + ' km/h）',
+      affectedTxIds: [itAlert.fromTx, itAlert.toTx]
+    });
+
+    /* --- 模式 A：字典式低額試刷 --- */
+    var micro = false, probeIds = [];
+    for (var j = 0; j < sorted.length; j++) {
+      if (sorted[j].amountTWD >= 50) continue;
+      var group = [sorted[j]];
+      for (var k = j + 1; k < sorted.length; k++) {
+        if (new Date(sorted[k].timestamp) - new Date(sorted[j].timestamp) > 10 * 60000) break;
+        if (sorted[k].amountTWD < 50) group.push(sorted[k]);
+      }
+      if (group.length >= 2) {
+        var bigAfter = sorted.slice(j + group.length).some(function (t) {
+          return t.amountTWD > 10000 && new Date(t.timestamp) - new Date(sorted[j].timestamp) <= 24 * 3600000; });
+        if (bigAfter) { micro = true; probeIds = group.map(function (t) { return t.txId; }); break; }
+      }
+    }
+    if (micro) {
+      mark('MICRO_PROBE', probeIds);
+      patterns.push({
+        patternId: 'MICRO_PROBE', patternName: '⚠️ 低額試刷後爆發性大額 (Micro Probe)',
+        severity: 'DANGER',
+        description: '偵測 ' + probeIds.length + ' 筆 <NT$50 試刷，10 分鐘內連續發生，且隨後出現 >NT$10,000 大額交易',
+        affectedTxIds: probeIds
+      });
+    }
+
+    /* --- 模式 B：深夜高頻連刷 --- */
+    var midnight = false, midnightIds = [];
+    sorted.forEach(function (t) {
+      var h = hourOf(t.timestamp);
+      if (h < 2 || h >= 5) return;
+      var near = sorted.filter(function (o) {
+        return hourOf(o.timestamp) >= 2 && hourOf(o.timestamp) < 5 &&
+          Math.abs(new Date(o.timestamp) - new Date(t.timestamp)) <= 5 * 60000 &&
+          (o.merchantName === t.merchantName || Math.abs(o.amountTWD - t.amountTWD) <= Math.max(50, t.amountTWD * 0.15));
+      });
+      if (near.length >= 3) { midnight = true; midnightIds = near.map(function (x) { return x.txId; });
+        midnightIds.push(t.txId); }
+    });
+    if (midnight) {
+      midnightIds = midnightIds.filter(function (v, i, s) { return s.indexOf(v) === i; });
+      mark('MIDNIGHT_BURST', midnightIds);
+      patterns.push({
+        patternId: 'MIDNIGHT_BURST', patternName: '🌙 深夜高頻連刷 (Midnight Burst)',
+        severity: 'WARNING',
+        description: '02:00~05:00 區間 5 分鐘內連續 ' + midnightIds.length + ' 筆同特店/相似金額交易',
+        affectedTxIds: midnightIds
+      });
+    }
+
+    /* --- 模式 C：高風險 MCC 突變 --- */
+    var baselineMCC = sorted.filter(function (t) { return GEO_SUPERMARKET[t.mcc]; }).length;
+    var riskTx = sorted.filter(function (t) { return HIGH_RISK_MCC[t.mcc]; });
+    var drift = riskTx.length > 0 && (baselineMCC >= 2 || riskTx.some(function (t) { return t.amountTWD > 20000; }));
+    if (drift) {
+      var ids = riskTx.map(function (t) { return t.txId; });
+      mark('HIGH_RISK_MCC', ids);
+      patterns.push({
+        patternId: 'HIGH_RISK_MCC', patternName: '⚠️ 高風險 MCC 突變 (Merchant Drift)',
+        severity: 'WARNING',
+        description: '出現高風險行業：' + riskTx.map(function (t) { return t.mcc + ' ' + (HIGH_RISK_MCC[t.mcc]); }).join('、'),
+        affectedTxIds: ids
+      });
+    }
+
+    /* --- 模式 D：3DS 連續失效後降級 --- */
+    var downgrade = false, dIds = [];
+    for (var m = 0; m < sorted.length; m++) {
+      var t0 = sorted[m];
+      if (t0.authMethod === 'CNP_3DS' && (t0.authResult === 'TIMEOUT' || t0.authResult === 'CHALLENGE_REQUIRED' || t0.cvvResult === 'MISMATCH')) {
+        var fails = [t0];
+        for (var n = m + 1; n < sorted.length; n++) {
+          var t1 = sorted[n];
+          if (t1.authMethod === 'CNP_3DS' && (t1.authResult === 'TIMEOUT' || t1.authResult === 'CHALLENGE_REQUIRED' || t1.cvvResult === 'MISMATCH')) fails.push(t1);
+          else if (t1.authMethod === 'CNP_NON_3DS' && t1.authResult === 'APPROVED') {
+            if (fails.length >= 2) { downgrade = true; dIds = fails.map(function (x) { return x.txId; }).concat([t1.txId]); }
+            break;
+          } else break;
+        }
+        if (downgrade) break;
+      }
+    }
+    if (downgrade) {
+      mark('3DS_DOWNGRADE', dIds);
+      patterns.push({
+        patternId: '3DS_DOWNGRADE', patternName: '🚨 3DS 連續失效後降級授權',
+        severity: 'DANGER',
+        description: 'OTP 連續 ' + (dIds.length - 1) + ' 次失效/超時後，隨即轉為非 3DS 管道扣款',
+        affectedTxIds: dIds
+      });
+    }
+
+    /* --- 布林旗標 --- */
+    var cvvMismatch = sorted.filter(function (t) { return t.cvvResult === 'MISMATCH'; }).length >= 2;
+    var non3dsCnpLarge = sorted.some(function (t) { return t.authMethod === 'CNP_NON_3DS' && t.amountTWD > 20000; });
+    var flags = {
+      impossibleTravel: !!itAlert,
+      microProbe: micro,
+      highRiskMCC: drift,
+      cvvMismatch: cvvMismatch,
+      non3dsCnpLarge: non3dsCnpLarge,
+      midnightBurst: midnight
+    };
+    if (cvvMismatch) {
+      var cvvIds = sorted.filter(function (t) { return t.cvvResult === 'MISMATCH'; }).map(function (t) { return t.txId; });
+      mark('CVV_MISMATCH', cvvIds);
+      patterns.push({ patternId: 'CVV_MISMATCH', patternName: '🔑 CVV 連續驗證錯誤',
+        severity: 'WARNING', description: '連續 ' + cvvIds.length + ' 筆以上 CVV 驗證錯誤', affectedTxIds: cvvIds });
+    }
+    if (non3dsCnpLarge) {
+      var n3 = sorted.filter(function (t) { return t.authMethod === 'CNP_NON_3DS' && t.amountTWD > 20000; }).map(function (t) { return t.txId; });
+      mark('NON3DS_CNP', n3);
+      patterns.push({ patternId: 'NON3DS_CNP', patternName: '🌐 海外未啟動 3DS 大額交易',
+        severity: 'WARNING', description: '金額 > NT$20,000 且未經 3DS 驗證', affectedTxIds: n3 });
+    }
+
+    var sc = this.score(sorted, flags, th);
+    return {
+      overallRiskScore: sc.score, riskLevel: this.level(sc.score),
+      detectedPatterns: patterns, impossibleTravelAlert: itAlert,
+      scoreReasons: sc.reasons, flaggedTxIds: affected
+    };
+  }
+};
+
+/* =====================================================================
+   4. IndexedDB 封裝 (§2.2 / §7.2：全面停用 localStorage)
+   ===================================================================== */
+var IDB = (function () {
+  var DB_NAME = 'cfs-sandbox', DB_VER = 1, db = null, available = false;
+  var mem = { templates: {}, auditLogs: {}, settings: {}, cases: {} };
+  function memAll(store) { return Object.keys(mem[store]).map(function (k) { return mem[store][k]; }); }
+
+  function open() {
+    return new Promise(function (resolve) {
+      var settled = false;
+      function done(ok) { if (settled) return; settled = true; available = ok; resolve(ok); }
+      if (typeof indexedDB === 'undefined') return done(false);
+      var req;
+      try { req = indexedDB.open(DB_NAME, DB_VER); } catch (e) { return done(false); }
+      req.onupgradeneeded = function (ev) {
+        var d = ev.target.result;
+        if (!d.objectStoreNames.contains('templates')) {
+          var s = d.createObjectStore('templates', { keyPath: 'id' });
+          s.createIndex('group', 'group'); s.createIndex('name', 'name'); s.createIndex('updatedAt', 'updatedAt');
+        }
+        if (!d.objectStoreNames.contains('auditLogs')) {
+          var a = d.createObjectStore('auditLogs', { keyPath: 'actionId' });
+          a.createIndex('timestamp', 'timestamp'); a.createIndex('actionType', 'actionType');
+        }
+        if (!d.objectStoreNames.contains('settings')) d.createObjectStore('settings', { keyPath: 'key' });
+        if (!d.objectStoreNames.contains('cases')) {
+          var c = d.createObjectStore('cases', { keyPath: 'id' }); c.createIndex('updatedAt', 'updatedAt');
+        }
+      };
+      req.onsuccess = function () { db = req.result; done(true); };
+      req.onerror = function () { done(false); };
+      req.onblocked = function () { done(false); };
+      /* 安全網：部分環境（私密模式 / 沙盒）開啟 IndexedDB 會懸置 */
+      setTimeout(function () { done(false); }, 4000);
+    });
+  }
+  function tx(store, mode, fn) {
+    if (!available) return Promise.resolve(fn(null));
+    return new Promise(function (res, rej) {
+      var t = db.transaction(store, mode), out;
+      var os = Array.isArray(store) ? store.map(function (s) { return t.objectStore(s); }) : t.objectStore(store);
+      out = fn(os);
+      t.oncomplete = function () { res(out && out.__req ? out.__req.result : out); };
+      t.onerror = function () { rej(t.error); };
+      t.onabort = function () { rej(t.error); };
+    });
+  }
+  function wrapReq(req) { var o = { __req: req }; return o; }
+
+  return {
+    open: open,
+    isAvailable: function () { return available; },
+    get: function (store, key) {
+      if (!available) return Promise.resolve(mem[store][key]);
+      return tx(store, 'readonly', function (os) { return wrapReq(os.get(key)); });
+    },
+    getAll: function (store) {
+      if (!available) return Promise.resolve(memAll(store));
+      return tx(store, 'readonly', function (os) { return wrapReq(os.getAll()); });
+    },
+    put: function (store, rec) {
+      if (!available) { mem[store][rec.id || rec.key || rec.actionId] = deep(rec); return Promise.resolve(rec); }
+      return tx(store, 'readwrite', function (os) { os.put(rec); return rec; });
+    },
+    del: function (store, key) {
+      if (!available) { delete mem[store][key]; return Promise.resolve(true); }
+      return tx(store, 'readwrite', function (os) { os.delete(key); return true; });
+    },
+    /* 同一交易寫多個 store（原子性）*/
+    atomic: function (writes) {
+      if (!available) { writes.forEach(function (w) { if (w.type === 'put') mem[w.store][w.rec.id || w.rec.key || w.rec.actionId] = deep(w.rec);
+        else delete mem[w.store][w.key]; }); return Promise.resolve(true); }
+      var stores = writes.map(function (w) { return w.store; });
+      return tx(stores, 'readwrite', function (osArr) {
+        var map = {}; stores.forEach(function (s, i) { map[s] = osArr[i]; });
+        writes.forEach(function (w) { if (w.type === 'put') map[w.store].put(w.rec); else map[w.store].delete(w.key); });
+        return true;
+      });
+    },
+    clearStore: function (store) {
+      if (!available) { mem[store] = {}; return Promise.resolve(true); }
+      return tx(store, 'readwrite', function (os) { os.clear(); return true; });
+    },
+    exportAll: function () {
+      return Promise.all([this.getAll('templates'), this.getAll('auditLogs'), this.getAll('settings')]).then(function (r) {
+        return { schemaVersion: DB_VER, exportedAt: new Date().toISOString(),
+          templates: r[0], auditLogs: r[1], settings: r[2] };
+      });
+    }
+  };
+})();
+
+/* =====================================================================
+   5. 交易工廠 + 10 組內建模板 (§4.4.1)
+   ===================================================================== */
+var RATE = { TWD: 1, USD: 31.5, EUR: 34.2, GBP: 40.1, HKD: 4.03, JPY: 0.21, SGD: 23.5, KHR: 0.0078 };
+var MCC_NAME = {
+  '5816': '數位遊戲點數 / 遊戲平台', '7995': '博弈投注', '6051': '虛擬資產 / 準現金',
+  '4829': '匯款轉帳', '5411': '超級市場', '5499': '食品雜貨', '5422': '生鮮肉品',
+  '5451': '乳製品', '5691': '服飾零售', '5812': '餐飲', '4111': '大眾運輸', '5732': '電子產品'
+};
+var _seq = 0;
+function mkTx(card, o) {
+  _seq++;
+  var cur = o.ccy || 'TWD';
+  var amountTWD = o.twd != null ? o.twd : Math.round(o.amt * (RATE[cur] || 1));
+  var loc = CITY[o.city] || CITY.taipei;
+  return {
+    txId: o.id || ('TX-' + (o.date || '20261017') + '-' + ('0000' + _seq).slice(-4)),
+    cardMasked: card.pan, cardholderId: card.cust, cardholderNameMasked: card.name, phoneMasked: card.phone,
+    timestamp: o.ts, amount: o.amt, currency: cur, amountTWD: amountTWD,
+    mcc: o.mcc, mccDescription: MCC_NAME[o.mcc] || '其他',
+    merchantName: o.merchant, merchantCountry: o.country || 'TW',
+    location: { lat: loc.lat, lng: loc.lng, city: loc.city, ipAddress: o.ip || loc.ip },
+    authResult: o.res || 'APPROVED', authMethod: o.method || 'CNP_NON_3DS',
+    cvvResult: o.cvv || 'NOT_PROVIDED', deviceFingerprintRisk: o.risk || 'LOW',
+    isFlaggedByRule: false
+  };
+}
+var CARDS = {
+  c1: { pan: '4311-95**-****-8821', cust: 'CUST-99214', name: '陳*安', phone: '0912-***-456' },
+  c2: { pan: '5422-18**-****-1002', cust: 'CUST-40128', name: '林*豪', phone: '0933-***-771' },
+  c3: { pan: '4000-55**-****-3319', cust: 'CUST-77301', name: '張*瑋', phone: '0955-***-208' },
+  c4: { pan: '4563-21**-****-7745', cust: 'CUST-22650', name: '黃*婷', phone: '0987-***-114' },
+  c5: { pan: '5105-33**-****-9087', cust: 'CUST-61234', name: '吳*哲', phone: '0921-***-889' }
+};
+var D = '2026-10-17T';
+
+function seedTemplates() {
+  var list = [];
+
+  /* 1. 柬埔寨電信詐騙洗錢鏈 */
+  list.push({ id: 'tpl-kh-scam-chain', name: '柬埔寨電信詐騙洗錢鏈', group: 'attack', builtin: true,
+    description: '低額試刷後跨境大額洗錢，高風險遊戲點數 MCC 與未啟動 3DS 之 CNP 交易。',
+    tags: ['MicroProbe', 'HighRiskMCC', 'Non3DS_CNP'], transactions: [
+    mkTx(CARDS.c1, { ts: D + '18:02:10Z', amt: 30, mcc: '5816', merchant: 'STEAM GAMES HK', country: 'HK', city: 'hongkong', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'NOT_PROVIDED', risk: 'HIGH' }),
+    mkTx(CARDS.c1, { ts: D + '18:04:40Z', amt: 1.5, ccy: 'USD', mcc: '5816', merchant: 'STEAM GAMES HK', country: 'HK', city: 'hongkong', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'NOT_PROVIDED', risk: 'HIGH' }),
+    mkTx(CARDS.c1, { ts: D + '18:06:05Z', amt: 45, mcc: '5816', merchant: 'RAZER GOLD', country: 'HK', city: 'hongkong', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'MATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c1, { ts: D + '18:22:33Z', amt: 68000, mcc: '7995', merchant: 'GOLDENLUCK CASINO', country: 'KH', city: 'phnompenh', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'MATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c1, { ts: D + '18:25:12Z', amt: 125000, mcc: '6051', merchant: 'CRYPTOX EXCHANGE', country: 'KH', city: 'phnompenh', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'MATCH', risk: 'HIGH' })
+  ]});
+
+  /* 2. 跨國電商撞庫攻擊 (BIN Attack) */
+  list.push({ id: 'tpl-cnp-bin-attack', name: '跨國電商撞庫攻擊（BIN Attack）', group: 'attack', builtin: true,
+    description: '深夜以多筆低額交易測試卡號，伴隨 CVV 連續錯誤與大量逾時，隨後嘗試大額扣款。',
+    tags: ['CVV_Mismatch', 'MidnightBurst'], transactions: [
+    mkTx(CARDS.c2, { ts: D + '03:11:02Z', amt: 25, mcc: '5812', merchant: 'QUICK EATS', country: 'US', city: 'newyork', method: 'CNP_NON_3DS', res: 'DECLINED', cvv: 'MISMATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c2, { ts: D + '03:11:48Z', amt: 25, mcc: '5812', merchant: 'QUICK EATS', country: 'US', city: 'newyork', method: 'CNP_NON_3DS', res: 'DECLINED', cvv: 'MISMATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c2, { ts: D + '03:12:30Z', amt: 30, mcc: '5732', merchant: 'GADGET STORE', country: 'US', city: 'newyork', method: 'CNP_NON_3DS', res: 'TIMEOUT', cvv: 'MISMATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c2, { ts: D + '03:13:15Z', amt: 28, mcc: '5816', merchant: 'STEAM GAMES HK', country: 'HK', city: 'hongkong', method: 'CNP_NON_3DS', res: 'DECLINED', cvv: 'MISMATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c2, { ts: D + '03:15:40Z', amt: 92000, mcc: '5732', merchant: 'GADGET STORE', country: 'US', city: 'newyork', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'NOT_PROVIDED', risk: 'HIGH' })
+  ]});
+
+  /* 3. 倫敦↔台北 側錄複製卡（不可能位移） */
+  list.push({ id: 'tpl-impossible-travel', name: '倫敦↔台北 側錄複製卡', group: 'attack', builtin: true,
+    description: '同一張實體卡於 20 分鐘內分別在台北與倫敦實體扣款，換算時速遠超 800 km/h。',
+    tags: ['ImpossibleTravel'], transactions: [
+    mkTx(CARDS.c3, { ts: D + '08:00:20Z', amt: 1200, mcc: '5812', merchant: 'TAIPEI CAFE', country: 'TW', city: 'taipei', method: 'CHIP', res: 'APPROVED', cvv: 'MATCH', risk: 'LOW' }),
+    mkTx(CARDS.c3, { ts: D + '08:20:55Z', amt: 3500, ccy: 'GBP', mcc: '5691', merchant: 'LONDON FASHION', country: 'GB', city: 'london', method: 'CONTACTLESS', res: 'APPROVED', cvv: 'MATCH', risk: 'MEDIUM' }),
+    mkTx(CARDS.c3, { ts: D + '08:34:10Z', amt: 9800, ccy: 'GBP', mcc: '5732', merchant: 'LONDON ELECTRONICS', country: 'GB', city: 'london', method: 'SWIPE', res: 'APPROVED', cvv: 'NOT_PROVIDED', risk: 'HIGH' }),
+    mkTx(CARDS.c3, { ts: D + '09:02:40Z', amt: 45000, mcc: '5816', merchant: 'CLONE GAMES ONLINE', country: 'GB', city: 'london', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'MATCH', risk: 'HIGH' })
+  ]});
+
+  /* 4. 深夜點數卡高頻連刷 */
+  list.push({ id: 'tpl-midnight-burst', name: '深夜點數卡高頻連刷', group: 'attack', builtin: true,
+    description: '凌晨 02:00~05:00 於 5 分鐘內對同一遊戲平台連續多筆扣款，並夾雜 CVV 驗證失敗與高額儲值。',
+    tags: ['MidnightBurst', 'HighRiskMCC', 'CVV_Mismatch'], transactions: [
+    mkTx(CARDS.c5, { ts: D + '03:02:11Z', amt: 300, mcc: '5816', merchant: 'STEAM GAMES HK', country: 'HK', city: 'hongkong', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'MATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c5, { ts: D + '03:03:05Z', amt: 300, mcc: '5816', merchant: 'STEAM GAMES HK', country: 'HK', city: 'hongkong', method: 'CNP_NON_3DS', res: 'DECLINED', cvv: 'MISMATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c5, { ts: D + '03:04:22Z', amt: 300, mcc: '5816', merchant: 'STEAM GAMES HK', country: 'HK', city: 'hongkong', method: 'CNP_NON_3DS', res: 'DECLINED', cvv: 'MISMATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c5, { ts: D + '03:05:47Z', amt: 25000, mcc: '5816', merchant: 'STEAM GAMES HK', country: 'HK', city: 'hongkong', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'MATCH', risk: 'HIGH' })
+  ]});
+
+  /* 5. 3DS 連續失效後降級授權 */
+  list.push({ id: 'tpl-3ds-downgrade', name: '3DS 連續失效後降級授權', group: 'attack', builtin: true,
+    description: 'OTP 連續輸入錯誤/逾時後，旋即轉為非 3DS 管道完成大額扣款（深夜時段）。',
+    tags: ['3DS_Downgrade', 'Non3DS_CNP', 'CVV_Mismatch'], transactions: [
+    mkTx(CARDS.c4, { ts: D + '02:00:10Z', amt: 45000, mcc: '5816', merchant: 'MEGA GAMES', country: 'US', city: 'losangeles', method: 'CNP_3DS', res: 'CHALLENGE_REQUIRED', cvv: 'MISMATCH', risk: 'MEDIUM' }),
+    mkTx(CARDS.c4, { ts: D + '02:00:58Z', amt: 45000, mcc: '5816', merchant: 'MEGA GAMES', country: 'US', city: 'losangeles', method: 'CNP_3DS', res: 'CHALLENGE_REQUIRED', cvv: 'MISMATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c4, { ts: D + '02:02:14Z', amt: 45000, mcc: '5816', merchant: 'MEGA GAMES', country: 'US', city: 'losangeles', method: 'CNP_3DS', res: 'TIMEOUT', cvv: 'NOT_PROVIDED', risk: 'HIGH' }),
+    mkTx(CARDS.c4, { ts: D + '02:05:30Z', amt: 45000, mcc: '5816', merchant: 'MEGA GAMES', country: 'US', city: 'losangeles', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'NOT_PROVIDED', risk: 'HIGH' })
+  ]});
+
+  /* 6. 海外博弈 / 虛擬資產儲值 */
+  list.push({ id: 'tpl-crypto-offshore', name: '海外博弈／虛擬資產儲值', group: 'attack', builtin: true,
+    description: '於杜拜與新加坡以未啟動 3DS 之高額交易儲值博弈與虛擬資產平台。',
+    tags: ['HighRiskMCC', 'Non3DS_CNP'], transactions: [
+    mkTx(CARDS.c2, { ts: D + '14:10:02Z', amt: 80000, mcc: '7995', merchant: 'ROYALBET', country: 'AE', city: 'dubai', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'MATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c2, { ts: D + '14:32:44Z', amt: 150000, mcc: '6051', merchant: 'BINANCE OTC', country: 'SG', city: 'singapore', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'MATCH', risk: 'HIGH' })
+  ]});
+
+  /* 7. 小額試刷後爆發性大額 */
+  list.push({ id: 'tpl-micro-probe-burst', name: '小額試刷後爆發性大額', group: 'attack', builtin: true,
+    description: '10 分鐘內兩筆 <NT$50 試刷遭拒，緊接著於遊戲點數平台出現 >NT$10,000 大額授權。',
+    tags: ['MicroProbe', 'CVV_Mismatch', 'HighRiskMCC'], transactions: [
+    mkTx(CARDS.c1, { ts: D + '10:00:05Z', amt: 12, mcc: '5812', merchant: 'TINY SNACK', country: 'TW', city: 'taipei', method: 'CNP_NON_3DS', res: 'DECLINED', cvv: 'MISMATCH', risk: 'MEDIUM' }),
+    mkTx(CARDS.c1, { ts: D + '10:04:40Z', amt: 18, mcc: '5812', merchant: 'TINY SNACK', country: 'TW', city: 'taipei', method: 'CNP_NON_3DS', res: 'DECLINED', cvv: 'MISMATCH', risk: 'MEDIUM' }),
+    mkTx(CARDS.c1, { ts: D + '10:09:12Z', amt: 48000, mcc: '5816', merchant: 'MEGA GAMES', country: 'TW', city: 'taipei', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'MATCH', risk: 'HIGH' })
+  ]});
+
+  /* 8. 多卡號批次驗證 (Card Testing) */
+  list.push({ id: 'tpl-card-testing-sweep', name: '多卡號批次驗證（Card Testing）', group: 'attack', builtin: true,
+    description: '短時間內大量逾時/拒授跨多 MCC，典型撞庫批次驗證行為。',
+    tags: ['CVV_Mismatch'], transactions: [
+    mkTx(CARDS.c4, { ts: D + '12:00:01Z', amt: 10, mcc: '5812', merchant: 'TEST VENDOR', country: 'US', city: 'newyork', method: 'CNP_NON_3DS', res: 'TIMEOUT', cvv: 'NOT_PROVIDED', risk: 'HIGH' }),
+    mkTx(CARDS.c4, { ts: D + '12:00:09Z', amt: 10, mcc: '5732', merchant: 'TEST VENDOR', country: 'US', city: 'newyork', method: 'CNP_NON_3DS', res: 'DECLINED', cvv: 'MISMATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c4, { ts: D + '12:00:18Z', amt: 10, mcc: '5816', merchant: 'TEST VENDOR', country: 'US', city: 'newyork', method: 'CNP_NON_3DS', res: 'TIMEOUT', cvv: 'MISMATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c4, { ts: D + '12:00:27Z', amt: 10, mcc: '5411', merchant: 'TEST VENDOR', country: 'US', city: 'newyork', method: 'CNP_NON_3DS', res: 'DECLINED', cvv: 'MISMATCH', risk: 'HIGH' }),
+    mkTx(CARDS.c4, { ts: D + '12:01:02Z', amt: 45000, mcc: '5732', merchant: 'MEGA ELECTRONICS', country: 'US', city: 'newyork', method: 'CNP_NON_3DS', res: 'APPROVED', cvv: 'NOT_PROVIDED', risk: 'HIGH' })
+  ]});
+
+  /* 9. 出國旅遊正常消費（偽陽性對照） */
+  list.push({ id: 'tpl-traveler-false-positive', name: '出國旅遊正常消費（偽陽性對照）', group: 'baseline', builtin: true,
+    description: '真卡持卡人搭機出遊，跨國實體消費時間間隔合理，惟仍可能觸發位移提示，可由白名單解除。',
+    tags: ['有正當位移', 'FalsePositive'], transactions: [
+    mkTx(CARDS.c3, { ts: D + '06:30:00Z', amt: 260, mcc: '5812', merchant: 'TAIPEI AIRPORT CAFE', country: 'TW', city: 'taipei', method: 'CONTACTLESS', res: 'APPROVED', cvv: 'MATCH', risk: 'LOW' }),
+    mkTx(CARDS.c3, { ts: D + '14:10:00Z', amt: 1800, ccy: 'JPY', mcc: '5812', merchant: 'TOKYO RAMEN', country: 'JP', city: 'tokyo', method: 'CHIP', res: 'APPROVED', cvv: 'MATCH', risk: 'LOW' }),
+    mkTx(CARDS.c3, { ts: D + '22:40:00Z', amt: 4200, ccy: 'GBP', mcc: '5812', merchant: 'LONDON DINNER', country: 'GB', city: 'london', method: 'CHIP', res: 'APPROVED', cvv: 'MATCH', risk: 'LOW' })
+  ]});
+
+  /* 10. 日常超市/外送基線（正常對照） */
+  list.push({ id: 'tpl-daily-baseline', name: '日常超市／外送基線（正常對照）', group: 'baseline', builtin: true,
+    description: '一般上班族於本地超市與外送的日常小額消費，預期風險分 < 40。',
+    tags: ['Normal'], transactions: [
+    mkTx(CARDS.c5, { ts: D + '07:45:12Z', amt: 185, mcc: '5411', merchant: 'PX MART', country: 'TW', city: 'taipei', method: 'CONTACTLESS', res: 'APPROVED', cvv: 'MATCH', risk: 'LOW' }),
+    mkTx(CARDS.c5, { ts: D + '12:20:41Z', amt: 320, mcc: '5812', merchant: 'FOODPANDA', country: 'TW', city: 'taipei', method: 'CNP_3DS', res: 'APPROVED', cvv: 'MATCH', risk: 'LOW' }),
+    mkTx(CARDS.c5, { ts: D + '19:05:03Z', amt: 640, mcc: '5499', merchant: 'CARREFOUR', country: 'TW', city: 'kaohsiung', method: 'CHIP', res: 'APPROVED', cvv: 'MATCH', risk: 'LOW' })
+  ]});
+
+  return list;
+}
+
+/* 產生 500 筆效能測試資料 */
+function mock500() {
+  var out = [], base = new Date(D + '00:00:00Z').getTime();
+  var cities = Object.keys(CITY);
+  for (var i = 0; i < 500; i++) {
+    var t = base + Math.floor(Math.random() * 24 * 3600 * 1000);
+    var card = CARDS['c' + (1 + Math.floor(Math.random() * 5))];
+    var city = cities[Math.floor(Math.random() * cities.length)];
+    var mccs = Object.keys(MCC_NAME);
+    var risky = Math.random() < 0.12;
+    out.push(mkTx(card, {
+      ts: new Date(t).toISOString(),
+      amt: risky ? 5000 + Math.random() * 90000 : 30 + Math.random() * 2500,
+      mcc: risky ? ['5816', '7995', '6051'][Math.floor(Math.random() * 3)] : mccs[Math.floor(Math.random() * mccs.length)],
+      merchant: 'MERCHANT-' + Math.floor(Math.random() * 60),
+      country: city === 'taipei' ? 'TW' : 'XX', city: city,
+      method: risky ? 'CNP_NON_3DS' : (Math.random() < 0.5 ? 'CHIP' : 'CNP_3DS'),
+      res: Math.random() < 0.2 ? 'DECLINED' : 'APPROVED',
+      cvv: Math.random() < 0.15 ? 'MISMATCH' : 'MATCH',
+      risk: risky ? 'HIGH' : 'LOW'
+    }));
+  }
+  return out;
+}
+
+/* =====================================================================
+   6. 狀態 + 極簡 store
+   ===================================================================== */
+var state = {
+  templates: [],
+  txs: [],
+  cases: [],
+  selectedCase: null,
+  view: 'map',
+  thresholds: { score: 70, speed: 800 },
+  currentTime: null,
+  playing: false,
+  timer: null,
+  audit: [],
+  theme: 'dark',
+  editingId: null,
+  draftRows: [],
+  selectedTxId: null,
+  editingTxId: null,
+  flags: {},
+  _saveT: null
+};
+var listeners = [];
+function subscribe(fn) { listeners.push(fn); }
+function emit(parts) { (parts || ['all']).forEach(function (p) { listeners.forEach(function (f) { f(p); }); }); }
+
+/* =====================================================================
+   7. 分組與衍生
+   ===================================================================== */
+function groupCases(txs) {
+  var map = {};
+  txs.forEach(function (t) {
+    if (!map[t.cardMasked]) map[t.cardMasked] = [];
+    map[t.cardMasked].push(t);
+  });
+  return Object.keys(map).map(function (pan) {
+    var list = map[pan].slice().sort(function (a, b) { return new Date(a.timestamp) - new Date(b.timestamp); });
+    var a = Rules.analyze(list, state.thresholds);
+    var f = state.flags[pan] || {};
+    return { pan: pan, holder: list[0].cardholderNameMasked, cust: list[0].cardholderId,
+      txs: list, assessment: a, locked: !!f.locked, whitelisted: !!f.whitelisted };
+  }).sort(function (a, b) { return b.assessment.overallRiskScore - a.assessment.overallRiskScore; });
+}
+
+function visibleTxs() {
+  if (!state.selectedCase) return [];
+  var cut = state.currentTime;
+  return state.selectedCase.txs.filter(function (t) { return !cut || new Date(t.timestamp) <= cut; });
+}
+
+/* =====================================================================
+   8. 渲染
+   ===================================================================== */
+function renderHeader() {
+  var cases = state.cases;
+  $('statTotal').textContent = cases.filter(function (c) { return c.assessment.overallRiskScore >= state.thresholds.score; }).length;
+  $('statCritical').textContent = cases.filter(function (c) { return c.assessment.riskLevel === 'CRITICAL'; }).length;
+  $('statHigh').textContent = cases.filter(function (c) { return c.assessment.riskLevel === 'HIGH'; }).length;
+  $('statTx').textContent = state.txs.length;
+}
+
+function renderCaseList() {
+  var box = $('caseList');
+  box.innerHTML = '';
+  var q = ($('caseSearch').value || '').trim().toLowerCase();
+  var list = state.cases.filter(function (c) {
+    return !q || c.pan.toLowerCase().indexOf(q) >= 0 || c.holder.toLowerCase().indexOf(q) >= 0 || c.cust.toLowerCase().indexOf(q) >= 0;
+  });
+  $('caseCount').textContent = '（' + list.length + '）';
+  if (!list.length) { box.appendChild(el('div', { class: 'empty', text: '尚無案件，請由上方載入模板或匯入資料' })); return; }
+  list.forEach(function (c) {
+    var a = c.assessment, meta = Rules.levelMeta(a.riskLevel);
+    var node = el('div', { class: 'case-item' + (state.selectedCase && state.selectedCase.pan === c.pan ? ' active' : '') });
+    var sc = el('div', { class: 'case-score' });
+    sc.style.background = meta.color; sc.title = meta.label;
+    sc.appendChild(el('span', { text: meta.sym }));
+    sc.appendChild(el('span', { text: String(a.overallRiskScore) }));
+    var m = el('div', { class: 'case-meta' });
+    m.appendChild(el('div', { class: 'card', text: c.pan }));
+    m.appendChild(el('div', { class: 'name', text: c.holder + ' · ' + c.cust }));
+    var reason = a.detectedPatterns.length ? a.detectedPatterns.map(function (p) { return p.patternName.replace(/^[^\s]+\s/, ''); }).join('、') : '無明顯異常';
+    m.appendChild(el('div', { class: 'reason', text: reason }));
+    var tags = el('div');
+    if (c.locked) tags.appendChild(el('span', { class: 'tag lock', text: '🛑 STOP-90 已鎖卡' }));
+    if (c.whitelisted) tags.appendChild(el('span', { class: 'tag wl', text: '🛡️ 白名單 24h' }));
+    if (tags.childNodes.length) m.appendChild(tags);
+    node.appendChild(sc); node.appendChild(m);
+    node.addEventListener('click', function () { selectCase(c.pan); });
+    box.appendChild(node);
+  });
+}
+
+function renderRight() {
+  var hero = $('riskHero'), pat = $('patternList');
+  hero.innerHTML = ''; pat.innerHTML = '';
+  if (!state.selectedCase) {
+    hero.appendChild(el('div', { class: 'muted', text: '請由左側載入案件或模板' }));
+    pat.appendChild(el('div', { class: 'empty', text: '尚無資料' }));
+    return;
+  }
+  var a = state.selectedCase.assessment, meta = Rules.levelMeta(a.riskLevel);
+  hero.style.borderColor = meta.color;
+  hero.appendChild(el('div', { class: 'sym', text: meta.sym }));
+  hero.appendChild(el('div', { class: 'lvl', text: meta.label, }));
+  hero.querySelector('.lvl').style.color = meta.color;
+  hero.appendChild(el('div', { class: 'score', text: String(a.overallRiskScore) }));
+  hero.querySelector('.score').style.color = meta.color;
+  hero.appendChild(el('div', { class: 'muted', text: meta.desc }));
+  var bar = el('div', { class: 'risk-bar' }); var fill = el('i');
+  fill.style.width = a.overallRiskScore + '%'; fill.style.background = meta.color;
+  bar.appendChild(fill); hero.appendChild(bar);
+  hero.appendChild(el('div', { class: 'muted mono', text: state.selectedCase.pan + ' · ' + state.selectedCase.holder, }));
+
+  if (!a.detectedPatterns.length) pat.appendChild(el('div', { class: 'empty', text: '未偵測到異常模式 ✅' }));
+  a.detectedPatterns.forEach(function (p) {
+    var it = el('div', { class: 'pattern-item ' + p.severity });
+    it.appendChild(el('div', { class: 'pt', text: p.patternName }));
+    it.appendChild(el('div', { class: 'pd', text: p.description }));
+    it.appendChild(el('div', { class: 'pd mono', text: '涉及 ' + p.affectedTxIds.length + ' 筆：' + p.affectedTxIds.slice(0, 3).join(', ') + (p.affectedTxIds.length > 3 ? ' …' : '') }));
+    pat.appendChild(it);
+  });
+  /* 分數組成 */
+  if (a.scoreReasons && a.scoreReasons.length) {
+    pat.appendChild(el('div', { class: 'section-title', text: '分數組成', style: 'margin-top:10px' }));
+    pat.appendChild(el('div', { class: 'pd mono', text: a.scoreReasons.join(' | ') }));
+  }
+}
+
+function renderAudit() {
+  var box = $('auditList');
+  box.innerHTML = '';
+  if (!state.audit.length) { box.appendChild(el('div', { class: 'empty', text: '尚無紀錄' })); return; }
+  state.audit.slice(0, 40).forEach(function (a) {
+    var it = el('div', { class: 'audit-item' });
+    it.appendChild(el('b', { text: a.actionType }));
+    it.appendChild(document.createTextNode(' · ' + fmtFull(a.timestamp)));
+    it.appendChild(el('div', { text: a.note || '' }));
+    it.appendChild(el('div', { class: 'mono', text: a.analystId + ' · ' + a.actionId }));
+    box.appendChild(it);
+  });
+}
+
+/* --- 地圖 --- */
+function renderMap() {
+  var svg = $('worldSvg');
+  var flagged = state.selectedCase ? state.selectedCase.assessment.flaggedTxIds : {};
+  var txs = visibleTxs();
+  var parts = [];
+  parts.push('<rect x="0" y="0" width="1000" height="500" fill="none"/>');
+  WORLD.forEach(function (poly) { parts.push('<path d="' + worldPath(poly) + '" fill="var(--map-land)" stroke="var(--map-line)" stroke-width="0.8"/>'); });
+  /* 經緯格線 */
+  for (var lng = -180; lng <= 180; lng += 30) { var p = Geo.proj(0, lng); parts.push('<line x1="' + p.x + '" y1="0" x2="' + p.x + '" y2="500" stroke="var(--map-line)" stroke-width="0.4" opacity="0.5"/>'); }
+  for (var lat = -60; lat <= 60; lat += 30) { var q = Geo.proj(lat, 0); parts.push('<line x1="0" y1="' + q.y + '" x2="1000" y2="' + q.y + '" stroke="var(--map-line)" stroke-width="0.4" opacity="0.5"/>'); }
+
+  /* 航線 */
+  var itAlert = state.selectedCase ? state.selectedCase.assessment.impossibleTravelAlert : null;
+  var itPair = itAlert ? (itAlert.fromTx + '|' + itAlert.toTx) : '';
+  for (var i = 1; i < txs.length; i++) {
+    var A = Geo.proj(txs[i - 1].location.lat, txs[i - 1].location.lng);
+    var B = Geo.proj(txs[i].location.lat, txs[i].location.lng);
+    var pair = txs[i - 1].txId + '|' + txs[i].txId;
+    var flash = itPair && (pair === itPair || (itPair.split('|').indexOf(txs[i - 1].txId) >= 0 && itPair.split('|').indexOf(txs[i].txId) >= 0));
+    parts.push('<path class="' + (flash ? 'route-flash' : 'route') + '" d="M' + A.x.toFixed(1) + ' ' + A.y.toFixed(1) + ' L' + B.x.toFixed(1) + ' ' + B.y.toFixed(1) + '"/>');
+  }
+  /* 節點 */
+  txs.forEach(function (t) {
+    var p = Geo.proj(t.location.lat, t.location.lng);
+    var color = t.authResult === 'APPROVED' ? 'var(--low)' : (t.authResult === 'DECLINED' ? 'var(--critical)' : 'var(--high)');
+    var isF = flagged[t.txId];
+    var r = isF ? 6 : 4.2;
+    parts.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + r + '" fill="' + color + '" stroke="#0b1220" stroke-width="1.2" opacity="0.95">' +
+      '<title>' + esc(t.location.city + ' · ' + amtFmt(t.amount, t.currency) + ' (' + ntd(t.amountTWD) + ') · ' + t.authResult + ' · ' + fmtFull(t.timestamp)) + '</title></circle>');
+    if (isF) parts.push('<circle cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="11" fill="none" stroke="var(--critical)" stroke-width="1" opacity="0.7"><animate attributeName="r" values="7;14;7" dur="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.8;0;0.8" dur="1.6s" repeatCount="indefinite"/></circle>');
+    parts.push('<text class="node-label" x="' + (p.x + 7).toFixed(1) + '" y="' + (p.y - 6).toFixed(1) + '">' + esc(t.location.city) + '</text>');
+  });
+  svg.innerHTML = parts.join('');
+}
+
+/* --- 波形 --- */
+function renderWave() {
+  var cv = $('wave'), wrap = cv.parentElement;
+  var dpr = window.devicePixelRatio || 1;
+  var W = wrap.clientWidth, H = wrap.clientHeight;
+  cv.width = W * dpr; cv.height = H * dpr;
+  var ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  var txs = visibleTxs();
+  if (!txs.length) {
+    ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted');
+    ctx.font = '13px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('無交易資料', W / 2, H / 2); return;
+  }
+  var pad = { l: 54, r: 16, t: 20, b: 34 };
+  var cw = W - pad.l - pad.r, ch = H - pad.t - pad.b;
+  var maxAmt = Math.max.apply(null, txs.map(function (t) { return t.amountTWD; })) || 1;
+  var t0 = new Date(state.selectedCase.txs[0].timestamp).getTime();
+  var t1 = new Date(state.selectedCase.txs[state.selectedCase.txs.length - 1].timestamp).getTime();
+  if (t1 === t0) t1 = t0 + 1;
+  var flagged = state.selectedCase.assessment.flaggedTxIds;
+  /* 軸 */
+  ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--border');
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, H - pad.b); ctx.lineTo(W - pad.r, H - pad.b); ctx.stroke();
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted');
+  ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+  for (var g = 0; g <= 4; g++) {
+    var yv = maxAmt * g / 4, y = H - pad.b - ch * g / 4;
+    ctx.fillText(ntd(yv), pad.l - 6, y + 3);
+    ctx.strokeStyle = 'rgba(148,163,184,0.12)';
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+  }
+  var bars = [];
+  txs.forEach(function (t) {
+    var x = pad.l + ((new Date(t.timestamp).getTime() - t0) / (t1 - t0)) * cw;
+    var h = Math.max(3, (t.amountTWD / maxAmt) * ch);
+    var w = Math.max(4, Math.min(16, cw / Math.max(12, txs.length) * 0.7));
+    var color = t.authResult === 'APPROVED' ? '#22c55e' : (t.authResult === 'DECLINED' ? '#ef4444' : '#f97316');
+    ctx.fillStyle = color; ctx.globalAlpha = 0.85;
+    ctx.fillRect(x - w / 2, H - pad.b - h, w, h);
+    ctx.globalAlpha = 1;
+    if (flagged[t.txId]) { ctx.strokeStyle = '#f59e0b'; ctx.lineWidth = 1.5; ctx.strokeRect(x - w / 2 - 1.5, H - pad.b - h - 1.5, w + 3, h + 3); }
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, H - pad.b - h - 4, 2.6, 0, Math.PI * 2); ctx.fill();
+    bars.push({ x: x - w / 2, y: H - pad.b - h, w: w, h: h, tx: t });
+  });
+  ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted');
+  ctx.textAlign = 'left'; ctx.fillText(fmtClock(txs[0].timestamp), pad.l, H - pad.b + 14);
+  ctx.textAlign = 'right'; ctx.fillText(fmtClock(txs[txs.length - 1].timestamp), W - pad.r, H - pad.b + 14);
+  cv._bars = bars;
+}
+
+/* --- 交易明細（含 CRUD） --- */
+function renderList() {
+  var box = $('stageList');
+  var txs = visibleTxs();
+  var flagged = state.selectedCase ? state.selectedCase.assessment.flaggedTxIds : {};
+  var h = '<div class="list-toolbar">' +
+    '<button id="txAdd" class="primary sm">＋ 新增交易</button>' +
+    '<button id="txSort" class="sm">⇅ 依時間排序</button>' +
+    '<button id="txImport" class="sm">⇩ 匯入 CSV/JSON</button>' +
+    '<button id="txExport" class="sm">⇧ 匯出案件 CSV</button>' +
+    '<span class="spacer"></span><span class="hint">變更會自動存入 IndexedDB</span>' +
+    '</div>';
+  if (!txs.length) {
+    h += '<div class="empty">此案件尚無交易，請按「＋ 新增交易」或「⇩ 匯入」</div>';
+    box.innerHTML = h; bindListToolbar(); return;
+  }
+  h += '<table class="tx-table"><thead><tr>' +
+    ['時間', '序號', '金額', '換算TWD', 'MCC', '特店', '國別', '城市/IP', '授權結果', '方式', 'CVV', '裝置風險', '旗標', '操作']
+      .map(function (c) { return '<th>' + c + '</th>'; }).join('') +
+    '</tr></thead><tbody>';
+  txs.forEach(function (t) {
+    h += '<tr data-txid="' + esc(t.txId) + '" class="' + (flagged[t.txId] ? 'flagged' : '') + (state.selectedTxId === t.txId ? ' sel' : '') + '">' +
+      '<td class="mono">' + fmtFull(t.timestamp) + '</td>' +
+      '<td class="mono">' + esc(t.txId) + '</td>' +
+      '<td class="mono">' + esc(amtFmt(t.amount, t.currency)) + '</td>' +
+      '<td class="mono">' + ntd(t.amountTWD) + '</td>' +
+      '<td class="mono" title="' + esc(t.mcc + ' ' + t.mccDescription) + '">' + esc(t.mcc) + ' ' + esc(t.mccDescription) + '</td>' +
+      '<td title="' + esc(t.merchantName) + '">' + esc(t.merchantName) + '</td>' +
+      '<td>' + esc(t.merchantCountry) + '</td>' +
+      '<td title="' + esc(t.location.city + ' ' + (t.location.ipAddress || '')) + '">' + esc(t.location.city) + ' <span class="muted mono">' + esc(t.location.ipAddress || '') + '</span></td>' +
+      '<td><span class="pill ' + t.authResult + '">' + t.authResult + '</span></td>' +
+      '<td>' + t.authMethod + '</td>' +
+      '<td>' + t.cvvResult + '</td>' +
+      '<td>' + t.deviceFingerprintRisk + '</td>' +
+      '<td>' + (flagged[t.txId] ? '⚠️' : '') + '</td>' +
+      '<td style="white-space:nowrap">' +
+        '<button class="sm rowbtn" data-edit="' + esc(t.txId) + '" title="編輯">✎</button> ' +
+        '<button class="sm rowbtn" data-dup="' + esc(t.txId) + '" title="複製">⧉</button> ' +
+        '<button class="sm rowbtn danger" data-del="' + esc(t.txId) + '" title="刪除">🗑</button>' +
+      '</td></tr>';
+  });
+  h += '</tbody></table>';
+  box.innerHTML = h;
+
+  box.querySelectorAll('tr[data-txid]').forEach(function (tr) {
+    tr.addEventListener('click', function (e) {
+      if (e.target.closest('button')) return;
+      state.selectedTxId = tr.dataset.txid;
+      box.querySelectorAll('tr[data-txid]').forEach(function (x) { x.classList.remove('sel'); });
+      tr.classList.add('sel');
+    });
+  });
+  box.querySelectorAll('[data-edit]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var t = findTx(b.dataset.edit); if (t) openTxEditor(t); });
+  });
+  box.querySelectorAll('[data-dup]').forEach(function (b) {
+    b.addEventListener('click', function () { duplicateTx(b.dataset.dup); });
+  });
+  box.querySelectorAll('[data-del]').forEach(function (b) {
+    b.addEventListener('click', function () { deleteTx(b.dataset.del); });
+  });
+  bindListToolbar();
+}
+
+function bindListToolbar() {
+  var add = $('txAdd'); if (add) add.addEventListener('click', function () { openTxEditor(null); });
+  var sort = $('txSort'); if (sort) sort.addEventListener('click', function () {
+    state.txs.sort(function (a, b) { return new Date(a.timestamp) - new Date(b.timestamp); });
+    refreshCases(); persistWorking(); emit(['center', 'cases', 'right', 'header', 'timeline']);
+    toast('已依時間重新排序', 'ok');
+  });
+  var imp = $('txImport'); if (imp) imp.addEventListener('click', function () { $('txFile').click(); });
+  var exp = $('txExport'); if (exp) exp.addEventListener('click', function () { exportCaseCSV(); });
+}
+
+/* 取得目前工作資料中的交易 */
+function findTx(txId) {
+  return state.txs.filter(function (t) { return t.txId === txId; })[0] || null;
+}
+
+/* 重新分群並盡量保留選取 */
+function refreshCases() {
+  var keepPan = state.selectedCase ? state.selectedCase.pan : null;
+  state.cases = groupCases(state.txs);
+  if (keepPan) {
+    state.selectedCase = state.cases.filter(function (c) { return c.pan === keepPan; })[0] || state.cases[0] || null;
+  } else { state.selectedCase = state.cases[0] || null; }
+}
+
+function selectCaseOfTx(txId) {
+  var tx = findTx(txId);
+  if (!tx) return;
+  state.selectedCase = state.cases.filter(function (c) { return c.pan === tx.cardMasked; })[0] || state.selectedCase;
+}
+
+/* 工作資料持久化（IndexedDB） */
+function persistWorking() {
+  clearTimeout(state._saveT);
+  state._saveT = setTimeout(function () {
+    IDB.put('cases', { id: 'CURRENT', txs: state.txs, updatedAt: new Date().toISOString() })
+      .catch(function () {});
+  }, 350);
+}
+
+/* --- 交易編輯器 --- */
+var TX_FORM = [
+  { k: 'txId', label: '交易序號' },
+  { k: 'cardMasked', label: '遮罩卡號' },
+  { k: 'cardholderId', label: '客戶識別碼' },
+  { k: 'cardholderNameMasked', label: '遮罩姓名' },
+  { k: 'phoneMasked', label: '遮罩電話' },
+  { k: 'timestamp', label: '時間 (ISO 8601 UTC)' },
+  { k: 'amount', label: '金額', type: 'number' },
+  { k: 'currency', label: '幣別' },
+  { k: 'mcc', label: 'MCC 代碼' },
+  { k: 'mccDescription', label: '行業名稱' },
+  { k: 'merchantName', label: '特店名稱' },
+  { k: 'merchantCountry', label: '特店國別' },
+  { k: 'city', label: '城市' },
+  { k: 'lat', label: '緯度', type: 'number' },
+  { k: 'lng', label: '經度', type: 'number' },
+  { k: 'ipAddress', label: '來源 IP' },
+  { k: 'authResult', label: '授權結果', opts: ['APPROVED', 'DECLINED', 'TIMEOUT', 'CHALLENGE_REQUIRED'] },
+  { k: 'authMethod', label: '授權方式', opts: ['CHIP', 'CONTACTLESS', 'CNP_3DS', 'CNP_NON_3DS', 'SWIPE'] },
+  { k: 'cvvResult', label: 'CVV 驗證', opts: ['MATCH', 'MISMATCH', 'NOT_PROVIDED'] },
+  { k: 'deviceFingerprintRisk', label: '裝置指紋風險', opts: ['LOW', 'MEDIUM', 'HIGH'] }
+];
+
+function blankTxForm() {
+  var card = state.selectedCase ? state.selectedCase.pan : CARDS.c1.pan;
+  var cust = state.selectedCase ? state.selectedCase.cust : CARDS.c1.cust;
+  var name = state.selectedCase ? state.selectedCase.holder : CARDS.c1.name;
+  var phone = state.selectedCase ? state.selectedCase.txs[0].phoneMasked : CARDS.c1.phone;
+  return { txId: uniqueTxId(), cardMasked: card, cardholderId: cust,
+    cardholderNameMasked: name, phoneMasked: phone,
+    timestamp: new Date().toISOString().slice(0, 19) + 'Z', amount: 100, currency: 'TWD',
+    mcc: '5812', mccDescription: MCC_NAME['5812'], merchantName: 'NEW MERCHANT', merchantCountry: 'TW',
+    city: 'Taipei', lat: 25.033, lng: 121.565, ipAddress: '203.0.113.1',
+    authResult: 'APPROVED', authMethod: 'CNP_3DS', cvvResult: 'MATCH', deviceFingerprintRisk: 'LOW' };
+}
+
+function openTxEditor(t) {
+  state.editingTxId = t ? t.txId : null;
+  $('txModalTitle').textContent = t ? '編輯交易：' + t.txId : '新增交易';
+  var v = t ? flattenTx(t) : blankTxForm();
+  if (t) v.cardholderId = t.cardholderId;
+  $('txFormGrid').innerHTML = TX_FORM.map(function (f) {
+    var val = v[f.k] == null ? '' : v[f.k];
+    var input = f.opts
+      ? '<select id="txf_' + f.k + '">' + f.opts.map(function (o) {
+          return '<option value="' + o + '"' + (String(val) === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select>'
+      : '<input id="txf_' + f.k + '" type="' + (f.type || 'text') + '" value="' + esc(val) + '" />';
+    return '<div class="field"><label>' + f.label + '</label>' + input + '</div>';
+  }).join('');
+  $('txPiiWarn').classList.remove('show');
+  $('txModal').classList.add('show');
+}
+
+function collectTxForm() {
+  var v = {};
+  TX_FORM.forEach(function (f) { v[f.k] = $('txf_' + f.k).value; });
+
+  if (!v.timestamp || isNaN(new Date(v.timestamp))) { toast('時間格式錯誤（需 ISO 8601，例：2026-10-17T18:20:15Z）', 'err'); return null; }
+  if (v.amount === '' || isNaN(Number(v.amount)) || Number(v.amount) < 0) { toast('金額需為非負數字', 'err'); return null; }
+  if (Math.abs(Number(v.lat)) > 90 || Math.abs(Number(v.lng)) > 180) { toast('經緯度超出範圍', 'err'); return null; }
+  if (!String(v.cardMasked).trim()) { toast('遮罩卡號為必填', 'err'); return null; }
+
+  var tx = {
+    txId: v.txId || uniqueTxId(),
+    cardMasked: v.cardMasked, cardholderId: v.cardholderId || 'CUST-USER',
+    cardholderNameMasked: v.cardholderNameMasked, phoneMasked: v.phoneMasked,
+    timestamp: v.timestamp, amount: Number(v.amount), currency: v.currency,
+    amountTWD: Math.round(Number(v.amount) * (RATE[v.currency] || 1)),
+    mcc: String(v.mcc), mccDescription: v.mccDescription || MCC_NAME[v.mcc] || '其他',
+    merchantName: v.merchantName, merchantCountry: v.merchantCountry,
+    location: { lat: Number(v.lat), lng: Number(v.lng), city: v.city, ipAddress: v.ipAddress },
+    authResult: v.authResult, authMethod: v.authMethod, cvvResult: v.cvvResult,
+    deviceFingerprintRisk: v.deviceFingerprintRisk, isFlaggedByRule: false
+  };
+  var pii = findUnmaskedPII(tx);
+  if (pii.length) {
+    $('txPiiWarn').textContent = '⛔ 偵測到疑似未遮罩之完整卡號（違反 PCI-DSS），已阻擋儲存：' + pii[0];
+    $('txPiiWarn').classList.add('show');
+    toast('偵測到未遮罩 PAN，已阻擋儲存', 'err');
+    return null;
+  }
+  return tx;
+}
+
+function saveTx() {
+  var tx = collectTxForm();
+  if (!tx) return;
+  var isNew = !state.editingTxId;
+  if (isNew) {
+    var clash = state.txs.filter(function (t) { return t.txId === tx.txId; }).length;
+    if (clash) tx.txId = uniqueTxId();
+    state.txs.push(tx);
+  } else {
+    var idx = state.txs.findIndex(function (t) { return t.txId === state.editingTxId; });
+    if (idx < 0) state.txs.push(tx); else state.txs[idx] = tx;
+  }
+  refreshCases(); selectCaseOfTx(tx.txId);
+  state.selectedTxId = tx.txId;
+  state.currentTime = null;
+  persistWorking();
+  addAudit(isNew ? 'TX_CREATE' : 'TX_UPDATE', (isNew ? '新增' : '更新') + '交易 ' + tx.txId + '（' + tx.cardMasked + ' · ' + ntd(tx.amountTWD) + '）');
+  $('txModal').classList.remove('show');
+  emit(['header', 'cases', 'case', 'right', 'center', 'timeline']);
+  toast('交易 ' + tx.txId + ' 已' + (isNew ? '新增' : '更新'), 'ok');
+}
+
+function duplicateTx(txId) {
+  var t = findTx(txId); if (!t) return;
+  var c = deep(t);
+  c.txId = uniqueTxId();
+  state.txs.push(c);
+  refreshCases(); selectCaseOfTx(c.txId);
+  state.selectedTxId = c.txId;
+  state.currentTime = null;
+  persistWorking();
+  addAudit('TX_CREATE', '複製交易 ' + txId + ' → ' + c.txId);
+  emit(['header', 'cases', 'case', 'right', 'center', 'timeline']);
+  toast('已複製為 ' + c.txId, 'ok');
+}
+
+async function deleteTx(txId) {
+  var t = findTx(txId); if (!t) return;
+  var ok = await doubleConfirm('🗑 刪除交易', '確定刪除交易 <b class="mono">' + esc(txId) + '</b>？<br>' +
+    esc(t.merchantName) + ' · ' + ntd(t.amountTWD) + ' · ' + fmtFull(t.timestamp), true);
+  if (!ok) return;
+  state.txs = state.txs.filter(function (x) { return x.txId !== txId; });
+  if (state.selectedTxId === txId) state.selectedTxId = null;
+  refreshCases();
+  state.currentTime = null;
+  persistWorking();
+  addAudit('TX_DELETE', '刪除交易 ' + txId);
+  emit(['header', 'cases', 'case', 'right', 'center', 'timeline']);
+  toast('交易 ' + txId + ' 已刪除', 'ok');
+}
+
+/* --- 交易匯入 / 匯出 --- */
+function exportCaseCSV() {
+  if (!state.selectedCase || !state.selectedCase.txs.length) { toast('沒有可匯出的交易', 'warn'); return; }
+  var cols = ['txId', 'cardMasked', 'cardholderId', 'cardholderNameMasked', 'phoneMasked', 'timestamp',
+    'amount', 'currency', 'amountTWD', 'mcc', 'mccDescription', 'merchantName', 'merchantCountry',
+    'city', 'lat', 'lng', 'ipAddress', 'authResult', 'authMethod', 'cvvResult', 'deviceFingerprintRisk'];
+  var lines = [cols.join(',')];
+  state.selectedCase.txs.forEach(function (t) {
+    lines.push([t.txId, t.cardMasked, t.cardholderId, t.cardholderNameMasked, t.phoneMasked, t.timestamp,
+      t.amount, t.currency, t.amountTWD, t.mcc, t.mccDescription, t.merchantName, t.merchantCountry,
+      t.location.city, t.location.lat, t.location.lng, t.location.ipAddress || '',
+      t.authResult, t.authMethod, t.cvvResult, t.deviceFingerprintRisk]
+      .map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }).join(','));
+  });
+  addAudit('TX_EXPORT', '匯出案件交易 CSV：' + state.selectedCase.pan + '（' + state.selectedCase.txs.length + ' 筆）');
+  download('transactions-' + state.selectedCase.pan.replace(/[^0-9]/g, '') + '.csv', lines.join('\r\n'), 'text/csv;charset=utf-8');
+  toast('已匯出交易 CSV', 'ok');
+}
+
+function importTxText(text) {
+  var list = [];
+  var trimmed = String(text || '').trim();
+  if (!trimmed) { toast('檔案為空', 'err'); return; }
+  if (trimmed[0] === '[' || trimmed[0] === '{') {
+    try {
+      var parsed = JSON.parse(trimmed);
+      list = Array.isArray(parsed) ? parsed : [parsed];
+      list = list.map(function (t) { return (t.cardMasked && t.location) ? t : rowToTx(t); });
+    } catch (e) { toast('JSON 解析失敗：' + e.message, 'err'); return; }
+  } else {
+    var rows = parseCSV(trimmed);
+    if (!rows.length) { toast('CSV 無有效資料列', 'err'); return; }
+    list = rows.map(function (r) {
+      var cityKey = (r.city || 'Taipei').toLowerCase().replace(/\s/g, '');
+      var loc = CITY[cityKey] || CITY.taipei;
+      return rowToTx({
+        txId: r.txId, cardMasked: r.cardMasked, cardholderNameMasked: r.cardholderNameMasked,
+        phoneMasked: r.phoneMasked, timestamp: r.timestamp, amount: r.amount, currency: r.currency || 'TWD',
+        mcc: r.mcc || '5812', merchantName: r.merchantName, merchantCountry: r.merchantCountry,
+        city: loc.city, lat: r.lat || loc.lat, lng: r.lng || loc.lng, ipAddress: r.ipAddress || loc.ip,
+        authResult: r.authResult || 'APPROVED', authMethod: r.authMethod || 'CNP_3DS',
+        cvvResult: r.cvvResult || 'MATCH', deviceFingerprintRisk: r.deviceFingerprintRisk || 'LOW'
+      });
+    });
+  }
+  var pii = findUnmaskedPII(list);
+  if (pii.length) { toast('檔案含未遮罩 PAN，已阻擋匯入', 'err'); return; }
+  var added = 0;
+  list.forEach(function (t) {
+    if (!t.txId) t.txId = uniqueTxId();
+    if (state.txs.some(function (x) { return x.txId === t.txId; })) t.txId = uniqueTxId();
+    state.txs.push(t); added++;
+  });
+  refreshCases(); state.currentTime = null; persistWorking();
+  addAudit('TX_IMPORT', '匯入 ' + added + ' 筆交易');
+  emit(['header', 'cases', 'case', 'right', 'center', 'timeline']);
+  toast('已匯入 ' + added + ' 筆交易', 'ok');
+}
+
+function renderCenter() {
+  if (state.view === 'map') { renderMap(); }
+  else if (state.view === 'wave') { renderWave(); }
+  else { renderList(); }
+}
+
+function renderTimeline() {
+  var ro = $('timeReadout'), sc = $('scrubber');
+  if (!state.selectedCase) { ro.textContent = '—'; sc.value = 1000; sc.disabled = true; $('btnPlay').disabled = true; return; }
+  sc.disabled = false; $('btnPlay').disabled = false;
+  var all = state.selectedCase.txs;
+  var t0 = new Date(all[0].timestamp).getTime(), t1 = new Date(all[all.length - 1].timestamp).getTime();
+  if (state.currentTime == null) state.currentTime = t1;
+  var frac = t1 > t0 ? (state.currentTime - t0) / (t1 - t0) : 1;
+  sc.value = Math.round(clamp(frac, 0, 1) * 1000);
+  var shown = visibleTxs().length;
+  ro.textContent = fmtFull(new Date(state.currentTime).toISOString()) + ' UTC  (' + shown + '/' + all.length + ')';
+}
+
+function renderTplSelect() {
+  var sel = $('tplSelect'); sel.innerHTML = '';
+  ['attack', 'baseline'].forEach(function (g) {
+    var og = el('optgroup', { label: g === 'attack' ? '攻擊情境 (attack)' : '對照基線 (baseline)' });
+    state.templates.filter(function (t) { return t.group === g; }).forEach(function (t) {
+      og.appendChild(el('option', { value: t.id, text: t.name + (t.builtin ? '' : ' ★') + '（' + (t.transactions || []).length + ' 筆）' }));
+    });
+    if (og.childNodes.length) sel.appendChild(og);
+  });
+  if (!sel.childNodes.length) sel.appendChild(el('option', { value: '', text: '（無模板）' }));
+}
+
+function renderAll() {
+  renderHeader(); renderCaseList(); renderRight(); renderAudit(); renderTplSelect();
+  renderCenter(); renderTimeline();
+}
+
+/* =====================================================================
+   9. 互動：載入 / 選取 / 時間軸 / 門檻
+   ===================================================================== */
+function loadTransactions(txs, label) {
+  state.txs = txs.slice();
+  state.cases = groupCases(state.txs);
+  state.selectedCase = state.cases[0] || null;
+  state.currentTime = null;
+  state.selectedTxId = null;
+  persistWorking();
+  emit();
+  if (label) toast('已載入「' + label + '」：' + txs.length + ' 筆、' + state.cases.length + ' 個案件', 'ok');
+  AudioEngine.tap();
+  /* 自動警示 */
+  var crit = state.cases.filter(function (c) { return c.assessment.riskLevel === 'CRITICAL'; }).length;
+  if (crit) AudioEngine.danger();
+}
+
+function selectCase(pan) {
+  state.selectedCase = state.cases.filter(function (c) { return c.pan === pan; })[0] || null;
+  state.currentTime = null;
+  emit(['case', 'right', 'center', 'timeline', 'header']);
+}
+
+function currentTemplate() {
+  var id = $('tplSelect').value;
+  return state.templates.filter(function (t) { return t.id === id; })[0] || null;
+}
+
+/* =====================================================================
+   10. 處置動作 + 稽核 (§4.3)
+   ===================================================================== */
+function addAudit(type, note) {
+  var rec = { actionId: uid('ACT-'), timestamp: new Date().toISOString(), analystId: 'F-8012', actionType: type, note: note || '' };
+  state.audit.unshift(rec);
+  IDB.put('auditLogs', rec).catch(function () {});
+  renderAudit();
+  return rec;
+}
+
+/* 二次確認 */
+function doubleConfirm(title, msg, danger) {
+  return new Promise(function (resolve) {
+    var mask = $('confirmModal'), ok = $('cfOk');
+    $('cfTitle').textContent = title;
+    $('cfMsg').innerHTML = msg;
+    ok.className = danger ? 'danger' : 'primary';
+    ok.textContent = '確認執行';
+    var armed = false, done = false;
+    function cleanup() { mask.classList.remove('show'); ok.removeEventListener('click', onOk);
+      $('cfCancel').removeEventListener('click', onCancel); }
+    function onOk() {
+      if (!armed) { armed = true; ok.textContent = '⚠️ 再次點擊以確認（防呆）'; return; }
+      done = true; cleanup(); resolve(true);
+    }
+    function onCancel() { cleanup(); resolve(false); }
+    ok.addEventListener('click', onOk);
+    $('cfCancel').addEventListener('click', onCancel);
+    mask.classList.add('show');
+  });
+}
+
+function guardCase() {
+  if (!state.selectedCase) { toast('請先載入並選擇案件', 'warn'); return false; }
+  return true;
+}
+
+async function actLock() {
+  if (!guardCase()) return;
+  var c = state.selectedCase;
+  var ok = await doubleConfirm('🛑 一鍵立即鎖卡（STOP-90）',
+    '將對 <b class="mono">' + esc(c.pan) + '</b>（' + esc(c.holder) + '）發出 <b>STOP-90</b> 暫時鎖卡指令。<br>此動作將寫入稽核軌跡並通知客戶。', true);
+  if (!ok) return;
+  c.locked = true;
+  state.flags[c.pan] = { locked: true, whitelisted: !!c.whitelisted };
+  addAudit('LOCK_CARD', 'STOP-90 暫時鎖卡：' + c.pan + '（風險分 ' + c.assessment.overallRiskScore + '）');
+  await IDB.put('cases', { id: 'FLAG:' + c.pan, pan: c.pan, locked: true, whitelisted: !!c.whitelisted, updatedAt: new Date().toISOString() });
+  AudioEngine.ok(); toast('已對 ' + c.pan + ' 執行 STOP-90 鎖卡', 'ok');
+  renderCaseList();
+}
+
+async function actSms() {
+  if (!guardCase()) return;
+  var c = state.selectedCase;
+  var top = c.txs.slice().sort(function (a, b) { return b.amountTWD - a.amountTWD; })[0];
+  var msg = '您目前是否有於 <b>' + esc(top.merchantName) + '</b> 扣款 <b>' + ntd(top.amountTWD) +
+    '</b>？若無請點擊此處立即阻斷。';
+  var ok = await doubleConfirm('📱 發送即時照會 SMS', '發送至 <b class="mono">' + esc(c.txs[0].phoneMasked) + '</b><br><br>「' + msg + '」', false);
+  if (!ok) return;
+  addAudit('SEND_SMS_VERIFY', '發送照會簡訊至 ' + c.txs[0].phoneMasked + '：' + top.merchantName + ' ' + ntd(top.amountTWD));
+  AudioEngine.ok(); toast('照會簡訊已發送', 'ok');
+}
+
+async function actWhite() {
+  if (!guardCase()) return;
+  var c = state.selectedCase;
+  var ok = await doubleConfirm('🛡️ 解除並加入暫時白名單（24h）',
+    '將案件 <b class="mono">' + esc(c.pan) + '</b> 標記為「持卡人本人／正當交易」，解除告警並加入 24 小時白名單。', false);
+  if (!ok) return;
+  c.whitelisted = true; c.locked = false;
+  state.flags[c.pan] = { locked: false, whitelisted: true };
+  addAudit('WHITELIST', '加入 24h 白名單並解除告警：' + c.pan);
+  await IDB.put('cases', { id: 'FLAG:' + c.pan, pan: c.pan, locked: false, whitelisted: true, updatedAt: new Date().toISOString() });
+  AudioEngine.ok(); toast('已加入 24h 白名單', 'ok');
+  renderCaseList();
+}
+
+async function actReport() {
+  if (!guardCase()) return;
+  var c = state.selectedCase;
+  var ok = await doubleConfirm('📋 正式立案通報', '將匯出包含完整交易軌跡、IP 歷程與規則比對之稽核檔案（JSON）。', false);
+  if (!ok) return;
+  var report = {
+    generatedAt: new Date().toISOString(), analystId: 'F-8012',
+    case: { cardMasked: c.pan, cardholderId: c.cust, cardholderNameMasked: c.holder },
+    assessment: c.assessment, transactions: c.txs,
+    auditTrail: state.audit.filter(function (a) { return (a.note || '').indexOf(c.pan) >= 0 || a.actionType.indexOf('TEMPLATE') !== 0; })
+  };
+  addAudit('REPORT_FRAUD', '正式立案通報並匯出稽核報告：' + c.pan);
+  download('fraud-ticket-' + c.pan.replace(/[^0-9]/g, '') + '.json', JSON.stringify(report, null, 2));
+  AudioEngine.ok(); toast('稽核報告已匯出', 'ok');
+}
+
+function download(filename, text, mime) {
+  var blob = new Blob([text], { type: mime || 'application/json;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = el('a', { href: url, download: filename });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+}
+
+/* =====================================================================
+   11. 模板 CRUD (§4.5)
+   ===================================================================== */
+async function persistTemplate(tpl, auditType, note) {
+  tpl.updatedAt = new Date().toISOString();
+  tpl.schemaVersion = 1;
+  if (state.templates.filter(function (t) { return t.id === tpl.id; }).length) {
+    state.templates = state.templates.map(function (t) { return t.id === tpl.id ? tpl : t; });
+  } else { state.templates.push(tpl); }
+  var rec = addAudit(auditType || 'TEMPLATE_UPDATE', note || tpl.name);
+  await IDB.atomic([
+    { type: 'put', store: 'templates', rec: tpl },
+    { type: 'put', store: 'auditLogs', rec: rec }
+  ]);
+  renderTplSelect();
+}
+
+async function deleteTemplate(id) {
+  var t = state.templates.filter(function (x) { return x.id === id; })[0];
+  if (!t) return;
+  var ok = await doubleConfirm('🗑 刪除模板', '確定刪除模板「<b>' + esc(t.name) + '</b>」？' +
+    (t.builtin ? '<br><span class="muted">此為內建模板，可日後用「↺ 還原」重新取得。</span>' : ''), true);
+  if (!ok) return;
+  state.templates = state.templates.filter(function (x) { return x.id !== id; });
+  var rec = addAudit('TEMPLATE_DELETE', t.name + ' (' + id + ')');
+  await IDB.atomic([{ type: 'delete', store: 'templates', key: id }, { type: 'put', store: 'auditLogs', rec: rec }]);
+  renderTplSelect(); toast('已刪除模板「' + t.name + '」', 'ok');
+}
+
+async function restoreBuiltin() {
+  var ok = await doubleConfirm('↺ 還原內建模板', '將重新植入 10 個內建模板（同名 ID 會被覆蓋，自訂模板保留）。', false);
+  if (!ok) return;
+  var seeds = seedTemplates();
+  seeds.forEach(function (s) {
+    state.templates = state.templates.filter(function (t) { return t.id !== s.id; });
+    state.templates.push(s);
+  });
+  var rec = addAudit('TEMPLATE_IMPORT', '還原 10 個內建模板');
+  var writes = seeds.map(function (s) { return { type: 'put', store: 'templates', rec: s }; });
+  writes.push({ type: 'put', store: 'auditLogs', rec: rec });
+  await IDB.atomic(writes);
+  renderTplSelect(); toast('已還原 10 個內建模板', 'ok');
+}
+
+/* --- 編輯器 --- */
+var EDIT_COLS = [
+  { k: 'txId', label: '序號', w: 120 }, { k: 'cardMasked', label: '遮罩卡號', w: 150 },
+  { k: 'cardholderNameMasked', label: '姓名', w: 70 }, { k: 'phoneMasked', label: '電話', w: 100 },
+  { k: 'timestamp', label: '時間(ISO)', w: 175 }, { k: 'amount', label: '金額', w: 70, type: 'number' },
+  { k: 'currency', label: '幣別', w: 60 }, { k: 'mcc', label: 'MCC', w: 60 },
+  { k: 'merchantName', label: '特店', w: 140 }, { k: 'merchantCountry', label: '國別', w: 50 },
+  { k: 'city', label: '城市', w: 90 }, { k: 'lat', label: '緯度', w: 70, type: 'number' },
+  { k: 'lng', label: '經度', w: 70, type: 'number' }, { k: 'ipAddress', label: '來源IP', w: 120 },
+  { k: 'authResult', label: '授權結果', w: 130, opts: ['APPROVED', 'DECLINED', 'TIMEOUT', 'CHALLENGE_REQUIRED'] },
+  { k: 'authMethod', label: '授權方式', w: 120, opts: ['CHIP', 'CONTACTLESS', 'CNP_3DS', 'CNP_NON_3DS', 'SWIPE'] },
+  { k: 'cvvResult', label: 'CVV', w: 110, opts: ['MATCH', 'MISMATCH', 'NOT_PROVIDED'] },
+  { k: 'deviceFingerprintRisk', label: '裝置風險', w: 90, opts: ['LOW', 'MEDIUM', 'HIGH'] }
+];
+function flattenTx(t) {
+  return { txId: t.txId, cardMasked: t.cardMasked, cardholderNameMasked: t.cardholderNameMasked, phoneMasked: t.phoneMasked,
+    timestamp: t.timestamp, amount: t.amount, currency: t.currency, mcc: t.mcc, merchantName: t.merchantName,
+    merchantCountry: t.merchantCountry, city: t.location.city, lat: t.location.lat, lng: t.location.lng,
+    ipAddress: t.location.ipAddress, authResult: t.authResult, authMethod: t.authMethod, cvvResult: t.cvvResult,
+    deviceFingerprintRisk: t.deviceFingerprintRisk };
+}
+function blankRow() {
+  return { txId: uniqueTxId(), cardMasked: '4000-00**-****-0000', cardholderNameMasked: '王*明',
+    phoneMasked: '0900-***-000', timestamp: new Date().toISOString().slice(0, 19) + 'Z', amount: 100, currency: 'TWD',
+    mcc: '5812', merchantName: 'NEW MERCHANT', merchantCountry: 'TW', city: 'Taipei', lat: 25.033, lng: 121.565,
+    ipAddress: '203.0.113.1', authResult: 'APPROVED', authMethod: 'CNP_3DS', cvvResult: 'MATCH', deviceFingerprintRisk: 'LOW' };
+}
+function rowToTx(r) {
+  return { txId: r.txId, cardMasked: r.cardMasked, cardholderId: 'CUST-USER', cardholderNameMasked: r.cardholderNameMasked,
+    phoneMasked: r.phoneMasked, timestamp: r.timestamp, amount: Number(r.amount) || 0, currency: r.currency,
+    amountTWD: Math.round((Number(r.amount) || 0) * (RATE[r.currency] || 1)), mcc: String(r.mcc),
+    mccDescription: MCC_NAME[r.mcc] || '其他', merchantName: r.merchantName, merchantCountry: r.merchantCountry,
+    location: { lat: Number(r.lat) || 0, lng: Number(r.lng) || 0, city: r.city, ipAddress: r.ipAddress },
+    authResult: r.authResult, authMethod: r.authMethod, cvvResult: r.cvvResult,
+    deviceFingerprintRisk: r.deviceFingerprintRisk, isFlaggedByRule: false };
+}
+
+function renderEditTable() {
+  var t = $('editTable');
+  var head = '<thead><tr>' + EDIT_COLS.map(function (c) { return '<th>' + c.label + '</th>'; }).join('') + '<th>操作</th></tr></thead>';
+  var body = '<tbody>';
+  state.draftRows.forEach(function (r, i) {
+    body += '<tr>';
+    EDIT_COLS.forEach(function (c) {
+      var v = r[c.k] == null ? '' : r[c.k];
+      if (c.opts) {
+        body += '<td><select data-i="' + i + '" data-k="' + c.k + '">' + c.opts.map(function (o) {
+          return '<option value="' + o + '"' + (String(v) === o ? ' selected' : '') + '>' + o + '</option>'; }).join('') + '</select></td>';
+      } else {
+        body += '<td><input data-i="' + i + '" data-k="' + c.k + '" type="' + (c.type || 'text') + '" value="' + esc(v) + '"/></td>';
+      }
+    });
+    body += '<td style="white-space:nowrap"><button class="sm" data-dup="' + i + '" title="複製">⧉</button> ' +
+      '<button class="sm danger" data-del="' + i + '" title="刪除">✕</button></td></tr>';
+  });
+  body += '</tbody>';
+  t.innerHTML = head + body;
+  $('rowCount').textContent = state.draftRows.length + ' 筆';
+  t.querySelectorAll('input,select').forEach(function (inp) {
+    inp.addEventListener('input', function () {
+      state.draftRows[Number(inp.dataset.i)][inp.dataset.k] = inp.value;
+    });
+  });
+  t.querySelectorAll('[data-del]').forEach(function (b) {
+    b.addEventListener('click', function () { state.draftRows.splice(Number(b.dataset.del), 1); renderEditTable(); });
+  });
+  t.querySelectorAll('[data-dup]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var r = deep(state.draftRows[Number(b.dataset.dup)]);
+      r.txId = uniqueTxId();
+      state.draftRows.splice(Number(b.dataset.dup) + 1, 0, r); renderEditTable();
+    });
+  });
+}
+
+function openEditor(tpl, asNew) {
+  state.editingId = asNew ? null : (tpl ? tpl.id : null);
+  $('tplModalTitle').textContent = asNew ? '新增模板' : (tpl ? '編輯模板：' + tpl.name : '新增模板');
+  $('mId').value = tpl && !asNew ? tpl.id : uniqueTemplateId();
+  $('mName').value = tpl ? tpl.name : '';
+  $('mGroup').value = tpl ? tpl.group : 'attack';
+  $('mDesc').value = tpl ? (tpl.description || '') : '';
+  $('mTags').value = tpl ? (tpl.tags || []).join(', ') : '';
+  state.draftRows = tpl ? tpl.transactions.map(flattenTx) : [blankRow()];
+  $('piiWarn').classList.remove('show');
+  renderEditTable();
+  $('tplModal').classList.add('show');
+}
+
+function validateTemplate() {
+  var name = $('mName').value.trim();
+  if (!name) { toast('模板名稱為必填', 'err'); return null; }
+  var rows = state.draftRows;
+  if (!rows.length) { toast('至少需要一筆交易', 'err'); return null; }
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (!r.timestamp || isNaN(new Date(r.timestamp))) { toast('第 ' + (i + 1) + ' 列時間格式錯誤（需 ISO 8601）', 'err'); return null; }
+    if (isNaN(Number(r.amount)) || Number(r.amount) < 0) { toast('第 ' + (i + 1) + ' 列金額需為數字', 'err'); return null; }
+    if (Math.abs(Number(r.lat)) > 90 || Math.abs(Number(r.lng)) > 180) { toast('第 ' + (i + 1) + ' 列經緯度超出範圍', 'err'); return null; }
+  }
+  var pii = findUnmaskedPII(rows);
+  if (pii.length) {
+    $('piiWarn').textContent = '⛔ 偵測到疑似未遮罩之完整卡號（違反 PCI-DSS），已阻擋儲存：' + pii[0];
+    $('piiWarn').classList.add('show');
+    toast('偵測到未遮罩 PAN，已阻擋儲存', 'err');
+    return null;
+  }
+  return { id: $('mId').value.trim(), name: name, group: $('mGroup').value,
+    description: $('mDesc').value.trim(),
+    tags: $('mTags').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean),
+    builtin: false, transactions: rows.map(rowToTx) };
+}
+
+async function saveEditor(asNew) {
+  var tpl = validateTemplate();
+  if (!tpl) return;
+  if (asNew) { tpl.id = uniqueTemplateId(); tpl.builtin = false; }
+  var exists = state.templates.filter(function (t) { return t.id === tpl.id; })[0];
+  if (!asNew && exists && exists.builtin) tpl.builtin = true;
+  await persistTemplate(tpl, asNew ? 'TEMPLATE_CREATE' : 'TEMPLATE_UPDATE',
+    (asNew ? '新增' : '更新') + '模板「' + tpl.name + '」（' + tpl.transactions.length + ' 筆）');
+  $('tplModal').classList.remove('show');
+  toast('模板「' + tpl.name + '」已儲存', 'ok');
+}
+
+/* --- 匯入 / 匯出 --- */
+function parseCSV(text) {
+  var lines = text.split(/\r?\n/).filter(function (l) { return l.trim(); });
+  if (!lines.length) return [];
+  var head = lines[0].split(',').map(function (s) { return s.trim(); });
+  return lines.slice(1).map(function (l) {
+    var cols = l.split(','), o = {};
+    head.forEach(function (h, i) { o[h] = (cols[i] || '').trim(); });
+    return o;
+  });
+}
+function rowsToTemplate(rows, nameHint) {
+  var txs = rows.map(function (r) {
+    var cityKey = (r.city || 'Taipei').toLowerCase().replace(/\s/g, '');
+    var loc = CITY[cityKey] || CITY.taipei;
+    return rowToTx({
+      txId: r.txId || uniqueTxId(), cardMasked: r.cardMasked || '4000-00**-****-0000',
+      cardholderNameMasked: r.cardholderNameMasked || r.name || '客*戶', phoneMasked: r.phoneMasked || '0900-***-000',
+      timestamp: r.timestamp || r.time || new Date().toISOString(), amount: Number(r.amount) || 0,
+      currency: r.currency || 'TWD', mcc: r.mcc || '5812', merchantName: r.merchantName || r.merchant || 'MERCHANT',
+      merchantCountry: r.merchantCountry || (cityKey === 'taipei' ? 'TW' : 'XX'),
+      city: loc.city, lat: Number(r.lat) || loc.lat, lng: Number(r.lng) || loc.lng, ipAddress: r.ipAddress || loc.ip,
+      authResult: r.authResult || 'APPROVED', authMethod: r.authMethod || 'CNP_3DS',
+      cvvResult: r.cvvResult || 'MATCH', deviceFingerprintRisk: r.deviceFingerprintRisk || 'LOW'
+    });
+  });
+  return { id: 'tpl-import-' + shortId(5), name: nameHint || '匯入模板', group: 'attack',
+    description: '由 CSV 匯入', tags: ['Imported'], builtin: false, transactions: txs };
+}
+function normalizeImported(o) {
+  if (!o || !o.transactions || !o.transactions.length) return null;
+  return { id: o.id || 'tpl-import-' + shortId(5), name: o.name || '匯入模板',
+    group: o.group === 'baseline' ? 'baseline' : 'attack', description: o.description || '',
+    tags: o.tags || [], builtin: false,
+    transactions: o.transactions.map(function (t) {
+      return (t.cardMasked && t.location) ? t : rowToTx(t); }) };
+}
+async function doImport() {
+  var text = $('impText').value.trim();
+  var conflict = $('impConflict').value;
+  var arr = [];
+  if (text) {
+    try {
+      var parsed = JSON.parse(text);
+      arr = Array.isArray(parsed) ? parsed : [parsed];
+    } catch (e) {
+      var rows = parseCSV(text);
+      if (!rows.length) { toast('無法解析（非 JSON 亦非有效 CSV）', 'err'); return; }
+      arr = [rowsToTemplate(rows, 'CSV 匯入模板')];
+    }
+  }
+  var list = arr.map(normalizeImported).filter(Boolean);
+  if (!list.length) { toast('沒有可匯入的有效模板', 'err'); return; }
+  var writes = [];
+  list.forEach(function (t) {
+    var exists = state.templates.filter(function (x) { return x.id === t.id; }).length;
+    if (exists) { if (conflict === 'rename') { t.id = 'tpl-import-' + shortId(5); t.name += ' (匯入)'; }
+      state.templates = state.templates.filter(function (x) { return x.id !== t.id; }); }
+    var pii = findUnmaskedPII(t.transactions);
+    if (pii.length) { toast('模板「' + t.name + '」含未遮罩 PAN，已略過', 'err'); return; }
+    state.templates.push(t); writes.push({ type: 'put', store: 'templates', rec: t });
+  });
+  var rec = addAudit('TEMPLATE_IMPORT', '匯入 ' + writes.length + ' 個模板');
+  writes.push({ type: 'put', store: 'auditLogs', rec: rec });
+  await IDB.atomic(writes);
+  $('importModal').classList.remove('show'); $('impText').value = '';
+  renderTplSelect(); toast('已匯入 ' + writes.length + ' 個模板', 'ok');
+}
+async function exportAll() {
+  var payload = { schemaVersion: 1, exportedAt: new Date().toISOString(), templates: state.templates };
+  var pii = findUnmaskedPII(payload.templates);
+  if (pii.length) { toast('偵測到未遮罩 PAN，已中止匯出', 'err'); return; }
+  addAudit('TEMPLATE_EXPORT', '匯出全部模板（' + state.templates.length + ' 個）');
+  download('fraud-templates.json', JSON.stringify(payload, null, 2));
+  toast('已匯出 ' + state.templates.length + ' 個模板', 'ok');
+}
+
+/* =====================================================================
+   12. 時間軸播放
+   ===================================================================== */
+function stepTx(dir) {
+  if (!state.selectedCase) return;
+  var all = state.selectedCase.txs;
+  if (state.currentTime == null) state.currentTime = new Date(all[all.length - 1].timestamp).getTime();
+  if (dir > 0) {
+    var nxt = all.filter(function (t) { return new Date(t.timestamp) > state.currentTime; })[0];
+    state.currentTime = nxt ? new Date(nxt.timestamp).getTime() : state.currentTime;
+  } else {
+    var prev = all.filter(function (t) { return new Date(t.timestamp) < state.currentTime; }).pop();
+    state.currentTime = prev ? new Date(prev.timestamp).getTime() : new Date(all[0].timestamp).getTime();
+  }
+  emit(['center', 'timeline']);
+}
+function togglePlay() {
+  if (!state.selectedCase) return;
+  if (state.playing) { clearInterval(state.timer); state.playing = false; $('btnPlay').textContent = '▶ 播放'; return; }
+  var all = state.selectedCase.txs;
+  var t0 = new Date(all[0].timestamp).getTime(), t1 = new Date(all[all.length - 1].timestamp).getTime();
+  if (state.currentTime == null || state.currentTime >= t1) state.currentTime = t0;
+  state.playing = true; $('btnPlay').textContent = '⏸ 暫停';
+  var span = Math.max(1, t1 - t0);
+  state.timer = setInterval(function () {
+    state.currentTime += span / 60;
+    if (state.currentTime >= t1) { state.currentTime = t1; clearInterval(state.timer); state.playing = false; $('btnPlay').textContent = '▶ 播放'; }
+    emit(['center', 'timeline']);
+  }, 90);
+}
+
+/* =====================================================================
+   13. 事件綁定與初始化
+   ===================================================================== */
+function bind() {
+  document.querySelectorAll('.view-tabs button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.view-tabs button').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active'); state.view = b.dataset.view;
+      $('stageMap').style.display = state.view === 'map' ? 'flex' : 'none';
+      $('stageWave').style.display = state.view === 'wave' ? 'block' : 'none';
+      $('stageList').style.display = state.view === 'list' ? 'block' : 'none';
+      renderCenter();
+    });
+  });
+
+  $('btnTheme').addEventListener('click', function () {
+    state.theme = state.theme === 'dark' ? 'light' : 'dark';
+    document.body.classList.toggle('light', state.theme === 'light');
+    $('btnTheme').textContent = state.theme === 'dark' ? '☀️ 淺色' : '🌙 深色';
+    IDB.put('settings', { key: 'theme', value: state.theme });
+    renderCenter();
+  });
+
+  $('btnLoad').addEventListener('click', function () {
+    var t = currentTemplate();
+    if (!t) { toast('沒有可載入的模板', 'warn'); return; }
+    loadTransactions(deep(t.transactions), t.name);
+  });
+  $('btnNew').addEventListener('click', function () { openEditor(null, true); });
+  $('btnEdit').addEventListener('click', function () {
+    var t = currentTemplate(); if (!t) { toast('請先選擇模板', 'warn'); return; } openEditor(t, false);
+  });
+  $('btnDel').addEventListener('click', function () {
+    var t = currentTemplate(); if (!t) { toast('請先選擇模板', 'warn'); return; } deleteTemplate(t.id);
+  });
+  $('btnImport').addEventListener('click', function () { $('importModal').classList.add('show'); });
+  $('btnExport').addEventListener('click', exportAll);
+  $('btnRestore').addEventListener('click', restoreBuiltin);
+  $('btnSaveAs').addEventListener('click', function () {
+    if (!state.txs.length) { toast('目前沒有載入交易', 'warn'); return; }
+    var pan = state.selectedCase ? state.selectedCase.pan : '';
+    var tpl = { id: uniqueTemplateId(), name: '自訂案件 ' + fmtClock(new Date().toISOString()),
+      group: 'attack', description: '由目前載入案件另存', tags: ['FromCurrent'],
+      transactions: deep(state.txs) };
+    openEditor(tpl, true);
+  });
+
+  $('sliderScore').addEventListener('input', function () {
+    state.thresholds.score = Number(this.value); $('lblScore').textContent = this.value;
+    IDB.put('settings', { key: 'scoreThreshold', value: state.thresholds.score });
+    state.cases = groupCases(state.txs);
+    if (state.selectedCase) state.selectedCase = state.cases.filter(function (c) { return c.pan === state.selectedCase.pan; })[0] || null;
+    emit(['header', 'cases', 'right']);
+  });
+  $('sliderSpeed').addEventListener('input', function () {
+    state.thresholds.speed = Number(this.value); $('lblSpeed').textContent = this.value;
+    IDB.put('settings', { key: 'speedLimit', value: state.thresholds.speed });
+    state.cases = groupCases(state.txs);
+    if (state.selectedCase) state.selectedCase = state.cases.filter(function (c) { return c.pan === state.selectedCase.pan; })[0] || null;
+    emit();
+  });
+  $('btnMock500').addEventListener('click', function () { loadTransactions(mock500(), '500 筆效能測試資料'); });
+
+  $('caseSearch').addEventListener('input', renderCaseList);
+
+  $('btnStepB').addEventListener('click', function () { stepTx(-1); });
+  $('btnStepF').addEventListener('click', function () { stepTx(1); });
+  $('btnPlay').addEventListener('click', togglePlay);
+  $('scrubber').addEventListener('input', function () {
+    if (!state.selectedCase) return;
+    var all = state.selectedCase.txs;
+    var t0 = new Date(all[0].timestamp).getTime(), t1 = new Date(all[all.length - 1].timestamp).getTime();
+    state.currentTime = t0 + (Number(this.value) / 1000) * (t1 - t0);
+    emit(['center', 'timeline']);
+  });
+
+  $('actLock').addEventListener('click', actLock);
+  $('actSms').addEventListener('click', actSms);
+  $('actWhite').addEventListener('click', actWhite);
+  $('actReport').addEventListener('click', actReport);
+
+  /* 模板編輯器 */
+  $('tplModalClose').addEventListener('click', function () { $('tplModal').classList.remove('show'); });
+  $('tplCancel').addEventListener('click', function () { $('tplModal').classList.remove('show'); });
+  $('tplSave').addEventListener('click', function () { saveEditor(false); });
+  $('tplSaveAs').addEventListener('click', function () { saveEditor(true); });
+  $('rowAdd').addEventListener('click', function () { state.draftRows.push(blankRow()); renderEditTable(); });
+  $('rowSort').addEventListener('click', function () {
+    state.draftRows.sort(function (a, b) { return new Date(a.timestamp) - new Date(b.timestamp); }); renderEditTable();
+  });
+  $('impClose').addEventListener('click', function () { $('importModal').classList.remove('show'); });
+  $('impCancel').addEventListener('click', function () { $('importModal').classList.remove('show'); });
+  $('impGo').addEventListener('click', doImport);
+  $('impFile').addEventListener('change', function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    var r = new FileReader(); r.onload = function () { $('impText').value = r.result; }; r.readAsText(f);
+  });
+
+  /* 交易 CRUD */
+  $('txClose').addEventListener('click', function () { $('txModal').classList.remove('show'); });
+  $('txCancel').addEventListener('click', function () { $('txModal').classList.remove('show'); });
+  $('txSave').addEventListener('click', saveTx);
+  $('txFile').addEventListener('change', function (e) {
+    var f = e.target.files[0]; if (!f) return;
+    var r = new FileReader();
+    r.onload = function () { importTxText(r.result); };
+    r.readAsText(f);
+    e.target.value = '';
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { $('tplModal').classList.remove('show'); $('importModal').classList.remove('show'); $('txModal').classList.remove('show'); }
+    if (e.ctrlKey && e.key === 'Enter') {
+      if ($('tplModal').classList.contains('show')) saveEditor(false);
+      else if ($('txModal').classList.contains('show')) saveTx();
+    }
+  });
+
+  /* 波形 hover */
+  $('wave').addEventListener('mousemove', function (e) {
+    var cv = e.target, bars = cv._bars || [], tip = $('waveTip');
+    var rect = cv.getBoundingClientRect(), x = e.clientX - rect.left, y = e.clientY - rect.top;
+    var hit = bars.filter(function (b) { return x >= b.x - 2 && x <= b.x + b.w + 2; })[0];
+    if (hit) {
+      var t = hit.tx;
+      tip.style.display = 'block';
+      tip.style.left = Math.min(rect.width - 250, x + 12) + 'px';
+      tip.style.top = Math.max(6, y - 60) + 'px';
+      tip.innerHTML = '<b>' + fmtFull(t.timestamp) + '</b><br>' + esc(t.merchantName) + ' (' + esc(t.location.city) + ')<br>' +
+        esc(amtFmt(t.amount, t.currency)) + ' / ' + ntd(t.amountTWD) + '<br>' +
+        'MCC ' + esc(t.mcc) + ' · ' + t.authResult + ' · ' + t.authMethod;
+    } else { tip.style.display = 'none'; }
+  });
+  $('wave').addEventListener('mouseleave', function () { $('waveTip').style.display = 'none'; });
+
+  window.addEventListener('resize', function () { if (state.view === 'wave') renderWave(); });
+  document.body.addEventListener('click', function () { AudioEngine.unlock(); }, { once: true });
+}
+
+/* --- 初始化 --- */
+async function init() {
+  bind();
+  var st = $('idbStatus');
+  st.textContent = '初始化中…';
+  renderAll();                 /* 先渲染可互動的 UI 空殼，不阻塞於儲存層 */
+  var ok = await IDB.open();
+  if (ok) { st.textContent = 'IndexedDB 已連線'; st.classList.remove('warn'); }
+  else { st.textContent = '⚠️ 本機儲存不可用（僅記憶體）'; st.classList.add('warn'); }
+
+  /* 讀取設定 */
+  var settings = await IDB.getAll('settings');
+  settings.forEach(function (s) {
+    if (s.key === 'scoreThreshold') { state.thresholds.score = s.value; $('sliderScore').value = s.value; $('lblScore').textContent = s.value; }
+    if (s.key === 'speedLimit') { state.thresholds.speed = s.value; $('sliderSpeed').value = s.value; $('lblSpeed').textContent = s.value; }
+    if (s.key === 'theme' && s.value === 'light') { state.theme = 'light'; document.body.classList.add('light'); $('btnTheme').textContent = '🌙 深色'; }
+  });
+
+  /* 讀取模板；空則植入內建 */
+  var templates = await IDB.getAll('templates');
+  if (!templates.length) {
+    var seeds = seedTemplates();
+    await Promise.all(seeds.map(function (s) { return IDB.put('templates', s); }));
+    templates = seeds;
+  }
+  state.templates = templates;
+
+  /* 讀取稽核 */
+  var logs = await IDB.getAll('auditLogs');
+  state.audit = logs.sort(function (a, b) { return new Date(b.timestamp) - new Date(a.timestamp); });
+
+  /* 讀取案件快照與管制旗標 */
+  var caseRecs = await IDB.getAll('cases');
+  var working = null;
+  caseRecs.forEach(function (r) {
+    if (r.id === 'CURRENT') { working = r; return; }
+    if (String(r.id).indexOf('FLAG:') === 0) state.flags[r.pan] = { locked: !!r.locked, whitelisted: !!r.whitelisted };
+  });
+
+  renderAll();
+  /* 優先還原上次工作資料，否則載入第一個攻擊模板 */
+  if (working && working.txs && working.txs.length) {
+    loadTransactions(working.txs, null);
+    toast('已還原上次工作資料（' + working.txs.length + ' 筆交易）', 'ok');
+  } else {
+    var first = state.templates.filter(function (t) { return t.group === 'attack'; })[0];
+    if (first) loadTransactions(deep(first.transactions), first.name);
+  }
+}
+
+subscribe(function (part) {
+  if (part === 'all') return renderAll();
+  if (part === 'header') return renderHeader();
+  if (part === 'cases') return renderCaseList();
+  if (part === 'case') return renderCaseList();
+  if (part === 'right') return renderRight();
+  if (part === 'center') return renderCenter();
+  if (part === 'timeline') return renderTimeline();
+  renderAll();
+});
+
+document.addEventListener('DOMContentLoaded', init);
+if (document.readyState !== 'loading') init();
+
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
