@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>PQ Debugger｜Power Query M 除錯工具</title>
+<style>
+:root{
+  --bg:#f5f6f8; --panel:#ffffff; --panel2:#f9fafb; --line:#e3e6ea; --text:#1f2328; --muted:#5f6b7a; --accent:#0f6cbd; --accent2:#e8f1fb;
+  --err:#d13438; --err-bg:#fde7e9; --warn:#a86b00; --warn-bg:#fff4ce; --info:#0f6cbd; --info-bg:#e8f1fb; --ok:#107c10; --ok-bg:#dff6dd;
+  --code-bg:#fbfbfc; --gutter:#f1f3f5; --sel:rgba(15,108,189,.25);
+  --c-kw:#8f08c4; --c-str:#a31515; --c-qid:#0b6a0b; --c-fn:#795e26; --c-id:#1f2328; --c-num:#098658; --c-com:#6a737d; --c-op:#3b3b3b; --c-def:#0451a5;
+  --mono:"Cascadia Code","Cascadia Mono",Consolas,"Microsoft JhengHei Mono","Courier New",monospace;
+  --sans:"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;
+}
+[data-theme=dark]{
+  --bg:#16181c; --panel:#1f2227; --panel2:#24282e; --line:#33383f; --text:#e6e8eb; --muted:#9aa4b2; --accent:#4ea1f3; --accent2:#1c2f45;
+  --err:#ff6b70; --err-bg:#3d1f22; --warn:#f2c94c; --warn-bg:#3a3219; --info:#6cb6ff; --info-bg:#182c42; --ok:#6ccb5f; --ok-bg:#1d3320;
+  --code-bg:#1b1d22; --gutter:#1f2227; --sel:rgba(78,161,243,.35);
+  --c-kw:#c586c0; --c-str:#ce9178; --c-qid:#4ec9b0; --c-fn:#dcdcaa; --c-id:#d4d4d4; --c-num:#b5cea8; --c-com:#6a9955; --c-op:#c8c8c8; --c-def:#9cdcfe;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+.topbar{display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;margin-right:10px;white-space:nowrap}
+.brand .logo{width:26px;height:26px;border-radius:6px;background:linear-gradient(135deg,#0f6cbd,#5b5fc7);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}
+.brand small{font-weight:400;color:var(--muted);font-size:12px}
+.spacer{flex:1}
+.btn{border:1px solid var(--line);background:var(--panel);padding:6px 12px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;line-height:1.2}
+.btn:hover{background:var(--panel2);border-color:var(--muted)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.dd{position:relative}
+.menu{position:absolute;top:calc(100% + 4px);left:0;min-width:240px;max-width:360px;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.18);padding:4px;z-index:50;display:none}
+.menu.open{display:block}
+.menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:7px 10px;border-radius:5px}
+.menu button:hover{background:var(--accent2)}
+.menu .meta{color:var(--muted);font-size:12px;display:block;margin-top:2px}
+.menu .empty{padding:10px;color:var(--muted)}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+main{flex:1;display:flex;min-height:0}
+.left{flex:1 1 52%;display:flex;flex-direction:column;min-width:0;border-right:1px solid var(--line)}
+.right{flex:1 1 48%;display:flex;flex-direction:column;min-width:0;background:var(--panel)}
+.pane-h{display:flex;align-items:center;gap:8px;padding:6px 12px;background:var(--panel);border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.editor{flex:1;display:flex;min-height:0;background:var(--code-bg);position:relative}
+.gutter{width:52px;flex:none;background:var(--gutter);border-right:1px solid var(--line);overflow:hidden;padding:10px 0;font-family:var(--mono);font-size:13px;line-height:20px;color:var(--muted);text-align:right;user-select:none}
+.gutter div{padding-right:8px;position:relative;height:20px}
+.gutter div.error{color:var(--err);font-weight:700}
+.gutter div.warning{color:var(--warn);font-weight:700}
+.gutter div.info{color:var(--info)}
+.gutter div.error::before,.gutter div.warning::before,.gutter div.info::before{content:"";position:absolute;left:6px;top:6px;width:8px;height:8px;border-radius:50%;background:currentColor}
+.code-wrap{position:relative;flex:1;min-width:0}
+#hl,#code{position:absolute;inset:0;margin:0;padding:10px 14px;font-family:var(--mono);font-size:13px;line-height:20px;white-space:pre;tab-size:4;overflow:auto;border:0;letter-spacing:0}
+#hl{pointer-events:none;color:var(--c-id);overflow:hidden}
+#code{background:transparent;color:transparent;caret-color:var(--text);resize:none;outline:none}
+#code::selection{background:var(--sel);color:transparent}
+#code::placeholder{color:var(--muted)}
+.t-kw{color:var(--c-kw);font-weight:600}.t-str{color:var(--c-str)}.t-qid{color:var(--c-qid)}.t-fn{color:var(--c-fn)}.t-num{color:var(--c-num)}.t-comment{color:var(--c-com);font-style:italic}.t-op,.t-punc{color:var(--c-op)}.t-def{color:var(--c-def);font-weight:600}
+.sq-error{text-decoration:underline wavy var(--err);text-decoration-skip-ink:none;text-underline-offset:3px;background:color-mix(in srgb,var(--err) 10%,transparent)}
+.sq-warning{text-decoration:underline wavy var(--warn);text-decoration-skip-ink:none;text-underline-offset:3px}
+.sq-info{text-decoration:underline dotted var(--info);text-underline-offset:3px}
+.bm{outline:1px solid var(--accent);background:var(--accent2);border-radius:2px}
+.flash{background:color-mix(in srgb,var(--accent) 25%,transparent);border-radius:2px}
+.errbox{border-top:1px solid var(--line);background:var(--panel)}
+.errbox summary{padding:7px 12px;cursor:pointer;font-size:13px;color:var(--muted);user-select:none}
+.errbox textarea{width:100%;height:76px;border:0;border-top:1px solid var(--line);padding:8px 12px;font-family:var(--mono);font-size:12px;background:var(--code-bg);color:var(--text);resize:vertical;outline:none}
+.tabs{display:flex;gap:2px;padding:0 10px;border-bottom:1px solid var(--line);background:var(--panel)}
+.tab{border:0;background:none;padding:10px 14px;border-bottom:2px solid transparent;color:var(--muted);font-weight:600}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.badge{display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;font-size:11px;line-height:18px;text-align:center;background:var(--panel2);border:1px solid var(--line);margin-left:4px;font-weight:600}
+.badge.e{background:var(--err-bg);color:var(--err);border-color:transparent}
+.tabbody{flex:1;overflow:auto;padding:12px}
+.hidden{display:none!important}
+.filters{display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--panel);border-radius:14px;padding:3px 10px;font-size:12px}
+.chip.on{background:var(--accent2);border-color:var(--accent);color:var(--accent)}
+.card{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--panel);cursor:pointer;transition:border-color .15s}
+.card:hover{border-color:var(--accent)}
+.card.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent2)}
+.card.error{border-left:4px solid var(--err)}.card.warning{border-left:4px solid var(--warn)}.card.info{border-left:4px solid var(--info)}
+.card .hd{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);margin-bottom:4px}
+.rid{font-family:var(--mono);font-weight:700;padding:1px 6px;border-radius:4px;font-size:11px}
+.rid.error{background:var(--err-bg);color:var(--err)}.rid.warning{background:var(--warn-bg);color:var(--warn)}.rid.info{background:var(--info-bg);color:var(--info)}
+.card .msg{font-size:14px;line-height:1.55}
+.card .why{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.card .acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;align-items:center}
+.manual{font-size:11px;color:var(--warn)}
+.diff{margin-top:8px;border:1px solid var(--line);border-radius:6px;overflow:auto;font-family:var(--mono);font-size:12px;line-height:18px}
+.diff div{white-space:pre;padding:0 8px}
+.diff .del{background:var(--err-bg)}.diff .ins{background:var(--ok-bg)}
+.diff .del::before{content:"− ";color:var(--err)}.diff .ins::before{content:"+ ";color:var(--ok)}
+.emap{border:1px solid var(--accent);background:var(--accent2);border-radius:8px;padding:10px 12px;margin-bottom:12px}
+.emap h4{margin:0 0 4px;font-size:14px}
+.emap p{margin:0 0 6px;font-size:13px;line-height:1.55}
+.emap .links{display:flex;gap:6px;flex-wrap:wrap}
+.empty-state{color:var(--muted);text-align:center;padding:40px 20px;line-height:1.8}
+.empty-state .big{font-size:36px}
+.step{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;position:relative}
+.step:hover{border-color:var(--accent)}
+.step .no{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--accent2);color:var(--accent);font-size:12px;font-weight:700;margin-right:6px}
+.step .nm{font-weight:700}
+.step .fn{font-family:var(--mono);font-size:11px;color:var(--muted);background:var(--panel2);border:1px solid var(--line);padding:1px 6px;border-radius:4px;margin-left:6px}
+.step .out{font-size:11px;background:var(--ok-bg);color:var(--ok);padding:1px 6px;border-radius:4px;margin-left:6px;font-weight:700}
+.step .sum{margin:6px 0 2px;line-height:1.55}
+.step ul{margin:4px 0 0;padding-left:20px;font-size:13px;line-height:1.6}
+.step .dep{font-size:12px;color:var(--muted);margin-top:6px}
+.step .iss{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.step .used{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.6}
+.step .used code{font-family:var(--mono);font-size:11px}
+.flowwrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--code-bg);padding:10px}
+.flow-acts{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.legend{font-size:12px;color:var(--muted);display:flex;gap:12px;align-items:center;margin-left:auto}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.status{display:flex;gap:14px;align-items:center;padding:4px 14px;background:var(--panel);border-top:1px solid var(--line);font-size:12px;color:var(--muted);flex-wrap:wrap}
+.status .e{color:var(--err)}.status .w{color:var(--warn)}.status .i{color:var(--info)}
+.status .lock{margin-left:auto;color:var(--ok)}
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(20px);background:#1f2328;color:#fff;padding:9px 16px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none;z-index:99;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+dialog{border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--text);padding:0;width:min(560px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+.dlg-h{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:15px}
+.dlg-b{padding:14px 18px;max-height:65vh;overflow:auto}
+.dlg-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.dlg-b label.blk{display:block;font-weight:600;margin:8px 0 6px}
+.dlg-b textarea{width:100%;height:70px;font-family:var(--sans);font-size:13px;padding:8px;border:1px solid var(--line);border-radius:6px;background:var(--code-bg);color:var(--text)}
+.rules{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:13px}
+.rules label{display:flex;gap:6px;align-items:center}
+.hint{font-size:12px;color:var(--muted);line-height:1.6}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 4px;background:var(--panel2)}
+@media (max-width:900px){main{flex-direction:column}.left{border-right:0;border-bottom:1px solid var(--line);min-height:50vh}}
+@media print{.topbar,.left,.tabs,.status{display:none}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="logo">M</div>PQ Debugger <small>Power Query M 除錯工具</small></div>
+  <div class="dd"><button class="btn" id="btnSample">📄 載入範例 ▾</button><div class="menu" id="menuSample"></div></div>
+  <div class="dd"><button class="btn" id="btnHist">🕘 歷史 ▾</button><div class="menu" id="menuHist"></div></div>
+  <button class="btn primary" id="btnCheck" title="Ctrl + Enter">▶ 檢查</button>
+  <button class="btn" id="btnApplyAll">🛠 全部套用</button>
+  <button class="btn" id="btnCopyFixed">📋 複製修正版</button>
+  <div class="dd"><button class="btn" id="btnExport">⬇ 匯出 ▾</button><div class="menu" id="menuExport">
+    <button data-x="md">Markdown 說明文件（.md）</button>
+    <button data-x="svg">流程圖（.svg）</button>
+    <button data-x="png">流程圖（.png）</button>
+    <button data-x="pq">修正後程式碼（.pq）</button>
+  </div></div>
+  <span class="spacer"></span>
+  <button class="btn" id="btnClear" title="清空編輯器">🗑 清空</button>
+  <button class="btn" id="btnSettings">⚙ 設定</button>
+  <button class="btn" id="btnTheme" title="切換深色模式">🌙</button>
+</header>
+
+<main>
+  <section class="left">
+    <div class="pane-h"><span>M Code</span><span class="spacer"></span><span id="cursorPos">第 1 行，第 1 欄</span></div>
+    <div class="editor">
+      <div class="gutter" id="gutter"></div>
+      <div class="code-wrap">
+        <pre id="hl" aria-hidden="true"></pre>
+        <textarea id="code" spellcheck="false" wrap="off" autocomplete="off" autocapitalize="off" placeholder="在這裡貼上 Power Query 的 M Code（進階編輯器中的完整內容）…&#10;&#10;或點上方「載入範例」試用。&#10;&#10;所有分析都在你的瀏覽器中完成，程式碼不會傳送到任何伺服器。"></textarea>
+      </div>
+    </div>
+    <details class="errbox" id="errBox">
+      <summary>⚠ Excel 錯誤訊息（選填）— 貼上重新整理時跳出的錯誤，協助定位問題</summary>
+      <textarea id="errMsg" spellcheck="false" placeholder="例如：Expression.Error: 找不到資料表的 '客戶名稱' 資料行。"></textarea>
+    </details>
+  </section>
+
+  <section class="right">
+    <nav class="tabs">
+      <button class="tab active" data-tab="issues">問題<span class="badge" id="bIssues">0</span></button>
+      <button class="tab" data-tab="steps">步驟說明<span class="badge" id="bSteps">0</span></button>
+      <button class="tab" data-tab="flow">流程圖</button>
+    </nav>
+    <div class="tabbody" id="tab-issues"></div>
+    <div class="tabbody hidden" id="tab-steps"></div>
+    <div class="tabbody hidden" id="tab-flow"></div>
+  </section>
+</main>
+
+<footer class="status">
+  <span id="stSteps">0 個步驟</span>
+  <span class="e" id="stE">● 0 錯誤</span>
+  <span class="w" id="stW">● 0 警告</span>
+  <span class="i" id="stI">● 0 建議</span>
+  <span id="stMs"></span>
+  <span class="lock" title="此頁面以 CSP 禁止所有對外連線">🔒 本機分析，不連網、不上傳</span>
+</footer>
+
+<dialog id="dlgSettings">
+  <div class="dlg-h">⚙ 設定</div>
+  <div class="dlg-b">
+    <label class="blk">R07 識別碼欄位關鍵字</label>
+    <textarea id="setKw"></textarea>
+    <div class="hint">以逗號或換行分隔。欄位名稱包含這些字（英文以單字比對、不分大小寫）且被轉成數值型別時，會提出警告。</div>
+    <label class="blk" style="margin-top:14px">啟用的檢查規則</label>
+    <div class="rules" id="setRules"></div>
+    <label class="blk" style="margin-top:14px">資料</label>
+    <button class="btn sm" id="btnClearAll">清除歷史紀錄與所有設定</button>
+    <div class="hint" id="storeInfo" style="margin-top:6px"></div>
+    <div class="hint" style="margin-top:6px">歷史紀錄、設定與草稿只保存在這台電腦瀏覽器的 IndexedDB，最多 10 筆歷史，不會上傳。<br>快捷鍵：<kbd>Ctrl</kbd>+<kbd>Enter</kbd> 檢查、<kbd>Tab</kbd> 縮排、<kbd>Shift</kbd>+<kbd>Tab</kbd> 取消縮排。</div>
+  </div>
+  <div class="dlg-f"><button class="btn" id="setReset">還原預設</button><button class="btn" id="setCancel">取消</button><button class="btn primary" id="setSave">儲存</button></div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== PQ Debugger Engine（純本機分析，無任何網路請求） ===== */
+const PQ = (() => {
+  'use strict';
+
+  const KEYWORDS = new Set(['let','in','each','if','then','else','and','or','not','true','false','null','type','meta','as','is','try','otherwise','error','section','shared','catch']);
+  const PRIMITIVES = new Set(['any','anynonnull','binary','date','datetime','datetimezone','duration','function','list','logical','none','null','number','record','table','text','time','type','nullable','optional']);
+  const PAIR = { ')':'(', ']':'[', '}':'{' };
+  const CLOSE = { '(':')', '[':']', '{':'}' };
+  const ID_START = /[\p{L}\p{Nl}_]/u;
+  const ID_PART = /[\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}_]/u;
+  const PLAIN_ID = /^[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}_]*(\.[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}\p{Mn}\p{Mc}\p{Pc}\p{Cf}_]*)*$/u;
+
+  const DEFAULT_ID_KEYWORDS = ['統編','統一編號','案號','編號','代碼','代號','帳號','帳戶','身分證','身份證','電話','手機','郵遞區號','郵遞','卡號','工號','員編','ID','Code','No','Zip','Phone','Account'];
+
+  const RULES = {
+    R01: { sev:'error',   title:'逗號或步驟結構錯誤', why:'let 區塊中，每個步驟之間必須以逗號分隔，最後一個步驟後面不可有逗號。' },
+    R02: { sev:'error',   title:'引用了不存在的名稱', why:'引用的步驟名稱拼錯或已被改名，重新整理時會出現「無法辨識名稱」錯誤。若它是其他查詢或參數名稱，可以忽略。' },
+    R03: { sev:'error',   title:'in 輸出的步驟不存在', why:'in 後面必須是已定義的步驟，常見於改了步驟名稱卻忘了改 in。' },
+    R04: { sev:'error',   title:'括號或引號未成對', why:'( )、[ ]、{ } 與 " " 必須成對出現，否則整段查詢無法解析。' },
+    R05: { sev:'error',   title:'步驟名稱重複', why:'同一個 let 區塊內不能有兩個同名步驟。' },
+    R06: { sev:'warning', title:'孤兒步驟（未被使用）', why:'這個步驟沒有被任何後續步驟或 in 使用，結果不會出現在輸出中。常見於在中間插入步驟後，下一步仍引用舊步驟。' },
+    R07: { sev:'warning', title:'識別碼欄位轉成數值', why:'統編、案號、帳號、電話等欄位常以 0 開頭，轉成數值型別會吃掉前導 0，或因含英文字母而轉換失敗。建議使用 type text。' },
+    R08: { sev:'warning', title:'寫死欄位清單', why:'來源欄位改名或刪除時，這個步驟會出現「找不到資料行」錯誤。移除／選取／重新命名欄位可加上 MissingField.Ignore。' },
+    R09: { sev:'warning', title:'引用已改名或移除的欄位', why:'前面的步驟已將這個欄位重新命名或移除，後續再用舊欄名會找不到欄位。' },
+    R10: { sev:'warning', title:'寫死檔案路徑或表格名稱', why:'換電腦、換資料夾或表格改名後查詢就會失敗。建議改用參數（管理參數）集中設定。' },
+    R11: { sev:'info',    title:'使用預設步驟名稱', why:'「已變更類型1」這類預設名稱無法說明用途，建議改成有意義的名稱，方便交接與維護。' },
+    R12: { sev:'info',    title:'自訂欄位未指定型別', why:'Table.AddColumn 沒有第四個參數時，新欄位型別為 any，後續載入或計算可能出錯。' }
+  };
+
+  /* ---------- 函數字典 ---------- */
+  const DICT = {
+    'Excel.CurrentWorkbook':{cat:'來源',desc:'讀取目前活頁簿中的表格與已命名範圍'},
+    'Excel.Workbook':{cat:'來源',desc:'讀取 Excel 活頁簿檔案中的工作表、表格與已命名範圍'},
+    'File.Contents':{cat:'來源',desc:'讀取指定路徑檔案的二進位內容'},
+    'Folder.Files':{cat:'來源',desc:'列出資料夾（含子資料夾）中的所有檔案'},
+    'Csv.Document':{cat:'來源',desc:'將 CSV 內容解析成表格'},
+    'Json.Document':{cat:'來源',desc:'將 JSON 內容解析成記錄或清單'},
+    'Sql.Database':{cat:'來源',desc:'連線到 SQL Server 資料庫'},
+    'Web.Contents':{cat:'來源',desc:'從網址下載內容'},
+    'SharePoint.Files':{cat:'來源',desc:'列出 SharePoint 網站中的檔案'},
+    'Table.PromoteHeaders':{cat:'表格',desc:'將第一列提升為欄位標題'},
+    'Table.DemoteHeaders':{cat:'表格',desc:'將欄位標題降為第一列資料'},
+    'Table.TransformColumnTypes':{cat:'表格',desc:'變更欄位的資料型別'},
+    'Table.AddColumn':{cat:'表格',desc:'新增自訂欄位'},
+    'Table.SelectRows':{cat:'表格',desc:'依條件篩選資料列'},
+    'Table.RemoveColumns':{cat:'表格',desc:'移除指定欄位'},
+    'Table.SelectColumns':{cat:'表格',desc:'只保留指定欄位'},
+    'Table.RenameColumns':{cat:'表格',desc:'重新命名欄位'},
+    'Table.ReorderColumns':{cat:'表格',desc:'調整欄位順序'},
+    'Table.NestedJoin':{cat:'表格',desc:'與另一張表合併（巢狀聯結）'},
+    'Table.Join':{cat:'表格',desc:'與另一張表聯結並直接展開欄位'},
+    'Table.ExpandTableColumn':{cat:'表格',desc:'展開巢狀表格欄位'},
+    'Table.ExpandRecordColumn':{cat:'表格',desc:'展開記錄欄位'},
+    'Table.ExpandListColumn':{cat:'表格',desc:'將清單欄位展開成多列'},
+    'Table.Group':{cat:'表格',desc:'依欄位分組並彙總'},
+    'Table.Sort':{cat:'表格',desc:'排序資料列'},
+    'Table.Distinct':{cat:'表格',desc:'移除重複的資料列'},
+    'Table.ReplaceValue':{cat:'表格',desc:'取代欄位中的值'},
+    'Table.ReplaceErrorValues':{cat:'表格',desc:'將錯誤值取代為指定值'},
+    'Table.RemoveRowsWithErrors':{cat:'表格',desc:'移除含錯誤值的資料列'},
+    'Table.FillDown':{cat:'表格',desc:'將上方的值向下填入空白儲存格'},
+    'Table.FillUp':{cat:'表格',desc:'將下方的值向上填入空白儲存格'},
+    'Table.UnpivotOtherColumns':{cat:'表格',desc:'取消其他資料行的樞紐（寬表轉長表）'},
+    'Table.Unpivot':{cat:'表格',desc:'取消指定欄位的樞紐（寬表轉長表）'},
+    'Table.Pivot':{cat:'表格',desc:'樞紐資料行（長表轉寬表）'},
+    'Table.Combine':{cat:'表格',desc:'將多張表上下附加成一張'},
+    'Table.TransformColumns':{cat:'表格',desc:'對指定欄位套用轉換函數'},
+    'Table.AddIndexColumn':{cat:'表格',desc:'新增流水號索引欄位'},
+    'Table.DuplicateColumn':{cat:'表格',desc:'複製欄位'},
+    'Table.SplitColumn':{cat:'表格',desc:'分割欄位'},
+    'Table.Skip':{cat:'表格',desc:'略過前面幾列'},
+    'Table.FirstN':{cat:'表格',desc:'只保留前面幾列'},
+    'Table.RemoveFirstN':{cat:'表格',desc:'移除前面幾列'},
+    'Table.LastN':{cat:'表格',desc:'只保留最後幾列'},
+    'Table.Buffer':{cat:'表格',desc:'將表格暫存於記憶體，避免重複讀取來源'},
+    'Table.RowCount':{cat:'表格',desc:'計算資料列數'},
+    'Table.ColumnNames':{cat:'表格',desc:'取得所有欄位名稱'},
+    'Table.Transpose':{cat:'表格',desc:'轉置表格（列與欄互換）'},
+    'Table.FromRecords':{cat:'表格',desc:'由記錄清單建立表格'},
+    'Table.FromList':{cat:'表格',desc:'由清單建立表格'},
+    'Table.FromRows':{cat:'表格',desc:'由列資料建立表格'},
+    'Table.Column':{cat:'表格',desc:'取出某一欄的所有值（清單）'},
+    'Text.From':{cat:'文字',desc:'將值轉成文字'},
+    'Text.Trim':{cat:'文字',desc:'移除前後空白'},
+    'Text.Clean':{cat:'文字',desc:'移除不可列印字元'},
+    'Text.Upper':{cat:'文字',desc:'轉成大寫'},
+    'Text.Lower':{cat:'文字',desc:'轉成小寫'},
+    'Text.Proper':{cat:'文字',desc:'每個字首大寫'},
+    'Text.Start':{cat:'文字',desc:'取文字開頭的 N 個字元'},
+    'Text.End':{cat:'文字',desc:'取文字結尾的 N 個字元'},
+    'Text.Middle':{cat:'文字',desc:'從指定位置取出部分文字'},
+    'Text.Length':{cat:'文字',desc:'計算文字長度'},
+    'Text.Contains':{cat:'文字',desc:'判斷是否包含指定文字'},
+    'Text.StartsWith':{cat:'文字',desc:'判斷是否以指定文字開頭'},
+    'Text.Replace':{cat:'文字',desc:'取代文字'},
+    'Text.Combine':{cat:'文字',desc:'將多段文字合併'},
+    'Text.Split':{cat:'文字',desc:'依分隔符號分割文字'},
+    'Text.PadStart':{cat:'文字',desc:'在前方補字元到指定長度（常用於補 0）'},
+    'Text.BeforeDelimiter':{cat:'文字',desc:'取分隔符號之前的文字'},
+    'Text.AfterDelimiter':{cat:'文字',desc:'取分隔符號之後的文字'},
+    'Number.From':{cat:'數值',desc:'將值轉成數字'},
+    'Number.Round':{cat:'數值',desc:'四捨五入'},
+    'Number.ToText':{cat:'數值',desc:'將數字轉成文字'},
+    'Date.From':{cat:'日期',desc:'將值轉成日期'},
+    'Date.Year':{cat:'日期',desc:'取出年份'},
+    'Date.Month':{cat:'日期',desc:'取出月份'},
+    'Date.Day':{cat:'日期',desc:'取出日'},
+    'Date.AddDays':{cat:'日期',desc:'日期加減天數'},
+    'Date.AddMonths':{cat:'日期',desc:'日期加減月數'},
+    'Date.ToText':{cat:'日期',desc:'將日期轉成文字'},
+    'Date.StartOfMonth':{cat:'日期',desc:'取得當月第一天'},
+    'Date.EndOfMonth':{cat:'日期',desc:'取得當月最後一天'},
+    'DateTime.LocalNow':{cat:'日期',desc:'取得目前的本機日期時間'},
+    'Duration.Days':{cat:'日期',desc:'取得期間的天數'},
+    'List.Sum':{cat:'清單',desc:'加總'},
+    'List.Max':{cat:'清單',desc:'取最大值'},
+    'List.Min':{cat:'清單',desc:'取最小值'},
+    'List.Average':{cat:'清單',desc:'取平均值'},
+    'List.Count':{cat:'清單',desc:'計算項目數'},
+    'List.Distinct':{cat:'清單',desc:'移除重複項目'},
+    'List.Contains':{cat:'清單',desc:'判斷清單是否包含某值'},
+    'List.Select':{cat:'清單',desc:'依條件篩選清單'},
+    'List.Transform':{cat:'清單',desc:'對每個項目套用轉換'},
+    'List.Dates':{cat:'清單',desc:'產生連續日期清單'},
+    'Record.Field':{cat:'記錄',desc:'取出記錄中的指定欄位'},
+    'Splitter.SplitTextByDelimiter':{cat:'其他',desc:'建立「依分隔符號分割」的分割器'},
+    'Replacer.ReplaceText':{cat:'其他',desc:'以部分文字比對方式取代'},
+    'Replacer.ReplaceValue':{cat:'其他',desc:'以整個儲存格比對方式取代'}
+  };
+
+  const TYPE_ZH = {
+    'Int64.Type':'整數','Int32.Type':'整數','Int16.Type':'整數','Int8.Type':'整數','Byte.Type':'整數',
+    'Number.Type':'十進位數字','type number':'十進位數字','Decimal.Type':'十進位數字','Double.Type':'浮點數','Single.Type':'浮點數',
+    'Currency.Type':'固定小數位數（貨幣）','Percentage.Type':'百分比',
+    'type text':'文字','Text.Type':'文字','type date':'日期','Date.Type':'日期','type datetime':'日期時間','DateTime.Type':'日期時間',
+    'type datetimezone':'日期時間時區','type time':'時間','Time.Type':'時間','type logical':'True/False','Logical.Type':'True/False',
+    'type duration':'持續時間','type any':'任意（未指定）','type binary':'二進位','type table':'表格','type list':'清單','type record':'記錄'
+  };
+  const NUMERIC_TYPE = /^(Int64\.Type|Int32\.Type|Int16\.Type|Int8\.Type|Byte\.Type|Number\.Type|Decimal\.Type|Double\.Type|Single\.Type|Currency\.Type|Percentage\.Type|type\s+(nullable\s+)?number)$/;
+  const JOIN_ZH = {'JoinKind.Inner':'內部聯結','JoinKind.LeftOuter':'左外部聯結','JoinKind.RightOuter':'右外部聯結','JoinKind.FullOuter':'完整外部聯結','JoinKind.LeftAnti':'左反聯結（只留左表沒對到的）','JoinKind.RightAnti':'右反聯結（只留右表沒對到的）'};
+
+  const DEFAULT_NAME = new RegExp('^(' + [
+    '已變更類型','已新增自訂','已移除資料行','已重新命名資料行','已篩選資料列','已排序資料列','已展開','已提升標頭','已移除重複項目','已移除重複','已分組資料列',
+    '已合併查詢','已取代值','已向下填滿','已向上填滿','已取消資料行樞紐','已取消其他資料行樞紐','已樞紐資料行','已插入','已新增索引','已附加查詢','已移除其他資料行',
+    '已依分隔符號分隔資料行','已分割資料行','已移除空白資料列','已移除頂端資料列','已保留前幾列','已複製資料行','已重新排序資料行','已修剪文字','已清除文字','已計算',
+    'Changed Type','Added Custom','Removed Columns','Renamed Columns','Filtered Rows','Sorted Rows','Expanded','Promoted Headers','Removed Duplicates','Grouped Rows',
+    'Merged Queries','Replaced Value','Filled Down','Filled Up','Unpivoted Columns','Unpivoted Other Columns','Pivoted Column','Inserted','Added Index','Appended Query',
+    'Removed Other Columns','Split Column by Delimiter','Removed Blank Rows','Removed Top Rows','Kept First Rows','Duplicated Column','Reordered Columns','Trimmed Text','Cleaned Text','Custom'
+  ].map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|') + ')\\s*\\d*$');
+
+  /* ---------- 工具 ---------- */
+  function levenshtein(a,b){
+    a=[...a]; b=[...b];
+    const d=Array.from({length:a.length+1},(_,i)=>[i]);
+    for(let j=1;j<=b.length;j++) d[0][j]=j;
+    for(let i=1;i<=a.length;i++) for(let j=1;j<=b.length;j++)
+      d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));
+    return d[a.length][b.length];
+  }
+  function closest(name, cands){
+    let best=null, bd=Infinity;
+    for(const c of cands){ const d=levenshtein(name.toLowerCase(), c.toLowerCase()); if(d<bd){bd=d;best=c;} }
+    const lim=Math.max(1, Math.floor([...name].length/3));
+    return best!==null && bd<=lim ? best : null;
+  }
+  const idText = n => (PLAIN_ID.test(n) && !KEYWORDS.has(n)) ? n : '#"' + n.replace(/"/g,'""') + '"';
+  const strLit = v => '"' + v.replace(/"/g,'""') + '"';
+  const fieldText = n => /^[\p{L}\p{Nl}_][\p{L}\p{Nl}\p{Nd}_ ]*$/u.test(n) && !/^\s|\s$/.test(n) ? '['+n+']' : '[#"'+n.replace(/"/g,'""')+'"]';
+  function applyEdits(src, edits){
+    const es=[...edits].sort((x,y)=>y.s-x.s || y.e-x.e);
+    let out=src;
+    for(const e of es) out=out.slice(0,e.s)+e.text+out.slice(e.e);
+    return out;
+  }
+  function kwMatcher(list){
+    const res=list.map(k=>k.trim()).filter(Boolean).map(k=>{
+      const esc=k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+      return /^[A-Za-z0-9 ]+$/.test(k) ? new RegExp('(^|[^A-Za-z])'+esc+'([^a-z]|$)', 'i') : new RegExp(esc,'i');
+    });
+    return name => res.some(r=>r.test(name));
+  }
+
+  /* ---------- 斷詞 ---------- */
+  function tokenize(src){
+    const T=[]; let i=0; const n=src.length;
+    while(i<n){
+      const c=src[i], s=i;
+      if(/\s/.test(c)){ while(i<n && /\s/.test(src[i])) i++; T.push({t:'ws',s,e:i}); continue; }
+      if(c==='/' && src[i+1]==='/'){ while(i<n && src[i]!=='\n') i++; T.push({t:'comment',s,e:i}); continue; }
+      if(c==='/' && src[i+1]==='*'){ const j=src.indexOf('*/',i+2); i=j<0?n:j+2; T.push({t:'comment',s,e:i,unterminated:j<0}); continue; }
+      if(c==='"' || (c==='#' && src[i+1]==='"')){
+        const isQ=c==='#'; i+=isQ?2:1; let closed=false;
+        while(i<n){ if(src[i]==='"'){ if(src[i+1]==='"'){ i+=2; continue; } i++; closed=true; break; } i++; }
+        const raw=src.slice(s,i);
+        const inner=closed ? raw.slice(isQ?2:1,-1) : raw.slice(isQ?2:1);
+        T.push({t:isQ?'qid':'str',s,e:i,v:inner.replace(/""/g,'"'),unterminated:!closed});
+        continue;
+      }
+      if(c==='#' && /[A-Za-z]/.test(src[i+1]||'')){ i++; while(i<n && /[A-Za-z]/.test(src[i])) i++; T.push({t:'ident',s,e:i,v:src.slice(s,i),hash:true}); continue; }
+      if(/[0-9]/.test(c) || (c==='.' && /[0-9]/.test(src[i+1]||''))){
+        if(c==='0' && /[xX]/.test(src[i+1]||'')){ i+=2; while(i<n && /[0-9a-fA-F]/.test(src[i])) i++; }
+        else {
+          while(i<n && /[0-9]/.test(src[i])) i++;
+          if(src[i]==='.' && /[0-9]/.test(src[i+1]||'')){ i++; while(i<n && /[0-9]/.test(src[i])) i++; }
+          if(/[eE]/.test(src[i]||'') && /[0-9+\-]/.test(src[i+1]||'')){ i+=2; while(i<n && /[0-9]/.test(src[i])) i++; }
+        }
+        T.push({t:'num',s,e:i,v:src.slice(s,i)}); continue;
+      }
+      if(ID_START.test(c)){
+        i++;
+        while(i<n){
+          if(ID_PART.test(src[i])){ i++; continue; }
+          if(src[i]==='.' && i+1<n && ID_START.test(src[i+1])){ i++; continue; }
+          break;
+        }
+        const v=src.slice(s,i);
+        T.push({t:KEYWORDS.has(v)?'kw':'ident',s,e:i,v}); continue;
+      }
+      const three=src.substr(i,3), two=src.substr(i,2);
+      if(three==='...'){ i+=3; T.push({t:'op',s,e:i,v:three}); continue; }
+      if(['=>','<=','>=','<>','..','??'].includes(two)){ i+=2; T.push({t:'op',s,e:i,v:two}); continue; }
+      i++; T.push({t:'()[]{},;'.includes(c)?'punc':'op',s,e:i,v:c});
+    }
+    return T;
+  }
+
+  /* ---------- 主分析 ---------- */
+  function analyze(src, cfg){
+    cfg=cfg||{};
+    const t0=Date.now();
+    const disabled=new Set(cfg.disabled||[]);
+    const isIdCol=kwMatcher(cfg.idKeywords||DEFAULT_ID_KEYWORDS);
+    const toks=tokenize(src);
+    const ls=[0]; for(let i=0;i<src.length;i++) if(src[i]==='\n') ls.push(i+1);
+    const lineOf=off=>{ let lo=0,hi=ls.length-1; while(lo<hi){ const m=(lo+hi+1)>>1; if(ls[m]<=off) lo=m; else hi=m-1; } return lo+1; };
+    const colOf=off=>off-ls[lineOf(off)-1]+1;
+    toks.forEach(t=>t.line=lineOf(t.s));
+    const sig=toks.filter(t=>t.t!=='ws' && t.t!=='comment');
+    const issues=[];
+    const add=(ruleId,severity,s,e,message,o)=>{
+      if(disabled.has(ruleId)) return;
+      issues.push(Object.assign({ruleId,severity,s,e,line:lineOf(s),col:colOf(s),message},o||{}));
+    };
+    const short=(s,e,max=90)=>{ const t=src.slice(s,e).replace(/\s+/g,' ').trim(); return t.length>max?t.slice(0,max)+'…':t; };
+    const isName=t=>t && (t.t==='ident' || t.t==='qid');
+    const isOp=(t,v)=>t && t.t==='op' && t.v===v;
+    const isKw=(t,v)=>t && t.t==='kw' && t.v===v;
+
+    for(const t of toks) if(t.t==='comment' && t.unterminated)
+      add('R04','error',t.s,t.s+2,'區塊註解 /* 沒有對應的 */',{fix:{label:'在結尾補上 */',edits:[{s:src.length,e:src.length,text:' */'}]}});
+
+    function scanBrackets(tk,endPos){
+      const st=[];
+      for(const t of tk){
+        if((t.t==='str'||t.t==='qid') && t.unterminated){
+          const le=src.indexOf('\n',t.s); const lineEnd=le<0?src.length:le;
+          const seg=src.slice(t.s,lineEnd); const m=seg.match(/^#?"[^",)}\]\r]*/);
+          const pos=t.s+(m?m[0].length:seg.length);
+          add('R04','error',t.s,t.s+(t.t==='qid'?2:1),'引號未成對：字串從這裡開始，但找不到結尾的「"」',{fix:{label:'補上結尾引號',edits:[{s:pos,e:pos,text:'"'}]}});
+          continue;
+        }
+        if(t.t!=='punc') continue;
+        if('([{'.includes(t.v)) st.push(t);
+        else if(PAIR[t.v]){
+          let j=st.length-1; while(j>=0 && st[j].v!==PAIR[t.v]) j--;
+          if(j>=0 && j===st.length-1) st.pop();
+          else if(j>=0){
+            const miss=st.slice(j+1); const cl=miss.slice().reverse().map(o=>CLOSE[o.v]).join(''); const o=miss[miss.length-1];
+            add('R04','error',o.s,o.e,`「${o.v}」沒有對應的結尾：在「${t.v}」之前缺少「${cl}」`,{fix:{label:`補上「${cl}」`,edits:[{s:t.s,e:t.s,text:cl}]}});
+            st.length=j;
+          } else {
+            add('R04','error',t.s,t.e,`多出一個「${t.v}」，前面沒有對應的「${PAIR[t.v]}」`,{fix:{label:`刪除多餘的「${t.v}」`,edits:[{s:t.s,e:t.e,text:''}]}});
+          }
+        }
+      }
+      if(st.length){
+        const cl=st.slice().reverse().map(o=>CLOSE[o.v]).join(''); const o=st[st.length-1];
+        add('R04','error',o.s,o.e,`「${st.map(x=>x.v).join('')}」沒有對應的結尾，缺少「${cl}」`,{fix:{label:`補上「${cl}」`,edits:[{s:endPos,e:endPos,text:cl}]}});
+      }
+    }
+
+    const res={src,toks,sig,steps:[],output:null,issues,mode:'let',lineOf,colOf,errorMap:null};
+    if(!sig.length){ res.mode='empty'; res.ms=Date.now()-t0; return res; }
+
+    // 找出最外層 let
+    let p=-1;
+    { const st=[]; for(let k=0;k<sig.length;k++){ const t=sig[k];
+        if(t.t==='punc'){ if('([{'.includes(t.v)) st.push(t); else if(PAIR[t.v]) st.pop(); }
+        if(isKw(t,'let') && st.length===0){ p=k; break; } } }
+    const globalParams=new Set();
+    if(p<0){
+      res.mode='expr';
+      scanBrackets(sig,sig[sig.length-1].e);
+      res.ms=Date.now()-t0; finalize(); return res;
+    }
+    if(p>0){ res.mode='function'; for(const t of sig.slice(0,p)) if(t.t==='ident' && !t.v.includes('.') && !PRIMITIVES.has(t.v)) globalParams.add(t.v); }
+
+    const isCont=t=> t.t==='op' || (t.t==='kw' && !['true','false','null'].includes(t.v)) || (t.t==='punc' && '([{,'.includes(t.v));
+    const steps=res.steps;
+    p++;
+    let outStart=-1;
+    while(p<sig.length){
+      const t=sig[p];
+      if(isKw(t,'in')){ outStart=p; break; }
+      if(!(isName(t) && isOp(sig[p+1],'='))){
+        add('R01','error',t.s,t.e,`這裡應該是「步驟名稱 = 運算式」，卻遇到「${short(t.s,t.e,30)}」`);
+        let q=p+1; const st=[];
+        for(; q<sig.length; q++){ const u=sig[q];
+          if(u.t==='punc'){ if('([{'.includes(u.v)) st.push(u); else if(PAIR[u.v]) st.pop(); else if(u.v===',' && !st.length) break; }
+          if(isKw(u,'in') && !st.length) break; }
+        p = (q<sig.length && sig[q].v===',') ? q+1 : q;
+        continue;
+      }
+      const nameTok=t; let q=p+2; const st=[]; let letN=0, forced=false, missingComma=false;
+      for(; q<sig.length; q++){
+        const u=sig[q];
+        if(q>p+2 && letN===0 && isName(u) && isOp(sig[q+1],'=') && sig[q-1].line<u.line){
+          const prev=sig[q-1], top=st[st.length-1];
+          if(!st.length && !isCont(prev)){ missingComma=true; break; }
+          if(st.length && top.v!=='[' && prev.v===','){ forced=true; break; }
+        }
+        if(isKw(u,'in') && letN===0 && st.length && sig[q-1].line<u.line){ forced=true; break; }
+        if(u.t==='punc'){
+          if('([{'.includes(u.v)) st.push(u);
+          else if(PAIR[u.v]){ let j=st.length-1; while(j>=0 && st[j].v!==PAIR[u.v]) j--; if(j>=0) st.length=j; }
+          else if(u.v===',' && !st.length && letN===0) break;
+        }
+        if(u.t==='kw'){ if(u.v==='let') letN++; else if(u.v==='in'){ if(letN>0) letN--; else if(!st.length) break; } }
+      }
+      let exprEnd=q;
+      if(forced && sig[q-1] && sig[q-1].v===',') exprEnd=q-1;
+      const exprToks=sig.slice(p+2,exprEnd);
+      const name=nameTok.v;
+      const step={name,nameTok,rawName:src.slice(nameTok.s,nameTok.e),exprToks,index:steps.length,
+        s:nameTok.s,e:exprToks.length?exprToks[exprToks.length-1].e:sig[p+1].e,line:nameTok.line,deps:[],issues:[]};
+      steps.push(step);
+      if(!exprToks.length) add('R01','error',nameTok.s,nameTok.e,`步驟「${name}」的等號後面沒有內容`);
+      else scanBrackets(exprToks,step.e);
+      if(missingComma){
+        const prev=sig[q-1];
+        add('R01','error',prev.s,prev.e,`步驟「${name}」結尾缺少逗號，下一個步驟「${sig[q].v}」無法被辨識`,{fix:{label:'補上逗號',edits:[{s:prev.e,e:prev.e,text:','}]}});
+        p=q; continue;
+      }
+      if(forced){ p=q; continue; }
+      if(q>=sig.length){ add('R01','error',sig[sig.length-1].s,sig[sig.length-1].e,'找不到 in：let 區塊必須以「in 輸出步驟」結尾'); break; }
+      const u=sig[q];
+      if(u.v===','){
+        if(isKw(sig[q+1],'in')) add('R01','error',u.s,u.e,`最後一個步驟「${name}」後面多了逗號`,{fix:{label:'刪除多餘的逗號',edits:[{s:u.s,e:u.e,text:''}]}});
+        p=q+1;
+      } else p=q;
+    }
+
+    // in 輸出
+    if(outStart>=0){
+      const ot=sig.slice(outStart+1);
+      res.output={inTok:sig[outStart],toks:ot,name:null,tok:null,deps:[]};
+      if(!ot.length) add('R03','error',sig[outStart].s,sig[outStart].e,'in 後面沒有指定輸出的步驟',
+        steps.length?{fix:{label:`輸出最後一個步驟「${steps[steps.length-1].name}」`,edits:[{s:sig[outStart].e,e:sig[outStart].e,text:'\n    '+idText(steps[steps.length-1].name)}]}}:{});
+      else { if(ot.length===1 && isName(ot[0])){ res.output.name=ot[0].v; res.output.tok=ot[0]; } scanBrackets(ot,ot[ot.length-1].e); }
+    }
+
+    // 重複名稱
+    const stepIndex=new Map();
+    for(const st of steps){
+      if(stepIndex.has(st.name)){
+        let nn=st.name+'_2', k=2; while(steps.some(x=>x.name===nn)) nn=st.name+'_'+(++k);
+        const edits=[{s:st.nameTok.s,e:st.nameTok.e,text:idText(nn)}];
+        add('R05','error',st.nameTok.s,st.nameTok.e,`步驟名稱「${st.name}」重複定義（第一次在第 ${stepIndex.get(st.name).line} 行）`,
+          {fix:{label:`改名為「${nn}」`,edits},stepName:st.name,dupStep:st});
+      } else stepIndex.set(st.name,st);
+    }
+
+    // 引用分析
+    function refsOf(tk){
+      const params=new Set(globalParams), locals=new Set(), refs=[];
+      const stk=[];
+      for(let k=0;k<tk.length;k++){
+        const t=tk[k];
+        if(t.t==='punc' && '([{'.includes(t.v)) stk.push(k);
+        else if(t.t==='punc' && PAIR[t.v]){
+          const a=stk.pop();
+          if(a!==undefined && tk[a].v==='('){
+            let nx=k+1; if(isKw(tk[nx],'as')){ nx++; while(tk[nx] && !isOp(tk[nx],'=>') && nx<k+6) nx++; }
+            if(isOp(tk[nx],'=>')) for(let m=a+1;m<k;m++) if(tk[m].t==='ident' && !tk[m].v.includes('.')) params.add(tk[m].v);
+          }
+        }
+      }
+      const bs=[];
+      for(let k=0;k<tk.length;k++){
+        const t=tk[k];
+        if(t.t==='punc'){ if('([{'.includes(t.v)) bs.push(t.v); else if(PAIR[t.v]) bs.pop(); continue; }
+        if(!isName(t)) continue;
+        if(bs[bs.length-1]==='[') continue;
+        const prev=tk[k-1], next=tk[k+1];
+        if(isOp(next,'=') && (isKw(prev,'let') || (prev && prev.v===','))){ locals.add(t.v); continue; }
+        if(t.hash || t.v==='_') continue;
+        if(t.t==='ident' && PRIMITIVES.has(t.v) && prev && (isKw(prev,'type') || isKw(prev,'as') || (prev.t==='ident' && (prev.v==='nullable'||prev.v==='optional')))) continue;
+        refs.push({name:t.v,tok:t});
+      }
+      return refs.filter(r=>!params.has(r.name) && !locals.has(r.name));
+    }
+
+    function resolve(owner, tk){
+      const deps=new Set();
+      for(const r of refsOf(tk)){
+        if(stepIndex.has(r.name)){ deps.add(r.name); continue; }
+        if(r.tok.t==='ident' && r.name.includes('.')) continue;
+        const cand=closest(r.name,[...stepIndex.keys()]);
+        if(cand) add('R02','error',r.tok.s,r.tok.e,`找不到名稱「${r.name}」，是不是要引用步驟「${cand}」？`,{fix:{label:`改為「${cand}」`,edits:[{s:r.tok.s,e:r.tok.e,text:idText(cand)}]},stepName:owner});
+        else add('R02','warning',r.tok.s,r.tok.e,`無法辨識名稱「${r.name}」：不是本查詢的步驟。若它是其他查詢或參數名稱可忽略，否則請檢查拼字`,{stepName:owner});
+      }
+      return [...deps];
+    }
+    for(const st of steps){ st.refsAll=refsOf(st.exprToks); st.deps=resolve(st.name,st.exprToks).filter(d=>d!==st.name); }
+    if(res.output){
+      res.output.deps=resolve('(in)',res.output.toks);
+      if(res.output.name && !stepIndex.has(res.output.name)){
+        // resolve 已對 R02 做處理；改為 R03 呈現
+        for(let i=issues.length-1;i>=0;i--) if(issues[i].ruleId==='R02' && issues[i].s===res.output.tok.s) issues.splice(i,1);
+        const cand=closest(res.output.name,[...stepIndex.keys()]) || (steps.length?steps[steps.length-1].name:null);
+        add('R03','error',res.output.tok.s,res.output.tok.e,`in 輸出的步驟「${res.output.name}」不存在`,
+          cand?{fix:{label:`改為「${cand}」`,edits:[{s:res.output.tok.s,e:res.output.tok.e,text:idText(cand)}]}}:{});
+      }
+    }
+    // R05 修正：一併更新後續引用
+    for(const is of issues) if(is.ruleId==='R05' && is.dupStep){
+      const d=is.dupStep, nn=is.fix.edits[0].text;
+      for(const st of steps.slice(d.index+1)) for(const r of st.refsAll) if(r.name===d.name) is.fix.edits.push({s:r.tok.s,e:r.tok.e,text:nn});
+      if(res.output) for(const r of refsOf(res.output.toks)) if(r.name===d.name) is.fix.edits.push({s:r.tok.s,e:r.tok.e,text:nn});
+      delete is.dupStep;
+    }
+
+    // 呼叫資訊
+    function listItems(tk){
+      if(!tk || !tk.length || tk[0].v!=='{') return null;
+      const items=[]; let cur=[], depth=0;
+      for(let k=1;k<tk.length;k++){
+        const t=tk[k];
+        if(t.t==='punc' && '([{'.includes(t.v)) depth++;
+        else if(t.t==='punc' && PAIR[t.v]){ if(depth===0) break; depth--; }
+        else if(t.t==='punc' && t.v===',' && depth===0){ items.push(cur); cur=[]; continue; }
+        cur.push(t);
+      }
+      if(cur.length) items.push(cur);
+      return items;
+    }
+    function pairs(arg){
+      if(!arg) return [];
+      const items=listItems(arg.toks); if(!items) return [];
+      if(items.length && items[0][0] && items[0][0].v==='{') return items.map(it=>listItems(it)||[]);
+      return [items];
+    }
+    const strs=arg=>arg?arg.toks.filter(t=>t.t==='str'):[];
+    function callInfo(tk){
+      if(!tk.length) return {fn:null};
+      const f=tk[0];
+      if(isKw(f,'let')) return {fn:'let'};
+      if(isKw(f,'each')) return {fn:'each'};
+      if(f.t==='punc' && f.v==='(' && tk.some(t=>isOp(t,'=>'))) return {fn:'(function)'};
+      if(f.t==='ident' && tk[1] && tk[1].v==='('){
+        let depth=0, c=-1; const args=[]; let cur=[];
+        for(let k=1;k<tk.length;k++){
+          const t=tk[k];
+          if(t.t==='punc' && '([{'.includes(t.v)){ depth++; if(depth===1) continue; }
+          else if(t.t==='punc' && PAIR[t.v]){ depth--; if(depth===0){ c=k; break; } }
+          else if(t.t==='punc' && t.v===',' && depth===1){ args.push(cur); cur=[]; continue; }
+          cur.push(t);
+        }
+        if(cur.length) args.push(cur);
+        return {fn:f.v,args:args.map(a=>({toks:a,s:a.length?a[0].s:0,e:a.length?a[a.length-1].e:0})),close:c>=0?tk[c]:null,tail:c>=0?tk.slice(c+1):[]};
+      }
+      if(isName(f)) return {fn:null,ref:f};
+      return {fn:null};
+    }
+    for(const st of steps){ st.call=callInfo(st.exprToks); }
+
+    // 欄位內參考 [欄位]
+    function fieldRefs(tk){
+      const out=[]; let start=tk.findIndex(t=>isKw(t,'each') || isOp(t,'=>'));
+      if(start<0) return out;
+      for(let k=start;k<tk.length;k++){
+        const t=tk[k]; if(!(t.t==='punc' && t.v==='[')) continue;
+        const prev=tk[k-1];
+        if(prev && ((prev.t==='ident' && prev.v!=='_') || prev.t==='qid' || (prev.t==='punc' && ']})'.includes(prev.v)))) continue;
+        let m=k+1, ok=true; while(m<tk.length && !(tk[m].t==='punc' && tk[m].v===']')){ if(!(tk[m].t==='ident'||tk[m].t==='qid'||tk[m].t==='num'||tk[m].t==='kw')) ok=false; m++; }
+        if(!ok || m>=tk.length || m===k+1) continue;
+        let nm=src.slice(t.e,tk[m].s).trim();
+        if(m===k+2 && tk[k+1].t==='qid') nm=tk[k+1].v;
+        out.push({name:nm,s:t.s,e:tk[m].e});
+        k=m;
+      }
+      return out;
+    }
+
+    // 逐步規則：R07 R08 R09 R10 R11 R12
+    const colState=new Map();
+    const PASS=new Set(['Table.SelectRows','Table.Sort','Table.Distinct','Table.FirstN','Table.LastN','Table.Skip','Table.RemoveFirstN','Table.Buffer','Table.RemoveRowsWithErrors','Table.ReplaceErrorValues','Table.ReplaceValue','Table.FillDown','Table.FillUp','Table.TransformColumnTypes','Table.TransformColumns','Table.ReorderColumns','Table.ExpandListColumn','Table.AlternateRows','Table.Range','Table.RemoveLastN']);
+    const RESET=new Set(['Table.Group','Table.UnpivotOtherColumns','Table.Unpivot','Table.Pivot','Table.PromoteHeaders','Table.DemoteHeaders','Table.Transpose','Table.Combine','Table.Join','Table.SplitColumn']);
+    for(const st of steps){
+      const ci=st.call||{}, fn=ci.fn, A=k=>ci.args&&ci.args[k];
+      // R11
+      if(DEFAULT_NAME.test(st.name)) add('R11','info',st.nameTok.s,st.nameTok.e,`步驟名稱「${st.name}」是自動產生的預設名稱，建議改成能說明用途的名稱`,{stepName:st.name});
+      // R10
+      const tk=st.exprToks;
+      for(let k=0;k<tk.length;k++){
+        const t=tk[k];
+        if(t.t==='ident' && /^(File\.Contents|Folder\.Files|Folder\.Contents|Web\.Contents|Sql\.Database|Sql\.Databases|Odbc\.DataSource|SharePoint\.Files|SharePoint\.Contents|SharePoint\.Tables|OData\.Feed|Access\.Database|Oracle\.Database)$/.test(t.v) && tk[k+1] && tk[k+1].v==='(' && tk[k+2] && tk[k+2].t==='str')
+          add('R10','warning',tk[k+2].s,tk[k+2].e,`${t.v} 寫死了「${tk[k+2].v}」，換電腦或搬移位置後會失效，建議改用參數`,{stepName:st.name});
+        if(t.t==='ident' && t.v==='Excel.CurrentWorkbook'){
+          for(let m=k+1;m<Math.min(tk.length,k+10);m++) if(tk[m].t==='ident' && tk[m].v==='Name' && isOp(tk[m+1],'=') && tk[m+2] && tk[m+2].t==='str'){
+            add('R10','warning',tk[m+2].s,tk[m+2].e,`寫死表格名稱「${tk[m+2].v}」，表格改名或複製到其他活頁簿後會失效。建議將 Excel 表格改成有意義的名稱，並集中以參數管理`,{stepName:st.name}); break; }
+        }
+      }
+      if(!fn) continue;
+      // R07
+      if(fn==='Table.TransformColumnTypes') for(const pr of pairs(A(1))){
+        const c=pr[0]&&pr[0][0], ty=pr[1];
+        if(!c || c.t!=='str' || !ty || !ty.length) continue;
+        const tyTxt=src.slice(ty[0].s,ty[ty.length-1].e).replace(/\s+/g,' ');
+        if(NUMERIC_TYPE.test(tyTxt) && isIdCol(c.v))
+          add('R07','warning',ty[0].s,ty[ty.length-1].e,`「${c.v}」看起來是識別碼欄位，轉成 ${TYPE_ZH[tyTxt]||tyTxt} 會吃掉前導 0，建議改為文字`,{fix:{label:'改為 type text',edits:[{s:ty[0].s,e:ty[ty.length-1].e,text:'type text'}]},stepName:st.name});
+      }
+      // R08
+      if(['Table.TransformColumnTypes','Table.RemoveColumns','Table.SelectColumns','Table.RenameColumns','Table.ReorderColumns'].includes(fn) && A(1) && A(1).toks.some(t=>t.t==='str')){
+        const n=new Set(strs(A(1)).map(t=>t.v)).size;
+        if(fn==='Table.TransformColumnTypes')
+          add('R08','warning',st.nameTok.s,st.nameTok.e,`寫死了 ${n} 個欄位名稱的型別轉換，來源欄位改名或刪除時會出現「找不到資料行」錯誤`,{stepName:st.name,note:'Table.TransformColumnTypes 沒有忽略缺漏欄位的參數；若來源欄位常變動，可只轉換必要欄位，或改用 Table.TransformColumns 搭配 MissingField.Ignore。'});
+        else if(ci.args.length===2 && ci.close)
+          add('R08','warning',st.nameTok.s,st.nameTok.e,`寫死了欄位清單，來源欄位不存在時會報錯；可加上 MissingField.Ignore 讓缺漏欄位自動略過`,{fix:{label:'加上 MissingField.Ignore',edits:[{s:ci.close.s,e:ci.close.s,text:', MissingField.Ignore'}]},stepName:st.name});
+      }
+      // R12
+      if(fn==='Table.AddColumn' && ci.args && ci.close){
+        if(ci.args.length===3){
+          const ty=inferType(src.slice(A(2).s,A(2).e));
+          add('R12','info',st.nameTok.s,st.nameTok.e,`新增欄位${strs(A(1))[0]?'「'+strs(A(1))[0].v+'」':''}沒有指定型別（結果為 any）`+(ty?`，依公式推測為 ${ty}`:''),
+            ty?{fix:{label:`加上 ${ty}（推測，請確認）`,edits:[{s:ci.close.s,e:ci.close.s,text:', '+ty}]},stepName:st.name}:{stepName:st.name});
+        } else if(A(3) && /^type\s+any$/.test(src.slice(A(3).s,A(3).e).trim()))
+          add('R12','info',A(3).s,A(3).e,'新增欄位的型別指定為 type any，等同未指定',{stepName:st.name});
+      }
+      // R09 欄位追蹤
+      let input=null;
+      if(A(0) && A(0).toks.length===1 && isName(A(0).toks[0]) && stepIndex.has(A(0).toks[0].v)) input=colState.get(A(0).toks[0].v)||null;
+      if(!input){ colState.set(st.name,{exact:null,gone:new Map()}); continue; }
+      const S={exact:input.exact?new Set(input.exact):null,gone:new Map(input.gone)};
+      const check=(name,s,e,kind)=>{
+        if(S.gone.has(name)){
+          const g=S.gone.get(name);
+          if(g.type==='rename') add('R09','warning',s,e,`欄位「${name}」已在步驟「${g.step}」重新命名為「${g.to}」，這裡仍使用舊名稱`,{fix:{label:`改為「${g.to}」`,edits:[{s,e,text:kind==='str'?strLit(g.to):fieldText(g.to)}]},stepName:st.name});
+          else add('R09','warning',s,e,`欄位「${name}」已在步驟「${g.step}」${g.type==='expand'?'展開後消失':'被移除'}，這裡卻仍引用它`,{stepName:st.name});
+        } else if(S.exact && !S.exact.has(name)){
+          const cand=closest(name,[...S.exact]);
+          add('R09','warning',s,e,`前面的步驟只保留了特定欄位，其中沒有「${name}」`,cand?{fix:{label:`改為「${cand}」`,edits:[{s,e,text:kind==='str'?strLit(cand):fieldText(cand)}]},stepName:st.name}:{stepName:st.name});
+        }
+      };
+      const chk=t=>check(t.v,t.s,t.e,'str');
+      const addCol=n=>{ S.gone.delete(n); if(S.exact) S.exact.add(n); };
+      const remCol=(n,type)=>{ S.gone.set(n,{type:type||'remove',step:st.name}); if(S.exact) S.exact.delete(n); };
+      if(fn.startsWith('Table.')){
+        for(const a of (ci.args||[]).slice(1)) for(const f of fieldRefs(a.toks)) check(f.name,f.s,f.e,'field');
+      }
+      switch(fn){
+        case 'Table.TransformColumnTypes': case 'Table.TransformColumns':
+          for(const pr of pairs(A(1))) if(pr[0]&&pr[0][0]&&pr[0][0].t==='str') chk(pr[0][0]); break;
+        case 'Table.RenameColumns':
+          for(const pr of pairs(A(1))){ const o=pr[0]&&pr[0][0], nn=pr[1]&&pr[1][0];
+            if(o&&o.t==='str'){ chk(o); if(nn&&nn.t==='str'){ S.gone.set(o.v,{type:'rename',to:nn.v,step:st.name}); S.gone.delete(nn.v); if(S.exact){S.exact.delete(o.v);S.exact.add(nn.v);} } } }
+          break;
+        case 'Table.RemoveColumns': for(const t of strs(A(1))){ chk(t); remCol(t.v); } break;
+        case 'Table.SelectColumns': { const ts=strs(A(1)); ts.forEach(chk); const keep=new Set(ts.map(t=>t.v));
+          if(S.exact) for(const c of S.exact) if(!keep.has(c)) S.gone.set(c,{type:'remove',step:st.name});
+          S.exact=keep; break; }
+        case 'Table.ReorderColumns': case 'Table.FillDown': case 'Table.FillUp': case 'Table.Distinct': strs(A(1)).forEach(chk); break;
+        case 'Table.ReplaceValue': strs(A(4)).forEach(chk); break;
+        case 'Table.Sort': { const it=A(1)&&listItems(A(1).toks);
+          if(!it) strs(A(1)).forEach(chk);
+          else for(const x of it){ if(x[0]&&x[0].v==='{'){ const li=listItems(x); if(li&&li[0]&&li[0][0]&&li[0][0].t==='str') chk(li[0][0]); } else if(x[0]&&x[0].t==='str') chk(x[0]); } break; }
+        case 'Table.AddColumn': if(strs(A(1))[0]) addCol(strs(A(1))[0].v); break;
+        case 'Table.AddIndexColumn': if(strs(A(1))[0]) addCol(strs(A(1))[0].v); break;
+        case 'Table.DuplicateColumn': if(strs(A(1))[0]) chk(strs(A(1))[0]); if(strs(A(2))[0]) addCol(strs(A(2))[0].v); break;
+        case 'Table.NestedJoin': strs(A(1)).forEach(chk); if(strs(A(4))[0]) addCol(strs(A(4))[0].v); break;
+        case 'Table.ExpandTableColumn': case 'Table.ExpandRecordColumn': { const c=strs(A(1))[0]; if(c){ chk(c); remCol(c.v,'expand'); }
+          (A(3)?strs(A(3)):strs(A(2))).forEach(t=>addCol(t.v)); break; }
+        default:
+          if(RESET.has(fn)){ if(['Table.Group','Table.UnpivotOtherColumns','Table.Unpivot','Table.SplitColumn'].includes(fn)) strs(A(1)).filter((t,i)=>fn!=='Table.SplitColumn'||i===0).forEach(chk); colState.set(st.name,{exact:null,gone:new Map()}); continue; }
+          if(!PASS.has(fn)){ colState.set(st.name,{exact:null,gone:new Map()}); continue; }
+      }
+      colState.set(st.name,S);
+    }
+
+    // R06 孤兒步驟
+    const used=new Set(); steps.forEach(s=>s.deps.forEach(d=>used.add(d))); if(res.output) res.output.deps.forEach(d=>used.add(d));
+    steps.forEach(st=>{
+      if(used.has(st.name) || (res.output && res.output.name===st.name)) return;
+      if(stepIndex.get(st.name)!==st) return;
+      let fix=null; const nx=steps[st.index+1];
+      if(nx){
+        const pv=st.deps.find(d=>nx.deps.includes(d));
+        if(pv){ const edits=nx.refsAll.filter(r=>r.name===pv).map(r=>({s:r.tok.s,e:r.tok.e,text:idText(st.name)}));
+          if(edits.length) fix={label:`讓下一步「${nx.name}」改用「${st.name}」`,edits,manual:true}; }
+      }
+      const why = nx && fix ? `；下一步「${nx.name}」跳過了它，直接引用「${fix.edits.length?st.deps.find(d=>nx.deps.includes(d)):''}」` : '';
+      add('R06','warning',st.nameTok.s,st.nameTok.e,`步驟「${st.name}」沒有被任何步驟或 in 使用，它的結果不會出現在輸出中${why}`,fix?{fix,stepName:st.name}:{stepName:st.name});
+    });
+
+    // 步驟解釋
+    for(const st of steps) st.explain=explainStep(st);
+    res.ms=Date.now()-t0;
+    finalize();
+    return res;
+
+    function finalize(){
+      const order={error:0,warning:1,info:2};
+      issues.sort((a,b)=>order[a.severity]-order[b.severity] || a.s-b.s);
+      issues.forEach((is,i)=>{ is.id='i'+i; if(is.e<=is.s) is.e=Math.min(src.length,is.s+1); });
+      for(const st of res.steps) st.issues=issues.filter(is=>is.stepName===st.name || (is.s>=st.s && is.s<=st.e));
+    }
+
+    function explainStep(st){
+      const ci=st.call||{}, fn=ci.fn, A=k=>ci.args&&ci.args[k];
+      const T=a=>a?short(a.s,a.e,70):'';
+      const S=a=>strs(a).map(t=>t.v);
+      const inp = A(0) && A(0).toks.length===1 && isName(A(0).toks[0]) ? A(0).toks[0].v : null;
+      const q=x=>`「${x}」`;
+      const join=xs=>xs.map(q).join('、');
+      let summary='', details=[];
+      switch(fn){
+        case 'Excel.CurrentWorkbook': {
+          const tk=st.exprToks; let nm=null;
+          for(let k=0;k<tk.length;k++) if(tk[k].v==='Name' && isOp(tk[k+1],'=') && tk[k+2] && tk[k+2].t==='str'){ nm=tk[k+2].v; break; }
+          summary = nm ? `從目前活頁簿讀取名為${q(nm)}的 Excel 表格` : '讀取目前活頁簿中的所有表格與已命名範圍'; break; }
+        case 'Excel.Workbook': case 'Csv.Document': case 'Json.Document': {
+          const inner=A(0)&&A(0).toks; const path=inner && inner[0] && inner[0].v==='File.Contents' && inner[2] && inner[2].t==='str' ? inner[2].v : null;
+          summary = (fn==='Excel.Workbook'?'開啟 Excel 檔案':fn==='Csv.Document'?'讀取 CSV 檔案':'讀取 JSON 檔案') + (path?q(path):`（來源：${T(A(0))}）`); break; }
+        case 'Folder.Files': summary=`列出資料夾${q(S(A(0))[0]||T(A(0)))}中的所有檔案`; break;
+        case 'Sql.Database': summary=`連線到 SQL Server ${q(S(A(0))[0]||'')} 的資料庫 ${q(S(A(1))[0]||'')}`; break;
+        case 'Table.PromoteHeaders': summary=`將${inp?q(inp):''}的第一列提升為欄位標題`; break;
+        case 'Table.TransformColumnTypes': {
+          const ps=pairs(A(1)).filter(p=>p[0]&&p[0][0]&&p[0][0].t==='str'&&p[1]&&p[1].length);
+          summary=`將 ${ps.length} 個欄位轉換型別`;
+          details=ps.map(p=>{ const ty=src.slice(p[1][0].s,p[1][p[1].length-1].e).replace(/\s+/g,' '); return `${p[0][0].v} → ${TYPE_ZH[ty]||ty}`; }); break; }
+        case 'Table.RenameColumns': { const ps=pairs(A(1)).filter(p=>p[0]&&p[0][0]&&p[0][0].t==='str'&&p[1]&&p[1][0]);
+          summary=`重新命名 ${ps.length} 個欄位`; details=ps.map(p=>`${p[0][0].v} → ${p[1][0].v||src.slice(p[1][0].s,p[1][0].e)}`); break; }
+        case 'Table.RemoveColumns': { const c=S(A(1)); summary=`移除 ${c.length} 個欄位`; details=c; break; }
+        case 'Table.SelectColumns': { const c=S(A(1)); summary=`只保留 ${c.length} 個欄位，其餘欄位全部移除`; details=c; break; }
+        case 'Table.ReorderColumns': summary=`調整欄位順序為：${S(A(1)).join('、')}`; break;
+        case 'Table.AddColumn': {
+          const nm=S(A(1))[0]; const fx=A(2)?short(A(2).s,A(2).e,120).replace(/^each\s+/,''):'';
+          const ty=A(3)?src.slice(A(3).s,A(3).e).replace(/\s+/g,' ').trim():null;
+          summary=`新增欄位${nm?q(nm):''}`; details=[`公式：${fx}`, `型別：${ty?(TYPE_ZH[ty]||ty):'未指定（any）'}`]; break; }
+        case 'Table.SelectRows': summary=`篩選資料列，只保留符合條件的列`; details=[`條件：${A(1)?short(A(1).s,A(1).e,140).replace(/^each\s+/,''):''}`]; break;
+        case 'Table.Sort': { const it=A(1)&&listItems(A(1).toks)||[];
+          summary='排序資料列';
+          details=it.map(x=>{ if(x[0]&&x[0].v==='{'){ const li=listItems(x)||[]; const c=li[0]&&li[0][0]&&li[0][0].v; const o=li[1]&&li[1][0]&&li[1][0].v; return `${c} ${o==='Order.Descending'?'遞減 ↓':'遞增 ↑'}`; } return `${x[0]&&x[0].v} 遞增 ↑`; });
+          if(!it.length && S(A(1))[0]) details=[`${S(A(1))[0]} 遞增 ↑`]; break; }
+        case 'Table.Distinct': summary = A(1) ? `依 ${join(S(A(1)))} 移除重複的資料列` : '移除完全重複的資料列'; break;
+        case 'Table.NestedJoin': {
+          const other=T(A(2)); const kind=A(5)?src.slice(A(5).s,A(5).e).trim():'JoinKind.LeftOuter';
+          summary=`以 ${join(S(A(1)))} 對應 ${q(other)} 的 ${join(S(A(3)))}，合併結果放在新欄位${q(S(A(4))[0]||'')}`;
+          details=[`聯結方式：${JOIN_ZH[kind]||kind}`]; break; }
+        case 'Table.ExpandTableColumn': case 'Table.ExpandRecordColumn': {
+          const c=S(A(1))[0], f=S(A(2)), nn=A(3)?S(A(3)):null;
+          summary=`展開${q(c||'')}欄位中的 ${f.length} 個欄位`;
+          details=f.map((x,i)=>nn&&nn[i]&&nn[i]!==x?`${x} → ${nn[i]}`:x); break; }
+        case 'Table.Group': {
+          summary=`依 ${join(S(A(1)))} 分組彙總`;
+          const it=A(2)&&listItems(A(2).toks)||[];
+          const ag=(it.length&&it[0][0]&&it[0][0].v==='{')?it.map(x=>listItems(x)||[]):[it];
+          details=ag.filter(a=>a[0]&&a[0][0]&&a[0][0].t==='str').map(a=>`${a[0][0].v} ＝ ${a[1]?short(a[1][0].s,a[1][a[1].length-1].e,80).replace(/^each\s+/,''):''}`); break; }
+        case 'Table.ReplaceValue': summary=`在 ${join(S(A(4)))} 中，將 ${T(A(1))} 取代為 ${T(A(2))}`; details=[`比對方式：${A(3)&&/ReplaceText/.test(T(A(3)))?'部分文字':'整個儲存格'}`]; break;
+        case 'Table.FillDown': summary=`將 ${join(S(A(1)))} 的空白儲存格以上方的值向下填滿`; break;
+        case 'Table.FillUp': summary=`將 ${join(S(A(1)))} 的空白儲存格以下方的值向上填滿`; break;
+        case 'Table.UnpivotOtherColumns': summary=`保留 ${join(S(A(1)))}，其餘欄位轉成「${S(A(2))[0]||'屬性'}／${S(A(3))[0]||'值'}」兩欄（寬表轉長表）`; break;
+        case 'Table.Combine': summary=`將 ${T(A(0))} 上下附加成一張表`; break;
+        case 'Table.AddIndexColumn': summary=`新增索引欄位${q(S(A(1))[0]||'索引')}${A(2)?`，從 ${T(A(2))} 開始`:''}`; break;
+        case 'Table.Skip': case 'Table.RemoveFirstN': summary=`略過前 ${T(A(1))} 列`; break;
+        case 'Table.FirstN': summary=`只保留前 ${T(A(1))} 列`; break;
+        case 'Table.TransformColumns': { const ps=pairs(A(1)).filter(p=>p[0]&&p[0][0]&&p[0][0].t==='str');
+          summary=`對 ${ps.length} 個欄位套用轉換`; details=ps.map(p=>`${p[0][0].v}：${p[1]?short(p[1][0].s,p[1][p[1].length-1].e,60):''}`); break; }
+        case 'let': summary='巢狀 let 運算式（在步驟內再定義多個子步驟）'; break;
+        case 'each': summary='定義一個逐列套用的函數（each）'; break;
+        case '(function)': summary='定義自訂函數'; break;
+      }
+      if(!summary){
+        if(fn && DICT[fn]) summary=DICT[fn].desc;
+        else if(fn) summary=`呼叫 ${fn} 函數`;
+        else if(ci.ref){
+          const tk=st.exprToks; const flds=[]; let fld=null;
+          if(tk[1] && tk[1].v==='{'){
+            for(let k=2;k<tk.length && tk[k].v!=='}';k++) if(isName(tk[k]) && isOp(tk[k+1],'=') && tk[k+2]) flds.push(`${tk[k].v}=${tk[k+2].t==='str'?q(tk[k+2].v):src.slice(tk[k+2].s,tk[k+2].e)}`);
+            const last=tk[tk.length-1]; if(last.v===']' && tk[tk.length-3] && tk[tk.length-3].v==='[') fld=src.slice(tk[tk.length-2].s,tk[tk.length-2].e);
+          }
+          summary = flds.length ? `從${q(ci.ref.v)}中找出 ${flds.join('、')} 的項目${fld?`，取出其 ${fld} 內容`:''}` : `以${q(ci.ref.v)}為基礎計算：${short(st.exprToks[0].s,st.e,80)}`;
+        } else summary=`自訂運算式：${st.exprToks.length?short(st.exprToks[0].s,st.e,80):''}`;
+      }
+      if(inp && fn && fn.startsWith('Table.') && !summary.includes(inp)) details.unshift(`輸入：${inp}`);
+      const usedFns=[...new Set(st.exprToks.filter(t=>t.t==='ident' && DICT[t.v] && t.v!==fn).map(t=>t.v))].slice(0,6).map(f=>({fn:f,desc:DICT[f].desc}));
+      return {summary,details,usedFns,fnDesc:fn&&DICT[fn]?DICT[fn].desc:null};
+    }
+  }
+
+  function inferType(txt){
+    if(/Text\.Length|List\.(Sum|Count|Max|Min|Average)|Number\.|Date\.(Year|Month|Day)\b|Duration\.Days/.test(txt) && !/"/.test(txt)) return 'type number';
+    if(/#date|Date\.(From|AddDays|AddMonths|AddYears|StartOf\w+|EndOf\w+)/.test(txt) && !/DateTime/.test(txt)) return 'type date';
+    if(/DateTime\./.test(txt)) return 'type datetime';
+    if(/Text\.|&|"/.test(txt)) return 'type text';
+    if(/[*\/]|\d\s*[+\-]|[+\-]\s*\d|\]\s*[+\-]\s*\[/.test(txt)) return 'type number';
+    if(/^\s*(each\s+)?\[[^\]]+\]\s*(=|<>|<=|>=|<|>)/.test(txt) || /\b(and|or)\b/.test(txt) && !/\bif\b/.test(txt)) return 'type logical';
+    return null;
+  }
+
+  /* ---------- Excel 錯誤訊息對應 ---------- */
+  function mapErrorMessage(msg, res){
+    msg=(msg||'').trim(); if(!msg) return null;
+    const src=res.src, out=[];
+    const findAll=n=>{ const r=[]; if(!n) return r; let i=0; while((i=src.indexOf(n,i))>=0){ r.push({s:i,e:i+n.length}); i+=n.length; } return r; };
+    const pick=m=>m&&m.slice(1).find(x=>x);
+    const issuesOf=ids=>res.issues.filter(i=>ids.includes(i.ruleId));
+    let m;
+    if((m=msg.match(/column '([^']+)' of the table wasn't found/i)||msg.match(/找不到資料表的?\s*[「'"]([^」'"]+)[」'"]\s*資料行/)||msg.match(/資料行\s*[「'"]([^」'"]+)[」'"]/))){
+      const c=pick(m);
+      out.push({title:`找不到欄位「${c}」`,explain:'來源資料中已經沒有這個欄位，可能是來源欄位被改名、刪除，或前面的步驟已將它重新命名／移除。請檢查下方標示的位置，並確認來源表格的欄位名稱（包含前後空白與全半形）。',
+        ranges:[...findAll('"'+c+'"'),...findAll('['+c+']')],related:issuesOf(['R08','R09'])});
+    }
+    if((m=msg.match(/name '([^']+)' wasn't recognized/i)||msg.match(/無法辨識(?:名稱)?\s*[「'"]([^」'"]+)[」'"]/))){
+      const c=pick(m);
+      out.push({title:`無法辨識名稱「${c}」`,explain:'程式碼引用了一個不存在的步驟、查詢或函數名稱，通常是拼字錯誤、大小寫不符，或步驟改名後沒有同步修改引用處。M 語言區分大小寫。',
+        ranges:findAll(c),related:issuesOf(['R02','R03'])});
+    }
+    if(/Token Comma expected|Token ',' expected|Comma|逗號/i.test(msg))
+      out.push({title:'缺少逗號',explain:'let 區塊中某個步驟結尾少了逗號，或在不該出現的位置多了逗號。',ranges:[],related:issuesOf(['R01'])});
+    if(/Token (Eof|RightParen|RightBrace|RightBracket|Literal|Identifier) expected|語彙基元|Invalid identifier/i.test(msg))
+      out.push({title:'語法不完整（括號、引號或識別碼）',explain:'通常是括號或引號沒有成對，或步驟名稱含空白卻沒有用 #"…" 包起來。',ranges:[],related:issuesOf(['R01','R04'])});
+    if(/couldn't convert to (Number|數字)|無法轉換(成|為)\s*(Number|數字|數值)|DataFormat\.Error/i.test(msg)){
+      const r=[]; for(const st of res.steps) if(st.call&&st.call.fn==='Table.TransformColumnTypes'){ for(const t of st.exprToks) if(t.t==='ident' && /^(Int64|Int32|Number|Decimal|Double|Currency|Percentage)\.Type$/.test(t.v)) r.push({s:t.s,e:t.e}); }
+      const val=(msg.match(/[:：]\s*([^\r\n]+)$/)||[])[1];
+      out.push({title:'資料無法轉換成數值',explain:`某個欄位含有非數字的內容${val?`（例如 ${val.trim()}）`:''}，轉成數值型別時失敗。可將該欄位改為 type text，或先用 Table.ReplaceValue 清理資料、或以 try … otherwise null 包住轉換。`,ranges:r,related:issuesOf(['R07'])});
+    }
+    if(/Formula\.Firewall/i.test(msg))
+      out.push({title:'Formula.Firewall（隱私層級限制）',explain:'查詢在同一個步驟中合併了不同隱私層級的資料來源。解法：(1)「資料 › 取得資料 › 查詢選項 › 隱私權」改為「一律忽略隱私權等級設定」；或 (2) 把各資料來源拆成獨立查詢，再於新查詢中合併。',ranges:[],related:[]});
+    if(/cyclic reference|循環參考/i.test(msg))
+      out.push({title:'循環參考',explain:'查詢或步驟彼此互相引用形成迴圈，請檢查是否有步驟引用了自己或後面的步驟、或兩個查詢互相參照。',ranges:[],related:issuesOf(['R02'])});
+    if(/key didn't match any rows|索引鍵不符合|找不到.*(資料列|索引鍵)/i.test(msg)){
+      const r=res.issues.filter(i=>i.ruleId==='R10').map(i=>({s:i.s,e:i.e}));
+      out.push({title:'找不到指定的表格或工作表',explain:'例如 {[Name="表格2"]} 找不到對應的表格：可能 Excel 表格已改名、被刪除，或工作表名稱不同。請到「表格設計 › 表格名稱」確認。',ranges:r,related:issuesOf(['R10'])});
+    }
+    if(/DataSource\.(Error|NotFound)|could not find (a part of )?(the )?(file|path)|找不到(檔案|路徑)/i.test(msg)){
+      const r=res.issues.filter(i=>i.ruleId==='R10').map(i=>({s:i.s,e:i.e}));
+      out.push({title:'找不到資料來源檔案或路徑',explain:'檔案被移動、改名，或目前電腦沒有存取該路徑的權限。建議把路徑改成參數集中管理。',ranges:r,related:issuesOf(['R10'])});
+    }
+    if(!out.length){
+      const q=[...msg.matchAll(/'([^']{1,60})'|「([^」]{1,60})」/g)].map(x=>x[1]||x[2]);
+      const r=[]; q.forEach(x=>r.push(...findAll(x)));
+      out.push({title:'未收錄的錯誤訊息',explain:r.length?'無法自動判斷錯誤類型，但已在程式碼中找到訊息提到的名稱，請先檢查這些位置。':'無法自動判斷錯誤類型。請確認貼上完整的錯誤訊息（包含 Expression.Error／DataFormat.Error 等開頭），或參考下方的問題清單。',ranges:r,related:[]});
+    }
+    return out;
+  }
+
+  /* ---------- Mermaid ---------- */
+  function toMermaid(res){
+    const esc=s=>s.replace(/"/g,'#quot;');
+    const id=new Map(); res.steps.forEach((s,i)=>{ if(!id.has(s.name)) id.set(s.name,'S'+(i+1)); });
+    const L=['flowchart TD'];
+    res.steps.forEach((s,i)=>{ const f=s.call&&s.call.fn&&!s.call.fn.startsWith('(')?`<br/><small>${esc(s.call.fn)}</small>`:''; L.push(`    S${i+1}["${esc(s.name)}${f}"]`); });
+    if(res.output) L.push('    OUT(["輸出"])');
+    res.steps.forEach((s,i)=>s.deps.forEach(d=>{ if(id.has(d)) L.push(`    ${id.get(d)} --> S${i+1}`); }));
+    if(res.output) res.output.deps.forEach(d=>{ if(id.has(d)) L.push(`    ${id.get(d)} --> OUT`); });
+    const cls={error:[],warning:[]};
+    res.steps.forEach((s,i)=>{ if(s.issues.some(x=>x.severity==='error')) cls.error.push('S'+(i+1)); else if(s.issues.some(x=>x.severity==='warning')) cls.warning.push('S'+(i+1)); });
+    L.push('    classDef err fill:#fde7e9,stroke:#d13438,color:#000','    classDef warn fill:#fff4ce,stroke:#c19c00,color:#000');
+    if(cls.error.length) L.push(`    class ${cls.error.join(',')} err`);
+    if(cls.warning.length) L.push(`    class ${cls.warning.join(',')} warn`);
+    return L.join('\n');
+  }
+
+  return {tokenize,analyze,applyEdits,mapErrorMessage,toMermaid,RULES,DICT,TYPE_ZH,DEFAULT_ID_KEYWORDS,idText};
+})();
+if(typeof module!=='undefined') module.exports=PQ;
+
+</script>
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const LS = { cfg:'settings', theme:'theme', draft:'draft' };
+const HIST_MAX=10;
+/* ---------- IndexedDB 儲存層 ----------
+   資料庫 PQDebugger（v1）
+   - kv      ：設定、主題、草稿（keyPath: key）
+   - history ：歷史紀錄（keyPath: id 自動遞增，索引 t、code）
+   啟動時一次載入到記憶體快取，讀取同步、寫入非同步（write-through）。 */
+const DB = (() => {
+  const NAME='PQDebugger', VER=1;
+  let db=null, ok=false;
+  const kv=new Map(); let hist=[];
+  const req2p = r => new Promise((res,rej)=>{ r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  const tx = (stores,mode,fn) => new Promise((res,rej)=>{
+    if(!ok){ res(); return; }
+    try{ const t=db.transaction(stores,mode); const out=fn(t); t.oncomplete=()=>res(out); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }
+    catch(e){ rej(e); }
+  });
+  const warn = e => { console.warn('IndexedDB 寫入失敗', e); toast && toast('⚠ 本機資料儲存失敗：'+(e&&e.name||e)); };
+
+  async function open(){
+    if(!('indexedDB' in window)) return false;
+    try{
+      db=await new Promise((res,rej)=>{
+        const r=indexedDB.open(NAME,VER);
+        r.onupgradeneeded=()=>{
+          const d=r.result;
+          if(!d.objectStoreNames.contains('kv')) d.createObjectStore('kv',{keyPath:'key'});
+          if(!d.objectStoreNames.contains('history')){
+            const h=d.createObjectStore('history',{keyPath:'id',autoIncrement:true});
+            h.createIndex('t','t'); h.createIndex('code','code');
+          }
+        };
+        r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); r.onblocked=()=>rej(new Error('blocked'));
+      });
+      db.onversionchange=()=>{ db.close(); ok=false; };
+      ok=true;
+      await tx(['kv','history'],'readonly',t=>{
+        req2p(t.objectStore('kv').getAll()).then(rows=>rows.forEach(r=>kv.set(r.key,r.value)));
+        req2p(t.objectStore('history').getAll()).then(rows=>{ hist=rows.sort((a,b)=>b.t-a.t); });
+      });
+      await migrateLocalStorage();
+      return true;
+    }catch(e){ console.warn('IndexedDB 無法使用，改為僅保存在本次分頁', e); ok=false; return false; }
+  }
+
+  // 從舊版 LocalStorage 搬移資料（只做一次）
+  async function migrateLocalStorage(){
+    let ls; try{ ls=window.localStorage; }catch(e){ return; }
+    if(!ls) return;
+    const OLD={cfg:'pqdbg.settings',theme:'pqdbg.theme',draft:'pqdbg.draft',hist:'pqdbg.history'};
+    const read=k=>{ try{ const v=ls.getItem(k); return v==null?undefined:JSON.parse(v); }catch(e){ return undefined; } };
+    let moved=false;
+    for(const [nk,ok_] of [[LS.cfg,OLD.cfg],[LS.theme,OLD.theme],[LS.draft,OLD.draft]]){
+      const v=read(ok_); if(v!==undefined){ if(!kv.has(nk)) await set(nk,v); ls.removeItem(ok_); moved=true; }
+    }
+    const h=read(OLD.hist);
+    if(Array.isArray(h)){ for(const x of h.slice().reverse()) if(x&&x.code&&!hist.some(y=>y.code===x.code)) await addHistory(x); ls.removeItem(OLD.hist); moved=true; }
+    if(moved) console.info('已將 LocalStorage 舊資料搬移到 IndexedDB');
+  }
+
+  function get(k,d){ return kv.has(k)?kv.get(k):d; }
+  function set(k,v){ kv.set(k,v); return tx(['kv'],'readwrite',t=>{ t.objectStore('kv').put({key:k,value:v}); }).catch(warn); }
+  function del(k){ kv.delete(k); return tx(['kv'],'readwrite',t=>{ t.objectStore('kv').delete(k); }).catch(warn); }
+
+  function listHistory(){ return hist.slice(); }
+  async function addHistory(item){
+    const dup=hist.filter(x=>x.code===item.code);
+    hist=hist.filter(x=>x.code!==item.code);
+    const rec=Object.assign({},item); delete rec.id;
+    hist.unshift(rec);
+    const extra=hist.slice(HIST_MAX); hist=hist.slice(0,HIST_MAX);
+    try{
+      await tx(['history'],'readwrite',t=>{
+        const s=t.objectStore('history');
+        [...dup,...extra].forEach(x=>{ if(x.id!=null) s.delete(x.id); });
+        const r=s.add(rec); r.onsuccess=()=>{ rec.id=r.result; };
+      });
+    }catch(e){ warn(e); }
+  }
+  function removeHistory(id){ hist=hist.filter(x=>x.id!==id); return tx(['history'],'readwrite',t=>{ t.objectStore('history').delete(id); }).catch(warn); }
+  function clearHistory(){ hist=[]; return tx(['history'],'readwrite',t=>{ t.objectStore('history').clear(); }).catch(warn); }
+  function clearAll(){ hist=[]; kv.clear(); return tx(['kv','history'],'readwrite',t=>{ t.objectStore('kv').clear(); t.objectStore('history').clear(); }).catch(warn); }
+  async function usage(){ try{ if(navigator.storage&&navigator.storage.estimate){ const e=await navigator.storage.estimate(); return e.usage; } }catch(e){} return null; }
+  return { open, get, set, del, listHistory, addHistory, removeHistory, clearHistory, clearAll, usage, get ready(){ return ok; } };
+})();
+const store={ get:DB.get, set:DB.set, del:DB.del };
+const code=$('#code'), hl=$('#hl'), gutter=$('#gutter'), errMsg=$('#errMsg');
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const SEV_ICON={error:'🔴',warning:'🟡',info:'🔵'}, SEV_ZH={error:'錯誤',warning:'警告',info:'建議'}, RANK={error:3,warning:2,info:1};
+const LINE_H=20;
+
+let cfg = loadCfg();
+let res=null, emap=null, filter='all', curTab='issues', selKey=null, flowDirty=true;
+const openDiff=new Set(); const undoStack=[]; let fixedVal=null; let draftT=null, timer=null, flashRange=null, flashTimer=null, bmPair=null;
+const ik = i => i.ruleId+'@'+i.s+'@'+i.message.length;
+
+function loadCfg(){
+  const c=store.get(LS.cfg,{});
+  return { idKeywords: Array.isArray(c.idKeywords)&&c.idKeywords.length?c.idKeywords:PQ.DEFAULT_ID_KEYWORDS.slice(), disabled: Array.isArray(c.disabled)?c.disabled:[] };
+}
+
+/* ---------------- 範例 ---------------- */
+const SAMPLES=[
+  { title:'授審會資料來源', desc:'識別碼欄位轉數值、寫死表格名稱', code:
+`let
+    來源 = Excel.CurrentWorkbook(){[Name="表格2"]}[Content],
+    已變更類型 = Table.TransformColumnTypes(來源,{{"場次", Int64.Type}, {"公司名稱", type text}, {"統編", Int64.Type}, {"案號", Int64.Type}, {"授審日期", type date}}),
+    已篩選資料列 = Table.SelectRows(已變更類型, each [場次] <> null),
+    已新增自訂 = Table.AddColumn(已篩選資料列, "案件代碼", each Text.From([案號]) & "-" & Text.From([場次]))
+in
+    已新增自訂` },
+  { title:'錯誤大集合（新手練習）', desc:'缺逗號、拼錯步驟、改名後用舊欄名…', code:
+`let
+    Source = Excel.Workbook(File.Contents("C:\\Users\\me\\Desktop\\客戶清單.xlsx"), null, true),
+    客戶_Sheet = Source{[Item="客戶",Kind="Sheet"]}[Data],
+    提升標頭 = Table.PromoteHeaders(客戶_Sheet, [PromoteAllScalars=true]),
+    #"已變更類型" = Table.TransformColumnTypes(提升標頭,{{"客戶代碼", Int64.Type}, {"客戶名稱", type text}, {"金額", type number}})
+    重新命名 = Table.RenameColumns(#"已變更類型",{{"客戶名稱", "名稱"}}),
+    篩選有效客戶 = Table.SelectRows(重新命名, each [金額] > 0),
+    新增等級 = Table.AddColumn(重新命名, "等級", each if [金額] > 100000 then "A" else "B"),
+    排序 = Table.Sort(新增等級,{{"客戶名稱", Order.Ascending}}),
+    移除欄位 = Table.RemoveColumns(#"已變更類形",{"備註"}),
+in
+    排序` },
+  { title:'合併查詢與分組彙總', desc:'NestedJoin、展開、Group By', code:
+`let
+    訂單 = Excel.CurrentWorkbook(){[Name="訂單明細"]}[Content],
+    設定型別 = Table.TransformColumnTypes(訂單,{{"訂單編號", type text}, {"客戶代碼", type text}, {"數量", Int64.Type}, {"單價", Currency.Type}, {"訂單日期", type date}}),
+    計算金額 = Table.AddColumn(設定型別, "金額", each [數量] * [單價], Currency.Type),
+    合併客戶 = Table.NestedJoin(計算金額, {"客戶代碼"}, 客戶主檔, {"客戶代碼"}, "客戶", JoinKind.LeftOuter),
+    展開客戶 = Table.ExpandTableColumn(合併客戶, "客戶", {"客戶名稱", "區域"}, {"客戶名稱", "區域"}),
+    加入年月 = Table.AddColumn(展開客戶, "年月", each Date.ToText([訂單日期], "yyyy-MM"), type text),
+    依區域彙總 = Table.Group(加入年月, {"區域", "年月"}, {{"訂單數", each Table.RowCount(_), Int64.Type}, {"總金額", each List.Sum([金額]), Currency.Type}}),
+    排序結果 = Table.Sort(依區域彙總,{{"年月", Order.Descending}, {"總金額", Order.Descending}})
+in
+    排序結果` },
+  { title:'括號未成對', desc:'少了一個 }', code:
+`let
+    來源 = Csv.Document(File.Contents("D:\\報表\\每日交易.csv"),[Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.None]),
+    提升標頭 = Table.PromoteHeaders(來源, [PromoteAllScalars=true]),
+    設定型別 = Table.TransformColumnTypes(提升標頭,{{"交易序號", type text}, {"交易金額", type number}),
+    篩選大額 = Table.SelectRows(設定型別, each [交易金額] >= 50000)
+in
+    篩選大額` }
+];
+
+/* ---------------- 編輯器渲染 ---------------- */
+function fresh(){ return res && res.src===code.value; }
+function renderEditor(){
+  const src=code.value;
+  const ok=fresh();
+  const toks= ok ? res.toks : PQ.tokenize(src);
+  const iss = ok ? res.issues : [];
+  const defs = new Set(ok ? res.steps.map(s=>s.nameTok.s) : []);
+  const parts=[];
+  for(const t of toks){
+    const txt=esc(src.slice(t.s,t.e));
+    if(t.t==='ws'){ parts.push(txt); continue; }
+    let cls='t-'+(t.t==='ident'?((t.v.includes('.')||t.hash)?'fn':'id'):t.t);
+    if(defs.has(t.s)) cls='t-def';
+    let sev=null;
+    for(const i of iss) if(i.s<t.e && i.e>t.s && (!sev || RANK[i.severity]>RANK[sev])) sev=i.severity;
+    if(sev) cls+=' sq-'+sev;
+    if(bmPair && bmPair.includes(t.s)) cls+=' bm';
+    if(flashRange && flashRange.s<t.e && flashRange.e>t.s) cls+=' flash';
+    parts.push(`<span class="${cls}">${txt}</span>`);
+  }
+  hl.innerHTML=parts.join('')+'\n ';
+  const n=src.split('\n').length, ls={}, lm={};
+  for(const i of iss){ if(!ls[i.line] || RANK[i.severity]>RANK[ls[i.line]]) ls[i.line]=i.severity; (lm[i.line]=lm[i.line]||[]).push(`${SEV_ICON[i.severity]} ${i.ruleId} ${i.message}`); }
+  const g=[]; for(let l=1;l<=n;l++) g.push(`<div class="${ls[l]||''}" data-line="${l}"${lm[l]?` title="${esc(lm[l].join('\n'))}"`:''}>${l}</div>`);
+  gutter.innerHTML=g.join('')+'<div style="height:60px"></div>';
+  syncScroll();
+}
+function syncScroll(){ hl.scrollTop=code.scrollTop; hl.scrollLeft=code.scrollLeft; gutter.scrollTop=code.scrollTop; }
+
+/* ---------------- 分析 ---------------- */
+function run(opts){
+  opts=opts||{};
+  clearTimeout(timer);
+  const src=code.value;
+  res=PQ.analyze(src,cfg);
+  emap=PQ.mapErrorMessage(errMsg.value,res);
+  if(selKey && !res.issues.some(i=>ik(i)===selKey)) selKey=null;
+  flowDirty=true;
+  renderAll();
+  clearTimeout(draftT); draftT=setTimeout(()=>store.set(LS.draft,src),500);
+  if(opts.save) saveHistory(src);
+}
+function schedule(){ clearTimeout(timer); timer=setTimeout(()=>run(),300); }
+function renderAll(){
+  renderEditor(); renderIssues(); renderSteps();
+  if(curTab==='flow') renderFlow();
+  const c=counts();
+  $('#bIssues').textContent=res.issues.length; $('#bIssues').className='badge'+(c.error?' e':'');
+  $('#bSteps').textContent=res.steps.length;
+  $('#stSteps').textContent=`${res.steps.length} 個步驟`+(res.output&&res.output.name?`，輸出「${res.output.name}」`:'');
+  $('#stE').textContent=`● ${c.error} 錯誤`; $('#stW').textContent=`● ${c.warning} 警告`; $('#stI').textContent=`● ${c.info} 建議`;
+  $('#stMs').textContent=res.mode==='empty'?'':`分析耗時 ${res.ms} ms`;
+  const fixable=res.issues.filter(i=>i.fix&&!i.fix.manual).length;
+  $('#btnApplyAll').disabled=!fixable; $('#btnApplyAll').textContent=`🛠 全部套用${fixable?`（${fixable}）`:''}`;
+}
+function counts(){ const c={error:0,warning:0,info:0}; if(res) res.issues.forEach(i=>c[i.severity]++); return c; }
+
+/* ---------------- 問題清單 ---------------- */
+function emptyState(){
+  return `<div class="empty-state"><div class="big">🧩</div>
+  <b>貼上 M Code 開始分析</b><br>在 Excel 中開啟 Power Query 編輯器 › 常用 › 進階編輯器，<br>複製全部內容貼到左側即可。<br><br>
+  ${SAMPLES.map((s,k)=>`<button class="btn sm" data-sample="${k}">試用：${esc(s.title)}</button>`).join(' ')}</div>`;
+}
+function diffHtml(edits){
+  const src=code.value;
+  const s=Math.min(...edits.map(e=>e.s)), e=Math.max(...edits.map(e=>e.e));
+  const ls=src.lastIndexOf('\n',s-1)+1; let le=src.indexOf('\n',e); if(le<0) le=src.length;
+  const before=src.slice(ls,le);
+  const after=PQ.applyEdits(before,edits.map(x=>({s:x.s-ls,e:x.e-ls,text:x.text})));
+  const cap=a=>a.length>14?a.slice(0,6).concat(['  …'],a.slice(-6)):a;
+  const b=before.split('\n'), a=after.split('\n');
+  let h='';
+  const dl=[], il=[];
+  for(let k=0;k<Math.max(b.length,a.length);k++){ if(b[k]!==a[k]){ if(b[k]!==undefined) dl.push(b[k]); if(a[k]!==undefined) il.push(a[k]); } }
+  h=cap(dl).map(l=>`<div class="del">${esc(l.trim())}</div>`).join('')+cap(il).map(l=>`<div class="ins">${esc(l.trim())}</div>`).join('');
+  return `<div class="diff">${h||'<div>（無可見差異）</div>'}</div>`;
+}
+function renderIssues(){
+  const el=$('#tab-issues');
+  if(!res || res.mode==='empty'){ el.innerHTML=emptyState(); return; }
+  let h='';
+  if(undoStack.length) h+=`<div class="filters"><button class="btn sm" data-undo="1">↶ 復原上一次修正</button><span class="hint">（共 ${undoStack.length} 次可復原）</span></div>`;
+  if(emap) emap.forEach((m,k)=>{
+    h+=`<div class="emap"><h4>🧭 錯誤訊息分析：${esc(m.title)}</h4><p>${esc(m.explain)}</p><div class="links">`+
+      m.ranges.slice(0,8).map((r,j)=>`<button class="btn sm" data-er="${k}:${j}">📍 第 ${res.lineOf(r.s)} 行</button>`).join('')+
+      m.related.slice(0,6).map(i=>`<button class="btn sm" data-goto="${esc(ik(i))}">${SEV_ICON[i.severity]} ${i.ruleId}・第 ${i.line} 行</button>`).join('')+
+      (!m.ranges.length&&!m.related.length?'<span class="hint">程式碼中沒有找到對應位置</span>':'')+`</div></div>`;
+  });
+  if(res.mode==='expr') h+=`<div class="emap"><h4>ℹ 這段程式碼不是 let … in 結構</h4><p>目前只檢查括號與引號是否成對。若要完整分析，請貼上進階編輯器中的完整內容（以 let 開頭、in 結尾）。</p></div>`;
+  const c=counts(), all=res.issues.length;
+  h+=`<div class="filters">`+[['all',`全部 ${all}`],['error',`🔴 錯誤 ${c.error}`],['warning',`🟡 警告 ${c.warning}`],['info',`🔵 建議 ${c.info}`]]
+    .map(([k,t])=>`<button class="chip${filter===k?' on':''}" data-f="${k}">${t}</button>`).join('')+`</div>`;
+  if(!all) h+=`<div class="empty-state"><div class="big">✅</div><b>沒有發現問題</b><br>可以到「步驟說明」或「流程圖」確認處理邏輯。</div>`;
+  const list=res.issues.filter(i=>filter==='all'||i.severity===filter);
+  if(all && !list.length) h+=`<div class="empty-state">這個分類沒有問題</div>`;
+  for(const i of list){
+    const R=PQ.RULES[i.ruleId], k=ik(i);
+    h+=`<div class="card ${i.severity}${selKey===k?' sel':''}" data-goto="${esc(k)}">
+      <div class="hd">${SEV_ICON[i.severity]} <span class="rid ${i.severity}">${i.ruleId}</span><span>${esc(R.title)}</span><span class="spacer"></span><span>第 ${i.line} 行</span></div>
+      <div class="msg">${esc(i.message)}</div>
+      <div class="why">${esc(i.note||R.why)}</div>`;
+    if(i.fix) h+=`<div class="acts"><button class="btn sm" data-diff="${esc(k)}">${openDiff.has(k)?'隱藏':'預覽'}修正</button><button class="btn sm primary" data-apply="${esc(k)}">套用：${esc(i.fix.label)}</button>${i.fix.manual?'<span class="manual">⚠ 會改變資料流程，請確認後再套用（不含在「全部套用」）</span>':''}</div>${openDiff.has(k)?diffHtml(i.fix.edits):''}`;
+    h+=`</div>`;
+  }
+  el.innerHTML=h;
+}
+$('#tab-issues').addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-apply],[data-diff],[data-f],[data-er],[data-undo],[data-sample],[data-goto]'); if(!b) return;
+  const find=k=>res.issues.find(i=>ik(i)===k);
+  if(b.dataset.sample!==undefined){ loadCode(SAMPLES[+b.dataset.sample].code); return; }
+  if(b.dataset.undo){ undo(); return; }
+  if(b.dataset.f){ filter=b.dataset.f; renderIssues(); return; }
+  if(b.dataset.er){ const [k,j]=b.dataset.er.split(':').map(Number); const r=emap[k].ranges[j]; select(r.s,r.e); return; }
+  if(b.dataset.apply){ ev.stopPropagation(); const i=find(b.dataset.apply); if(i) applyFix([i]); return; }
+  if(b.dataset.diff){ ev.stopPropagation(); const k=b.dataset.diff; openDiff.has(k)?openDiff.delete(k):openDiff.add(k); renderIssues(); return; }
+  if(b.dataset.goto){ const i=find(b.dataset.goto); if(i) gotoIssue(i); }
+});
+
+/* ---------------- 修正 ---------------- */
+function pickEdits(issues){
+  const ed=[];
+  for(const i of issues){ if(!i.fix) continue;
+    if(i.fix.edits.every(e=>ed.every(o=>e.e<o.s || e.s>o.e || (e.s===e.e && o.s===o.e && e.s!==o.s)))) ed.push(...i.fix.edits); }
+  return ed;
+}
+function fixAll(src){
+  let cur=src, n=0;
+  for(let pass=0;pass<4;pass++){
+    const r=PQ.analyze(cur,cfg);
+    const ed=pickEdits(r.issues.filter(i=>i.fix&&!i.fix.manual));
+    if(!ed.length) break;
+    cur=PQ.applyEdits(cur,ed); n++;
+  }
+  return cur;
+}
+function setCode(v){
+  undoStack.push(code.value); if(undoStack.length>30) undoStack.shift();
+  const st=code.scrollTop, sl=code.scrollLeft;
+  code.value=v; code.scrollTop=st; code.scrollLeft=sl; fixedVal=v;
+}
+function applyFix(list){
+  const ed=pickEdits(list); if(!ed.length) return;
+  const before=counts();
+  setCode(PQ.applyEdits(code.value,ed));
+  run();
+  const c=counts();
+  toast(`已套用修正 ✔　剩餘 ${res.issues.length} 個問題（錯誤 ${c.error}、警告 ${c.warning}、建議 ${c.info}）`);
+  const first=ed.reduce((a,b)=>a.s<b.s?a:b);
+  flash(first.s, first.s+Math.max(1,first.text.length));
+}
+function applyAll(){
+  if(!res) return;
+  const v=fixAll(code.value);
+  if(v===code.value){ toast('沒有可自動套用的修正'); return; }
+  const n=res.issues.length;
+  setCode(v); run();
+  const c=counts();
+  toast(`已全部套用 ✔　問題 ${n} → ${res.issues.length}（錯誤 ${c.error}、警告 ${c.warning}、建議 ${c.info}）`);
+}
+function undo(){
+  if(!undoStack.length) return;
+  code.value=undoStack.pop(); fixedVal=code.value; run(); toast('已復原上一次修正');
+}
+
+/* ---------------- 選取與跳轉 ---------------- */
+function select(s,e){
+  code.focus();
+  code.setSelectionRange(s,e);
+  const line=code.value.slice(0,s).split('\n').length;
+  const top=(line-1)*LINE_H;
+  if(top<code.scrollTop || top>code.scrollTop+code.clientHeight-LINE_H*2) code.scrollTop=Math.max(0,top-code.clientHeight/3);
+  const col=s-code.value.lastIndexOf('\n',s-1)-1;
+  if(col<8) code.scrollLeft=0;
+  syncScroll(); flash(s,e); updateCursor();
+}
+function flash(s,e){ flashRange={s,e}; renderEditor(); clearTimeout(flashTimer); flashTimer=setTimeout(()=>{ flashRange=null; renderEditor(); },1400); }
+function gotoIssue(i){
+  selKey=ik(i);
+  document.querySelectorAll('#tab-issues .card').forEach(c=>c.classList.toggle('sel',c.dataset.goto===selKey));
+  select(i.s,i.e);
+}
+gutter.addEventListener('click',ev=>{
+  const d=ev.target.closest('[data-line]'); if(!d||!res||!fresh()) return;
+  const l=+d.dataset.line; const i=res.issues.find(x=>x.line===l);
+  if(i){ switchTab('issues'); if(filter!=='all'&&filter!==i.severity){filter='all';renderIssues();} gotoIssue(i); const c=document.querySelector(`#tab-issues .card.sel`); if(c) c.scrollIntoView({block:'nearest'}); }
+});
+
+/* ---------------- 步驟說明 ---------------- */
+function renderSteps(){
+  const el=$('#tab-steps');
+  if(!res || !res.steps.length){ el.innerHTML=res&&res.mode!=='empty'?'<div class="empty-state">沒有找到 let … in 結構中的步驟</div>':emptyState(); return; }
+  const usedBy={}; res.steps.forEach(s=>s.deps.forEach(d=>(usedBy[d]=usedBy[d]||[]).push(s.name)));
+  if(res.output) res.output.deps.forEach(d=>(usedBy[d]=usedBy[d]||[]).push('in（輸出）'));
+  let h=`<div class="hint" style="margin-bottom:10px">共 ${res.steps.length} 個步驟${res.output&&res.output.name?`，最終輸出「<b>${esc(res.output.name)}</b>」`:''}。點選步驟可在左側反白對應程式碼。</div>`;
+  res.steps.forEach((s,k)=>{
+    const ex=s.explain, fn=s.call&&s.call.fn;
+    const isOut=res.output&&res.output.name===s.name;
+    h+=`<div class="step" data-step="${k}">
+      <div><span class="no">${k+1}</span><span class="nm">${esc(s.name)}</span>${fn&&!fn.startsWith('(')&&fn!=='let'&&fn!=='each'?`<span class="fn" title="${esc(ex.fnDesc||'')}">${esc(fn)}</span>`:''}${isOut?'<span class="out">輸出</span>':''}</div>
+      <div class="sum">${esc(ex.summary)}</div>`;
+    if(ex.details.length) h+=`<ul>${ex.details.map(d=>{ const warn=s.issues.find(i=>i.ruleId==='R07'&&d.startsWith(i.message.slice(1,i.message.indexOf('」'))+' →')); return `<li>${esc(d)}${warn?` <span class="rid warning">⚠ R07 建議改為文字</span>`:''}</li>`; }).join('')}</ul>`;
+    if(ex.usedFns.length) h+=`<div class="used">使用函數：${ex.usedFns.map(f=>`<code>${esc(f.fn)}</code> ${esc(f.desc)}`).join('；')}</div>`;
+    h+=`<div class="dep">${s.deps.length?`⬅ 使用：${s.deps.map(esc).join('、')}`:'⬅ 起始步驟（未引用其他步驟）'}${usedBy[s.name]?`　➡ 被用於：${usedBy[s.name].map(esc).join('、')}`:'　➡ <span style="color:var(--warn)">沒有被使用</span>'}</div>`;
+    if(s.issues.length) h+=`<div class="iss">${s.issues.map(i=>`<button class="btn sm" data-goto="${esc(ik(i))}">${SEV_ICON[i.severity]} ${i.ruleId} ${esc(PQ.RULES[i.ruleId].title)}</button>`).join('')}</div>`;
+    h+=`</div>`;
+  });
+  el.innerHTML=h;
+}
+$('#tab-steps').addEventListener('click',ev=>{
+  if(ev.target.closest('[data-sample]')){ loadCode(SAMPLES[+ev.target.closest('[data-sample]').dataset.sample].code); return; }
+  const g=ev.target.closest('[data-goto]');
+  if(g){ const i=res.issues.find(x=>ik(x)===g.dataset.goto); if(i){ switchTab('issues'); filter='all'; renderIssues(); gotoIssue(i); const c=document.querySelector('#tab-issues .card.sel'); if(c) c.scrollIntoView({block:'center'}); } return; }
+  const d=ev.target.closest('[data-step]'); if(!d) return;
+  const s=res.steps[+d.dataset.step]; select(s.s,s.e);
+});
+
+/* ---------------- 流程圖 ---------------- */
+const PAL={
+  light:{bg:'#ffffff',node:'#ffffff',stroke:'#8a94a3',text:'#1f2328',sub:'#5f6b7a',edge:'#8a94a3',err:'#d13438',errBg:'#fde7e9',warn:'#c19c00',warnBg:'#fff4ce',out:'#107c10',outBg:'#dff6dd',num:'#0f6cbd',numBg:'#e8f1fb'},
+  dark:{bg:'#1b1d22',node:'#24282e',stroke:'#5d6673',text:'#e6e8eb',sub:'#9aa4b2',edge:'#7d8794',err:'#ff6b70',errBg:'#3d1f22',warn:'#f2c94c',warnBg:'#3a3219',out:'#6ccb5f',outBg:'#1d3320',num:'#6cb6ff',numBg:'#182c42'}
+};
+function trunc(s,n){ let w=0,o=''; for(const ch of s){ w+=/[\u2E80-\uFFFF]/.test(ch)?2:1.1; if(w>n){ return o+'…'; } o+=ch; } return o; }
+function flowSvg(p){
+  const st=res.steps, W=340, H=52, X=24, GY=30, T=16;
+  const idx=new Map(); st.forEach((s,i)=>{ if(!idx.has(s.name)) idx.set(s.name,i); });
+  const y=i=>T+i*(H+GY);
+  const outI=st.length;
+  const edges=[];
+  st.forEach((s,i)=>s.deps.forEach(d=>{ if(idx.has(d)) edges.push([idx.get(d),i]); }));
+  if(res.output) res.output.deps.forEach(d=>{ if(idx.has(d)) edges.push([idx.get(d),outI]); });
+  let maxOff=0; edges.forEach(([a,b])=>{ if(b!==a+1) maxOff=Math.max(maxOff,Math.abs(b-a)); });
+  const totalW=X+W+50+Math.min(maxOff,12)*14+20;
+  const totalH=y(res.output?outI:outI-1)+H+T+(res.output?0:0);
+  let g='';
+  g+=`<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="${p.edge}"/></marker></defs>`;
+  g+=`<rect width="100%" height="100%" fill="${p.bg}"/>`;
+  for(const [a,b] of edges){
+    if(b===a+1){ g+=`<line x1="${X+W/2}" y1="${y(a)+H}" x2="${X+W/2}" y2="${y(b)-2}" stroke="${p.edge}" stroke-width="1.6" marker-end="url(#ar)"/>`; }
+    else { const off=30+Math.min(Math.abs(b-a),12)*14, x0=X+W, ya=y(a)+H/2, yb=y(b)+H/2;
+      g+=`<path d="M${x0},${ya} C${x0+off},${ya} ${x0+off},${yb} ${x0+3},${yb}" fill="none" stroke="${p.edge}" stroke-width="1.4" stroke-dasharray="${b<a?'4 3':''}" marker-end="url(#ar)"/>`; }
+  }
+  st.forEach((s,i)=>{
+    const e=s.issues.some(x=>x.severity==='error'), w=!e&&s.issues.some(x=>x.severity==='warning');
+    const orphan=s.issues.some(x=>x.ruleId==='R06');
+    const isOut=res.output&&res.output.name===s.name;
+    const fill=e?p.errBg:w?p.warnBg:p.node, str=e?p.err:w?p.warn:isOut?p.out:p.stroke;
+    const fn=s.call&&s.call.fn&&!s.call.fn.startsWith('(')?s.call.fn:(s.call&&s.call.fn==='(function)'?'自訂函數':'運算式');
+    g+=`<g data-step="${i}" style="cursor:pointer"><title>${esc(s.name)}：${esc(s.explain.summary)}</title>
+      <rect x="${X}" y="${y(i)}" width="${W}" height="${H}" rx="8" fill="${fill}" stroke="${str}" stroke-width="${e||w||isOut?2:1.2}" ${orphan?'stroke-dasharray="6 4"':''}/>
+      <circle cx="${X+22}" cy="${y(i)+H/2}" r="12" fill="${p.numBg}"/><text x="${X+22}" y="${y(i)+H/2+4}" text-anchor="middle" font-size="12" font-weight="700" fill="${p.num}" font-family="Segoe UI, Microsoft JhengHei, sans-serif">${i+1}</text>
+      <text x="${X+44}" y="${y(i)+22}" font-size="14" font-weight="700" fill="${p.text}" font-family="Segoe UI, Microsoft JhengHei, sans-serif">${esc(trunc(s.name,30))}${e?' ⛔':w?' ⚠':''}</text>
+      <text x="${X+44}" y="${y(i)+40}" font-size="11.5" fill="${p.sub}" font-family="Consolas, Microsoft JhengHei, monospace">${esc(trunc(fn,40))}</text></g>`;
+  });
+  if(res.output){
+    const yy=y(outI);
+    g+=`<g><rect x="${X+W/2-60}" y="${yy}" width="120" height="${H-10}" rx="${(H-10)/2}" fill="${p.outBg}" stroke="${p.out}" stroke-width="2"/><text x="${X+W/2}" y="${yy+(H-10)/2+5}" text-anchor="middle" font-size="14" font-weight="700" fill="${p.out}" font-family="Segoe UI, Microsoft JhengHei, sans-serif">輸出</text></g>`;
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${totalW}" height="${totalH}" viewBox="0 0 ${totalW} ${totalH}">${g}</svg>`;
+}
+function renderFlow(){
+  const el=$('#tab-flow'); flowDirty=false;
+  if(!res || !res.steps.length){ el.innerHTML=res&&res.mode!=='empty'?'<div class="empty-state">沒有可繪製的步驟</div>':emptyState(); return; }
+  const dark=document.documentElement.dataset.theme==='dark';
+  el.innerHTML=`<div class="flow-acts"><button class="btn sm" data-x="svg">⬇ SVG</button><button class="btn sm" data-x="png">⬇ PNG</button><button class="btn sm" data-x="mmd">📋 複製 Mermaid</button>
+    <span class="legend"><span><i style="background:${PAL.light.errBg};border:1px solid ${PAL.light.err}"></i>錯誤</span><span><i style="background:${PAL.light.warnBg};border:1px solid ${PAL.light.warn}"></i>警告</span><span><i style="border:1px dashed var(--muted)"></i>孤兒步驟</span><span>虛線箭頭＝跨步驟引用</span></span></div>
+    <div class="flowwrap">${flowSvg(dark?PAL.dark:PAL.light)}</div>`;
+}
+$('#tab-flow').addEventListener('click',ev=>{
+  const x=ev.target.closest('[data-x]'); if(x){ doExport(x.dataset.x); return; }
+  if(ev.target.closest('[data-sample]')){ loadCode(SAMPLES[+ev.target.closest('[data-sample]').dataset.sample].code); return; }
+  const g=ev.target.closest('[data-step]'); if(g){ const s=res.steps[+g.dataset.step]; select(s.s,s.e); }
+});
+
+/* ---------------- 匯出 ---------------- */
+function download(name,data,type){
+  const blob=data instanceof Blob?data:new Blob([data],{type:type||'text/plain;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+}
+function baseName(){ const n=(res&&res.output&&res.output.name)||'查詢'; return n.replace(/[\\/:*?"<>|]/g,'_'); }
+function stamp(){ const d=new Date(), z=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}${z(d.getMonth()+1)}${z(d.getDate())}-${z(d.getHours())}${z(d.getMinutes())}`; }
+function buildMarkdown(){
+  const c=counts(), d=new Date();
+  const cell=s=>String(s).replace(/\|/g,'\\|').replace(/\n/g,' ');
+  let m=`# Power Query 查詢說明：${baseName()}\n\n`;
+  m+=`- 產生時間：${d.toLocaleString('zh-TW',{hour12:false})}\n- 步驟數：${res.steps.length}\n- 最終輸出：${res.output&&res.output.name?res.output.name:'（未指定）'}\n- 檢查結果：🔴 錯誤 ${c.error}、🟡 警告 ${c.warning}、🔵 建議 ${c.info}\n\n`;
+  m+=`## 步驟說明\n\n`;
+  res.steps.forEach((s,k)=>{
+    const fn=s.call&&s.call.fn&&!s.call.fn.startsWith('(')?`（\`${s.call.fn}\`）`:'';
+    m+=`### ${k+1}. ${s.name}${fn}\n\n${s.explain.summary}\n\n`;
+    if(s.explain.details.length) m+=s.explain.details.map(x=>`- ${x}`).join('\n')+'\n\n';
+    m+=`- 使用步驟：${s.deps.length?s.deps.join('、'):'（無，起始步驟）'}\n`;
+    if(s.issues.length) m+=s.issues.map(i=>`- ${SEV_ICON[i.severity]} **${i.ruleId}** ${i.message}`).join('\n')+'\n';
+    m+='\n';
+  });
+  m+=`## 問題清單\n\n`;
+  if(!res.issues.length) m+='沒有發現問題。\n\n';
+  else { m+=`| 等級 | 規則 | 行 | 說明 | 建議修正 |\n|---|---|---|---|---|\n`;
+    res.issues.forEach(i=>{ m+=`| ${SEV_ICON[i.severity]} ${SEV_ZH[i.severity]} | ${i.ruleId} ${cell(PQ.RULES[i.ruleId].title)} | ${i.line} | ${cell(i.message)} | ${i.fix?cell(i.fix.label):'—'} |\n`; }); m+='\n'; }
+  if(res.steps.length) m+=`## 步驟流程圖\n\n\`\`\`mermaid\n${PQ.toMermaid(res)}\n\`\`\`\n\n`;
+  m+=`## 原始程式碼\n\n\`\`\`powerquery\n${code.value}\n\`\`\`\n`;
+  const fixed=fixAll(code.value);
+  if(fixed!==code.value) m+=`\n## 自動修正後程式碼\n\n\`\`\`powerquery\n${fixed}\n\`\`\`\n`;
+  m+=`\n---\n*由 PQ Debugger 於本機產生*\n`;
+  return m;
+}
+function svgToPng(svg,cb){
+  const img=new Image();
+  img.onload=()=>{ const sc=2, cv=document.createElement('canvas'); cv.width=img.width*sc; cv.height=img.height*sc; const cx=cv.getContext('2d'); cx.scale(sc,sc); cx.drawImage(img,0,0); cv.toBlob(cb,'image/png'); };
+  img.onerror=()=>toast('PNG 轉檔失敗，請改用 SVG');
+  img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+}
+function doExport(kind){
+  if(!res || res.mode==='empty'){ toast('請先貼上 M Code'); return; }
+  const nm=`${baseName()}_${stamp()}`;
+  if(kind==='md'){ download(nm+'.md',buildMarkdown(),'text/markdown;charset=utf-8'); toast('已匯出 Markdown 說明文件'); }
+  else if(kind==='pq'){ download(nm+'_修正版.pq',fixAll(code.value)); toast('已匯出修正後程式碼'); }
+  else if(kind==='mmd'){ copyText(PQ.toMermaid(res)).then(()=>toast('已複製 Mermaid 語法')); }
+  else if(!res.steps.length){ toast('沒有可匯出的流程圖'); }
+  else if(kind==='svg'){ download(nm+'_流程圖.svg',flowSvg(PAL.light),'image/svg+xml'); toast('已匯出 SVG'); }
+  else if(kind==='png'){ svgToPng(flowSvg(PAL.light),b=>{ if(b){ download(nm+'_流程圖.png',b); toast('已匯出 PNG'); } }); }
+}
+
+/* ---------------- 剪貼簿、提示 ---------------- */
+function copyText(t){
+  const fb=()=>{ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); };
+  if(navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(t).catch(fb);
+  fb(); return Promise.resolve();
+}
+let toastT=null;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+
+/* ---------------- 歷史 ---------------- */
+function saveHistory(src){
+  if(!src.trim()) return;
+  const title=(res&&res.output&&res.output.name)||(res&&res.steps[0]&&res.steps[0].name)||src.trim().split('\n')[0].slice(0,30);
+  DB.addHistory({t:Date.now(),title,steps:res?res.steps.length:0,issues:res?res.issues.length:0,code:src});
+}
+function renderHistMenu(){
+  const h=DB.listHistory(); const m=$('#menuHist');
+  if(!h.length){ m.innerHTML='<div class="empty">尚無歷史紀錄<br><span class="hint">按「檢查」或貼上程式碼後會自動保存</span></div>'; return; }
+  m.innerHTML=(DB.ready?'':'<div class="empty" style="color:var(--warn)">⚠ 瀏覽器不允許 IndexedDB，紀錄只保留到關閉分頁</div>')+h.map((x,k)=>`<button data-h="${k}">${esc(x.title)}<span class="meta">${new Date(x.t).toLocaleString('zh-TW',{hour12:false})}・${x.steps} 步驟・${x.issues} 問題</span></button>`).join('')+'<hr><button data-h="clear" style="color:var(--err)">🗑 清除全部歷史</button>';
+}
+$('#menuHist').addEventListener('click',ev=>{
+  const b=ev.target.closest('[data-h]'); if(!b) return; closeMenus();
+  if(b.dataset.h==='clear'){ DB.clearHistory().then(()=>toast('已清除歷史紀錄')); return; }
+  const x=DB.listHistory()[+b.dataset.h]; if(x) loadCode(x.code,false);
+});
+
+/* ---------------- 選單 ---------------- */
+function closeMenus(){ document.querySelectorAll('.menu.open').forEach(m=>m.classList.remove('open')); }
+function toggleMenu(id,before){ const m=$(id); const open=!m.classList.contains('open'); closeMenus(); if(open){ if(before) before(); m.classList.add('open'); } }
+$('#menuSample').innerHTML=SAMPLES.map((s,k)=>`<button data-s="${k}">${esc(s.title)}<span class="meta">${esc(s.desc)}</span></button>`).join('');
+$('#btnSample').onclick=e=>{ e.stopPropagation(); toggleMenu('#menuSample'); };
+$('#btnHist').onclick=e=>{ e.stopPropagation(); toggleMenu('#menuHist',renderHistMenu); };
+$('#btnExport').onclick=e=>{ e.stopPropagation(); toggleMenu('#menuExport'); };
+$('#menuSample').addEventListener('click',ev=>{ const b=ev.target.closest('[data-s]'); if(!b) return; closeMenus(); loadCode(SAMPLES[+b.dataset.s].code); });
+$('#menuExport').addEventListener('click',ev=>{ const b=ev.target.closest('[data-x]'); if(!b) return; closeMenus(); doExport(b.dataset.x); });
+document.addEventListener('click',ev=>{ if(!ev.target.closest('.dd')) closeMenus(); });
+
+function loadCode(v,save=true){
+  if(code.value && code.value!==v) undoStack.push(code.value);
+  code.value=v; code.scrollTop=0; code.scrollLeft=0; filter='all'; selKey=null; openDiff.clear();
+  run({save}); switchTab('issues'); code.focus(); code.setSelectionRange(0,0); updateCursor();
+}
+
+/* ---------------- 工具列 ---------------- */
+$('#btnCheck').onclick=()=>{ run({save:true}); const c=counts(); toast(res.mode==='empty'?'請先貼上 M Code':`檢查完成：錯誤 ${c.error}、警告 ${c.warning}、建議 ${c.info}`); };
+$('#btnApplyAll').onclick=applyAll;
+$('#btnCopyFixed').onclick=()=>{
+  if(!code.value.trim()){ toast('請先貼上 M Code'); return; }
+  const v=fixAll(code.value); const r=PQ.analyze(v,cfg); const c={error:0,warning:0,info:0}; r.issues.forEach(i=>c[i.severity]++);
+  copyText(v).then(()=>toast(v===code.value?`已複製程式碼（沒有可自動修正的項目）`:`已複製修正版 ✔　剩餘 錯誤 ${c.error}、警告 ${c.warning}、建議 ${c.info}`));
+};
+$('#btnClear').onclick=()=>{ if(!code.value) return; setCode(''); errMsg.value=''; run(); toast('已清空（可在問題分頁復原）'); };
+$('#btnTheme').onclick=()=>{ const d=document.documentElement.dataset.theme==='dark'?'light':'dark'; applyTheme(d); store.set(LS.theme,d); };
+function applyTheme(t){ document.documentElement.dataset.theme=t; $('#btnTheme').textContent=t==='dark'?'☀️':'🌙'; if(res && curTab==='flow') renderFlow(); else flowDirty=true; }
+
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>switchTab(t.dataset.tab));
+function switchTab(k){
+  curTab=k;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===k));
+  ['issues','steps','flow'].forEach(x=>$('#tab-'+x).classList.toggle('hidden',x!==k));
+  if(k==='flow' && (flowDirty || !$('#tab-flow').innerHTML)) renderFlow();
+}
+
+/* ---------------- 設定 ---------------- */
+const dlg=$('#dlgSettings');
+function fillSettings(c){
+  $('#setKw').value=c.idKeywords.join(', ');
+  $('#setRules').innerHTML=Object.entries(PQ.RULES).map(([k,r])=>`<label><input type="checkbox" value="${k}" ${c.disabled.includes(k)?'':'checked'}> ${SEV_ICON[r.sev]} ${k} ${esc(r.title)}</label>`).join('');
+}
+$('#btnSettings').onclick=()=>{ fillSettings(cfg); showUsage(); dlg.showModal(); };
+$('#setCancel').onclick=()=>dlg.close();
+$('#setReset').onclick=()=>fillSettings({idKeywords:PQ.DEFAULT_ID_KEYWORDS.slice(),disabled:[]});
+$('#setSave').onclick=()=>{
+  const kw=$('#setKw').value.split(/[,，、\n]/).map(s=>s.trim()).filter(Boolean);
+  const dis=[...document.querySelectorAll('#setRules input')].filter(x=>!x.checked).map(x=>x.value);
+  cfg={idKeywords:kw.length?kw:PQ.DEFAULT_ID_KEYWORDS.slice(),disabled:dis}; store.set(LS.cfg,cfg); dlg.close(); run(); toast('設定已儲存');
+};
+$('#btnClearAll').onclick=()=>{ DB.clearAll().then(()=>{ cfg=loadCfg(); fillSettings(cfg); showUsage(); toast('已清除歷史紀錄與所有設定'); }); };
+function showUsage(){ const el=$('#storeInfo'); if(!el) return; if(!DB.ready){ el.textContent='儲存方式：僅記憶體（此瀏覽器無法使用 IndexedDB，關閉分頁後資料會消失）'; return; } DB.usage().then(u=>{ el.textContent=`儲存方式：IndexedDB（資料庫 PQDebugger）・歷史 ${DB.listHistory().length}/${HIST_MAX} 筆`+(u!=null?`・本網域已用約 ${(u/1024).toFixed(1)} KB`:''); }); }
+
+/* ---------------- 編輯器行為 ---------------- */
+function insertText(t){
+  code.focus();
+  if(!document.execCommand || !document.execCommand('insertText',false,t)) code.setRangeText(t,code.selectionStart,code.selectionEnd,'end');
+}
+code.addEventListener('keydown',ev=>{
+  if((ev.ctrlKey||ev.metaKey) && ev.key==='Enter'){ ev.preventDefault(); $('#btnCheck').click(); return; }
+  if((ev.ctrlKey||ev.metaKey) && !ev.shiftKey && ev.key.toLowerCase()==='z' && undoStack.length && code.value===fixedVal){ ev.preventDefault(); undo(); return; }
+  if(ev.key==='Tab'){
+    ev.preventDefault();
+    const v=code.value, s=code.selectionStart, e=code.selectionEnd;
+    const ls=v.lastIndexOf('\n',s-1)+1;
+    if(s===e && !ev.shiftKey){ insertText('    '); return; }
+    const le=v.indexOf('\n',e-(e>s&&v[e-1]==='\n'?1:0)); const end=le<0?v.length:le;
+    const block=v.slice(ls,end);
+    const nb=ev.shiftKey?block.replace(/^( {1,4}|\t)/gm,''):block.replace(/^/gm,'    ');
+    code.setSelectionRange(ls,end); insertText(nb); code.setSelectionRange(ls,ls+nb.length);
+    return;
+  }
+  if(ev.key==='Enter' && !ev.shiftKey && !ev.ctrlKey){
+    const v=code.value, s=code.selectionStart;
+    const ls=v.lastIndexOf('\n',s-1)+1; const line=v.slice(ls,s);
+    let ind=(line.match(/^\s*/)||[''])[0];
+    if(/(\blet|[({\[])\s*$/.test(line)) ind+='    ';
+    ev.preventDefault(); insertText('\n'+ind);
+  }
+});
+code.addEventListener('input',()=>{ renderEditor(); schedule(); updateCursor(); });
+code.addEventListener('paste',()=>setTimeout(()=>run({save:true}),0));
+code.addEventListener('scroll',syncScroll);
+errMsg.addEventListener('input',()=>{ clearTimeout(timer); timer=setTimeout(()=>run(),300); });
+function updateCursor(){
+  const v=code.value, s=code.selectionStart;
+  const line=v.slice(0,s).split('\n').length, col=s-v.lastIndexOf('\n',s-1);
+  $('#cursorPos').textContent=`第 ${line} 行，第 ${col} 欄`+(code.selectionEnd>s?`（已選取 ${code.selectionEnd-s} 字元）`:'');
+  // 括號配對
+  let pair=null;
+  if(s===code.selectionEnd){
+    const toks=fresh()?res.toks:PQ.tokenize(v);
+    const sigP=toks.filter(t=>t.t==='punc' && '()[]{}'.includes(t.v));
+    const at=sigP.find(t=>t.s===s) || sigP.find(t=>t.e===s);
+    if(at){
+      const open='([{'.includes(at.v), mate={'(':')','[':']','{':'}',')':'(',']':'[','}':'{'}[at.v];
+      const k=sigP.indexOf(at); let d=0;
+      if(open){ for(let j=k;j<sigP.length;j++){ if(sigP[j].v===at.v) d++; else if(sigP[j].v===mate){ d--; if(!d){ pair=[at.s,sigP[j].s]; break; } } } }
+      else { for(let j=k;j>=0;j--){ if(sigP[j].v===at.v) d++; else if(sigP[j].v===mate){ d--; if(!d){ pair=[sigP[j].s,at.s]; break; } } } }
+    }
+  }
+  if(String(pair)!==String(bmPair)){ bmPair=pair; renderEditor(); }
+}
+document.addEventListener('selectionchange',()=>{ if(document.activeElement===code) updateCursor(); });
+
+/* ---------------- 初始化 ---------------- */
+const sysTheme=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';
+applyTheme(sysTheme);
+run();
+DB.open().then(()=>{
+  applyTheme(store.get(LS.theme,sysTheme));
+  cfg=loadCfg();
+  const draft=store.get(LS.draft,'');
+  if(draft && !code.value){ code.value=draft; }
+  run();
+  if(!DB.ready) toast('⚠ 此瀏覽器無法使用 IndexedDB，歷史與設定只保留到關閉分頁');
+});
+window.addEventListener('beforeunload',()=>{ if(code.value!==store.get(LS.draft,'')) store.set(LS.draft,code.value); });
+})();
+
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:52px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

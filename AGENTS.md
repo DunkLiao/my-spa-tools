@@ -38,6 +38,9 @@ my-spa-tools/
 │  ├─ api-mock-studio/           API Mock 與 cURL 格式轉換工作室
 │  ├─ data-quality-audit/        資料品質稽核中心（CSV／Excel 匯入、欄位剖析與規則檢核）
 │  ├─ data-relationship-explorer/ 資料關聯探索器（主外鍵推測、ER 圖與路徑／影響分析）
+│  ├─ excel-formula-map/         Excel 公式地圖（公式解析、依賴圖、熱區、循環與風險掃描）
+│  ├─ pdf-table-rescue/          PDF 表格救援站（PDF 表格框選、欄線校正、OCR 與批次匯出）
+│  ├─ pq-debugger/               PQ Debugger Power Query M 除錯工具（12 條規則、流程圖與修正）
 │  └─ screenshot-ocr-kb/         截圖 OCR 知識庫（Tesseract OCR、集合與操作流程；含 download_ocr_engine.bat）
 ├─ docs/                         文書與簡報
 │  ├─ project-gantt/  card-presenter/  docuformatter/  text-scrubber/
@@ -122,7 +125,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 42 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 45 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

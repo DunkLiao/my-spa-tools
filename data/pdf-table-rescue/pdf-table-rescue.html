@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF 表格救援站</title>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f4f6f9;--panel:#fff;--line:#dde2ea;--text:#1f2937;--muted:#6b7280;--pri:#2563eb;--green:#16a34a;--blue:#2563eb;--orange:#ea580c;--red:#dc2626;--gridH:38vh}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;font-size:13px;color:var(--text);background:var(--bg)}
+body{display:flex;flex-direction:column;overflow:hidden}
+button,select,input{font:inherit;color:inherit}
+.btn{border:1px solid var(--line);background:#fff;padding:5px 10px;border-radius:6px;cursor:pointer;white-space:nowrap;line-height:1.3}
+.btn:hover{background:#f1f5f9}
+.btn.pri{background:var(--pri);color:#fff;border-color:var(--pri)}
+.btn.pri:hover{background:#1d4ed8}
+.btn.danger{color:var(--red)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn.on{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+header.top{height:48px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#0f172a;color:#fff;flex:none}
+.brand{font-weight:700;font-size:15px;margin-right:6px;white-space:nowrap}
+.brand small{font-weight:400;color:#94a3b8;font-size:11px;margin-left:6px}
+header.top .btn{background:#1e293b;color:#e2e8f0;border-color:#334155}
+header.top .btn:hover{background:#334155}
+header.top .btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.spacer{flex:1}
+.proj-name{color:#94a3b8;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lock{color:#86efac;font-size:12px;white-space:nowrap}
+.menu{position:relative}
+.menu-pop{display:none;position:absolute;top:calc(100% + 4px);right:0;min-width:230px;background:#fff;color:var(--text);border:1px solid var(--line);border-radius:8px;box-shadow:0 10px 30px rgba(0,0,0,.18);padding:6px;z-index:50}
+.menu.left .menu-pop{left:0;right:auto}
+.menu.open .menu-pop{display:block}
+.menu-pop .mi{display:block;width:100%;text-align:left;border:0;background:none;padding:7px 10px;border-radius:6px;cursor:pointer}
+.menu-pop .mi:hover{background:#eff6ff}
+.menu-pop .sep{height:1px;background:var(--line);margin:5px 2px}
+.menu-pop .cap{font-size:11px;color:var(--muted);padding:4px 10px 2px}
+main{flex:1;display:grid;grid-template-columns:150px minmax(0,1fr) 320px;grid-template-rows:minmax(0,1fr) 6px var(--gridH);min-height:0}
+#thumbs{grid-row:1;grid-column:1;overflow:auto;background:#eef1f5;border-right:1px solid var(--line);padding:8px}
+.thumb{position:relative;margin:0 auto 10px;cursor:pointer;width:118px;text-align:center}
+.thumb canvas,.thumb .ph{display:block;width:118px;background:#fff;border:2px solid transparent;box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.thumb .ph{height:150px}
+.thumb.cur canvas,.thumb.cur .ph{border-color:var(--pri)}
+.thumb .pn{font-size:11px;color:var(--muted);margin-top:2px}
+.thumb .badge{position:absolute;top:4px;right:4px;font-size:10px;padding:1px 5px;border-radius:8px;color:#fff}
+.badge.ok{background:var(--green)}
+.badge.scan{background:#a16207;top:22px!important}
+#viewerWrap{grid-row:1;grid-column:2;display:flex;flex-direction:column;min-width:0;min-height:0}
+.vtool{display:flex;align-items:center;gap:6px;padding:6px 10px;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.vtool .grp{display:flex;gap:4px;align-items:center}
+.vtool .div{width:1px;height:22px;background:var(--line);margin:0 4px}
+.zoomv{min-width:46px;text-align:center;color:var(--muted)}
+.hint{color:var(--muted);font-size:12px;margin-left:auto}
+#banner{display:none;align-items:center;gap:8px;padding:7px 12px;background:#ecfdf5;border-bottom:1px solid #a7f3d0;color:#065f46}
+#banner.show{display:flex}
+#viewer{flex:1;overflow:auto;position:relative;background:#e5e7eb;min-height:0}
+#pageBox{position:relative;margin:16px auto;box-shadow:0 2px 12px rgba(0,0,0,.2);background:#fff}
+#pageCanvas{display:block}
+#overlay{position:absolute;left:0;top:0;user-select:none;touch-action:none}
+#overlay.m-box{cursor:crosshair}
+#overlay.m-col{cursor:col-resize}
+#overlay.m-row{cursor:row-resize}
+.seg-box{position:absolute;border:2px solid var(--green);background:rgba(22,163,74,.04);pointer-events:none}
+.seg-box.inactive{border-style:dashed;opacity:.6}
+.seg-box .lbl{position:absolute;top:-19px;left:-2px;background:var(--green);color:#fff;font-size:11px;padding:1px 6px;border-radius:3px;white-space:nowrap}
+.vline,.hline{position:absolute;pointer-events:auto;z-index:3}
+.vline{width:11px;margin-left:-5px;cursor:col-resize}
+.vline::after{content:"";position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--blue)}
+.hline{height:11px;margin-top:-5px;cursor:row-resize}
+.hline::after{content:"";position:absolute;top:5px;left:0;right:0;height:2px;background:var(--orange)}
+.vline:hover::after{background:#1e40af;width:3px}
+.hline:hover::after{background:#9a3412;height:3px}
+.ro{pointer-events:none;opacity:.35}
+.hline.auto{pointer-events:none}
+.hline.auto::after{height:0;border-top:1px dashed #f59e0b;background:none}
+.handle{position:absolute;width:11px;height:11px;margin:-5px 0 0 -5px;background:#fff;border:2px solid var(--green);z-index:4;pointer-events:auto}
+.handle.nw,.handle.se{cursor:nwse-resize}.handle.ne,.handle.sw{cursor:nesw-resize}
+.wbox{position:absolute;border:1px solid rgba(100,116,139,.5);pointer-events:none}
+.wbox.low{background:rgba(250,204,21,.4);border-color:#ca8a04}
+.draw-rect{position:absolute;border:2px dashed var(--green);background:rgba(22,163,74,.1);pointer-events:none}
+.drop{position:absolute;inset:24px;border:3px dashed #94a3b8;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#475569;gap:10px;text-align:center;background:rgba(255,255,255,.6)}
+.drop h2{margin:0;font-size:22px}
+.drop.hover{border-color:var(--pri);background:#eff6ff}
+#side{grid-row:1;grid-column:3;overflow:auto;background:var(--panel);border-left:1px solid var(--line)}
+.sec{padding:10px 12px;border-bottom:1px solid var(--line)}
+.sec h3{margin:0 0 8px;font-size:13px;display:flex;align-items:center;gap:6px}
+.sec h3 .r{margin-left:auto}
+.tlist{display:flex;flex-direction:column;gap:4px;max-height:200px;overflow:auto}
+.titem{display:flex;align-items:center;gap:6px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;cursor:pointer}
+.titem:hover{background:#f8fafc}
+.titem.act{border-color:var(--green);background:#f0fdf4}
+.titem .meta{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}
+.titem .warn{color:var(--red);font-size:11px}
+.row{display:flex;align-items:center;gap:6px;margin:6px 0;flex-wrap:wrap}
+.row label{color:#374151}
+.row .lab{width:78px;color:var(--muted);flex:none}
+.row input[type=text],.row input[type=number],.row select{border:1px solid var(--line);border-radius:5px;padding:4px 6px;background:#fff}
+.row input[type=text]{flex:1;min-width:0}
+.row input[type=number]{width:60px}
+.chk{display:flex;align-items:center;gap:6px;margin:5px 0;cursor:pointer}
+.btns{display:flex;flex-wrap:wrap;gap:5px}
+.muted{color:var(--muted)}
+.small{font-size:11px}
+.empty-side{color:var(--muted);padding:6px 0;line-height:1.7}
+.vres{font-size:12px;line-height:1.7}
+.vres .bad{color:var(--red)}
+.vres .ok{color:var(--green)}
+.vres a{cursor:pointer;text-decoration:underline}
+#splitter{grid-row:2;grid-column:1/4;background:#d6dbe3;cursor:row-resize}
+#splitter:hover{background:#93c5fd}
+#gridPanel{grid-row:3;grid-column:1/4;display:flex;flex-direction:column;background:#fff;min-height:0}
+.gtool{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:1px solid var(--line)}
+.gtool .title{font-weight:700}
+.legend{display:flex;gap:10px;font-size:11px;color:var(--muted);margin-left:auto;align-items:center}
+.legend i{display:inline-block;width:12px;height:12px;border:1px solid #ccc;vertical-align:-2px;margin-right:3px}
+#gridWrap{flex:1;overflow:auto;min-height:0}
+#gridWrap .empty{color:var(--muted);padding:24px;text-align:center}
+table.grid{border-collapse:collapse;font-size:12px}
+.grid td,.grid th{border:1px solid #e2e8f0;padding:3px 6px;white-space:pre-wrap;min-width:64px;max-width:380px;vertical-align:top;word-break:break-word}
+.grid thead th{position:sticky;top:0;background:#f1f5f9;z-index:2;font-weight:600;padding:3px 4px}
+.grid thead th select{font-size:11px;border:1px solid var(--line);border-radius:4px;margin-top:2px;width:100%;background:#fff}
+.grid th.rn{position:sticky;left:0;background:#f8fafc;color:#94a3b8;font-weight:400;min-width:38px;text-align:right;z-index:1}
+.grid thead th.rn{z-index:3}
+.grid tr.hdr td{background:#eef2ff;font-weight:600}
+.grid td.num{text-align:right;font-variant-numeric:tabular-nums}
+.grid td.bad,.grid td.low{background:#fef3c7}
+.grid td.mis{background:#fee2e2;color:#991b1b;box-shadow:inset 0 0 0 1px #f87171}
+.grid td.sumok{background:#dcfce7}
+.grid td.edited{box-shadow:inset 3px 0 0 #a855f7}
+.grid td:focus{outline:2px solid var(--pri);outline-offset:-2px;background:#fff}
+.grid td.merged{background-image:linear-gradient(135deg,rgba(37,99,235,.06) 25%,transparent 25%)}
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:200}
+.toast{background:#111827;color:#fff;padding:9px 14px;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.25);max-width:420px;animation:fi .2s}
+.toast.err{background:#b91c1c}.toast.ok{background:#15803d}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+#busy{position:fixed;inset:0;background:rgba(15,23,42,.45);display:none;align-items:center;justify-content:center;z-index:150}
+#busy.show{display:flex}
+#busy .box{background:#fff;border-radius:12px;padding:20px 24px;width:400px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+#busy .msg{margin-bottom:10px}
+#busy .bar{height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden}
+#busy .bar div{height:100%;background:var(--pri);width:0;transition:width .15s}
+dialog{border:0;border-radius:12px;padding:0;box-shadow:0 20px 60px rgba(0,0,0,.35);width:min(760px,94vw);max-height:88vh}
+dialog::backdrop{background:rgba(15,23,42,.45)}
+.dlg-h{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
+.dlg-h .x{margin-left:auto}
+.dlg-b{padding:14px 16px;overflow:auto;max-height:calc(88vh - 110px)}
+.dlg-f{display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid var(--line)}
+table.list{width:100%;border-collapse:collapse}
+table.list th,table.list td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+table.list th{color:var(--muted);font-weight:400;font-size:12px}
+.preview{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:6px;margin-top:8px}
+.preview table{border-collapse:collapse;font-size:11px}
+.preview td{border:1px solid #eee;padding:2px 5px;white-space:nowrap}
+.log{font-size:12px;color:#374151;background:#f8fafc;border:1px solid var(--line);border-radius:6px;padding:8px;max-height:140px;overflow:auto;margin-top:8px;white-space:pre-wrap}
+kbd{background:#f1f5f9;border:1px solid #cbd5e1;border-radius:3px;padding:0 4px;font-size:11px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">🛟 PDF 表格救援站<small>v1.0</small></div>
+  <button class="btn pri" id="btnOpen" title="開啟 PDF（也可直接拖入）">📂 開啟 PDF</button>
+  <div class="menu left" id="mProj">
+    <button class="btn" data-menu>🗂 專案 ▾</button>
+    <div class="menu-pop" id="projPop"></div>
+  </div>
+  <div class="menu left" id="mTpl">
+    <button class="btn" data-menu>📐 範本 ▾</button>
+    <div class="menu-pop">
+      <button class="mi" data-cmd="tplSave">💾 將目前表格存成範本</button>
+      <button class="mi" data-cmd="tplManage">📋 套用／管理範本…</button>
+    </div>
+  </div>
+  <button class="btn" id="btnBatch" title="以範本一次處理多份 PDF">📚 批次處理</button>
+  <span class="proj-name" id="projName"></span>
+  <div class="spacer"></div>
+  <span class="lock" title="所有解析都在瀏覽器內完成">🔒 檔案不上傳，只在本機處理</span>
+  <div class="menu" id="mExport">
+    <button class="btn pri" data-menu>⬇ 匯出 ▾</button>
+    <div class="menu-pop">
+      <div class="cap">目前表格</div>
+      <button class="mi" data-cmd="exXlsx">Excel（.xlsx）</button>
+      <button class="mi" data-cmd="exCsv">CSV（UTF-8，Excel 可直接開）</button>
+      <button class="mi" data-cmd="exJson">JSON</button>
+      <button class="mi" data-cmd="exMd">Markdown</button>
+      <button class="mi" data-cmd="exClip">📋 複製到剪貼簿（貼進 Excel 自動分欄）</button>
+      <div class="sep"></div>
+      <div class="cap">全部表格</div>
+      <button class="mi" data-cmd="exXlsxAll">Excel（每個表格一個工作表）</button>
+      <button class="mi" data-cmd="exJsonAll">JSON（全部表格）</button>
+    </div>
+  </div>
+</header>
+<input type="file" id="fileInput" accept="application/pdf,.pdf" hidden>
+
+<main>
+  <aside id="thumbs"></aside>
+
+  <section id="viewerWrap">
+    <div class="vtool">
+      <div class="grp">
+        <button class="btn sm on" data-mode="select" title="選取表格、拖動欄線列線（V）">👆 選取</button>
+        <button class="btn sm" data-mode="box" title="拖曳框出新表格（B）">▭ 框選表格</button>
+        <button class="btn sm" data-mode="col" title="在表格內點一下新增欄線（C）">┃ 欄線</button>
+        <button class="btn sm" data-mode="row" title="在表格內點一下新增列線（R）">━ 列線</button>
+      </div>
+      <div class="div"></div>
+      <div class="grp">
+        <button class="btn sm" id="zOut" title="縮小（-）">－</button>
+        <span class="zoomv" id="zoomVal">100%</span>
+        <button class="btn sm" id="zIn" title="放大（+）">＋</button>
+        <button class="btn sm" id="zFit">適合寬度</button>
+      </div>
+      <div class="div"></div>
+      <div class="grp">
+        <button class="btn sm" id="pPrev" title="上一頁（PageUp）">◀</button>
+        <span id="pageVal" class="muted">–</span>
+        <button class="btn sm" id="pNext" title="下一頁（PageDown）">▶</button>
+      </div>
+      <div class="div"></div>
+      <div class="grp">
+        <label class="chk small"><input type="checkbox" id="showWords">顯示文字框</label>
+        <button class="btn sm" id="btnDetectPage">🔍 偵測本頁</button>
+        <button class="btn sm" id="btnDetectAll">🔍 偵測全部頁</button>
+      </div>
+      <span class="hint" id="modeHint">雙擊或右鍵線條可刪除</span>
+    </div>
+    <div id="banner"></div>
+    <div id="viewer">
+      <div class="drop" id="drop">
+        <div style="font-size:48px">🛟</div>
+        <h2>把 PDF 拖進來</h2>
+        <div>或點左上角「開啟 PDF」。檔案只在瀏覽器裡處理，不會上傳。</div>
+        <div class="muted small" id="libStatus"></div>
+      </div>
+      <div id="pageBox" style="display:none">
+        <canvas id="pageCanvas"></canvas>
+        <div id="overlay"></div>
+      </div>
+    </div>
+  </section>
+
+  <aside id="side"></aside>
+  <div id="splitter" title="拖曳調整高度"></div>
+
+  <section id="gridPanel">
+    <div class="gtool">
+      <span class="title" id="gridTitle">表格預覽</span>
+      <span class="muted" id="gridStat"></span>
+      <button class="btn sm" data-cmd="exClip">📋 複製</button>
+      <button class="btn sm" data-cmd="exXlsx">⬇ xlsx</button>
+      <button class="btn sm" data-cmd="exCsv">⬇ csv</button>
+      <div class="legend">
+        <span><i style="background:#eef2ff"></i>表頭</span>
+        <span><i style="background:#fef3c7"></i>異常值／OCR 可信度低</span>
+        <span><i style="background:#fee2e2"></i>加總不符</span>
+        <span><i style="background:#dcfce7"></i>加總相符</span>
+        <span><i style="box-shadow:inset 3px 0 0 #a855f7"></i>手動修改</span>
+      </div>
+    </div>
+    <div id="gridWrap"><div class="empty">尚未選取表格</div></div>
+  </section>
+</main>
+
+<div id="busy"><div class="box"><div class="msg" id="busyMsg">處理中…</div><div class="bar"><div id="busyBar"></div></div></div></div>
+<div id="toasts"></div>
+
+<dialog id="dlgTpl">
+  <div class="dlg-h">📐 範本<button class="btn sm x" data-close>✕</button></div>
+  <div class="dlg-b" id="tplBody"></div>
+  <div class="dlg-f"><button class="btn" data-close>關閉</button></div>
+</dialog>
+
+<dialog id="dlgBatch">
+  <div class="dlg-h">📚 批次處理（同格式 PDF 合併成一張表）<button class="btn sm x" data-close>✕</button></div>
+  <div class="dlg-b">
+    <div class="row"><span class="lab">使用範本</span><select id="bTpl" style="flex:1"></select></div>
+    <div class="row"><span class="lab">PDF 檔案</span><input type="file" id="bFiles" accept="application/pdf,.pdf" multiple></div>
+    <div class="row"><span class="lab">處理頁面</span>
+      <label class="chk"><input type="radio" name="bPages" value="first" checked>只處理第 1 頁</label>
+      <label class="chk"><input type="radio" name="bPages" value="match">表頭相符的頁</label>
+      <label class="chk"><input type="radio" name="bPages" value="all">全部頁</label>
+    </div>
+    <div class="row"><span class="lab">附加欄位</span><label class="chk"><input type="checkbox" id="bSrc" checked>加入「來源檔案」「頁碼」欄</label></div>
+    <div class="log" id="bLog" style="display:none"></div>
+    <div id="bResult"></div>
+  </div>
+  <div class="dlg-f">
+    <button class="btn" id="bXlsx" disabled>⬇ xlsx</button>
+    <button class="btn" id="bCsv" disabled>⬇ csv</button>
+    <button class="btn pri" id="bRun">開始處理</button>
+  </div>
+</dialog>
+<script>
+'use strict';
+/* ===== CORE START：解析演算法（不依賴畫面） ===== */
+const PDFJS_BASE = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/';
+const TESS_URL = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const clone = o => JSON.parse(JSON.stringify(o));
+const ov = (a0, a1, b0, b1) => Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
+const isCJK = ch => !!ch && /[\u3000-\u303f\u3400-\u9fff\uf900-\ufaff\uff00-\uffef]/.test(ch);
+const pad2 = n => String(n).padStart(2, '0');
+const round6 = n => Math.round(n * 1e6) / 1e6;
+const inBox = (w, b) => { const cx = (w.x0 + w.x1) / 2, cy = (w.y0 + w.y1) / 2; return cx >= b.x0 && cx <= b.x1 && cy >= b.y0 && cy <= b.y1; };
+function colName(i) { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+function hashStr(s) { let h = 2166136261; for (const ch of s) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619); } return (h >>> 0).toString(16); }
+function normText(s) { return (s || '').replace(/\s+/g, '').toLowerCase(); }
+function sim(a, b) {
+  a = normText(a); b = normText(b);
+  if (!a || !b) return 0; if (a === b) return 1;
+  if (a.length < 2 || b.length < 2) return 0;
+  const bg = s => { const m = new Map(); for (let i = 0; i < s.length - 1; i++) { const k = s.slice(i, i + 2); m.set(k, (m.get(k) || 0) + 1); } return m; };
+  const A = bg(a), B = bg(b); let inter = 0;
+  for (const [k, v] of A) if (B.has(k)) inter += Math.min(v, B.get(k));
+  return 2 * inter / ((a.length - 1) + (b.length - 1));
+}
+function dedupeNums(arr, tol = 3) {
+  const s = arr.slice().sort((a, b) => a - b), out = [];
+  for (const x of s) { const l = out[out.length - 1]; if (l && x - l.v <= tol) { l.v = (l.v * l.n + x) / (l.n + 1); l.n++; } else out.push({ v: x, n: 1 }); }
+  return out.map(o => Math.round(o.v * 100) / 100);
+}
+const fingerprint = (w, h, hdr) => `${Math.round(w)}x${Math.round(h)}#${hashStr(normText(hdr))}`;
+
+/* ---------- PDF 文字擷取 ---------- */
+function extractWords(items, vpTransform, Util) {
+  const words = []; let total = 0, bad = 0;
+  for (const it of items) {
+    const str = it.str; if (!str || !str.trim()) continue;
+    const tx = Util.transform(vpTransform, it.transform);
+    const fh = Math.hypot(tx[2], tx[3]) || Math.abs(it.height) || 8;
+    const x = tx[4], base = tx[5];
+    const chars = [...str];
+    const wts = chars.map(ch => isCJK(ch) ? 1 : (ch === ' ' ? 0.3 : 0.55));
+    const sum = wts.reduce((a, b) => a + b, 0) || 1;
+    const w = it.width > 0 ? it.width : fh * sum;
+    const unit = w / sum; const pos = []; let cx = x;
+    for (let i = 0; i < chars.length; i++) { pos.push(cx); cx += wts[i] * unit; } pos.push(cx);
+    for (const ch of chars) if (ch.trim()) { total++; const cp = ch.codePointAt(0); if (cp === 0xFFFD || (cp >= 0xE000 && cp <= 0xF8FF) || cp < 0x20) bad++; }
+    // 以「連續兩個以上空白」切開，避免一個 item 跨越多欄
+    let i = 0;
+    while (i < chars.length) {
+      while (i < chars.length && !chars[i].trim()) i++;
+      if (i >= chars.length) break;
+      let j = i, end = i;
+      while (j < chars.length) {
+        if (chars[j].trim()) { end = j; j++; continue; }
+        let k = j; while (k < chars.length && !chars[k].trim()) k++;
+        if (k - j >= 2 || k >= chars.length) break;
+        j = k;
+      }
+      words.push({ x0: pos[i], x1: pos[end + 1], y0: base - fh * 0.88, y1: base + fh * 0.12, text: chars.slice(i, end + 1).join('') });
+      i = end + 1;
+    }
+  }
+  const garbled = total > 0 && bad / total > 0.2;
+  return { words: garbled ? [] : words, scan: words.length < 5 || garbled, garbled };
+}
+
+/* ---------- 框線偵測（像素投影，免 OpenCV） ---------- */
+function scanRuns(dark, W, H, horiz, minLen) {
+  const outer = horiz ? H : W, inner = horiz ? W : H;
+  const lines = []; let open = [];
+  for (let o = 0; o < outer; o++) {
+    const runs = []; let start = -1, last = -1;
+    for (let i = 0; i <= inner; i++) {
+      const on = i < inner && dark[horiz ? o * W + i : i * W + o];
+      if (on) { if (start < 0) start = i; last = i; }
+      else if (start >= 0 && (i - last > 2 || i === inner)) { if (last - start + 1 >= minLen) runs.push([start, last]); start = -1; }
+    }
+    const next = [];
+    for (const r of runs) {
+      let hit = null;
+      for (const L of open) if (o - L.end <= 1 && ov(r[0], r[1] + 1, L.a0, L.a1 + 1) > 0) { hit = L; break; }
+      if (hit) { hit.end = o; hit.segs.push(r); hit.a0 = Math.min(hit.a0, r[0]); hit.a1 = Math.max(hit.a1, r[1]); if (!next.includes(hit)) next.push(hit); }
+      else { const L = { start: o, end: o, a0: r[0], a1: r[1], segs: [r] }; lines.push(L); next.push(L); }
+    }
+    open = next;
+  }
+  const out = [];
+  for (const L of lines) {
+    if (L.end - L.start + 1 > 8) continue; // 太粗＝色塊，不是線
+    const s = L.segs.slice().sort((a, b) => a[0] - b[0]), u = [];
+    for (const g of s) { const t = u[u.length - 1]; if (t && g[0] <= t[1] + 3) t[1] = Math.max(t[1], g[1]); else u.push([g[0], g[1]]); }
+    out.push({ pos: (L.start + L.end) / 2, a0: L.a0, a1: L.a1, segs: u });
+  }
+  return out;
+}
+function detectLinesFromImage(data, W, H, S) {
+  const dark = new Uint8Array(W * H);
+  for (let i = 0, j = 0; i < W * H; i++, j += 4) dark[i] = (data[j] * 299 + data[j + 1] * 587 + data[j + 2] * 114) < 170000 ? 1 : 0;
+  const h = scanRuns(dark, W, H, true, 20 * S), v = scanRuns(dark, W, H, false, 12 * S);
+  return {
+    h: h.map(l => ({ y: l.pos / S, x0: l.a0 / S, x1: l.a1 / S, segs: l.segs.map(s => [s[0] / S, s[1] / S]) })),
+    v: v.map(l => ({ x: l.pos / S, y0: l.a0 / S, y1: l.a1 / S, segs: l.segs.map(s => [s[0] / S, s[1] / S]) }))
+  };
+}
+
+/* ---------- 列分群 / 欄投影 ---------- */
+function clusterRows(ws) {
+  const s = ws.slice().sort((a, b) => (a.y0 + a.y1) - (b.y0 + b.y1)); const rows = [];
+  for (const w of s) {
+    const cy = (w.y0 + w.y1) / 2, h = w.y1 - w.y0, r = rows[rows.length - 1];
+    if (r && Math.abs(cy - r.cy) < Math.max(1.5, 0.5 * Math.min(h, r.h))) {
+      r.words.push(w); r.cy = (r.cy * (r.words.length - 1) + cy) / r.words.length;
+      r.y0 = Math.min(r.y0, w.y0); r.y1 = Math.max(r.y1, w.y1); r.h = Math.max(r.h, h);
+    } else rows.push({ cy, h, y0: w.y0, y1: w.y1, words: [w] });
+  }
+  return rows;
+}
+function autoColumns(words, b) {
+  const bw = b.x1 - b.x0, W = Math.ceil(bw); if (W <= 0) return [];
+  const ws = words.filter(w => inBox(w, b) && (w.x1 - w.x0) < 0.4 * bw);
+  if (ws.length < 2) return [];
+  const nRows = clusterRows(ws).length;
+  const cov = new Uint16Array(W + 1);
+  for (const w of ws) { const a = Math.max(0, Math.floor(w.x0 - b.x0)), z = Math.min(W, Math.ceil(w.x1 - b.x0)); for (let i = a; i <= z; i++) cov[i]++; }
+  const t = nRows >= 20 ? Math.floor(nRows * 0.05) : 0;
+  const hs = ws.map(w => w.y1 - w.y0).sort((a, c) => a - c); const mh = hs[hs.length >> 1] || 8;
+  const minGap = Math.max(3, mh * 0.35);
+  let first = 0; while (first <= W && cov[first] <= t) first++;
+  let last = W; while (last >= 0 && cov[last] <= t) last--;
+  const lines = []; let i = first;
+  while (i <= last) {
+    if (cov[i] <= t) { let j = i; while (j <= last && cov[j] <= t) j++; if (j - i >= minGap) lines.push(Math.round((b.x0 + (i + j) / 2) * 100) / 100); i = j; }
+    else i++;
+  }
+  return lines;
+}
+function autoRowLines(words, b) {
+  const rows = clusterRows(words.filter(w => inBox(w, b)));
+  const out = [];
+  for (let i = 1; i < rows.length; i++) out.push(Math.round(((rows[i - 1].y1 + rows[i].y0) / 2) * 100) / 100);
+  return out;
+}
+
+/* ---------- 表格區域偵測 ---------- */
+function textRegions(words) {
+  const rows = clusterRows(words);
+  for (const r of rows) {
+    r.words.sort((a, b) => a.x0 - b.x0); let segs = 1;
+    for (let i = 1; i < r.words.length; i++) if (r.words[i].x0 - r.words[i - 1].x1 > Math.max(8, 0.8 * r.h)) segs++;
+    r.tab = segs >= 2;
+  }
+  const regs = []; let cur = null, miss = 0;
+  for (const r of rows) {
+    if (r.tab) {
+      if (cur && miss <= 1 && r.y0 - cur.lastY1 < 3 * r.h) { cur.rows.push(...cur.pending, r); cur.pending = []; cur.n++; }
+      else { if (cur) regs.push(cur); cur = { rows: [r], pending: [], n: 1 }; }
+      cur.lastY1 = r.y1; miss = 0;
+    } else if (cur) { miss++; if (miss <= 1) cur.pending.push(r); }
+  }
+  if (cur) regs.push(cur);
+  return regs.filter(g => g.n >= 3).map(g => {
+    const ws = g.rows.flatMap(r => r.words);
+    return { x0: Math.min(...ws.map(w => w.x0)) - 2, y0: Math.min(...ws.map(w => w.y0)) - 2, x1: Math.max(...ws.map(w => w.x1)) + 2, y1: Math.max(...ws.map(w => w.y1)) + 2 };
+  });
+}
+function lineRegions(H) {
+  const hs = H.filter(l => l.x1 - l.x0 >= 40).sort((a, b) => a.y - b.y);
+  const groups = []; let g = null;
+  for (const l of hs) {
+    if (g && l.y - g.lastY < 150 && ov(l.x0, l.x1, g.x0, g.x1) >= 0.6 * Math.min(l.x1 - l.x0, g.x1 - g.x0)) {
+      g.lines.push(l); g.lastY = l.y; g.x0 = Math.min(g.x0, l.x0); g.x1 = Math.max(g.x1, l.x1);
+    } else { g = { lines: [l], lastY: l.y, x0: l.x0, x1: l.x1 }; groups.push(g); }
+  }
+  return groups.filter(g => g.lines.length >= 2).map(g => ({ x0: g.x0 - 1, y0: g.lines[0].y - 1, x1: g.x1 + 1, y1: g.lastY + 1 }));
+}
+function combineRegions(pd) {
+  const L = lineRegions(pd.hLines || []);
+  const T = pd.scan ? [] : textRegions(pd.words);
+  const out = L.map(r => ({ ...r }));
+  for (const t of T) {
+    let merged = false; const area = (t.x1 - t.x0) * (t.y1 - t.y0);
+    for (const r of out) {
+      if (ov(t.x0, t.x1, r.x0, r.x1) * ov(t.y0, t.y1, r.y0, r.y1) > 0.2 * area) {
+        r.x0 = Math.min(r.x0, t.x0); r.y0 = Math.min(r.y0, t.y0); r.x1 = Math.max(r.x1, t.x1); r.y1 = Math.max(r.y1, t.y1); merged = true; break;
+      }
+    }
+    if (!merged) out.push({ ...t });
+  }
+  out.sort((a, b) => (b.x1 - b.x0) * (b.y1 - b.y0) - (a.x1 - a.x0) * (a.y1 - a.y0));
+  const kept = [];
+  for (const r of out) {
+    if (kept.some(o => o.x0 <= r.x0 + 1 && o.y0 <= r.y0 + 1 && o.x1 >= r.x1 - 1 && o.y1 >= r.y1 - 1)) continue;
+    if (!pd.scan && pd.words.filter(w => inBox(w, r)).length < 4) continue;
+    if (pd.scan && (r.y1 - r.y0) < 30) continue;
+    kept.push(r);
+  }
+  return kept.sort((a, b) => a.y0 - b.y0);
+}
+
+/* ---------- 區段（某頁上的一塊表格） ---------- */
+function segLines(seg, pd) {
+  const b = seg.bbox, tol = 3, bw = b.x1 - b.x0, bh = b.y1 - b.y0;
+  const h = (pd.hLines || []).filter(l => l.y >= b.y0 - tol && l.y <= b.y1 + tol && ov(l.x0, l.x1, b.x0, b.x1) >= 0.15 * bw);
+  const v = (pd.vLines || []).filter(l => l.x >= b.x0 - tol && l.x <= b.x1 + tol && ov(l.y0, l.y1, b.y0, b.y1) >= Math.min(12, 0.1 * bh));
+  return { h, v };
+}
+function detectFrame(seg, pd) {
+  const { h, v } = segLines(seg, pd); const b = seg.bbox, bh = b.y1 - b.y0;
+  const longV = v.filter(l => ov(l.y0, l.y1, b.y0, b.y1) >= 0.25 * bh);
+  const inV = longV.filter(l => l.x > b.x0 + 4 && l.x < b.x1 - 4);
+  if (!(inV.length >= 1 && h.length >= 2)) return false;
+  const nb = {
+    x0: Math.min(...longV.map(l => l.x), ...h.map(l => l.x0)), x1: Math.max(...longV.map(l => l.x), ...h.map(l => l.x1)),
+    y0: Math.min(...h.map(l => l.y), ...longV.map(l => l.y0)), y1: Math.max(...h.map(l => l.y), ...longV.map(l => l.y1))
+  };
+  nb.x0 = Math.max(nb.x0, b.x0 - 4) - 0.5; nb.x1 = Math.min(nb.x1, b.x1 + 4) + 0.5; nb.y0 = Math.max(nb.y0, b.y0 - 4) - 0.5; nb.y1 = Math.min(nb.y1, b.y1 + 4) + 0.5;
+  seg.bbox = nb; seg.framed = true;
+  seg.colLines = dedupeNums(longV.filter(l => l.x > nb.x0 + 4 && l.x < nb.x1 - 4).map(l => l.x));
+  seg.rowLines = dedupeNums(h.filter(l => l.y > nb.y0 + 4 && l.y < nb.y1 - 4).map(l => l.y));
+  return true;
+}
+function newSegment(pd, p, bbox) {
+  const seg = { page: p, bbox: { ...bbox }, colLines: [], rowLines: [], framed: false, source: pd.scan ? 'ocr' : 'text', ocrWords: null };
+  if (!detectFrame(seg, pd) && seg.source === 'text') seg.colLines = autoColumns(pd.words, seg.bbox);
+  return seg;
+}
+function segWords(seg, pd) { return seg.source === 'ocr' ? (seg.ocrWords || []) : (pd.words || []); }
+
+function joinWords(ws) {
+  if (!ws.length) return '';
+  const s = ws.slice().sort((a, b) => {
+    const dy = ((a.y0 + a.y1) - (b.y0 + b.y1)) / 2;
+    if (Math.abs(dy) > 0.5 * Math.min(a.y1 - a.y0, b.y1 - b.y0)) return dy;
+    return a.x0 - b.x0;
+  });
+  let out = s[0].text, prev = s[0];
+  for (let i = 1; i < s.length; i++) {
+    const w = s[i], h = Math.min(w.y1 - w.y0, prev.y1 - prev.y0);
+    const same = Math.abs(((w.y0 + w.y1) - (prev.y0 + prev.y1)) / 2) < 0.5 * h;
+    const a = out.slice(-1), z = w.text[0];
+    let sep = ' ';
+    if (same && w.x0 - prev.x1 < 0.18 * h) sep = '';
+    else if (isCJK(a) && isCJK(z)) sep = '';
+    out += sep + w.text; prev = w;
+  }
+  return out.replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g, '$1').trim();
+}
+const joinStr = (a, b) => (isCJK(a.slice(-1)) && isCJK(b[0])) ? a + b : a + ' ' + b;
+
+function computeSegment(seg, pd) {
+  const b = seg.bbox;
+  const ws = segWords(seg, pd).filter(w => inBox(w, b));
+  const xs = [b.x0, ...seg.colLines.filter(x => x > b.x0 && x < b.x1).sort((a, c) => a - c), b.x1]; const nC = xs.length - 1;
+  const rl = seg.rowLines.filter(y => y > b.y0 && y < b.y1).sort((a, c) => a - c);
+  const cells = [], low = new Set(), spans = []; let bands;
+  const place = (r, w) => {
+    const cx = (w.x0 + w.x1) / 2, ww = w.x1 - w.x0; const hits = [];
+    for (let k = 0; k < nC; k++) if (ov(w.x0, w.x1, xs[k], xs[k + 1]) >= Math.max(1, 0.25 * ww)) hits.push(k);
+    let c0 = -1;
+    if (hits.length > 1 && !seg.framed) { c0 = hits[0]; spans.push({ r, c0, c1: hits[hits.length - 1] }); }
+    else { for (let k = 0; k < nC; k++) if (cx >= xs[k] && cx <= xs[k + 1]) { c0 = k; break; } if (c0 < 0) c0 = cx < xs[0] ? 0 : nC - 1; }
+    cells[r][c0].push(w); if (w.conf != null && w.conf < 60) low.add(r + ',' + c0);
+  };
+  if (!rl.length) {
+    const rows = clusterRows(ws); bands = rows.map(r => [r.y0, r.y1]);
+    rows.forEach((row, r) => { cells[r] = Array.from({ length: nC }, () => []); row.words.forEach(w => place(r, w)); });
+  } else {
+    const ys = [b.y0, ...rl, b.y1]; bands = [];
+    for (let i = 0; i < ys.length - 1; i++) { bands.push([ys[i], ys[i + 1]]); cells[i] = Array.from({ length: nC }, () => []); }
+    for (const w of ws) { const cy = (w.y0 + w.y1) / 2; const r = bands.findIndex(bd => cy >= bd[0] && cy <= bd[1]); if (r >= 0) place(r, w); }
+  }
+  const grid = cells.map(row => row.map(joinWords));
+  const merges = [];
+  if (!seg.framed) {
+    const byRow = new Map(); spans.forEach(s => { if (!byRow.has(s.r)) byRow.set(s.r, []); byRow.get(s.r).push(s); });
+    for (const [r, list] of byRow) {
+      list.sort((a, c) => a.c0 - c.c0); const u = [];
+      for (const s of list) { const l = u[u.length - 1]; if (l && s.c0 <= l.c1) l.c1 = Math.max(l.c1, s.c1); else u.push({ ...s }); }
+      for (const s of u) { let ok = true; for (let c = s.c0 + 1; c <= s.c1; c++) if (grid[r][c]) ok = false; if (ok && s.c1 > s.c0) merges.push({ r, c: s.c0, rs: 1, cs: s.c1 - s.c0 + 1 }); }
+    }
+  } else if (rl.length && grid.length) {
+    // 依框線缺口判斷合併儲存格
+    const { h, v } = segLines(seg, pd); const ys = [b.y0, ...rl, b.y1];
+    const present = (lines, key, pos, a0, a1) => {
+      const cand = lines.filter(l => Math.abs(l[key] - pos) <= 3); if (!cand.length) return true;
+      const lo = a0 + 2, hi = a1 - 2; if (hi <= lo) return true;
+      const cover = cand.reduce((s, l) => s + l.segs.reduce((ss, g) => ss + ov(g[0], g[1], lo, hi), 0), 0);
+      return cover >= 0.5 * (hi - lo);
+    };
+    const R = grid.length, par = Array.from({ length: R * nC }, (_, i) => i);
+    const find = i => { while (par[i] !== i) { par[i] = par[par[i]]; i = par[i]; } return i; };
+    const uni = (a, c) => { a = find(a); c = find(c); if (a !== c) par[c] = a; };
+    for (let r = 0; r < R; r++) for (let c = 0; c < nC; c++) {
+      if (c < nC - 1 && !present(v, 'x', xs[c + 1], ys[r], ys[r + 1])) uni(r * nC + c, r * nC + c + 1);
+      if (r < R - 1 && !present(h, 'y', ys[r + 1], xs[c], xs[c + 1])) uni(r * nC + c, (r + 1) * nC + c);
+    }
+    const comp = new Map();
+    for (let i = 0; i < R * nC; i++) { const k = find(i); if (!comp.has(k)) comp.set(k, []); comp.get(k).push(i); }
+    for (const list of comp.values()) {
+      if (list.length < 2) continue;
+      const rs = list.map(i => Math.floor(i / nC)), cs = list.map(i => i % nC);
+      const r0 = Math.min(...rs), r1 = Math.max(...rs), c0 = Math.min(...cs), c1 = Math.max(...cs);
+      if (list.length !== (r1 - r0 + 1) * (c1 - c0 + 1)) continue;
+      const all = []; for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) all.push(...cells[r][c]);
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) grid[r][c] = '';
+      grid[r0][c0] = joinWords(all);
+      merges.push({ r: r0, c: c0, rs: r1 - r0 + 1, cs: c1 - c0 + 1 });
+    }
+  }
+  return { grid, merges, low, nC, bands };
+}
+
+/* ---------- 列刪除（同步調整合併與旗標） ---------- */
+function deleteRow(M, r) {
+  M.grid.splice(r, 1); if (M.rowPage) M.rowPage.splice(r, 1);
+  M.merges = M.merges.filter(m => !(m.r === r && m.rs === 1)).map(m => {
+    if (m.r === r) return { ...m, rs: m.rs - 1 };
+    if (m.r < r && m.r + m.rs > r) return { ...m, rs: m.rs - 1 };
+    if (m.r > r) return { ...m, r: m.r - 1 };
+    return m;
+  });
+  const nl = new Set();
+  for (const k of M.low) { const [a, c] = k.split(',').map(Number); if (a < r) nl.add(k); else if (a > r) nl.add((a - 1) + ',' + c); }
+  M.low = nl;
+}
+
+/* ---------- 清洗與型別 ---------- */
+const EMPTY_MARK = /^[-–—－~]*$/;
+function toHalf(s) { return s.replace(/[\uff01-\uff5e]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xfee0)).replace(/\u3000/g, ' '); }
+function basicClean(v, R) {
+  let s = v == null ? '' : String(v);
+  if (R.fullwidth) s = toHalf(s);
+  if (R.trim) s = s.replace(/[ \t\u00a0]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
+  return s;
+}
+function parseNum(s, R) {
+  let t = s.replace(/\s+/g, '');
+  if (!t || EMPTY_MARK.test(t)) return { empty: true };
+  let neg = false, pct = false;
+  if (R.paren) {
+    const mm = t.match(/^\((.*)\)$/) || t.match(/^（(.*)）$/); if (mm) { neg = true; t = mm[1]; }
+    if (/^[△▲]/.test(t)) { neg = true; t = t.slice(1); }
+  }
+  if (/^-/.test(t)) { neg = !neg; t = t.slice(1); } else if (/^\+/.test(t)) t = t.slice(1);
+  t = t.replace(/^(NT\$|NTD|US\$|\$|＄|￥|¥)/i, '').replace(/(元|圓)$/, '');
+  if (/%$/.test(t)) { pct = true; t = t.slice(0, -1); }
+  if (R.thousands) t = t.replace(/,(?=\d{3}(\D|$))/g, '');
+  if (!/^(\d+(\.\d+)?|\.\d+)$/.test(t)) return null;
+  let n = parseFloat(t); if (neg) n = -n;
+  return { n, pct };
+}
+function parseDate(s, R, allowCompact) {
+  const t = s.replace(/\s+/g, ''); let m, y, mo, d;
+  if ((m = t.match(/^(\d{4})[\/.\-年](\d{1,2})[\/.\-月](\d{1,2})日?$/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if (R.roc && (m = t.match(/^(?:民國)?(\d{2,3})[\/.\-年](\d{1,2})[\/.\-月](\d{1,2})日?$/))) { y = +m[1] + 1911; mo = +m[2]; d = +m[3]; }
+  else if (allowCompact && R.roc && (m = t.match(/^(\d{3})(\d{2})(\d{2})$/))) { y = +m[1] + 1911; mo = +m[2]; d = +m[3]; }
+  else if (allowCompact && (m = t.match(/^(\d{4})(\d{2})(\d{2})$/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else return null;
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  const dt = new Date(Date.UTC(y, mo - 1, d)); if (dt.getUTCDate() !== d) return null;
+  return `${y}-${pad2(mo)}-${pad2(d)}`;
+}
+function inferType(base, c, hr, R) {
+  let n = 0, num = 0, dt = 0;
+  for (let r = hr; r < base.length; r++) {
+    const v = base[r][c]; if (!v || EMPTY_MARK.test(v.replace(/\s/g, ''))) continue; n++;
+    if (parseDate(v, R, false)) dt++; else { const p = parseNum(v, R); if (p && !p.empty) num++; }
+  }
+  if (!n) return 'text'; if (dt / n >= 0.7) return 'date'; if (num / n >= 0.7) return 'number'; return 'text';
+}
+function typeClean(v, type, R) {
+  if (type === 'number') {
+    const p = parseNum(v, R); if (!p) return { s: v, bad: !!v }; if (p.empty) return { s: v };
+    return { s: p.pct ? round6(p.n) + '%' : String(round6(p.n)), n: p.pct ? round6(p.n / 100) : round6(p.n), pct: p.pct, num: true };
+  }
+  if (type === 'date') {
+    if (!v || EMPTY_MARK.test(v.replace(/\s/g, ''))) return { s: v };
+    const d = parseDate(v, R, true); if (!d) return { s: v, bad: true }; return { s: d, d };
+  }
+  return { s: v };
+}
+
+/* ---------- 加總驗證 ---------- */
+const SUM_LBL = /(小計|合計|總計|總額|sub-?total|total)/i;
+function validate(cells, types, hr) {
+  const out = [];
+  const kinds = cells.map((row, r) => {
+    if (r < hr) return null;
+    const txt = row.filter((c, i) => types[i] !== 'number').map(c => c.s).join(' ');
+    if (!SUM_LBL.test(txt)) return 'd';
+    return /小計|sub-?total/i.test(txt) ? 'sub' : 'tot';
+  });
+  types.forEach((tp, c) => {
+    if (tp !== 'number') return;
+    if (cells.some((row, r) => r >= hr && row[c].pct)) return;
+    let sub = 0, subN = 0, tot = 0, totN = 0, all = 0, allN = 0;
+    for (let r = hr; r < cells.length; r++) {
+      const cell = cells[r][c], k = kinds[r];
+      if (k === 'd') { if (cell.n != null) { sub += cell.n; tot += cell.n; all += cell.n; subN++; totN++; allN++; } continue; }
+      const cands = k === 'sub' ? [[sub, subN]] : [[tot, totN], [all, allN]];
+      const usable = cands.filter(x => x[1] >= 2);
+      if (cell.n != null && usable.length) {
+        const ok = usable.some(([e]) => Math.abs(cell.n - e) <= Math.max(0.005, Math.abs(e) * 1e-9));
+        out.push({ r, c, expected: round6(usable[0][0]), actual: cell.n, ok, kind: k });
+      }
+      sub = 0; subN = 0; if (k === 'tot') { tot = 0; totN = 0; }
+    }
+  });
+  return out;
+}
+
+/* ---------- 組合整張表格（多頁區段 → 一張表） ---------- */
+function defaultOpts(seg) {
+  return { headerRows: 1, mergeMode: 'keep', joinWrap: !!seg && !seg.framed && seg.source === 'text', rules: { trim: true, fullwidth: true, thousands: true, paren: true, roc: true } };
+}
+function assembleTable(t, pageData) {
+  const hr = Math.max(0, t.opts.headerRows | 0);
+  const M = { grid: [], merges: [], low: new Set(), rowPage: [] }; let header = null, nC = 0; const segStart = new Set();
+  for (const seg of t.segments) {
+    const pd = pageData(seg.page); if (!pd) continue;
+    const s = computeSegment(seg, pd);
+    const L = { grid: s.grid, merges: s.merges, low: s.low };
+    for (let r = L.grid.length - 1; r >= 0; r--) {
+      if (L.grid[r].every(v => !v) && !L.merges.some(m => m.r <= r && m.r + m.rs > r && m.r !== r)) deleteRow(L, r);
+    }
+    if (header === null) header = L.grid.slice(0, hr).map(r => r.join('|'));
+    else if (hr > 0 && L.grid.length >= hr && header.some(h => normText(h)) &&
+      L.grid.slice(0, hr).every((r, i) => sim(r.join('|'), header[i]) >= 0.85 || normText(r.join('')) === normText(header[i]))) {
+      for (let i = 0; i < hr; i++) deleteRow(L, 0);
+    }
+    const off = M.grid.length; segStart.add(off);
+    L.grid.forEach(r => { M.grid.push(r); M.rowPage.push(seg.page); });
+    L.merges.forEach(m => M.merges.push({ ...m, r: m.r + off }));
+    L.low.forEach(k => { const [r, c] = k.split(',').map(Number); M.low.add((r + off) + ',' + c); });
+    nC = Math.max(nC, s.nC);
+  }
+  M.grid.forEach(r => { while (r.length < nC) r.push(''); });
+  if (t.opts.joinWrap) {
+    const R = t.opts.rules;
+    for (let r = M.grid.length - 1; r > hr; r--) {
+      if (segStart.has(r)) continue;
+      const row = M.grid[r], ne = []; row.forEach((v, i) => { if (v.trim()) ne.push(i); });
+      if (ne.length !== 1) continue;
+      const c = ne[0], v = row[c]; const p = parseNum(basicClean(v, R), R);
+      if (p && !p.empty) continue;
+      const prev = M.grid[r - 1];
+      if (prev.filter(x => x.trim()).length < 2 || !prev[c].trim()) continue;
+      if (M.merges.some(m => m.r <= r && m.r + m.rs > r)) continue;
+      prev[c] = joinStr(prev[c], v); deleteRow(M, r);
+    }
+  }
+  for (const k in (t.edits || {})) { const [r, c] = k.split(',').map(Number); if (r < M.grid.length && c < nC) M.grid[r][c] = t.edits[k]; }
+  return finalizeTable(t, { ...M, nC, hr });
+}
+function finalizeTable(t, M) {
+  const { nC, hr } = M; const R = t.opts.rules; const mode = t.opts.mergeMode;
+  const raw = M.grid.map(r => r.slice());
+  const grid = M.grid.map(r => r.slice());
+  const merges = M.merges.filter(m => m.r < grid.length && m.c < nC);
+  if (mode === 'fill') for (const g of merges) { const v = grid[g.r][g.c]; for (let r = g.r; r < g.r + g.rs && r < grid.length; r++) for (let c = g.c; c < g.c + g.cs && c < nC; c++) grid[r][c] = v; }
+  const base = grid.map(row => row.map(v => basicClean(v, R)));
+  const types = []; const ct = t.columnTypes || [];
+  for (let c = 0; c < nC; c++) { const set = ct[c] || 'auto'; types.push(set === 'auto' ? inferType(base, c, hr, R) : set); }
+  const cells = base.map((row, r) => row.map((v, c) => r < hr ? { s: v } : typeClean(v, types[c], R)));
+  cells.forEach((row, r) => row.forEach((cell, c) => { if (M.low.has(r + ',' + c)) cell.low = true; if (t.edits && t.edits[r + ',' + c] != null) cell.edited = true; }));
+  const validation = validate(cells, types, hr);
+  for (const v of validation) { const cell = cells[v.r][v.c]; cell.sum = v.ok ? 'ok' : 'bad'; cell.expected = v.expected; }
+  return { cells, merges: mode === 'keep' ? merges : [], allMerges: merges, types, nC, nR: grid.length, hr, validation, raw, rowPage: M.rowPage || [] };
+}
+
+/* ---------- 匯出資料結構 ---------- */
+function headerKeys(m) {
+  const { cells, allMerges, hr, nC } = m; const keys = [];
+  const H = cells.slice(0, hr).map(r => r.map(c => c.s));
+  for (const g of allMerges) if (g.r < hr) for (let r = g.r; r < Math.min(hr, g.r + g.rs); r++) for (let c = g.c; c < g.c + g.cs; c++) if (H[r] && c < nC) H[r][c] = H[g.r][g.c];
+  const used = new Map();
+  for (let c = 0; c < nC; c++) {
+    const parts = []; for (let r = 0; r < hr; r++) { const v = (H[r][c] || '').replace(/\s+/g, ' ').trim(); if (v && parts[parts.length - 1] !== v) parts.push(v); }
+    let k = parts.join('_') || colName(c);
+    if (used.has(k)) { const n = used.get(k) + 1; used.set(k, n); k = `${k}_${n}`; } else used.set(k, 1);
+    keys.push(k);
+  }
+  return keys;
+}
+function toCSV(rows) {
+  const esc = v => { const s = v == null ? '' : String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  return '\ufeff' + rows.map(r => r.map(c => esc(c.s)).join(',')).join('\r\n');
+}
+function toTSV(rows) { return rows.map(r => r.map(c => (c.s || '').replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\r\n'); }
+function toJSONRows(m) {
+  const keys = headerKeys(m);
+  return m.cells.slice(m.hr).map(row => { const o = {}; row.forEach((c, i) => { o[keys[i]] = c.n != null ? c.n : (c.d || (c.s === '' ? null : c.s)); }); return o; });
+}
+function toMarkdown(m) {
+  const keys = headerKeys(m); const e = s => String(s == null ? '' : s).replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+  const lines = ['| ' + keys.map(e).join(' | ') + ' |', '| ' + keys.map((k, i) => m.types[i] === 'number' ? '---:' : '---').join(' | ') + ' |'];
+  for (const row of m.cells.slice(m.hr)) lines.push('| ' + row.map(c => e(c.s)).join(' | ') + ' |');
+  return lines.join('\n');
+}
+/* ===== CORE END ===== */
+/* ===== APP：畫面、儲存、互動 ===== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function toast(msg, type = 'info', ms = 2800) {
+  const d = document.createElement('div'); d.className = 'toast ' + type; d.textContent = msg;
+  $('#toasts').appendChild(d); setTimeout(() => d.remove(), ms);
+}
+function progress(msg, frac) {
+  $('#busy').classList.add('show'); if (msg != null) $('#busyMsg').textContent = msg;
+  $('#busyBar').style.width = (frac == null ? 0 : Math.max(0, Math.min(1, frac)) * 100) + '%';
+}
+function hideProgress() { $('#busy').classList.remove('show'); }
+function download(name, data, type) {
+  const blob = data instanceof Blob ? data : new Blob([data], { type });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function loadScript(src) {
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('無法載入 ' + src)); document.head.appendChild(s); });
+}
+const baseName = () => (S.project ? S.project.name.replace(/\.pdf$/i, '') : 'tables');
+const safeFile = s => s.replace(/[\\/:*?"<>|]+/g, '_');
+
+/* ---------- IndexedDB ---------- */
+const DB = {
+  db: null,
+  open() {
+    return new Promise((res, rej) => {
+      const rq = indexedDB.open('pdf-table-rescue', 1);
+      rq.onupgradeneeded = () => {
+        const d = rq.result;
+        if (!d.objectStoreNames.contains('projects')) d.createObjectStore('projects', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('tables')) d.createObjectStore('tables', { keyPath: 'id' }).createIndex('projectId', 'projectId');
+        if (!d.objectStoreNames.contains('templates')) d.createObjectStore('templates', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('settings')) d.createObjectStore('settings', { keyPath: 'key' });
+      };
+      rq.onsuccess = () => { this.db = rq.result; res(); };
+      rq.onerror = () => rej(rq.error);
+    });
+  },
+  tx(store, mode, fn) {
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode), s = t.objectStore(store); let out;
+      const r = fn(s); if (r) r.onsuccess = () => { out = r.result; };
+      t.oncomplete = () => res(out); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    });
+  },
+  get(st, k) { return this.tx(st, 'readonly', s => s.get(k)); },
+  put(st, v) { return this.tx(st, 'readwrite', s => s.put(v)); },
+  del(st, k) { return this.tx(st, 'readwrite', s => s.delete(k)); },
+  all(st) { return this.tx(st, 'readonly', s => s.getAll()); },
+  byProject(pid) { return this.tx('tables', 'readonly', s => s.index('projectId').getAll(pid)); },
+  async setting(k, v) { if (v === undefined) { const r = await this.get('settings', k); return r ? r.value : undefined; } return this.put('settings', { key: k, value: v }); }
+};
+
+/* ---------- PDF 文件 ---------- */
+class PdfCtx {
+  constructor(doc) { this.doc = doc; this.n = doc.numPages; this.cache = new Map(); }
+  static async open(buf) {
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(buf.slice(0)), cMapUrl: PDFJS_BASE + 'cmaps/', cMapPacked: true, standardFontDataUrl: PDFJS_BASE + 'standard_fonts/' }).promise;
+    return new PdfCtx(doc);
+  }
+  async page(p) {
+    let c = this.cache.get(p); if (!c) { c = {}; this.cache.set(p, c); }
+    if (!c.pg) { c.pg = await this.doc.getPage(p); const vp = c.pg.getViewport({ scale: 1 }); c.w = vp.width; c.h = vp.height; }
+    return c;
+  }
+  async text(p) {
+    const c = await this.page(p); if (c.words) return c;
+    const vp = c.pg.getViewport({ scale: 1 }); const tc = await c.pg.getTextContent();
+    const r = extractWords(tc.items, vp.transform, pdfjsLib.Util);
+    c.words = r.words; c.scan = r.scan; c.garbled = r.garbled; return c;
+  }
+  async render(p, scale) {
+    const c = await this.page(p); const vp = c.pg.getViewport({ scale });
+    const cv = document.createElement('canvas'); cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+    const g = cv.getContext('2d', { willReadFrequently: true }); g.fillStyle = '#fff'; g.fillRect(0, 0, cv.width, cv.height);
+    await c.pg.render({ canvasContext: g, viewport: vp }).promise; return cv;
+  }
+  async lines(p) {
+    const c = await this.text(p); if (c.hLines) return c;
+    const S2 = 2, cv = await this.render(p, S2);
+    const d = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, cv.width, cv.height).data;
+    const r = detectLinesFromImage(d, cv.width, cv.height, S2); c.hLines = r.h; c.vLines = r.v; cv.width = cv.height = 0; return c;
+  }
+  async full(p) { await this.text(p); return this.lines(p); }
+  async region(p, b, scale) {
+    const full = await this.render(p, scale);
+    const x = Math.max(0, Math.floor(b.x0 * scale)), y = Math.max(0, Math.floor(b.y0 * scale));
+    const w = Math.max(1, Math.min(full.width - x, Math.ceil((b.x1 - b.x0) * scale))), h = Math.max(1, Math.min(full.height - y, Math.ceil((b.y1 - b.y0) * scale)));
+    const out = document.createElement('canvas'); out.width = w; out.height = h;
+    out.getContext('2d', { willReadFrequently: true }).drawImage(full, x, y, w, h, 0, 0, w, h); full.width = full.height = 0;
+    return { canvas: out, ox: x / scale, oy: y / scale, scale };
+  }
+  destroy() { try { this.doc.destroy(); } catch (e) { } }
+}
+async function computeTable(t, ctx) {
+  for (const seg of t.segments) await ctx.full(seg.page);
+  return assembleTable(t, p => ctx.cache.get(p));
+}
+
+/* ---------- OCR（Tesseract.js，需要時才載入） ---------- */
+const OCR = { worker: null, log: null };
+async function getOcrWorker() {
+  if (OCR.worker) return OCR.worker;
+  progress('首次使用 OCR：下載辨識引擎與繁中語言檔（約 20MB），請稍候…', 0.05);
+  if (!window.Tesseract) await loadScript(TESS_URL);
+  OCR.worker = await Tesseract.createWorker('chi_tra+eng', 1, { logger: m => { if (OCR.log) OCR.log(m); else if (m.status && m.status !== 'recognizing text' && m.progress != null) progress('載入 OCR：' + m.status, m.progress); } });
+  return OCR.worker;
+}
+function inkRatio(cv) {
+  const d = cv.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, cv.width, cv.height).data; let n = 0;
+  for (let i = 0; i < d.length; i += 4) if (d[i] + d[i + 1] + d[i + 2] < 384) n++;
+  return n / (cv.width * cv.height);
+}
+const cleanOcrText = s => (s || '').replace(/[|│┃]/g, '').replace(/([\u3400-\u9fff])\s+(?=[\u3400-\u9fff])/g, '$1').trim();
+async function ocrSegment(ctx, seg, onProg) {
+  const worker = await getOcrWorker();
+  const scale = 3, b = seg.bbox; const reg = await ctx.region(seg.page, b, scale); const cv = reg.canvas;
+  const g = cv.getContext('2d', { willReadFrequently: true });
+  const pd = await ctx.full(seg.page); const { h, v } = segLines(seg, pd); g.fillStyle = '#fff';
+  for (const l of h) for (const s of l.segs) g.fillRect((s[0] - reg.ox) * scale - 2, (l.y - reg.oy) * scale - 4, (s[1] - s[0]) * scale + 4, 8);
+  for (const l of v) for (const s of l.segs) g.fillRect((l.x - reg.ox) * scale - 4, (s[0] - reg.oy) * scale - 2, 8, (s[1] - s[0]) * scale + 4);
+  const words = [];
+  const map = (w, dx, dy) => ({ x0: reg.ox + (w.bbox.x0 + dx) / scale, y0: reg.oy + (w.bbox.y0 + dy) / scale, x1: reg.ox + (w.bbox.x1 + dx) / scale, y1: reg.oy + (w.bbox.y1 + dy) / scale, text: cleanOcrText(w.text), conf: Math.round(w.confidence) });
+  const cl = seg.colLines.filter(x => x > b.x0 && x < b.x1).sort((a, c) => a - c), rl = seg.rowLines.filter(y => y > b.y0 && y < b.y1).sort((a, c) => a - c);
+  const nCells = (cl.length + 1) * (rl.length + 1);
+  if (seg.framed && rl.length && nCells <= 600) {
+    // 框線表格：逐格辨識，準確度較高
+    await worker.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
+    const xs = [b.x0, ...cl, b.x1], ys = [b.y0, ...rl, b.y1]; let k = 0;
+    for (let r = 0; r < ys.length - 1; r++) for (let c = 0; c < xs.length - 1; c++) {
+      k++; onProg && onProg(k / nCells);
+      const px0 = Math.round((xs[c] - reg.ox) * scale) + 3, py0 = Math.round((ys[r] - reg.oy) * scale) + 3;
+      const px1 = Math.round((xs[c + 1] - reg.ox) * scale) - 3, py1 = Math.round((ys[r + 1] - reg.oy) * scale) - 3;
+      const w = px1 - px0, hh = py1 - py0; if (w < 6 || hh < 6) continue;
+      const cell = document.createElement('canvas'); cell.width = w + 20; cell.height = hh + 20;
+      const cg = cell.getContext('2d', { willReadFrequently: true }); cg.fillStyle = '#fff'; cg.fillRect(0, 0, cell.width, cell.height);
+      cg.drawImage(cv, px0, py0, w, hh, 10, 10, w, hh);
+      if (inkRatio(cell) < 0.003) continue;
+      const { data } = await worker.recognize(cell);
+      for (const w2 of (data.words || [])) { const m = map(w2, px0 - 10, py0 - 10); if (m.text) words.push(m); }
+    }
+  } else {
+    await worker.setParameters({ tessedit_pageseg_mode: '11', preserve_interword_spaces: '1' });
+    OCR.log = m => { if (m.status === 'recognizing text' && onProg) onProg(m.progress); };
+    try { const { data } = await worker.recognize(cv); for (const w of (data.words || [])) { const m = map(w, 0, 0); if (m.text) words.push(m); } }
+    finally { OCR.log = null; }
+  }
+  cv.width = cv.height = 0;
+  seg.ocrWords = words; seg.source = 'ocr';
+  if (!seg.framed && !seg.colLines.length) seg.colLines = autoColumns(words, seg.bbox);
+}
+
+/* ---------- 狀態 ---------- */
+const S = { project: null, ctx: null, tables: [], models: new Map(), activeId: null, page: 1, zoom: 1, mode: 'select', showWords: false, templates: [], drag: null, saveTimers: new Map(), renderTask: null, thumbObs: null, recommend: null };
+const activeTable = () => S.tables.find(t => t.id === S.activeId) || null;
+const segOn = (t, p) => t ? t.segments.find(s => s.page === p) || null : null;
+const tableById = id => S.tables.find(t => t.id === id);
+function nextName() { let n = 0; for (const t of S.tables) { const m = /^表(\d+)$/.exec(t.name); if (m) n = Math.max(n, +m[1]); } return '表' + (n + 1); }
+function newTable(segs, name) {
+  return { id: uid(), projectId: S.project ? S.project.id : null, name: name || nextName(), segments: segs, opts: defaultOpts(segs[0]), columnTypes: [], edits: {}, createdAt: Date.now() };
+}
+function pagesLabel(t) { const ps = [...new Set(t.segments.map(s => s.page))].sort((a, b) => a - b); if (!ps.length) return ''; return ps.length === 1 ? 'p' + ps[0] : `p${ps[0]}–${ps[ps.length - 1]}`; }
+
+function scheduleSave(t) {
+  clearTimeout(S.saveTimers.get(t.id));
+  S.saveTimers.set(t.id, setTimeout(async () => {
+    const m = S.models.get(t.id);
+    const rec = { ...t, cells: m ? m.raw : [], merges: m ? m.allMerges : [], columnTypesResolved: m ? m.types : [], validation: m ? m.validation : [], updatedAt: Date.now() };
+    try { await DB.put('tables', rec); if (S.project) { S.project.updatedAt = Date.now(); await DB.put('projects', S.project); } } catch (e) { console.error(e); toast('儲存失敗：' + e.message, 'err'); }
+  }, 400));
+}
+async function refreshTable(t, opt = {}) {
+  if (!S.ctx) return;
+  try { S.models.set(t.id, await computeTable(t, S.ctx)); } catch (e) { console.error(e); toast('解析失敗：' + e.message, 'err'); }
+  if (opt.save !== false) scheduleSave(t);
+  renderTableList(); renderThumbBadges();
+  if (t.id === S.activeId) { renderSide(); renderGrid(); }
+  renderOverlay();
+}
+function clearEdits(t) { if (Object.keys(t.edits || {}).length) { t.edits = {}; toast('表格結構已變更，先前的手動修改已清除'); } }
+async function removeTable(t) {
+  S.tables = S.tables.filter(x => x.id !== t.id); S.models.delete(t.id); await DB.del('tables', t.id);
+  if (S.activeId === t.id) S.activeId = S.tables[0] ? S.tables[0].id : null;
+}
+
+/* ---------- 開啟／載入專案 ---------- */
+async function openPdfFile(file) {
+  if (!window.pdfjsLib) return toast('PDF 元件未載入，請確認網路可連到 cdn.jsdelivr.net', 'err', 5000);
+  if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') return toast('請選擇 PDF 檔', 'err');
+  progress('載入 PDF…', 0.05);
+  let ctx, buf;
+  try { buf = await file.arrayBuffer(); ctx = await PdfCtx.open(buf); }
+  catch (e) { hideProgress(); return toast(e && e.name === 'PasswordException' ? '此 PDF 有密碼保護，請先解除密碼' : 'PDF 開啟失敗：' + (e.message || e), 'err', 5000); }
+  const proj = { id: uid(), name: file.name, fileBlob: new Blob([buf], { type: 'application/pdf' }), pageCount: ctx.n, createdAt: Date.now(), updatedAt: Date.now() };
+  await DB.put('projects', proj);
+  await loadProject(proj, ctx, []);
+  const pages = Array.from({ length: ctx.n }, (_, i) => i + 1);
+  await detectPages(pages);
+  await recommendTemplates();
+}
+async function openProjectById(id) {
+  const proj = await DB.get('projects', id); if (!proj) return toast('找不到專案', 'err');
+  progress('開啟專案…', 0.1);
+  try {
+    const buf = await proj.fileBlob.arrayBuffer(); const ctx = await PdfCtx.open(buf);
+    const tables = await DB.byProject(id); tables.sort((a, b) => a.createdAt - b.createdAt);
+    tables.forEach(t => { delete t.cells; delete t.merges; delete t.validation; delete t.columnTypesResolved; delete t.updatedAt; });
+    await loadProject(proj, ctx, tables);
+  } catch (e) { console.error(e); toast('開啟失敗：' + e.message, 'err'); }
+  hideProgress();
+}
+async function loadProject(proj, ctx, tables) {
+  if (S.ctx && S.ctx !== ctx) S.ctx.destroy();
+  S.project = proj; S.ctx = ctx; S.tables = tables; S.models = new Map(); S.activeId = tables[0] ? tables[0].id : null; S.page = 1; S.recommend = null;
+  await DB.setting('lastProject', proj.id);
+  $('#projName').textContent = `${proj.name}（${proj.pageCount} 頁）`;
+  $('#drop').style.display = 'none'; $('#pageBox').style.display = 'block';
+  renderBanner();
+  buildThumbs(); fitZoom(); await gotoPage(1);
+  for (let i = 0; i < tables.length; i++) { progress(`還原表格 ${i + 1}/${tables.length}`, i / tables.length); await refreshTable(tables[i], { save: false }); }
+  hideProgress();
+  renderTableList(); renderSide(); renderGrid();
+}
+function closeProject() {
+  if (S.ctx) S.ctx.destroy();
+  Object.assign(S, { project: null, ctx: null, tables: [], models: new Map(), activeId: null, page: 1, recommend: null });
+  $('#projName').textContent = ''; $('#thumbs').innerHTML = ''; $('#pageBox').style.display = 'none'; $('#drop').style.display = 'flex';
+  renderBanner(); renderSide(); renderGrid(); $('#pageVal').textContent = '–';
+}
+
+/* ---------- 偵測 ---------- */
+async function detectPages(pages) {
+  const created = [];
+  try {
+    for (let i = 0; i < pages.length; i++) {
+      const p = pages[i]; progress(`偵測表格…第 ${p} / ${S.ctx.n} 頁`, i / pages.length);
+      const pd = await S.ctx.full(p);
+      for (const r of combineRegions(pd)) created.push(newTable([newSegment(pd, p, r)]));
+      if (i % 5 === 4) await sleep(0);
+    }
+  } catch (e) { console.error(e); toast('偵測時發生錯誤：' + e.message, 'err'); }
+  // 跨頁接續：上一頁表格到底、下一頁表格在頂端、欄數相同 → 合併
+  created.sort((a, b) => a.segments[0].page - b.segments[0].page || a.segments[0].bbox.y0 - b.segments[0].bbox.y0);
+  for (let i = 0; i < created.length; i++) {
+    const t = created[i]; if (!t) continue;
+    while (true) {
+      const last = t.segments[t.segments.length - 1]; const pl = S.ctx.cache.get(last.page);
+      const j = created.findIndex(u => u && u !== t && u.segments[0].page === last.page + 1);
+      if (j < 0) break; const u = created[j], f = u.segments[0], pn = S.ctx.cache.get(f.page);
+      const wr = (f.bbox.x1 - f.bbox.x0) / (last.bbox.x1 - last.bbox.x0);
+      if (last.bbox.y1 > 0.75 * pl.h && f.bbox.y0 < 0.3 * pn.h && f.colLines.length === last.colLines.length && Math.abs(wr - 1) < 0.1) { t.segments.push(...u.segments); created[j] = null; }
+      else break;
+    }
+  }
+  const list = created.filter(Boolean); let n = 0; for (const t of S.tables) { const m = /^表(\d+)$/.exec(t.name); if (m) n = Math.max(n, +m[1]); }
+  for (const t of list) { t.name = '表' + (++n); S.tables.push(t); }
+  for (let i = 0; i < list.length; i++) { progress(`解析表格 ${i + 1}/${list.length}`, i / Math.max(1, list.length)); await refreshTable(list[i]); }
+  hideProgress();
+  if (list.length && !S.activeId) S.activeId = list[0].id;
+  const scans = pages.filter(p => S.ctx.cache.get(p) && S.ctx.cache.get(p).scan).length;
+  toast(`找到 ${list.length} 個表格` + (scans ? `；${scans} 頁看起來是掃描檔或亂碼，需要 OCR` : ''), list.length ? 'ok' : 'info', 4000);
+  renderAll();
+  return list;
+}
+async function detectCurrentPage() {
+  if (!S.ctx) return;
+  const onlyHere = S.tables.filter(t => t.segments.every(s => s.page === S.page));
+  if (onlyHere.length && !confirm(`本頁已有 ${onlyHere.length} 個表格，重新偵測會取代它們。繼續？`)) return;
+  for (const t of onlyHere) await removeTable(t);
+  const list = await detectPages([S.page]); if (list[0]) selectTable(list[0].id, false);
+}
+
+/* ---------- 範本 ---------- */
+function segFromTemplate(tpl, p, pd) {
+  return { page: p, bbox: { ...tpl.seg.bbox }, colLines: [...tpl.seg.colLines], rowLines: [...tpl.seg.rowLines], framed: tpl.seg.framed, source: (tpl.seg.source === 'ocr' || pd.scan) ? 'ocr' : 'text', ocrWords: null };
+}
+function tableFromTemplate(tpl, segs) { const t = newTable(segs, tpl.name); t.opts = clone(tpl.opts); t.columnTypes = [...(tpl.columnTypes || [])]; t.templateId = tpl.id; return t; }
+async function saveTemplate() {
+  const t = activeTable(); if (!t) return toast('請先選取一個表格', 'err');
+  const m = S.models.get(t.id), seg = t.segments[0], pc = await S.ctx.page(seg.page);
+  const name = prompt('範本名稱（例如：月報-授信餘額表）', t.name + ' 範本'); if (!name) return;
+  const headerText = m ? m.raw.slice(0, t.opts.headerRows).map(r => r.join('|')).join('||') : '';
+  const tpl = { id: uid(), name, pageW: pc.w, pageH: pc.h, headerText, fingerprint: fingerprint(pc.w, pc.h, headerText), seg: { bbox: { ...seg.bbox }, colLines: [...seg.colLines], rowLines: [...seg.rowLines], framed: seg.framed, source: seg.source }, opts: clone(t.opts), columnTypes: [...t.columnTypes], createdAt: Date.now() };
+  await DB.put('templates', tpl); S.templates.push(tpl);
+  toast(`已儲存範本「${name}」`, 'ok');
+}
+async function templateScore(tpl, ctx, p) {
+  const pd = await ctx.full(p);
+  if (Math.abs(pd.w - tpl.pageW) > 2 || Math.abs(pd.h - tpl.pageH) > 2) return 0;
+  if (pd.scan) return tpl.seg.source === 'ocr' ? 0.5 : 0;
+  const t = tableFromTemplate(tpl, [segFromTemplate(tpl, p, pd)]);
+  const m = assembleTable(t, q => ctx.cache.get(q));
+  const hdr = m.raw.slice(0, tpl.opts.headerRows).map(r => r.join('|')).join('||');
+  if (fingerprint(pd.w, pd.h, hdr) === tpl.fingerprint) return 1;
+  return sim(hdr, tpl.headerText);
+}
+async function recommendTemplates() {
+  S.recommend = null; if (!S.ctx || !S.templates.length) return renderBanner();
+  let best = null;
+  for (const tpl of S.templates) for (let p = 1; p <= Math.min(S.ctx.n, 3); p++) {
+    const sc = await templateScore(tpl, S.ctx, p);
+    if (sc >= 0.6 && (!best || sc > best.score)) best = { tpl, page: p, score: sc };
+  }
+  S.recommend = best; renderBanner();
+}
+function renderBanner() {
+  const b = $('#banner'); const r = S.recommend;
+  if (!r) { b.classList.remove('show'); b.innerHTML = ''; return; }
+  b.innerHTML = `💡 這份 PDF 符合範本「<b>${esc(r.tpl.name)}</b>」（第 ${r.page} 頁，相似度 ${Math.round(r.score * 100)}%）
+    <button class="btn sm pri" data-rec="page">套用到第 ${r.page} 頁</button><button class="btn sm" data-rec="all">套用到所有頁（合併成一張表）</button><button class="btn sm" data-rec="x">✕</button>`;
+  b.classList.add('show');
+}
+async function applyTemplate(tpl, mode, page) {
+  if (!S.ctx) return toast('請先開啟 PDF', 'err');
+  const pages = mode === 'all' ? Array.from({ length: S.ctx.n }, (_, i) => i + 1) : [page || S.page];
+  const segs = [];
+  for (const p of pages) { const pd = await S.ctx.full(p); if (mode === 'all' && (Math.abs(pd.w - tpl.pageW) > 2 || Math.abs(pd.h - tpl.pageH) > 2)) continue; segs.push(segFromTemplate(tpl, p, pd)); }
+  if (!segs.length) return toast('沒有尺寸相符的頁面', 'err');
+  const t = tableFromTemplate(tpl, segs); t.name = tpl.name; S.tables.push(t);
+  S.activeId = t.id; await refreshTable(t); await gotoPage(segs[0].page);
+  toast(`已套用範本「${tpl.name}」`, 'ok');
+  if (segs.some(s => s.source === 'ocr') && confirm('此範本的頁面需要 OCR，要立即執行嗎？')) await runOcr(t, t.segments.filter(s => s.source === 'ocr'));
+  renderAll();
+}
+async function openTemplateDialog() {
+  const body = $('#tplBody');
+  if (!S.templates.length) body.innerHTML = '<div class="empty-side">目前沒有範本。<br>先把一個表格的範圍、欄線、清洗規則調好，再按「範本 ▸ 將目前表格存成範本」。之後同格式的 PDF 就能一鍵套用，也能用在批次處理。</div>';
+  else body.innerHTML = `<table class="list"><tr><th>名稱</th><th>頁面尺寸</th><th>來源</th><th>表頭</th><th></th></tr>${S.templates.map(t => `<tr>
+    <td><b>${esc(t.name)}</b></td><td class="muted">${Math.round(t.pageW)}×${Math.round(t.pageH)}</td><td>${t.seg.source === 'ocr' ? 'OCR' : 'PDF 文字'}${t.seg.framed ? '・框線' : ''}</td>
+    <td class="muted small" style="max-width:220px">${esc((t.headerText || '').slice(0, 60))}</td>
+    <td style="white-space:nowrap"><button class="btn sm pri" data-tpl-apply="${t.id}" data-m="page">套用本頁</button> <button class="btn sm" data-tpl-apply="${t.id}" data-m="all">所有頁</button> <button class="btn sm danger" data-tpl-del="${t.id}">刪除</button></td></tr>`).join('')}</table>`;
+  $('#dlgTpl').showModal();
+}
+
+/* ---------- OCR 執行 ---------- */
+async function runOcr(t, segs) {
+  try {
+    for (let i = 0; i < segs.length; i++) {
+      const seg = segs[i];
+      await ocrSegment(S.ctx, seg, f => progress(`OCR 辨識中…第 ${seg.page} 頁（${i + 1}/${segs.length}）`, (i + f) / segs.length));
+    }
+    clearEdits(t); await refreshTable(t);
+    toast('OCR 完成，黃色儲存格代表可信度較低，請再確認', 'ok', 4000);
+  } catch (e) { console.error(e); toast('OCR 失敗：' + (e.message || e) + '（需可連線下載 OCR 引擎與語言檔）', 'err', 6000); }
+  hideProgress();
+}
+
+/* ---------- 縮圖 ---------- */
+function buildThumbs() {
+  const box = $('#thumbs'); box.innerHTML = '';
+  if (S.thumbObs) S.thumbObs.disconnect();
+  S.thumbObs = new IntersectionObserver(ents => {
+    for (const e of ents) if (e.isIntersecting) { const el = e.target; S.thumbObs.unobserve(el); renderThumb(el, +el.dataset.p); }
+  }, { root: box, rootMargin: '200px' });
+  for (let p = 1; p <= S.ctx.n; p++) {
+    const d = document.createElement('div'); d.className = 'thumb'; d.dataset.p = p;
+    d.innerHTML = `<div class="ph"></div><div class="pn">${p}</div>`;
+    d.onclick = () => gotoPage(p); box.appendChild(d); S.thumbObs.observe(d);
+  }
+  renderThumbBadges();
+}
+async function renderThumb(el, p) {
+  try {
+    const ctx = S.ctx; const c = await ctx.page(p); const sc = 118 / c.w;
+    const cv = await ctx.render(p, sc * (window.devicePixelRatio || 1)); if (ctx !== S.ctx) return;
+    cv.style.width = '118px'; el.querySelector('.ph') && el.querySelector('.ph').replaceWith(cv);
+  } catch (e) { }
+}
+function renderThumbBadges() {
+  $$('#thumbs .thumb').forEach(el => {
+    const p = +el.dataset.p; el.classList.toggle('cur', p === S.page);
+    el.querySelectorAll('.badge').forEach(b => b.remove());
+    const n = S.tables.filter(t => t.segments.some(s => s.page === p)).length;
+    if (n) el.insertAdjacentHTML('beforeend', `<span class="badge ok">✓${n > 1 ? n : ''}</span>`);
+    const c = S.ctx && S.ctx.cache.get(p); if (c && c.scan) el.insertAdjacentHTML('beforeend', `<span class="badge scan" title="${c.garbled ? '文字亂碼（CID 字型）' : '沒有文字層'}">掃描</span>`);
+  });
+}
+
+/* ---------- 主頁面 ---------- */
+async function fitZoom() {
+  if (!S.ctx) return; const c = await S.ctx.page(S.page || 1);
+  const w = $('#viewer').clientWidth - 48; S.zoom = Math.max(0.3, Math.min(3, w / c.w));
+}
+async function gotoPage(p) {
+  if (!S.ctx) return; p = Math.max(1, Math.min(S.ctx.n, p)); S.page = p;
+  $('#pageVal').textContent = `${p} / ${S.ctx.n}`;
+  renderThumbBadges();
+  const el = $(`#thumbs .thumb[data-p="${p}"]`); if (el) el.scrollIntoView({ block: 'nearest' });
+  await S.ctx.full(p); await renderPage(); renderSide();
+}
+async function renderPage() {
+  if (!S.ctx) return; const c = await S.ctx.page(S.page); const z = S.zoom, dpr = window.devicePixelRatio || 1;
+  $('#zoomVal').textContent = Math.round(z * 100) + '%';
+  const cv = $('#pageCanvas'); const vp = c.pg.getViewport({ scale: z * dpr });
+  if (S.renderTask) { try { S.renderTask.cancel(); } catch (e) { } }
+  cv.width = Math.ceil(vp.width); cv.height = Math.ceil(vp.height);
+  const W = c.w * z, H = c.h * z;
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  $('#pageBox').style.width = W + 'px'; $('#pageBox').style.height = H + 'px';
+  const ovl = $('#overlay'); ovl.style.width = W + 'px'; ovl.style.height = H + 'px';
+  renderOverlay();
+  const task = c.pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }); S.renderTask = task;
+  try { await task.promise; } catch (e) { if (!e || e.name !== 'RenderingCancelledException') console.warn(e); }
+}
+function renderOverlay() {
+  const ovl = $('#overlay'); if (!S.ctx) { ovl.innerHTML = ''; return; }
+  ovl.className = 'm-' + S.mode;
+  const z = S.zoom, p = S.page, pd = S.ctx.cache.get(p); let html = '';
+  const at = activeTable(), aseg = segOn(at, p);
+  if (S.showWords && pd) {
+    const ws = aseg && aseg.source === 'ocr' ? (aseg.ocrWords || []) : (pd.words || []);
+    for (const w of ws) html += `<div class="wbox${w.conf != null && w.conf < 60 ? ' low' : ''}" style="left:${w.x0 * z}px;top:${w.y0 * z}px;width:${(w.x1 - w.x0) * z}px;height:${(w.y1 - w.y0) * z}px" title="${esc(w.text)}${w.conf != null ? ' (' + w.conf + '%)' : ''}"></div>`;
+  }
+  for (const t of S.tables) t.segments.forEach((seg, si) => {
+    if (seg.page !== p) return; const act = t.id === S.activeId, b = seg.bbox, ro = act ? '' : ' ro';
+    const L = `left:${b.x0 * z}px;top:${b.y0 * z}px;width:${(b.x1 - b.x0) * z}px;height:${(b.y1 - b.y0) * z}px`;
+    html += `<div class="seg-box${act ? '' : ' inactive'}" style="${L}"><span class="lbl">${esc(t.name)}${t.segments.length > 1 ? ` (${si + 1}/${t.segments.length})` : ''}${seg.source === 'ocr' ? ' · OCR' : ''}${seg.framed ? ' · 框線' : ''}</span></div>`;
+    seg.colLines.forEach((x, i) => { html += `<div class="vline${ro}" data-t="${t.id}" data-s="${si}" data-i="${i}" style="left:${x * z}px;top:${b.y0 * z}px;height:${(b.y1 - b.y0) * z}px" title="拖曳移動；雙擊或右鍵刪除"></div>`; });
+    seg.rowLines.forEach((y, i) => { html += `<div class="hline${ro}" data-t="${t.id}" data-s="${si}" data-i="${i}" style="top:${y * z}px;left:${b.x0 * z}px;width:${(b.x1 - b.x0) * z}px" title="拖曳移動；雙擊或右鍵刪除"></div>`; });
+    if (act && !seg.rowLines.length && pd) {
+      for (const y of autoRowLines(segWords(seg, pd), b)) html += `<div class="hline auto" style="top:${y * z}px;left:${b.x0 * z}px;width:${(b.x1 - b.x0) * z}px"></div>`;
+    }
+    if (act) for (const [k, x, y] of [['nw', b.x0, b.y0], ['ne', b.x1, b.y0], ['sw', b.x0, b.y1], ['se', b.x1, b.y1]])
+      html += `<div class="handle ${k}" data-h="${k}" data-t="${t.id}" data-s="${si}" style="left:${x * z}px;top:${y * z}px"></div>`;
+  });
+  const d = S.drag;
+  if (d && d.type === 'draw') html += `<div class="draw-rect" style="left:${Math.min(d.x0, d.x1) * z}px;top:${Math.min(d.y0, d.y1) * z}px;width:${Math.abs(d.x1 - d.x0) * z}px;height:${Math.abs(d.y1 - d.y0) * z}px"></div>`;
+  ovl.innerHTML = html;
+}
+function setMode(m) {
+  S.mode = m; $$('[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  $('#modeHint').textContent = { select: '點表格可選取；拖曳藍線／橘線調整，雙擊或右鍵刪除', box: '在頁面上拖曳，框出表格範圍', col: '在選取的表格內點一下，新增一條欄線', row: '在選取的表格內點一下，新增一條列線' }[m];
+  renderOverlay();
+}
+function selectTable(id, jump = true) {
+  S.activeId = id; const t = activeTable();
+  if (jump && t && !segOn(t, S.page)) gotoPage(t.segments[0].page);
+  renderTableList(); renderSide(); renderGrid(); renderOverlay();
+}
+
+/* ---------- 頁面互動：框選／欄線／列線／調整範圍 ---------- */
+function toPt(e) { const r = $('#overlay').getBoundingClientRect(); return { x: (e.clientX - r.left) / S.zoom, y: (e.clientY - r.top) / S.zoom }; }
+const insideBox = (pt, b) => pt.x >= b.x0 && pt.x <= b.x1 && pt.y >= b.y0 && pt.y <= b.y1;
+function bindOverlay() {
+  const ovl = $('#overlay');
+  ovl.addEventListener('pointerdown', e => {
+    if (e.button !== 0 || !S.ctx) return;
+    const pt = toPt(e), el = e.target;
+    if ((el.classList.contains('vline') || el.classList.contains('hline')) && el.dataset.t) {
+      S.drag = { type: el.classList.contains('vline') ? 'v' : 'h', t: tableById(el.dataset.t), si: +el.dataset.s, i: +el.dataset.i, moved: false };
+    } else if (el.classList.contains('handle')) {
+      S.drag = { type: 'resize', t: tableById(el.dataset.t), si: +el.dataset.s, h: el.dataset.h, moved: false };
+    } else if (S.mode === 'box') {
+      S.drag = { type: 'draw', x0: pt.x, y0: pt.y, x1: pt.x, y1: pt.y };
+    } else {
+      const t = activeTable(), seg = segOn(t, S.page);
+      if ((S.mode === 'col' || S.mode === 'row') && seg && insideBox(pt, seg.bbox)) { addLine(t, seg, S.mode, pt); return; }
+      const hit = S.tables.filter(x => x.segments.some(s => s.page === S.page && insideBox(pt, s.bbox)));
+      if (hit.length) { const cur = hit.findIndex(x => x.id === S.activeId); selectTable(hit[(cur + 1) % hit.length].id, false); }
+      return;
+    }
+    ovl.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  ovl.addEventListener('pointermove', e => {
+    const d = S.drag; if (!d) return; const pt = toPt(e);
+    if (d.type === 'draw') { d.x1 = pt.x; d.y1 = pt.y; renderOverlay(); return; }
+    const seg = d.t.segments[d.si]; const b = seg.bbox; d.moved = true;
+    if (d.type === 'v') seg.colLines[d.i] = Math.max(b.x0 + 1, Math.min(b.x1 - 1, pt.x));
+    else if (d.type === 'h') seg.rowLines[d.i] = Math.max(b.y0 + 1, Math.min(b.y1 - 1, pt.y));
+    else if (d.type === 'resize') {
+      if (d.h.includes('w')) b.x0 = Math.min(pt.x, b.x1 - 10); if (d.h.includes('e')) b.x1 = Math.max(pt.x, b.x0 + 10);
+      if (d.h.includes('n')) b.y0 = Math.min(pt.y, b.y1 - 10); if (d.h.includes('s')) b.y1 = Math.max(pt.y, b.y0 + 10);
+    }
+    renderOverlay();
+  });
+  const end = async () => {
+    const d = S.drag; if (!d) return; S.drag = null;
+    if (d.type === 'draw') {
+      const b = { x0: Math.min(d.x0, d.x1), y0: Math.min(d.y0, d.y1), x1: Math.max(d.x0, d.x1), y1: Math.max(d.y0, d.y1) };
+      renderOverlay(); if (b.x1 - b.x0 < 12 || b.y1 - b.y0 < 8) return;
+      await createTableFromBox(b); return;
+    }
+    if (!d.moved) return;
+    const seg = d.t.segments[d.si], b = seg.bbox;
+    seg.colLines = seg.colLines.filter(x => x > b.x0 + 1 && x < b.x1 - 1).sort((a, c) => a - c);
+    seg.rowLines = seg.rowLines.filter(y => y > b.y0 + 1 && y < b.y1 - 1).sort((a, c) => a - c);
+    clearEdits(d.t); await refreshTable(d.t);
+  };
+  ovl.addEventListener('pointerup', end); ovl.addEventListener('pointercancel', end);
+  const delLine = async e => {
+    const el = e.target; if (!el.dataset || !el.dataset.t || !(el.classList.contains('vline') || el.classList.contains('hline'))) return;
+    e.preventDefault(); const t = tableById(el.dataset.t), seg = t.segments[+el.dataset.s];
+    (el.classList.contains('vline') ? seg.colLines : seg.rowLines).splice(+el.dataset.i, 1);
+    clearEdits(t); await refreshTable(t);
+  };
+  ovl.addEventListener('dblclick', delLine); ovl.addEventListener('contextmenu', delLine);
+}
+async function addLine(t, seg, mode, pt) {
+  if (mode === 'col') { seg.colLines.push(pt.x); seg.colLines.sort((a, b) => a - b); }
+  else {
+    if (!seg.rowLines.length) { seg.rowLines = autoRowLines(segWords(seg, S.ctx.cache.get(seg.page)), seg.bbox); toast('已把自動分列轉成手動列線'); }
+    seg.rowLines.push(pt.y); seg.rowLines = dedupeNums(seg.rowLines, 1.5);
+  }
+  clearEdits(t); await refreshTable(t);
+}
+async function createTableFromBox(b) {
+  const pd = await S.ctx.full(S.page);
+  const t = newTable([newSegment(pd, S.page, b)]); S.tables.push(t); S.activeId = t.id;
+  setMode('select'); await refreshTable(t);
+  if (t.segments[0].source === 'ocr' && confirm(pd.garbled ? '這頁的文字是亂碼（CID 字型），要改用 OCR 辨識這個區域嗎？' : '這頁沒有文字層（掃描檔），要立即對這個區域執行 OCR 嗎？')) await runOcr(t, [t.segments[0]]);
+}
+
+/* ---------- 右側面板 ---------- */
+function renderTableList() {
+  const box = $('#tlist'); if (!box) return;
+  if (!S.tables.length) { box.innerHTML = `<div class="empty-side">${S.ctx ? '這份 PDF 還沒有表格。<br>用「▭ 框選表格」手動框出範圍，或按「🔍 偵測本頁」。' : '尚未開啟 PDF'}</div>`; return; }
+  box.innerHTML = S.tables.map(t => {
+    const m = S.models.get(t.id); const bad = m ? m.validation.filter(v => !v.ok).length : 0;
+    return `<div class="titem${t.id === S.activeId ? ' act' : ''}" data-tid="${t.id}"><b>${esc(t.name)}</b>${bad ? `<span class="warn">⚠ ${bad}</span>` : ''}<span class="meta">${pagesLabel(t)} · ${m ? m.nR + '×' + m.nC : '…'}</span></div>`;
+  }).join('');
+}
+function renderSide() {
+  const side = $('#side'); const t = activeTable(); const m = t && S.models.get(t.id);
+  const seg = t && (segOn(t, S.page) || null);
+  let h = `<div class="sec"><h3>📋 表格清單 <span class="r muted small">${S.tables.length} 個</span></h3><div class="tlist" id="tlist"></div></div>`;
+  if (!t) { side.innerHTML = h + `<div class="sec"><div class="empty-side"><b>使用方式</b><br>1. 開啟或拖入 PDF，系統會自動偵測表格<br>2. 綠框是表格範圍，<span style="color:var(--blue)">藍線</span>是欄線，<span style="color:var(--orange)">橘線</span>是列線<br>3. 拖動線條微調，下方表格即時更新<br>4. 設定清洗規則後匯出<br><br><span class="small">快捷鍵：<kbd>V</kbd> 選取 <kbd>B</kbd> 框選 <kbd>C</kbd> 欄線 <kbd>R</kbd> 列線 <kbd>+</kbd><kbd>-</kbd> 縮放 <kbd>PgUp</kbd><kbd>PgDn</kbd> 換頁</span></div></div>`; renderTableList(); return; }
+  const R = t.opts.rules;
+  h += `<div class="sec"><h3>🧩 目前表格</h3>
+    <div class="row"><span class="lab">名稱</span><input type="text" id="tName" value="${esc(t.name)}"></div>
+    <div class="row"><span class="lab">頁面</span><span>${t.segments.map((s, i) => `<a style="cursor:pointer;text-decoration:${s.page === S.page ? 'none;font-weight:700' : 'underline'}" data-goto="${s.page}">p${s.page}</a>`).join('、')}</span></div>
+    ${seg ? `<div class="row"><span class="lab">本頁來源</span><select id="segSrc"><option value="text"${seg.source === 'text' ? ' selected' : ''}>PDF 文字層</option><option value="ocr"${seg.source === 'ocr' ? ' selected' : ''}>OCR 辨識</option></select>
+      ${seg.source === 'ocr' ? `<button class="btn sm pri" data-act="ocr">${seg.ocrWords ? '重新 OCR' : '執行 OCR'}</button>` : ''}</div>
+      ${seg.source === 'ocr' && !seg.ocrWords ? '<div class="small" style="color:#a16207">⚠ 尚未辨識，請按「執行 OCR」</div>' : ''}
+      <div class="row"><span class="lab">分列方式</span><span>${seg.rowLines.length ? `手動列線 ${seg.rowLines.length} 條` : '自動（依文字行）'}</span></div>
+      <div class="btns">
+        <button class="btn sm" data-act="autoCols" title="依文字空白帶重新計算欄線">↻ 自動欄線</button>
+        <button class="btn sm" data-act="frame" title="從框線重新偵測欄列">▦ 偵測框線</button>
+        ${seg.rowLines.length ? '<button class="btn sm" data-act="clearRows">清除列線（改回自動）</button>' : '<button class="btn sm" data-act="rowsManual">自動分列→手動列線</button>'}
+        <button class="btn sm" data-act="clearCols">清除欄線</button>
+      </div>` : `<div class="small muted">這個表格不在本頁。</div>`}
+    <div class="btns" style="margin-top:8px">
+      <button class="btn sm" data-act="addNext" title="把下一頁同位置加入成為這張表的接續">➕ 加入下一頁接續</button>
+      ${seg && t.segments.length > 1 ? '<button class="btn sm" data-act="removeSeg">移除本頁區段</button>' : ''}
+      <button class="btn sm danger" data-act="delTable">🗑 刪除表格</button>
+    </div></div>
+  <div class="sec"><h3>🔗 表頭與合併儲存格</h3>
+    <div class="row"><span class="lab">表頭列數</span><input type="number" min="0" max="10" id="hdrRows" value="${t.opts.headerRows}"><span class="muted small">跨頁時自動移除重複表頭</span></div>
+    <div class="row"><span class="lab">合併儲存格</span><select id="mergeMode">
+      <option value="keep"${t.opts.mergeMode === 'keep' ? ' selected' : ''}>保留合併</option>
+      <option value="fill"${t.opts.mergeMode === 'fill' ? ' selected' : ''}>拆開並填滿</option>
+      <option value="first"${t.opts.mergeMode === 'first' ? ' selected' : ''}>拆開，只留左上</option></select></div>
+    <label class="chk"><input type="checkbox" id="joinWrap"${t.opts.joinWrap ? ' checked' : ''}>合併換行列（只有一格有字的列併回上一列）</label></div>
+  <div class="sec"><h3>🧹 清洗規則</h3>
+    <label class="chk"><input type="checkbox" data-rule="trim"${R.trim ? ' checked' : ''}>去除多餘空白</label>
+    <label class="chk"><input type="checkbox" data-rule="fullwidth"${R.fullwidth ? ' checked' : ''}>全形轉半形（１２３ → 123）</label>
+    <label class="chk"><input type="checkbox" data-rule="thousands"${R.thousands ? ' checked' : ''}>移除千分位（1,234 → 1234）</label>
+    <label class="chk"><input type="checkbox" data-rule="paren"${R.paren ? ' checked' : ''}>括號／△ 轉負數（(1,234) → -1234）</label>
+    <label class="chk"><input type="checkbox" data-rule="roc"${R.roc ? ' checked' : ''}>民國年轉西元（113/05/01 → 2024-05-01）</label>
+    <div class="small muted">欄位型別在下方表格的欄名下拉選單設定。</div></div>
+  <div class="sec"><h3>✅ 加總驗證</h3><div class="vres">${validationHtml(m)}</div></div>`;
+  side.innerHTML = h; renderTableList();
+}
+function validationHtml(m) {
+  if (!m) return '<span class="muted">計算中…</span>';
+  if (!m.validation.length) return '<span class="muted">沒有找到「小計／合計／總計／Total」列，或數字欄不足以驗證。</span>';
+  const ok = m.validation.filter(v => v.ok).length, bad = m.validation.filter(v => !v.ok);
+  return `<div><span class="ok">✔ 相符 ${ok} 項</span>　${bad.length ? `<span class="bad">✘ 不符 ${bad.length} 項</span>` : ''}</div>` +
+    bad.slice(0, 20).map(v => `<div class="bad">• <a data-cell="${v.r},${v.c}">第 ${v.r + 1} 列 ${colName(v.c)} 欄</a>：顯示 ${v.actual}，加總應為 ${v.expected}（差 ${round6(v.actual - v.expected)}）</div>`).join('');
+}
+function bindSide() {
+  const side = $('#side');
+  side.addEventListener('click', async e => {
+    const ti = e.target.closest('[data-tid]'); if (ti) return selectTable(ti.dataset.tid);
+    const g = e.target.closest('[data-goto]'); if (g) return gotoPage(+g.dataset.goto);
+    const cl = e.target.closest('[data-cell]'); if (cl) { const td = $(`#gridWrap td[data-r="${cl.dataset.cell.split(',')[0]}"][data-c="${cl.dataset.cell.split(',')[1]}"]`); if (td) { td.scrollIntoView({ block: 'center', inline: 'center' }); td.focus(); } return; }
+    const a = e.target.closest('[data-act]'); if (!a) return;
+    const t = activeTable(); if (!t) return; const seg = segOn(t, S.page); const pd = seg && S.ctx.cache.get(seg.page);
+    switch (a.dataset.act) {
+      case 'ocr': return runOcr(t, [seg]);
+      case 'autoCols': seg.colLines = autoColumns(segWords(seg, pd), seg.bbox); seg.framed = false; break;
+      case 'frame': { const ok = detectFrame(seg, pd); if (!ok) return toast('這個範圍內找不到足夠的框線', 'err'); toast('已依框線重設欄列', 'ok'); if (seg.framed) t.opts.joinWrap = false; break; }
+      case 'clearRows': seg.rowLines = []; break;
+      case 'rowsManual': seg.rowLines = autoRowLines(segWords(seg, pd), seg.bbox); break;
+      case 'clearCols': seg.colLines = []; break;
+      case 'addNext': {
+        const last = t.segments[t.segments.length - 1]; const p = last.page + 1;
+        if (p > S.ctx.n) return toast('已經是最後一頁', 'err');
+        if (t.segments.some(s => s.page === p)) return toast(`第 ${p} 頁已在這張表中`, 'err');
+        const npd = await S.ctx.full(p);
+        t.segments.push({ page: p, bbox: { ...last.bbox }, colLines: [...last.colLines], rowLines: last.framed ? [] : [...last.rowLines], framed: false, source: npd.scan ? 'ocr' : 'text', ocrWords: null });
+        const ns = t.segments[t.segments.length - 1]; if (last.framed) { ns.rowLines = []; if (!detectFrame(ns, npd)) ns.colLines = [...last.colLines]; }
+        await refreshTable(t); await gotoPage(p); toast(`已加入第 ${p} 頁，請確認綠框範圍與欄線`, 'ok'); return;
+      }
+      case 'removeSeg': t.segments = t.segments.filter(s => s !== seg); break;
+      case 'delTable': if (!confirm(`刪除「${t.name}」？`)) return; await removeTable(t); renderAll(); return;
+    }
+    clearEdits(t); await refreshTable(t);
+  });
+  side.addEventListener('change', async e => {
+    const t = activeTable(); if (!t) return; const el = e.target;
+    if (el.id === 'tName') { t.name = el.value.trim() || t.name; scheduleSave(t); renderTableList(); renderOverlay(); $('#gridTitle').textContent = t.name; return; }
+    if (el.id === 'segSrc') { const seg = segOn(t, S.page); seg.source = el.value; if (el.value === 'ocr' && !seg.ocrWords) { if (confirm('要立即執行 OCR 嗎？')) return runOcr(t, [seg]); } else if (el.value === 'text' && !seg.framed) seg.colLines = autoColumns(S.ctx.cache.get(seg.page).words, seg.bbox); clearEdits(t); }
+    else if (el.id === 'hdrRows') { t.opts.headerRows = Math.max(0, Math.min(10, +el.value || 0)); clearEdits(t); }
+    else if (el.id === 'mergeMode') t.opts.mergeMode = el.value;
+    else if (el.id === 'joinWrap') { t.opts.joinWrap = el.checked; clearEdits(t); }
+    else if (el.dataset.rule) t.opts.rules[el.dataset.rule] = el.checked;
+    else return;
+    await refreshTable(t);
+  });
+}
+
+/* ---------- 下方表格 Grid ---------- */
+function renderGrid() {
+  const wrap = $('#gridWrap'); const t = activeTable(); const m = t && S.models.get(t.id);
+  $('#gridTitle').textContent = t ? t.name : '表格預覽';
+  if (!t || !m) { $('#gridStat').textContent = ''; wrap.innerHTML = `<div class="empty">${t ? '解析中…' : '尚未選取表格'}</div>`; return; }
+  const seg0 = t.segments.find(s => s.source === 'ocr' && !s.ocrWords);
+  $('#gridStat').textContent = `${m.nR} 列 × ${m.nC} 欄` + (m.merges.length ? `・${m.merges.length} 個合併儲存格` : '');
+  if (!m.nR) { wrap.innerHTML = `<div class="empty">${seg0 ? '這個區域需要 OCR：請在右側按「執行 OCR」。' : '範圍內沒有文字。請調整綠框範圍。'}</div>`; return; }
+  const cover = new Map(); for (const g of m.merges) for (let r = g.r; r < g.r + g.rs; r++) for (let c = g.c; c < g.c + g.cs; c++) cover.set(r + ',' + c, (r === g.r && c === g.c) ? g : null);
+  const typeLbl = { text: '文字', number: '數字', date: '日期' };
+  let h = '<table class="grid"><thead><tr><th class="rn"></th>';
+  for (let c = 0; c < m.nC; c++) {
+    const set = t.columnTypes[c] || 'auto';
+    h += `<th>${colName(c)}<select data-ctype="${c}"><option value="auto"${set === 'auto' ? ' selected' : ''}>自動（${typeLbl[m.types[c]]}）</option><option value="text"${set === 'text' ? ' selected' : ''}>文字</option><option value="number"${set === 'number' ? ' selected' : ''}>數字</option><option value="date"${set === 'date' ? ' selected' : ''}>日期</option></select></th>`;
+  }
+  h += '</tr></thead><tbody>';
+  m.cells.forEach((row, r) => {
+    h += `<tr class="${r < m.hr ? 'hdr' : ''}"><th class="rn" title="${m.rowPage[r] ? '來自第 ' + m.rowPage[r] + ' 頁' : ''}">${r + 1}</th>`;
+    row.forEach((cell, c) => {
+      const k = r + ',' + c; let span = '';
+      if (cover.has(k)) { const g = cover.get(k); if (!g) return; span = ` rowspan="${g.rs}" colspan="${g.cs}"`; }
+      const cls = [cell.num ? 'num' : '', cell.bad ? 'bad' : '', cell.low ? 'low' : '', cell.sum === 'bad' ? 'mis' : cell.sum === 'ok' ? 'sumok' : '', cell.edited ? 'edited' : '', span ? 'merged' : ''].filter(Boolean).join(' ');
+      const tip = cell.sum === 'bad' ? `加總應為 ${cell.expected}` : cell.bad ? '無法轉成此欄的型別' : cell.low ? 'OCR 可信度低' : '';
+      h += `<td contenteditable="true" spellcheck="false" data-r="${r}" data-c="${c}"${span} class="${cls}"${tip ? ` title="${esc(tip)}"` : ''}>${esc(cell.s)}</td>`;
+    });
+    h += '</tr>';
+  });
+  wrap.innerHTML = h + '</tbody></table>';
+}
+function bindGrid() {
+  const wrap = $('#gridWrap');
+  wrap.addEventListener('focusin', e => { const td = e.target.closest('td[data-r]'); if (td) td.dataset.orig = td.textContent; });
+  wrap.addEventListener('focusout', async e => {
+    const td = e.target.closest('td[data-r]'); if (!td) return; const t = activeTable(); if (!t) return;
+    const v = td.innerText.replace(/\n$/, ''); if (v === td.dataset.orig) return;
+    t.edits = t.edits || {}; t.edits[td.dataset.r + ',' + td.dataset.c] = v; await refreshTable(t);
+  });
+  wrap.addEventListener('keydown', e => {
+    const td = e.target.closest('td[data-r]'); if (!td) return;
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const nx = $(`#gridWrap td[data-r="${+td.dataset.r + 1}"][data-c="${td.dataset.c}"]`); td.blur(); if (nx) setTimeout(() => nx.focus(), 30); }
+    if (e.key === 'Escape') { td.textContent = td.dataset.orig; td.blur(); }
+  });
+  wrap.addEventListener('change', async e => {
+    const sel = e.target.closest('select[data-ctype]'); if (!sel) return; const t = activeTable();
+    t.columnTypes[+sel.dataset.ctype] = sel.value; for (let i = 0; i < t.columnTypes.length; i++) if (!t.columnTypes[i]) t.columnTypes[i] = 'auto';
+    await refreshTable(t);
+  });
+}
+
+/* ---------- 匯出 ---------- */
+function sheetFromModel(name, m) { return { name, rows: m.cells, merges: m.merges, types: m.types }; }
+function sheetToWs(sd) {
+  const ws = XLSX.utils.aoa_to_sheet(sd.rows.map(r => r.map(c => c.s)));
+  sd.rows.forEach((row, r) => row.forEach((c, ci) => {
+    const a = XLSX.utils.encode_cell({ r, c: ci });
+    if (c.n != null) { ws[a] = { t: 'n', v: c.n }; if (c.pct) ws[a].z = '0.00%'; else if (Number.isInteger(c.n) && Math.abs(c.n) >= 1000) ws[a].z = '#,##0'; }
+    else if (c.d) { const [y, mo, d] = c.d.split('-').map(Number); ws[a] = { t: 'n', v: (Date.UTC(y, mo - 1, d) - Date.UTC(1899, 11, 30)) / 864e5, z: 'yyyy-mm-dd' }; }
+  }));
+  if (sd.merges && sd.merges.length) ws['!merges'] = sd.merges.map(m => ({ s: { r: m.r, c: m.c }, e: { r: m.r + m.rs - 1, c: m.c + m.cs - 1 } }));
+  const nC = Math.max(0, ...sd.rows.map(r => r.length)); const cols = [];
+  for (let c = 0; c < nC; c++) { let w = 6; for (const r of sd.rows) { const s = (r[c] && r[c].s) || ''; let l = 0; for (const ch of s) l += isCJK(ch) ? 2 : 1; w = Math.max(w, Math.min(50, l + 2)); } cols.push({ wch: w }); }
+  ws['!cols'] = cols; return ws;
+}
+function writeXlsx(sheets, fname) {
+  const wb = XLSX.utils.book_new(); const used = new Set();
+  for (const sd of sheets) {
+    let n = (sd.name || 'Sheet').replace(/[\\\/\?\*\[\]:]/g, '_').slice(0, 31) || 'Sheet', k = 2;
+    while (used.has(n)) n = (sd.name.slice(0, 28) + '_' + k++); used.add(n);
+    XLSX.utils.book_append_sheet(wb, sheetToWs(sd), n);
+  }
+  XLSX.writeFile(wb, fname);
+}
+function needModel() { const t = activeTable(); const m = t && S.models.get(t.id); if (!m || !m.nR) { toast('請先選取有內容的表格', 'err'); return null; } return { t, m }; }
+async function doExport(cmd) {
+  if (cmd.endsWith('All')) {
+    const list = S.tables.map(t => ({ t, m: S.models.get(t.id) })).filter(x => x.m && x.m.nR);
+    if (!list.length) return toast('沒有可匯出的表格', 'err');
+    if (cmd === 'exXlsxAll') { if (!window.XLSX) return toast('Excel 元件未載入', 'err'); writeXlsx(list.map(x => sheetFromModel(x.t.name, x.m)), safeFile(baseName()) + '_全部表格.xlsx'); }
+    if (cmd === 'exJsonAll') download(safeFile(baseName()) + '_全部表格.json', JSON.stringify(Object.fromEntries(list.map(x => [x.t.name, toJSONRows(x.m)])), null, 2), 'application/json');
+    return toast(`已匯出 ${list.length} 個表格`, 'ok');
+  }
+  const x = needModel(); if (!x) return; const fn = safeFile(baseName() + '_' + x.t.name);
+  if (cmd === 'exXlsx') { if (!window.XLSX) return toast('Excel 元件未載入', 'err'); writeXlsx([sheetFromModel(x.t.name, x.m)], fn + '.xlsx'); }
+  if (cmd === 'exCsv') download(fn + '.csv', toCSV(x.m.cells), 'text/csv;charset=utf-8');
+  if (cmd === 'exJson') download(fn + '.json', JSON.stringify(toJSONRows(x.m), null, 2), 'application/json');
+  if (cmd === 'exMd') download(fn + '.md', toMarkdown(x.m), 'text/markdown;charset=utf-8');
+  if (cmd === 'exClip') {
+    const txt = toTSV(x.m.cells);
+    try { await navigator.clipboard.writeText(txt); toast('已複製，可直接貼到 Excel', 'ok'); }
+    catch (e) { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('已複製，可直接貼到 Excel', 'ok'); }
+  }
+}
+
+/* ---------- 批次處理 ---------- */
+const BATCH = { result: null };
+function openBatch() {
+  if (!S.templates.length) return toast('批次處理需要範本：請先把一個表格存成範本', 'err', 4000);
+  $('#bTpl').innerHTML = S.templates.map(t => `<option value="${t.id}">${esc(t.name)}（${Math.round(t.pageW)}×${Math.round(t.pageH)}${t.seg.source === 'ocr' ? '・OCR' : ''}）</option>`).join('');
+  $('#bLog').style.display = 'none'; $('#bLog').textContent = ''; $('#bResult').innerHTML = ''; $('#bXlsx').disabled = $('#bCsv').disabled = true; BATCH.result = null;
+  $('#dlgBatch').showModal();
+}
+async function runBatch() {
+  const tpl = S.templates.find(t => t.id === $('#bTpl').value); const files = [...$('#bFiles').files];
+  const pageMode = $('input[name=bPages]:checked').value, addSrc = $('#bSrc').checked;
+  if (!tpl) return toast('請選擇範本', 'err'); if (!files.length) return toast('請選擇 PDF 檔', 'err');
+  const log = $('#bLog'); log.style.display = 'block'; log.textContent = '';
+  const say = s => { log.textContent += s + '\n'; log.scrollTop = log.scrollHeight; };
+  let header = null; const body = []; let mism = 0, okFiles = 0;
+  $('#bRun').disabled = true;
+  try {
+    for (let fi = 0; fi < files.length; fi++) {
+      const f = files[fi]; progress(`批次處理 ${fi + 1}/${files.length}：${f.name}`, fi / files.length);
+      let ctx;
+      try { ctx = await PdfCtx.open(await f.arrayBuffer()); } catch (e) { say(`✘ ${f.name}：無法開啟（${e.message}）`); continue; }
+      try {
+        const pages = pageMode === 'first' ? [1] : Array.from({ length: ctx.n }, (_, i) => i + 1); const segs = [];
+        for (const p of pages) {
+          const pd = await ctx.full(p);
+          if (Math.abs(pd.w - tpl.pageW) > 2 || Math.abs(pd.h - tpl.pageH) > 2) { if (pageMode !== 'all') say(`  · ${f.name} p${p}：頁面尺寸不同，略過`); continue; }
+          if (pageMode === 'match' && await templateScore(tpl, ctx, p) < 0.6) continue;
+          const seg = segFromTemplate(tpl, p, pd);
+          if (seg.source === 'ocr') await ocrSegment(ctx, seg, fr => progress(`批次 OCR ${fi + 1}/${files.length}：${f.name} p${p}`, (fi + fr) / files.length));
+          segs.push(seg);
+        }
+        if (!segs.length) { say(`– ${f.name}：沒有符合的頁面`); continue; }
+        const t = tableFromTemplate(tpl, segs); const m = await computeTable(t, ctx);
+        const hr = m.hr; const bad = m.validation.filter(v => !v.ok).length; mism += bad;
+        if (!header) header = m.cells.slice(0, hr).map((row, i) => addSrc ? [{ s: i === 0 ? '來源檔案' : '' }, { s: i === 0 ? '頁碼' : '' }, ...row] : row);
+        m.cells.slice(hr).forEach((row, i) => body.push(addSrc ? [{ s: f.name }, { s: String(m.rowPage[hr + i] || ''), n: m.rowPage[hr + i] || null }, ...row] : row));
+        okFiles++; say(`✔ ${f.name}：${segs.length} 頁、${m.nR - hr} 列` + (bad ? `，⚠ 加總不符 ${bad} 項` : ''));
+      } catch (e) { console.error(e); say(`✘ ${f.name}：${e.message}`); }
+      finally { ctx.destroy(); }
+    }
+  } finally { hideProgress(); $('#bRun').disabled = false; }
+  const rows = [...(header || []), ...body];
+  const nC = Math.max(0, ...rows.map(r => r.length)); rows.forEach(r => { while (r.length < nC) r.push({ s: '' }); });
+  BATCH.result = { name: tpl.name, rows, merges: [] };
+  say(`\n完成：${okFiles}/${files.length} 個檔案，共 ${body.length} 列資料` + (mism ? `；加總不符 ${mism} 項，請檢查` : ''));
+  $('#bResult').innerHTML = rows.length ? `<div class="preview"><table>${rows.slice(0, 30).map(r => '<tr>' + r.map(c => `<td>${esc(c.s)}</td>`).join('') + '</tr>').join('')}</table></div><div class="small muted">預覽前 30 列</div>` : '';
+  $('#bXlsx').disabled = $('#bCsv').disabled = !body.length;
+}
+
+/* ---------- 專案選單 ---------- */
+async function renderProjMenu() {
+  const list = (await DB.all('projects')).sort((a, b) => b.updatedAt - a.updatedAt);
+  const pop = $('#projPop');
+  pop.innerHTML = `<div class="cap">最近的專案（存在本機 IndexedDB）</div>` + (list.length ? list.slice(0, 15).map(p => `<div style="display:flex;align-items:center"><button class="mi" data-open-proj="${p.id}" style="flex:1">${p.id === (S.project && S.project.id) ? '▶ ' : ''}${esc(p.name)} <span class="muted small">· ${p.pageCount} 頁 · ${new Date(p.updatedAt).toLocaleString('zh-TW', { hour12: false })}</span></button><button class="btn sm danger" data-del-proj="${p.id}" title="刪除專案">✕</button></div>`).join('') : '<div class="mi muted">尚無專案</div>') +
+    `<div class="sep"></div><button class="mi" data-cmd="closeProj">關閉目前專案</button>`;
+}
+async function deleteProject(id) {
+  const p = await DB.get('projects', id); if (!p || !confirm(`刪除專案「${p.name}」及其所有表格？`)) return;
+  for (const t of await DB.byProject(id)) await DB.del('tables', t.id);
+  await DB.del('projects', id); if (S.project && S.project.id === id) closeProject();
+  toast('已刪除專案', 'ok');
+}
+
+/* ---------- 綁定 ---------- */
+function renderAll() { renderTableList(); renderSide(); renderGrid(); renderOverlay(); renderThumbBadges(); }
+async function handleCmd(cmd) {
+  $$('.menu').forEach(m => m.classList.remove('open'));
+  if (cmd === 'tplSave') return saveTemplate();
+  if (cmd === 'tplManage') return openTemplateDialog();
+  if (cmd === 'closeProj') return closeProject();
+  if (cmd.startsWith('ex')) return doExport(cmd);
+}
+function bindUI() {
+  $('#btnOpen').onclick = () => $('#fileInput').click();
+  $('#fileInput').onchange = e => { const f = e.target.files[0]; if (f) openPdfFile(f); e.target.value = ''; };
+  document.addEventListener('click', async e => {
+    const mb = e.target.closest('[data-menu]');
+    if (mb) { const menu = mb.parentElement; const was = menu.classList.contains('open'); $$('.menu').forEach(m => m.classList.remove('open')); if (!was) { if (menu.id === 'mProj') await renderProjMenu(); menu.classList.add('open'); } return; }
+    const op = e.target.closest('[data-open-proj]'); if (op) { $$('.menu').forEach(m => m.classList.remove('open')); return openProjectById(op.dataset.openProj); }
+    const dp = e.target.closest('[data-del-proj]'); if (dp) { await deleteProject(dp.dataset.delProj); return renderProjMenu(); }
+    const c = e.target.closest('[data-cmd]'); if (c) return handleCmd(c.dataset.cmd);
+    if (!e.target.closest('.menu')) $$('.menu').forEach(m => m.classList.remove('open'));
+    const cl = e.target.closest('[data-close]'); if (cl) cl.closest('dialog').close();
+    const ta = e.target.closest('[data-tpl-apply]'); if (ta) { $('#dlgTpl').close(); return applyTemplate(S.templates.find(t => t.id === ta.dataset.tplApply), ta.dataset.m); }
+    const td = e.target.closest('[data-tpl-del]'); if (td) { const tp = S.templates.find(t => t.id === td.dataset.tplDel); if (confirm(`刪除範本「${tp.name}」？`)) { await DB.del('templates', tp.id); S.templates = S.templates.filter(t => t !== tp); openTemplateDialog(); } return; }
+    const rc = e.target.closest('[data-rec]'); if (rc) { const r = S.recommend; S.recommend = null; renderBanner(); if (rc.dataset.rec !== 'x' && r) applyTemplate(r.tpl, rc.dataset.rec, r.page); }
+  });
+  $$('[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+  $('#zIn').onclick = () => { S.zoom = Math.min(4, S.zoom * 1.2); renderPage(); };
+  $('#zOut').onclick = () => { S.zoom = Math.max(0.25, S.zoom / 1.2); renderPage(); };
+  $('#zFit').onclick = async () => { await fitZoom(); renderPage(); };
+  $('#pPrev').onclick = () => gotoPage(S.page - 1);
+  $('#pNext').onclick = () => gotoPage(S.page + 1);
+  $('#showWords').onchange = e => { S.showWords = e.target.checked; renderOverlay(); };
+  $('#btnDetectPage').onclick = () => detectCurrentPage();
+  $('#btnDetectAll').onclick = async () => {
+    if (!S.ctx) return; if (S.tables.length && !confirm('重新偵測全部頁面會刪除目前所有表格（含手動調整），繼續？')) return;
+    for (const t of [...S.tables]) await removeTable(t);
+    await detectPages(Array.from({ length: S.ctx.n }, (_, i) => i + 1));
+  };
+  $('#btnBatch').onclick = openBatch;
+  $('#bRun').onclick = runBatch;
+  $('#bXlsx').onclick = () => BATCH.result && writeXlsx([BATCH.result], safeFile('批次_' + BATCH.result.name) + '.xlsx');
+  $('#bCsv').onclick = () => BATCH.result && download(safeFile('批次_' + BATCH.result.name) + '.csv', toCSV(BATCH.result.rows), 'text/csv;charset=utf-8');
+  // 拖放
+  const viewer = $('#viewer'), drop = $('#drop');
+  ['dragenter', 'dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('hover'); }));
+  ['dragleave', 'drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('hover'); }));
+  document.addEventListener('drop', e => { const f = [...(e.dataTransfer.files || [])].find(x => /\.pdf$/i.test(x.name) || x.type === 'application/pdf'); if (f) openPdfFile(f); });
+  // 鍵盤
+  document.addEventListener('keydown', e => {
+    if (e.target.closest('input,select,textarea,[contenteditable="true"]') || e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
+    const k = e.key.toLowerCase();
+    if (k === 'v') setMode('select'); else if (k === 'b') setMode('box'); else if (k === 'c') setMode('col'); else if (k === 'r') setMode('row');
+    else if (k === '+' || k === '=') $('#zIn').click(); else if (k === '-') $('#zOut').click();
+    else if (e.key === 'PageDown') { e.preventDefault(); gotoPage(S.page + 1); } else if (e.key === 'PageUp') { e.preventDefault(); gotoPage(S.page - 1); }
+    else if (e.key === 'Escape') { S.drag = null; setMode('select'); }
+  });
+  // 分隔線
+  const sp = $('#splitter');
+  sp.addEventListener('pointerdown', e => {
+    sp.setPointerCapture(e.pointerId);
+    const mv = ev => { const h = Math.max(120, Math.min(window.innerHeight - 220, window.innerHeight - ev.clientY)); document.documentElement.style.setProperty('--gridH', h + 'px'); };
+    const up = () => { sp.removeEventListener('pointermove', mv); sp.removeEventListener('pointerup', up); DB.setting('gridH', getComputedStyle(document.documentElement).getPropertyValue('--gridH')); };
+    sp.addEventListener('pointermove', mv); sp.addEventListener('pointerup', up);
+  });
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => S.ctx && renderOverlay(), 200); });
+  bindOverlay(); bindSide(); bindGrid();
+}
+
+/* ---------- 啟動 ---------- */
+(async function init() {
+  bindUI(); renderSide();
+  if (window.pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_BASE + 'build/pdf.worker.min.js';
+  else $('#libStatus').innerHTML = '<span style="color:var(--red)">⚠ 無法載入 PDF 元件（pdf.js）。請確認可連線到 cdn.jsdelivr.net，或請 IT 開放。</span>';
+  if (!window.XLSX) $('#libStatus').insertAdjacentHTML('beforeend', '<br><span style="color:var(--red)">⚠ 無法載入 Excel 匯出元件（SheetJS），xlsx 匯出將無法使用。</span>');
+  try {
+    await DB.open();
+    S.templates = (await DB.all('templates')).sort((a, b) => a.createdAt - b.createdAt);
+    const gh = await DB.setting('gridH'); if (gh) document.documentElement.style.setProperty('--gridH', gh);
+    const last = await DB.setting('lastProject');
+    if (last && window.pdfjsLib && await DB.get('projects', last)) await openProjectById(last);
+  } catch (e) { console.error(e); toast('本機資料庫（IndexedDB）無法使用：' + e.message + '。無痕模式可能不支援。', 'err', 6000); }
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body></html>
