@@ -28,7 +28,8 @@ my-spa-tools/
 │  ├─ credit-card-fraud-sandbox/  信用卡防阻詐騙異常模式沙盒（案件情境注入、規則引擎與風險評分）
 │  ├─ debt-restructuring-calculator/ 消金逾期戶還款協議試算（債權整理、協商方案、核決層級與協議草稿）
 │  ├─ credit-report-parser/      聯徵與財報速讀解析器（風險訊號、DBR、循環使用率與財務比率）
-│  └─ audit-finding-kb/          稽核缺失知識庫（全文檢索、儀表板、報表、批次匯入與備份）
+│  ├─ audit-finding-kb/          稽核缺失知識庫（全文檢索、儀表板、報表、批次匯入與備份）
+│  └─ audit-sampling-studio/     稽核抽樣工作站（母體匯入、品質檢核、排除軌跡與可重現抽樣）
 ├─ sql/                          SQL 工具（每個工具一個子資料夾）
 │  ├─ sql-catalog/  sql-compare/  oracle-sql-formatter/
 │  ├─ sql-pii-cleaner/  sql-lineage-analyzer/
@@ -127,7 +128,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 47 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 48 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。
