@@ -58,7 +58,8 @@ my-spa-tools/
 │  ├─ decision-sandbox/          決策沙盤推演系統（多準則計分、TOPSIS、情境與蒙地卡羅模擬、決議快照）
 │  └─ zen-typewriter-editor/     Zen Typewriter 打字機心流編輯器（打字機聲效、Markdown 預覽與文稿庫）
 ├─ design/                       設計工具
-│  └─ palette-lore/
+│  ├─ palette-lore/
+│  └─ semantic-color-tokenizer/  Semantic Color Tokenizer 語意化色彩與 Token 產生器
 └─ diagram/                      流程與圖表建模
    ├─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器
    └─ vba-dependency-explorer/   VBA Dependency Explorer 依賴關係分析與視覺化
@@ -128,7 +129,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 48 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 49 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

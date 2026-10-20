@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Semantic Color Tokenizer | 語意化色彩與 Token 產生器</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  <!-- Culori for OKLCH color interpolation and conversion -->
+  <script src="https://cdn.jsdelivr.net/npm/culori@3.3.0/bundled/culori.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(150, 150, 150, 0.3);
+      border-radius: 4px;
+    }
+    .swatch-glow:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-50 text-slate-800 dark:bg-slate-950 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+
+  <!-- Top Navigation Header -->
+  <header class="border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur sticky top-0 z-40 px-4 lg:px-8 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 via-sky-500 to-emerald-400 flex items-center justify-center text-white shadow-md shadow-indigo-500/20">
+        <i class="ph ph-paint-brush-broad text-xl"></i>
+      </div>
+      <div>
+        <h1 class="text-base font-bold leading-tight tracking-tight flex items-center gap-2">
+          TokenCraft <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-mono font-medium">SPA</span>
+        </h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400">語意化色彩與 Design Tokens 產生系統</p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex items-center gap-2">
+      <!-- Randomize button -->
+      <button id="btn-randomize" class="p-2 text-slate-600 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors" title="隨機生成配色">
+        <i class="ph ph-shuffle text-lg"></i>
+      </button>
+
+      <!-- Share URL -->
+      <button id="btn-share" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+        <i class="ph ph-share-network"></i>
+        <span>分享</span>
+      </button>
+
+      <!-- App theme toggle (Dark / Light) -->
+      <button id="btn-app-theme" class="p-2 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition" title="切換介面外觀">
+        <i class="ph ph-moon text-lg dark:hidden"></i>
+        <i class="ph ph-sun text-lg hidden dark:inline"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Grid Layout -->
+  <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+
+    <!-- Left Settings Sidebar (lg:col-span-4 or 5) -->
+    <aside class="lg:col-span-4 xl:col-span-3 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 overflow-y-auto space-y-6">
+      
+      <!-- Section 1: Base Palettes -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">1. 基礎種子色 (Seed Colors)</h2>
+          <span class="text-[11px] text-slate-400">OKLCH 插值擴展</span>
+        </div>
+
+        <!-- Primary Seed -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+            <span>Primary (主要品牌色)</span>
+            <span id="primary-hex-label" class="font-mono text-slate-400 text-[11px]">#3b82f6</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <div class="relative w-10 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm shrink-0">
+              <input type="color" id="primary-picker" value="#3b82f6" class="absolute -top-2 -left-2 w-16 h-16 cursor-pointer opacity-100">
+            </div>
+            <input type="text" id="primary-input" value="#3b82f6" class="flex-1 font-mono text-xs uppercase px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/80 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+        </div>
+
+        <!-- Secondary / Accent Seed -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+            <span>Secondary / Accent (強調色)</span>
+            <span id="secondary-hex-label" class="font-mono text-slate-400 text-[11px]">#10b981</span>
+          </label>
+          <div class="flex items-center gap-2">
+            <div class="relative w-10 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm shrink-0">
+              <input type="color" id="secondary-picker" value="#10b981" class="absolute -top-2 -left-2 w-16 h-16 cursor-pointer opacity-100">
+            </div>
+            <input type="text" id="secondary-input" value="#10b981" class="flex-1 font-mono text-xs uppercase px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/80 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+          </div>
+        </div>
+
+        <!-- Neutral Family Option -->
+        <div class="space-y-1.5">
+          <label class="text-xs font-semibold text-slate-700 dark:text-slate-300">Neutral (灰階基底傾向)</label>
+          <div class="grid grid-cols-3 gap-1.5 text-xs">
+            <button type="button" data-tint="cool" class="neutral-tint-btn px-2 py-2 rounded-lg border border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-medium text-center transition">Cool 冷灰</button>
+            <button type="button" data-tint="true" class="neutral-tint-btn px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium text-center transition">Pure 純灰</button>
+            <button type="button" data-tint="warm" class="neutral-tint-btn px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium text-center transition">Warm 暖灰</button>
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-slate-200 dark:border-slate-800">
+
+      <!-- Section 2: Semantic Mapping Overrides -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">2. 語意對應微調 (Semantic Overrides)</h2>
+          <span class="text-[11px] text-slate-400">階層對齊</span>
+        </div>
+
+        <div class="space-y-3 text-xs">
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-medium">Primary Brand Step</span>
+              <span id="label-brand-step" class="font-mono text-indigo-600 dark:text-indigo-400 font-bold">500</span>
+            </div>
+            <input type="range" id="slider-brand-step" min="300" max="700" step="100" value="500" class="w-full accent-indigo-600">
+          </div>
+
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-medium">Surface Depth (Light: 50~100)</span>
+              <span id="label-surface-step" class="font-mono text-indigo-600 dark:text-indigo-400 font-bold">50</span>
+            </div>
+            <input type="range" id="slider-surface-step" min="0" max="200" step="50" value="50" class="w-full accent-indigo-600">
+          </div>
+
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-medium">Text Main Density (900~950)</span>
+              <span id="label-text-step" class="font-mono text-indigo-600 dark:text-indigo-400 font-bold">900</span>
+            </div>
+            <input type="range" id="slider-text-step" min="800" max="950" step="50" value="900" class="w-full accent-indigo-600">
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-slate-200 dark:border-slate-800">
+
+      <!-- Section 3: WCAG Quick Report -->
+      <div class="space-y-3">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">3. 即時對比度檢查 (WCAG 2.1)</h2>
+        <div class="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/80 dark:border-slate-700/60 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-600 dark:text-slate-300">品牌色在白色底</span>
+            <span id="contrast-brand-white" class="font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">4.5:1 (AA)</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-600 dark:text-slate-300">主內文在卡片底</span>
+            <span id="contrast-text-surface" class="font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">12.2:1 (AAA)</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-600 dark:text-slate-300">次要內文可讀性</span>
+            <span id="contrast-muted-surface" class="font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">4.8:1 (AA)</span>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Right Workspace Area (lg:col-span-8 or 9) -->
+    <main class="lg:col-span-8 xl:col-span-9 overflow-y-auto p-5 lg:p-8 space-y-8">
+      
+      <!-- Palette Scale Strip -->
+      <section class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white">生成的原始色彩尺度 (50 - 950 Scales)</h2>
+            <p class="text-xs text-slate-500">點擊任一色塊即可複製 HEX 色碼</p>
+          </div>
+          <div class="text-xs text-slate-400 font-mono">
+            OKLCH Perceptual Interpolation
+          </div>
+        </div>
+
+        <!-- Scale Bars -->
+        <div class="space-y-3">
+          <!-- Primary Scale -->
+          <div class="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+            <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Primary Scale</span>
+            <div id="scale-primary" class="grid grid-cols-11 gap-1 sm:gap-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Secondary Scale -->
+          <div class="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+            <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Secondary Scale</span>
+            <div id="scale-secondary" class="grid grid-cols-11 gap-1 sm:gap-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Neutral Scale -->
+          <div class="bg-white dark:bg-slate-900 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm space-y-2">
+            <span class="text-xs font-semibold text-slate-600 dark:text-slate-300">Neutral Scale</span>
+            <div id="scale-neutral" class="grid grid-cols-11 gap-1 sm:gap-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Sandbox Preview -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white">語意化 UI 沙盒即時預覽 (Live Sandbox)</h2>
+            <p class="text-xs text-slate-500">模擬以定義 Token 繪製的真實介面卡片與元件</p>
+          </div>
+          <div class="flex items-center gap-1 bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
+            <button id="preview-mode-light" class="px-3 py-1 rounded-lg text-xs font-medium bg-white dark:bg-slate-700 shadow-sm transition">Light Mode</button>
+            <button id="preview-mode-dark" class="px-3 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 transition">Dark Mode</button>
+          </div>
+        </div>
+
+        <!-- Sandbox Preview Frame Container -->
+        <div id="sandbox-frame" class="p-6 sm:p-8 rounded-3xl transition-all duration-300 border border-slate-200/80 shadow-md">
+          <div class="max-w-3xl mx-auto space-y-6">
+            
+            <!-- Sandbox Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b gap-3" id="sandbox-header-divider">
+              <div>
+                <span class="text-[11px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full inline-block mb-1" id="sandbox-badge">Analytics Engine</span>
+                <h3 class="text-xl font-bold" id="sandbox-title">專案營收指標儀表板</h3>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="sandbox-btn-secondary" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition">次要操作</button>
+                <button id="sandbox-btn-primary" class="px-4 py-1.5 rounded-xl text-xs font-semibold shadow-sm transition flex items-center gap-1.5">
+                  <i class="ph ph-plus-circle font-bold"></i> 新建報表
+                </button>
+              </div>
+            </div>
+
+            <!-- Dashboard Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- Metric 1 -->
+              <div class="p-4 rounded-2xl border shadow-sm space-y-2 transition" id="sandbox-card-1">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-medium" id="sandbox-metric-lbl1">活躍使用者</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1" id="sandbox-tag-1">
+                    <i class="ph ph-trend-up"></i> +14.2%
+                  </span>
+                </div>
+                <div class="text-2xl font-bold font-mono tracking-tight" id="sandbox-metric-val1">24,580</div>
+                <p class="text-[11px]" id="sandbox-metric-desc1">較上月增長 3,120 位付費訂閱</p>
+              </div>
+
+              <!-- Metric 2 -->
+              <div class="p-4 rounded-2xl border shadow-sm space-y-2 transition" id="sandbox-card-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-medium" id="sandbox-metric-lbl2">平均停留時長</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1" id="sandbox-tag-2">
+                    <i class="ph ph-trend-up"></i> +8.1%
+                  </span>
+                </div>
+                <div class="text-2xl font-bold font-mono tracking-tight" id="sandbox-metric-val2">4m 32s</div>
+                <p class="text-[11px]" id="sandbox-metric-desc2">各端跳出率整體下降 2.4%</p>
+              </div>
+
+              <!-- Metric 3 -->
+              <div class="p-4 rounded-2xl border shadow-sm space-y-2 transition" id="sandbox-card-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-medium" id="sandbox-metric-lbl3">本月總收益</span>
+                  <span class="text-xs px-2 py-0.5 rounded-full font-bold flex items-center gap-1" id="sandbox-tag-3">
+                    <i class="ph ph-check-circle"></i> 達標
+                  </span>
+                </div>
+                <div class="text-2xl font-bold font-mono tracking-tight" id="sandbox-metric-val3">$182,400</div>
+                <p class="text-[11px]" id="sandbox-metric-desc3">年度目標達成進度 91.5%</p>
+              </div>
+            </div>
+
+            <!-- Form Interaction Preview -->
+            <div class="p-5 rounded-2xl border shadow-sm space-y-3" id="sandbox-card-form">
+              <h4 class="text-sm font-semibold" id="sandbox-form-title">即時搜尋與篩選</h4>
+              <div class="flex flex-col sm:flex-row items-center gap-3">
+                <div class="relative flex-1 w-full">
+                  <i class="ph ph-magnifying-glass absolute left-3 top-2.5 text-sm" id="sandbox-search-icon"></i>
+                  <input type="text" placeholder="快速搜尋專案編號、標籤或負責人..." class="w-full text-xs pl-9 pr-3 py-2 rounded-xl border focus:outline-none transition" id="sandbox-input">
+                </div>
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                  <button class="flex-1 sm:flex-none px-3 py-2 text-xs rounded-xl border font-medium flex items-center justify-center gap-1" id="sandbox-filter-btn">
+                    <i class="ph ph-faders"></i> 篩選器
+                  </button>
+                  <button class="flex-1 sm:flex-none px-4 py-2 text-xs rounded-xl font-semibold shadow-sm transition" id="sandbox-confirm-btn">
+                    搜尋
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Code Export Panel -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-bold text-slate-900 dark:text-white">配置程式碼匯出 (Tokens Export)</h2>
+            <p class="text-xs text-slate-500">標準格式一鍵貼至專案直接啟用</p>
+          </div>
+          <button id="btn-copy-code" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium shadow-sm transition">
+            <i class="ph ph-copy"></i>
+            <span id="copy-btn-text">複製代碼</span>
+          </button>
+        </div>
+
+        <div class="bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden shadow-lg">
+          <!-- Code Tabs -->
+          <div class="flex items-center border-b border-slate-800 bg-slate-950/60 px-4">
+            <button data-tab="css" class="code-tab-btn py-2.5 px-3 text-xs font-mono font-medium border-b-2 border-indigo-500 text-indigo-400">CSS Variables</button>
+            <button data-tab="tailwind" class="code-tab-btn py-2.5 px-3 text-xs font-mono font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200">Tailwind Config</button>
+            <button data-tab="json" class="code-tab-btn py-2.5 px-3 text-xs font-mono font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200">DTCG JSON</button>
+            <button data-tab="yaml" class="code-tab-btn py-2.5 px-3 text-xs font-mono font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200">YAML</button>
+          </div>
+
+          <!-- Code View -->
+          <pre class="p-4 text-xs font-mono text-slate-200 overflow-x-auto leading-relaxed max-h-[340px]"><code id="code-output">/* Generating tokens... */</code></pre>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Toast Notification Box -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-12 opacity-0 transition-all duration-300 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xl text-xs font-medium">
+    <i class="ph ph-check-circle-fill text-emerald-400 dark:text-emerald-600 text-base"></i>
+    <span id="toast-message">已成功複製到剪貼簿</span>
+  </div>
+
+  <!-- Script Logic -->
+  <script>
+    // System State Store
+    const state = {
+      primary: '#3b82f6',
+      secondary: '#10b981',
+      neutralTint: 'cool', // 'cool', 'true', 'warm'
+      brandStep: 500,
+      surfaceStep: 50,
+      textStep: 900,
+      previewMode: 'light', // 'light' or 'dark'
+      activeTab: 'css',
+      scales: {
+        primary: {},
+        secondary: {},
+        neutral: {}
+      }
+    };
+
+    // Standard Scale Levels
+    const SCALE_STEPS = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+
+    // OKLCH Lightness Anchor Table for clean UI tones
+    const OKLCH_LIGHTNESS = {
+      50: 0.97,
+      100: 0.93,
+      200: 0.86,
+      300: 0.77,
+      400: 0.68,
+      500: 0.58,
+      600: 0.49,
+      700: 0.40,
+      800: 0.31,
+      900: 0.22,
+      950: 0.15
+    };
+
+    // Helper: Safely convert any color to valid Hex
+    function safeHex(color) {
+      try {
+        return culori.formatHex(color) || '#000000';
+      } catch (e) {
+        return '#000000';
+      }
+    }
+
+    // Generate balanced 11-step scale using OKLCH
+    function generateOklchScale(baseColorHex, isNeutral = false, neutralType = 'cool') {
+      const baseOklch = culori.oklch(baseColorHex) || { l: 0.5, c: 0.1, h: 240 };
+      const scale = {};
+
+      SCALE_STEPS.forEach(step => {
+        const targetL = OKLCH_LIGHTNESS[step];
+        let chroma = baseOklch.c;
+        let hue = baseOklch.h;
+
+        if (isNeutral) {
+          // Subtle saturation for modern cool/warm slate
+          if (neutralType === 'cool') {
+            chroma = 0.015;
+            hue = 250; // Cool slate
+          } else if (neutralType === 'warm') {
+            chroma = 0.016;
+            hue = 60; // Warm stone
+          } else {
+            chroma = 0.002; // Pure gray
+            hue = 0;
+          }
+        } else {
+          // Dampen chroma slightly at extreme highlights and shadows for organic feel
+          if (step === 50) chroma *= 0.35;
+          else if (step === 100) chroma *= 0.55;
+          else if (step === 200) chroma *= 0.8;
+          else if (step === 900) chroma *= 0.85;
+          else if (step === 950) chroma *= 0.7;
+        }
+
+        const oklchColor = { mode: 'oklch', l: targetL, c: chroma, h: hue };
+        scale[step] = safeHex(oklchColor);
+      });
+
+      return scale;
+    }
+
+    // Calculate WCAG Relative Luminance
+    function getLuminance(hex) {
+      const rgb = culori.rgb(hex);
+      if (!rgb) return 0;
+      const a = [rgb.r, rgb.g, rgb.b].map(v => {
+        return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+      });
+      return a[0] * 0.2126 + a[1] * 0.7152 + a[2] * 0.0722;
+    }
+
+    // Calculate WCAG Contrast Ratio
+    function getContrast(hex1, hex2) {
+      const lum1 = getLuminance(hex1);
+      const lum2 = getLuminance(hex2);
+      const brightest = Math.max(lum1, lum2);
+      const darkest = Math.min(lum1, lum2);
+      return (brightest + 0.05) / (darkest + 0.05);
+    }
+
+    // Copy to clipboard with fallback
+    function copyText(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('已成功複製到剪貼簿');
+      } catch (e) {
+        showToast('複製失敗，請手動選取');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // Custom Toast
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toast-message');
+      toastMessage.textContent = msg;
+      toast.classList.remove('translate-y-12', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-12', 'opacity-0');
+      }, 2500);
+    }
+
+    // Build the visual swatches
+    function renderScales() {
+      const renderRow = (containerId, scaleObj) => {
+        const container = document.getElementById(containerId);
+        container.innerHTML = '';
+        SCALE_STEPS.forEach(step => {
+          const hex = scaleObj[step];
+          const btn = document.createElement('button');
+          btn.className = 'swatch-glow group relative flex flex-col items-center justify-between p-1.5 sm:p-2 rounded-xl transition duration-200';
+          btn.style.backgroundColor = hex;
+          
+          // Determine text contrast inside swatch
+          const isDarkText = getLuminance(hex) > 0.4;
+          const textColor = isDarkText ? '#0f172a' : '#ffffff';
+
+          btn.innerHTML = `
+            <span class="text-[10px] font-mono font-bold" style="color: ${textColor}">${step}</span>
+            <span class="text-[9px] font-mono uppercase opacity-0 group-hover:opacity-100 transition-opacity mt-4 truncate max-w-full" style="color: ${textColor}">${hex}</span>
+          `;
+          btn.title = `階層 ${step}: ${hex} (點擊複製)`;
+          btn.addEventListener('click', () => {
+            copyText(hex);
+          });
+          container.appendChild(btn);
+        });
+      };
+
+      renderRow('scale-primary', state.scales.primary);
+      renderRow('scale-secondary', state.scales.secondary);
+      renderRow('scale-neutral', state.scales.neutral);
+    }
+
+    // Update Sandbox UI with the computed Semantic Tokens
+    function updateSandbox() {
+      const isDark = state.previewMode === 'dark';
+      const p = state.scales.primary;
+      const s = state.scales.secondary;
+      const n = state.scales.neutral;
+
+      // Semantic Mappings
+      const bgCanvas = isDark ? n[950] : n[state.surfaceStep];
+      const bgSurface = isDark ? n[900] : '#ffffff';
+      const bgSurfaceRaised = isDark ? n[800] : n[100];
+      const textMain = isDark ? n[50] : n[state.textStep];
+      const textMuted = isDark ? n[400] : n[500];
+      const borderSubtle = isDark ? n[800] : n[200];
+      const brandDefault = isDark ? p[400] : p[state.brandStep];
+      const brandHover = isDark ? p[300] : p[state.brandStep + 100 > 950 ? 950 : state.brandStep + 100];
+      const brandContrast = isDark ? n[950] : '#ffffff';
+      const accentDefault = isDark ? s[400] : s[500];
+
+      // Update Sandbox Container
+      const frame = document.getElementById('sandbox-frame');
+      frame.style.backgroundColor = bgCanvas;
+      frame.style.borderColor = borderSubtle;
+
+      // Header and Text
+      document.getElementById('sandbox-title').style.color = textMain;
+      document.getElementById('sandbox-header-divider').style.borderColor = borderSubtle;
+      
+      const badge = document.getElementById('sandbox-badge');
+      badge.style.backgroundColor = isDark ? p[950] : p[100];
+      badge.style.color = brandDefault;
+
+      // Buttons
+      const btnPrimary = document.getElementById('sandbox-btn-primary');
+      btnPrimary.style.backgroundColor = brandDefault;
+      btnPrimary.style.color = brandContrast;
+
+      const btnSecondary = document.getElementById('sandbox-btn-secondary');
+      btnSecondary.style.backgroundColor = bgSurface;
+      btnSecondary.style.color = textMain;
+      btnSecondary.style.borderColor = borderSubtle;
+
+      // Cards
+      const cards = ['sandbox-card-1', 'sandbox-card-2', 'sandbox-card-3', 'sandbox-card-form'];
+      cards.forEach(id => {
+        const el = document.getElementById(id);
+        el.style.backgroundColor = bgSurface;
+        el.style.borderColor = borderSubtle;
+      });
+
+      // Metric Card 1
+      document.getElementById('sandbox-metric-lbl1').style.color = textMuted;
+      document.getElementById('sandbox-metric-val1').style.color = textMain;
+      document.getElementById('sandbox-metric-desc1').style.color = textMuted;
+      const tag1 = document.getElementById('sandbox-tag-1');
+      tag1.style.backgroundColor = isDark ? s[950] : s[100];
+      tag1.style.color = accentDefault;
+
+      // Metric Card 2
+      document.getElementById('sandbox-metric-lbl2').style.color = textMuted;
+      document.getElementById('sandbox-metric-val2').style.color = textMain;
+      document.getElementById('sandbox-metric-desc2').style.color = textMuted;
+      const tag2 = document.getElementById('sandbox-tag-2');
+      tag2.style.backgroundColor = isDark ? s[950] : s[100];
+      tag2.style.color = accentDefault;
+
+      // Metric Card 3
+      document.getElementById('sandbox-metric-lbl3').style.color = textMuted;
+      document.getElementById('sandbox-metric-val3').style.color = textMain;
+      document.getElementById('sandbox-metric-desc3').style.color = textMuted;
+      const tag3 = document.getElementById('sandbox-tag-3');
+      tag3.style.backgroundColor = isDark ? p[950] : p[100];
+      tag3.style.color = brandDefault;
+
+      // Form Elements
+      document.getElementById('sandbox-form-title').style.color = textMain;
+      document.getElementById('sandbox-search-icon').style.color = textMuted;
+      const input = document.getElementById('sandbox-input');
+      input.style.backgroundColor = bgSurfaceRaised;
+      input.style.color = textMain;
+      input.style.borderColor = borderSubtle;
+
+      const filterBtn = document.getElementById('sandbox-filter-btn');
+      filterBtn.style.backgroundColor = bgSurface;
+      filterBtn.style.color = textMain;
+      filterBtn.style.borderColor = borderSubtle;
+
+      const confirmBtn = document.getElementById('sandbox-confirm-btn');
+      confirmBtn.style.backgroundColor = brandDefault;
+      confirmBtn.style.color = brandContrast;
+
+      // Update Contrast Checker
+      updateContrastMetrics(brandDefault, bgSurface, textMain, textMuted);
+    }
+
+    // Refresh contrast cards
+    function updateContrastMetrics(brand, surface, textMain, textMuted) {
+      const contrastBrand = getContrast(brand, '#ffffff').toFixed(1);
+      const contrastText = getContrast(textMain, surface).toFixed(1);
+      const contrastMuted = getContrast(textMuted, surface).toFixed(1);
+
+      const formatBadge = (ratio, minAA = 4.5) => {
+        const passAAA = ratio >= 7.0;
+        const passAA = ratio >= minAA;
+        if (passAAA) return `${ratio}:1 (AAA)`;
+        if (passAA) return `${ratio}:1 (AA)`;
+        return `${ratio}:1 (Fail)`;
+      };
+
+      const setBadge = (elId, ratio, minAA = 4.5) => {
+        const el = document.getElementById(elId);
+        el.textContent = formatBadge(ratio, minAA);
+        if (ratio >= minAA) {
+          el.className = "font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300";
+        } else {
+          el.className = "font-mono font-bold px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300";
+        }
+      };
+
+      setBadge('contrast-brand-white', contrastBrand, 3.0);
+      setBadge('contrast-text-surface', contrastText, 4.5);
+      setBadge('contrast-muted-surface', contrastMuted, 4.5);
+    }
+
+    // Format & Render Code Output
+    function renderCode() {
+      const p = state.scales.primary;
+      const s = state.scales.secondary;
+      const n = state.scales.neutral;
+      const codeEl = document.getElementById('code-output');
+
+      if (state.activeTab === 'css') {
+        let css = `:root {\n  /* Primitive Scales */\n`;
+        SCALE_STEPS.forEach(st => css += `  --color-primary-${st}: ${p[st]};\n`);
+        SCALE_STEPS.forEach(st => css += `  --color-secondary-${st}: ${s[st]};\n`);
+        SCALE_STEPS.forEach(st => css += `  --color-neutral-${st}: ${n[st]};\n`);
+        css += `\n  /* Light Mode Semantic Tokens */\n`;
+        css += `  --color-bg-canvas: var(--color-neutral-${state.surfaceStep});\n`;
+        css += `  --color-bg-surface: #ffffff;\n`;
+        css += `  --color-bg-surface-raised: var(--color-neutral-100);\n`;
+        css += `  --color-border-subtle: var(--color-neutral-200);\n`;
+        css += `  --color-text-main: var(--color-neutral-${state.textStep});\n`;
+        css += `  --color-text-muted: var(--color-neutral-500);\n`;
+        css += `  --color-brand-default: var(--color-primary-${state.brandStep});\n`;
+        css += `  --color-brand-contrast: #ffffff;\n`;
+        css += `  --color-accent-default: var(--color-secondary-500);\n`;
+        css += `}\n\n`;
+        css += `[data-theme="dark"] {\n  /* Dark Mode Semantic Tokens */\n`;
+        css += `  --color-bg-canvas: var(--color-neutral-950);\n`;
+        css += `  --color-bg-surface: var(--color-neutral-900);\n`;
+        css += `  --color-bg-surface-raised: var(--color-neutral-800);\n`;
+        css += `  --color-border-subtle: var(--color-neutral-800);\n`;
+        css += `  --color-text-main: var(--color-neutral-50);\n`;
+        css += `  --color-text-muted: var(--color-neutral-400);\n`;
+        css += `  --color-brand-default: var(--color-primary-400);\n`;
+        css += `  --color-brand-contrast: var(--color-neutral-950);\n`;
+        css += `  --color-accent-default: var(--color-secondary-400);\n`;
+        css += `}`;
+        codeEl.textContent = css;
+      } else if (state.activeTab === 'tailwind') {
+        const obj = {
+          theme: {
+            extend: {
+              colors: {
+                primary: p,
+                secondary: s,
+                neutral: n,
+                brand: {
+                  DEFAULT: 'var(--color-brand-default)',
+                  contrast: 'var(--color-brand-contrast)'
+                },
+                canvas: 'var(--color-bg-canvas)',
+                surface: 'var(--color-bg-surface)',
+                'surface-raised': 'var(--color-bg-surface-raised)',
+                main: 'var(--color-text-main)',
+                muted: 'var(--color-text-muted)',
+                subtle: 'var(--color-border-subtle)'
+              }
+            }
+          }
+        };
+        codeEl.textContent = `// tailwind.config.js\nmodule.exports = ${JSON.stringify(obj, null, 2)};`;
+      } else if (state.activeTab === 'json') {
+        const dtcg = {
+          color: {
+            primary: {},
+            secondary: {},
+            neutral: {},
+            semantic: {
+              background: {
+                canvas: { $value: `{color.neutral.${state.surfaceStep}}`, $type: "color" },
+                surface: { $value: "#ffffff", $type: "color" }
+              },
+              text: {
+                main: { $value: `{color.neutral.${state.textStep}}`, $type: "color" }
+              },
+              brand: {
+                default: { $value: `{color.primary.${state.brandStep}}`, $type: "color" }
+              }
+            }
+          }
+        };
+        SCALE_STEPS.forEach(st => {
+          dtcg.color.primary[st] = { $value: p[st], $type: "color" };
+          dtcg.color.secondary[st] = { $value: s[st], $type: "color" };
+          dtcg.color.neutral[st] = { $value: n[st], $type: "color" };
+        });
+        codeEl.textContent = JSON.stringify(dtcg, null, 2);
+      } else if (state.activeTab === 'yaml') {
+        let yaml = `color:\n  primary:\n`;
+        SCALE_STEPS.forEach(st => yaml += `    ${st}: "${p[st]}"\n`);
+        yaml += `  secondary:\n`;
+        SCALE_STEPS.forEach(st => yaml += `    ${st}: "${s[st]}"\n`);
+        yaml += `  neutral:\n`;
+        SCALE_STEPS.forEach(st => yaml += `    ${st}: "${n[st]}"\n`);
+        yaml += `  semantic:\n    brand: "primary.${state.brandStep}"\n    canvas: "neutral.${state.surfaceStep}"\n    text: "neutral.${state.textStep}"\n`;
+        codeEl.textContent = yaml;
+      }
+    }
+
+    // Refresh All System Parts
+    function recalculate() {
+      state.scales.primary = generateOklchScale(state.primary, false);
+      state.scales.secondary = generateOklchScale(state.secondary, false);
+      state.scales.neutral = generateOklchScale('#64748b', true, state.neutralTint);
+
+      renderScales();
+      updateSandbox();
+      renderCode();
+      updateUrlHash();
+    }
+
+    // Hash sync: #p=3b82f6&s=10b981&n=cool
+    function updateUrlHash() {
+      const params = new URLSearchParams();
+      params.set('p', state.primary.replace('#', ''));
+      params.set('s', state.secondary.replace('#', ''));
+      params.set('n', state.neutralTint);
+      params.set('bs', state.brandStep);
+      params.set('ss', state.surfaceStep);
+      params.set('ts', state.textStep);
+      window.location.hash = params.toString();
+    }
+
+    function loadFromUrlHash() {
+      if (!window.location.hash || window.location.hash.length <= 1) return;
+      try {
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        if (params.get('p')) state.primary = '#' + params.get('p');
+        if (params.get('s')) state.secondary = '#' + params.get('s');
+        if (params.get('n')) state.neutralTint = params.get('n');
+        if (params.get('bs')) state.brandStep = parseInt(params.get('bs'), 10);
+        if (params.get('ss')) state.surfaceStep = parseInt(params.get('ss'), 10);
+        if (params.get('ts')) state.textStep = parseInt(params.get('ts'), 10);
+
+        // Sync input values
+        document.getElementById('primary-picker').value = state.primary;
+        document.getElementById('primary-input').value = state.primary;
+        document.getElementById('primary-hex-label').textContent = state.primary;
+
+        document.getElementById('secondary-picker').value = state.secondary;
+        document.getElementById('secondary-input').value = state.secondary;
+        document.getElementById('secondary-hex-label').textContent = state.secondary;
+
+        document.getElementById('slider-brand-step').value = state.brandStep;
+        document.getElementById('label-brand-step').textContent = state.brandStep;
+
+        document.getElementById('slider-surface-step').value = state.surfaceStep;
+        document.getElementById('label-surface-step').textContent = state.surfaceStep;
+
+        document.getElementById('slider-text-step').value = state.textStep;
+        document.getElementById('label-text-step').textContent = state.textStep;
+
+        updateNeutralTintUI();
+      } catch (e) {
+        console.error('Failed to parse URL hash parameters', e);
+      }
+    }
+
+    function updateNeutralTintUI() {
+      document.querySelectorAll('.neutral-tint-btn').forEach(btn => {
+        if (btn.dataset.tint === state.neutralTint) {
+          btn.className = 'neutral-tint-btn px-2 py-2 rounded-lg border border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-medium text-center transition';
+        } else {
+          btn.className = 'neutral-tint-btn px-2 py-2 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium text-center transition';
+        }
+      });
+    }
+
+    // Set up Event Listeners
+    function setupEvents() {
+      // Primary Input
+      const primaryPicker = document.getElementById('primary-picker');
+      const primaryInput = document.getElementById('primary-input');
+      const primaryLabel = document.getElementById('primary-hex-label');
+
+      primaryPicker.addEventListener('input', e => {
+        state.primary = e.target.value;
+        primaryInput.value = e.target.value;
+        primaryLabel.textContent = e.target.value;
+        recalculate();
+      });
+
+      primaryInput.addEventListener('change', e => {
+        const val = e.target.value.startsWith('#') ? e.target.value : '#' + e.target.value;
+        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+          state.primary = val;
+          primaryPicker.value = val;
+          primaryLabel.textContent = val;
+          recalculate();
+        }
+      });
+
+      // Secondary Input
+      const secondaryPicker = document.getElementById('secondary-picker');
+      const secondaryInput = document.getElementById('secondary-input');
+      const secondaryLabel = document.getElementById('secondary-hex-label');
+
+      secondaryPicker.addEventListener('input', e => {
+        state.secondary = e.target.value;
+        secondaryInput.value = e.target.value;
+        secondaryLabel.textContent = e.target.value;
+        recalculate();
+      });
+
+      secondaryInput.addEventListener('change', e => {
+        const val = e.target.value.startsWith('#') ? e.target.value : '#' + e.target.value;
+        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+          state.secondary = val;
+          secondaryPicker.value = val;
+          secondaryLabel.textContent = val;
+          recalculate();
+        }
+      });
+
+      // Neutral Tints
+      document.querySelectorAll('.neutral-tint-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.neutralTint = btn.dataset.tint;
+          updateNeutralTintUI();
+          recalculate();
+        });
+      });
+
+      // Sliders
+      const brandSlider = document.getElementById('slider-brand-step');
+      brandSlider.addEventListener('input', e => {
+        state.brandStep = parseInt(e.target.value, 10);
+        document.getElementById('label-brand-step').textContent = state.brandStep;
+        updateSandbox();
+        renderCode();
+        updateUrlHash();
+      });
+
+      const surfaceSlider = document.getElementById('slider-surface-step');
+      surfaceSlider.addEventListener('input', e => {
+        state.surfaceStep = parseInt(e.target.value, 10);
+        document.getElementById('label-surface-step').textContent = state.surfaceStep;
+        updateSandbox();
+        renderCode();
+        updateUrlHash();
+      });
+
+      const textSlider = document.getElementById('slider-text-step');
+      textSlider.addEventListener('input', e => {
+        state.textStep = parseInt(e.target.value, 10);
+        document.getElementById('label-text-step').textContent = state.textStep;
+        updateSandbox();
+        renderCode();
+        updateUrlHash();
+      });
+
+      // Sandbox Preview Mode Switcher (Light vs Dark)
+      const btnPreviewLight = document.getElementById('preview-mode-light');
+      const btnPreviewDark = document.getElementById('preview-mode-dark');
+
+      btnPreviewLight.addEventListener('click', () => {
+        state.previewMode = 'light';
+        btnPreviewLight.className = "px-3 py-1 rounded-lg text-xs font-medium bg-white dark:bg-slate-700 shadow-sm transition";
+        btnPreviewDark.className = "px-3 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 transition";
+        updateSandbox();
+      });
+
+      btnPreviewDark.addEventListener('click', () => {
+        state.previewMode = 'dark';
+        btnPreviewDark.className = "px-3 py-1 rounded-lg text-xs font-medium bg-white dark:bg-slate-700 shadow-sm transition";
+        btnPreviewLight.className = "px-3 py-1 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 transition";
+        updateSandbox();
+      });
+
+      // App Level Dark Mode Toggle
+      document.getElementById('btn-app-theme').addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+      });
+
+      // Random Palette Generator
+      document.getElementById('btn-randomize').addEventListener('click', () => {
+        const randHue1 = Math.floor(Math.random() * 360);
+        const randHue2 = (randHue1 + 60 + Math.floor(Math.random() * 120)) % 360;
+        
+        state.primary = safeHex({ mode: 'oklch', l: 0.6, c: 0.22, h: randHue1 });
+        state.secondary = safeHex({ mode: 'oklch', l: 0.65, c: 0.18, h: randHue2 });
+        
+        primaryPicker.value = state.primary;
+        primaryInput.value = state.primary;
+        primaryLabel.textContent = state.primary;
+
+        secondaryPicker.value = state.secondary;
+        secondaryInput.value = state.secondary;
+        secondaryLabel.textContent = state.secondary;
+
+        recalculate();
+        showToast('已隨機產生新調色盤');
+      });
+
+      // Share URL Button
+      document.getElementById('btn-share').addEventListener('click', () => {
+        updateUrlHash();
+        copyText(window.location.href);
+      });
+
+      // Export Tab Switcher
+      document.querySelectorAll('.code-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.code-tab-btn').forEach(b => {
+            b.classList.remove('border-indigo-500', 'text-indigo-400');
+            b.classList.add('border-transparent', 'text-slate-400');
+          });
+          btn.classList.add('border-indigo-500', 'text-indigo-400');
+          btn.classList.remove('border-transparent', 'text-slate-400');
+
+          state.activeTab = btn.dataset.tab;
+          renderCode();
+        });
+      });
+
+      // Copy Code Button
+      document.getElementById('btn-copy-code').addEventListener('click', () => {
+        const text = document.getElementById('code-output').textContent;
+        copyText(text);
+      });
+    }
+
+    // App Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      loadFromUrlHash();
+      setupEvents();
+      recalculate();
+    });
+  </script>
+  <!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+  <a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+  <style>
+    #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+      font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+      background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+      padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+      box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+    #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+    #hf-home-entry:active{transform:translateY(0)}
+    @media print{#hf-home-entry{display:none}}
+  </style>
+</body>
+</html>
