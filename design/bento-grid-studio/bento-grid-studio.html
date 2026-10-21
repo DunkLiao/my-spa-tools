@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" class="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bento Studio - Bento Grid 排版版型產生器</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            surface: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              700: '#334155',
+              800: '#1e293b',
+              850: '#111827',
+              900: '#0b0f19'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <style>
+    * {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    input, textarea, pre, code {
+      user-select: text;
+      -webkit-user-select: text;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* 自訂滾動條 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.05);
+    }
+    .dark ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #334155;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .dark ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* 網格畫布動態變數 */
+    :root {
+      --grid-cols: 4;
+      --grid-gap: 16px;
+      --cell-height: 160px;
+      --card-radius: 20px;
+    }
+
+    #bentoCanvas {
+      display: grid;
+      grid-template-columns: repeat(var(--grid-cols), minmax(0, 1fr));
+      gap: var(--grid-gap);
+      grid-auto-rows: var(--cell-height);
+    }
+
+    /* 輔助網格層 */
+    #gridGuides {
+      display: grid;
+      grid-template-columns: repeat(var(--grid-cols), minmax(0, 1fr));
+      gap: var(--grid-gap);
+      grid-auto-rows: var(--cell-height);
+      pointer-events: none;
+    }
+
+    /* 卡片在畫布中的 Grid 範圍過渡 */
+    .bento-card-item {
+      transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+      touch-action: none;
+    }
+    
+    .bento-card-item.is-dragging {
+      opacity: 0.35;
+      transform: scale(0.98);
+      z-index: 40;
+    }
+
+    /* 幽靈吸附預覽指示器 */
+    #ghostIndicator {
+      border-radius: var(--card-radius);
+      transition: all 0.08s cubic-bezier(0.2, 0, 0, 1);
+      pointer-events: none;
+    }
+
+    /* 尺寸拉伸把手 */
+    .resize-handle {
+      position: absolute;
+      right: 4px;
+      bottom: 4px;
+      width: 22px;
+      height: 22px;
+      cursor: nwse-resize;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.45;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      touch-action: none;
+    }
+    .resize-handle:hover,
+    .is-resizing .resize-handle {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+  </style>
+</head>
+
+<body class="bg-surface-50 dark:bg-surface-900 text-slate-800 dark:text-slate-100 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white transition-colors duration-200">
+  <header class="h-16 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-surface-850/80 backdrop-blur px-6 flex items-center justify-between sticky top-0 z-30 transition-colors">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/25">
+        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <rect x="3" y="3" width="7" height="7" rx="1.5" />
+          <rect x="14" y="3" width="7" height="11" rx="1.5" />
+          <rect x="3" y="14" width="7" height="7" rx="1.5" />
+          <rect x="14" y="18" width="7" height="3" rx="1" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-base font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          Bento Studio
+          <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-600 dark:bg-brand-500/20 dark:text-brand-400 border border-brand-500/30">SPA</span>
+        </h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400">現代便當盒排版與代碼生成器</p>
+      </div>
+    </div>
+
+    <!-- 中間版型切換與狀態 -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-750 p-1 rounded-xl text-xs">
+        <select id="projectSelect" class="bg-transparent text-slate-700 dark:text-slate-200 px-3 py-1 font-medium focus:outline-none cursor-pointer">
+          <!-- 動態載入 IndexedDB 版型 -->
+        </select>
+        <button id="btnNewProject" title="新增空白版型" class="p-1.5 hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg transition">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+        </button>
+      </div>
+
+      <div id="saveStatusBadge" class="hidden sm:flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800/60 px-2.5 py-1 rounded-full">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></span>
+        <span id="saveStatusText">已儲存至 IndexedDB</span>
+      </div>
+    </div>
+
+    <!-- 右側操作：模式切換、重設、匯出與預覽代碼 -->
+    <div class="flex items-center gap-2">
+      <!-- 淺色/深色模式切換按鈕 -->
+      <button id="btnThemeToggle" title="切換外觀模式" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs border border-slate-200 dark:border-slate-700 transition active:scale-95 flex items-center justify-center">
+        <!-- 太陽圖標（深色模式時顯示以切換至淺色） -->
+        <svg id="sunIcon" class="w-4 h-4 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <!-- 月亮圖標（淺色模式時顯示以切換至深色） -->
+        <svg id="moonIcon" class="w-4 h-4 block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      </button>
+
+      <button id="btnAddCard" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 transition active:scale-95">
+        <svg class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v12m6-6H6"/>
+        </svg>
+        新增區塊
+      </button>
+
+      <button id="btnShuffle" title="隨機產生經典版型" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs border border-slate-200 dark:border-slate-700 transition active:scale-95">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      </button>
+
+      <!-- 使用說明與套用教學按鈕 -->
+      <button id="btnOpenGuideModal" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 border border-slate-200 dark:border-slate-700 transition active:scale-95">
+        <svg class="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+        使用說明
+      </button>
+
+      <button id="btnOpenExportModal" class="px-4 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-brand-500/20 transition active:scale-95">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+        </svg>
+        匯出代碼
+      </button>
+    </div>
+  </header>
+  <main class="flex-1 flex overflow-hidden">
+    <!-- 左側參數與選中卡片面板 -->
+    <aside class="w-80 border-r border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-surface-850/50 flex flex-col overflow-y-auto shrink-0 transition-colors">
+      
+      <!-- 畫布全域網格設定 -->
+      <section class="p-5 border-b border-slate-200 dark:border-slate-800">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">畫布全域設定</h2>
+          <span class="text-[11px] text-slate-400 dark:text-slate-500 font-mono">Grid Engine</span>
+        </div>
+
+        <div class="space-y-4 text-xs">
+          <div>
+            <div class="flex justify-between items-center mb-1 text-slate-700 dark:text-slate-300 font-medium">
+              <span>網格欄數 (Columns)</span>
+              <span id="colVal" class="text-brand-600 dark:text-brand-400 font-mono font-bold">4</span>
+            </div>
+            <input id="inputCols" type="range" min="2" max="6" value="4" class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500">
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1 text-slate-700 dark:text-slate-300 font-medium">
+              <span>網格間距 (Gap)</span>
+              <span id="gapVal" class="text-brand-600 dark:text-brand-400 font-mono font-bold">16px</span>
+            </div>
+            <input id="inputGap" type="range" min="8" max="36" value="16" step="4" class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500">
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1 text-slate-700 dark:text-slate-300 font-medium">
+              <span>基準高度 (Cell Height)</span>
+              <span id="cellHeightVal" class="text-brand-600 dark:text-brand-400 font-mono font-bold">160px</span>
+            </div>
+            <input id="inputCellHeight" type="range" min="120" max="240" value="160" step="10" class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500">
+          </div>
+
+          <div>
+            <div class="flex justify-between items-center mb-1 text-slate-700 dark:text-slate-300 font-medium">
+              <span>圓角弧度 (Radius)</span>
+              <span id="radiusVal" class="text-brand-600 dark:text-brand-400 font-mono font-bold">20px</span>
+            </div>
+            <input id="inputRadius" type="range" min="0" max="36" value="20" step="2" class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-brand-500">
+          </div>
+        </div>
+      </section>
+
+      <!-- 目前選取的卡片屬性面板 -->
+      <section class="p-5 flex-1 flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">選取卡片屬性</h2>
+          <span id="selectedCardBadge" class="text-[11px] text-slate-400 dark:text-slate-500 font-mono">未選取</span>
+        </div>
+
+        <div id="cardPropertyControls" class="space-y-4 text-xs opacity-50 pointer-events-none transition-opacity">
+          <!-- 尺寸跨度指示 -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl">
+              <span class="text-slate-500 dark:text-slate-400 block mb-1">欄寬跨度 (Col Span)</span>
+              <div class="flex items-center justify-between">
+                <button id="btnDecW" class="w-6 h-6 rounded bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold">-</button>
+                <span id="propSpanW" class="font-mono text-sm font-bold text-slate-900 dark:text-white">1</span>
+                <button id="btnIncW" class="w-6 h-6 rounded bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold">+</button>
+              </div>
+            </div>
+
+            <div class="bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2.5 rounded-xl">
+              <span class="text-slate-500 dark:text-slate-400 block mb-1">列高跨度 (Row Span)</span>
+              <div class="flex items-center justify-between">
+                <button id="btnDecH" class="w-6 h-6 rounded bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold">-</button>
+                <span id="propSpanH" class="font-mono text-sm font-bold text-slate-900 dark:text-white">1</span>
+                <button id="btnIncH" class="w-6 h-6 rounded bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold">+</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 內容文字自訂 -->
+          <div>
+            <label class="block text-slate-500 dark:text-slate-400 mb-1 font-medium">標籤 / 徽章 (Tag)</label>
+            <input id="inputCardTag" type="text" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" placeholder="e.g. FEATURED">
+          </div>
+
+          <div>
+            <label class="block text-slate-500 dark:text-slate-400 mb-1 font-medium">主要標題 (Title)</label>
+            <input id="inputCardTitle" type="text" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500" placeholder="輸入區塊標題">
+          </div>
+
+          <div>
+            <label class="block text-slate-500 dark:text-slate-400 mb-1 font-medium">說明敘述 (Subtitle)</label>
+            <textarea id="inputCardSubtitle" rows="2" class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-brand-500 resize-none" placeholder="輸入詳細敘述"></textarea>
+          </div>
+
+          <!-- 視覺風格 10 組預設 -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-slate-500 dark:text-slate-400 font-medium">預設樣式 (10 種風格)</label>
+              <span id="currentThemeLabel" class="text-[10px] text-brand-600 dark:text-brand-400 font-mono font-medium">dark</span>
+            </div>
+            <div class="grid grid-cols-5 gap-1.5" id="presetThemesGrid">
+              <!-- 動態產出 10 個樣式按鈕 -->
+            </div>
+          </div>
+
+          <!-- 自訂色碼設定區塊 -->
+          <div class="p-3 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-700 dark:text-slate-200">自訂色碼 (HEX Code)</span>
+              <button id="btnClearCustomColor" class="text-[10px] text-slate-400 hover:text-brand-500 transition">重設回預設</button>
+            </div>
+            
+            <!-- 背景色 -->
+            <div>
+              <label class="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">背景顏色 (Background)</label>
+              <div class="flex items-center gap-2">
+                <input id="pickerCustomBg" type="color" value="#0f172a" class="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 dark:border-slate-700 p-0 bg-transparent">
+                <input id="inputCustomBg" type="text" maxlength="9" placeholder="#ffffff 或 #0f172a" class="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-white font-mono focus:outline-none focus:border-brand-500">
+              </div>
+            </div>
+
+            <!-- 文字顏色 -->
+            <div>
+              <label class="block text-[11px] text-slate-500 dark:text-slate-400 mb-1">文字顏色 (Text Color)</label>
+              <div class="flex items-center gap-2">
+                <input id="pickerCustomText" type="color" value="#ffffff" class="w-8 h-8 rounded-lg cursor-pointer border border-slate-300 dark:border-slate-700 p-0 bg-transparent">
+                <input id="inputCustomText" type="text" maxlength="9" placeholder="#ffffff 或 #0f172a" class="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-800 dark:text-white font-mono focus:outline-none focus:border-brand-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- 刪除此區塊 -->
+          <div class="pt-2">
+            <button id="btnDeleteCard" class="w-full py-2.5 px-3 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 border border-red-200 dark:border-red-800/60 text-red-600 dark:text-red-400 font-semibold flex items-center justify-center gap-1.5 transition">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              刪除此 Bento 區塊
+            </button>
+          </div>
+        </div>
+
+        <div id="noSelectionMsg" class="my-auto text-center text-slate-400 dark:text-slate-500 text-xs p-4">
+          點擊畫布中的任意卡片即可配置其文字內容、跨度與外觀色彩。
+        </div>
+      </section>
+    </aside>
+
+    <div class="flex-1 bg-surface-100 dark:bg-surface-900 p-8 overflow-y-auto flex flex-col items-center relative transition-colors" id="canvasScrollArea">
+      
+      <!-- 畫布容器（居中約束最大寬度） -->
+      <div class="w-full max-w-5xl relative">
+        
+        <!-- 底層輔助網格點/格線 -->
+        <div id="gridGuides" class="w-full h-full absolute inset-0 z-0">
+          <!-- 動態注入網格佔位框 -->
+        </div>
+
+        <!-- 幽靈吸附指示框 (Ghost) -->
+        <div id="ghostIndicator" class="absolute z-10 hidden border-2 transition-all"></div>
+
+        <!-- Bento 卡片實體渲染容器 -->
+        <div id="bentoCanvas" class="w-full relative z-20 min-h-[480px]">
+          <!-- 動態卡片實體 -->
+        </div>
+      </div>
+
+      <!-- 空白畫布導引用語 -->
+      <div class="mt-8 text-center text-xs text-slate-400 dark:text-slate-500 flex items-center gap-2">
+        <span>💡 提示：按住卡片頂部把手即可拖曳移動；拉伸右下角把手可自由調整寬度與高度。</span>
+      </div>
+    </div>
+  </main>
+  <div id="exportModal" class="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-surface-850 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[88vh] transition-colors">
+      <!-- 標題欄 -->
+      <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 dark:text-white">匯出 Bento Grid 代碼</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400">複製開箱即用的 HTML / CSS 或保存為 JSON 規格檔</p>
+        </div>
+        <button id="btnCloseModal" class="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 transition">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Tab 選籤切換 -->
+      <div class="px-6 pt-3 border-b border-slate-200 dark:border-slate-800 flex gap-4">
+        <button class="export-tab-btn py-2 text-xs font-bold border-b-2 border-brand-500 text-brand-600 dark:text-brand-400" data-format="tailwind">Tailwind CSS (響應式)</button>
+        <button class="export-tab-btn py-2 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" data-format="css">原生 CSS Grid</button>
+        <button class="export-tab-btn py-2 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" data-format="json">JSON 規格檔</button>
+      </div>
+
+      <!-- 代碼預覽區 -->
+      <div class="p-6 flex-1 overflow-y-auto">
+        <pre class="bg-slate-900 p-4 rounded-2xl text-xs text-slate-200 overflow-x-auto border border-slate-800 leading-relaxed font-mono"><code id="codeOutputBlock"></code></pre>
+      </div>
+
+      <!-- 底部動作欄 -->
+      <div class="p-4 px-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-surface-900/50 flex items-center justify-between">
+        <div id="copySuccessPrompt" class="text-xs text-emerald-600 dark:text-emerald-400 hidden font-medium flex items-center gap-1.5">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+          代碼已成功複製至剪貼簿！
+        </div>
+        <div class="ml-auto flex items-center gap-3">
+          <button id="btnDownloadJson" class="hidden px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 transition">下載 .json 檔</button>
+          <button id="btnCopyCode" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white shadow-lg shadow-brand-500/20 transition active:scale-95">
+            一鍵複製代碼
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 使用說明與套用教學 Modal -->
+  <div id="guideModal" class="fixed inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-surface-850 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-3xl overflow-hidden shadow-2xl flex flex-col max-h-[88vh] transition-colors">
+      <!-- 標題欄 -->
+      <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-brand-500/10 dark:bg-brand-500/20 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-900 dark:text-white">Bento Studio 使用與網頁套用指南</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">操作說明及將生成的便當盒排版嵌入到全新專案的完整步驟</p>
+          </div>
+        </div>
+        <button id="btnCloseGuideModal" class="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 transition">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- 說明主體內容 -->
+      <div class="p-6 flex-1 overflow-y-auto space-y-6 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+        
+        <!-- 區塊一：快速上手操作步驟 -->
+        <section class="space-y-3">
+          <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center text-[10px]">1</span>
+            工作室介面操作手冊
+          </h4>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
+              <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span class="text-brand-500">❖</span> 拖曳移動區塊
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">按住卡片右上角的<strong class="text-slate-700 dark:text-slate-300">雙橫線把手</strong>即可拖曳位置。藍色框表示可吸附，紅色框表示碰撞阻擋。</p>
+            </div>
+
+            <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
+              <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span class="text-brand-500">⤡</span> 自由縮放尺寸
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">滑鼠按住卡片右下角<strong class="text-slate-700 dark:text-slate-300">點狀拉伸把手</strong>拖拉，即可即時調整卡片的欄寬（Col Span）與列高（Row Span）。</p>
+            </div>
+
+            <div class="p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1">
+              <div class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span class="text-brand-500">🎨</span> 樣式與自訂色彩
+              </div>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">點選任一卡片後，左側面板提供 10 種精選高對比主題，亦可輸入 HEX 色碼（如 <code class="font-mono text-brand-600">#6366f1</code>）指定背景與字色。</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 區塊二：如何套用到全新網頁 -->
+        <section class="space-y-3 pt-2">
+          <h4 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span class="w-5 h-5 rounded-full bg-brand-600 text-white flex items-center justify-center text-[10px]">2</span>
+            如何套用至全新網頁專案（三步驟）
+          </h4>
+          
+          <!-- 步驟項目清單 -->
+          <div class="space-y-3">
+            <!-- Step 1 -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+              <div class="flex items-center gap-2 mb-2 font-semibold text-slate-800 dark:text-slate-100">
+                <span class="px-2 py-0.5 rounded bg-brand-500/10 text-brand-600 font-mono text-[11px]">步驟 1</span>
+                <span>匯出代碼</span>
+              </div>
+              <p class="text-slate-600 dark:text-slate-300 mb-2">排版滿意後，點擊右上角「<strong>匯出代碼</strong>」按鈕。建議選擇 <span class="text-brand-600 font-semibold">Tailwind CSS (響應式)</span> 或 <span class="text-brand-600 font-semibold">原生 CSS Grid</span>，點擊「一鍵複製代碼」。</p>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+              <div class="flex items-center gap-2 mb-2 font-semibold text-slate-800 dark:text-slate-100">
+                <span class="px-2 py-0.5 rounded bg-brand-500/10 text-brand-600 font-mono text-[11px]">步驟 2</span>
+                <span>黏貼至您的網頁中</span>
+              </div>
+              <div class="space-y-2">
+                <p>若使用 <strong>Tailwind CSS 專案</strong>（例如 Next.js, Nuxt, Astro 或一般帶有 Tailwind CDN 的 HTML）：</p>
+                <div class="bg-slate-900 text-slate-200 p-3 rounded-xl font-mono text-[11px] overflow-x-auto">
+&lt;!-- 1. 如果是全新空白 HTML，可在 &lt;head&gt; 加入 Tailwind CDN --&gt;<br>
+&lt;script src="https://cdn.tailwindcss.com"&gt;&lt;/script&gt;<br><br>
+&lt;!-- 2. 直接在 &lt;body&gt; 中貼上剛複製的 Bento Grid 結構代碼 --&gt;<br>
+&lt;div class="grid grid-cols-1 md:grid-cols-4 gap-[16px] ..."&gt;<br>
+&nbsp;&nbsp;&lt;!-- 您的 Bento Cards --&gt;<br>
+&lt;/div&gt;
+                </div>
+                <p class="text-[11px] text-slate-500">若使用 <strong>原生 CSS 模式</strong>：將 CSS 區塊貼入您的 <code class="font-mono text-slate-700 dark:text-slate-300">style.css</code>，並將 HTML 結構貼入對應頁面中即可。</p>
+              </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl">
+              <div class="flex items-center gap-2 mb-2 font-semibold text-slate-800 dark:text-slate-100">
+                <span class="px-2 py-0.5 rounded bg-brand-500/10 text-brand-600 font-mono text-[11px]">步驟 3</span>
+                <span>將卡片換成真實組件與內容</span>
+              </div>
+              <p class="text-slate-600 dark:text-slate-300">
+                產生的代碼已預先保留了乾淨的佈局骨架。您可以直接把卡片內的佔位文字替換為真實業務內容，例如：
+                <span class="inline-block mt-1 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded text-[11px] font-mono">Chart.js 圖表</span>、
+                <span class="inline-block mt-1 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded text-[11px] font-mono">產品截圖 &lt;img&gt;</span>、
+                <span class="inline-block mt-1 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded text-[11px] font-mono">動態統計數值</span> 或
+                <span class="inline-block mt-1 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded text-[11px] font-mono">CTA 行動呼籲按鈕</span>。
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- 區塊三：響應式適配說明 -->
+        <section class="p-4 bg-brand-500/5 dark:bg-brand-500/10 border border-brand-500/20 rounded-2xl text-[11px] space-y-1.5">
+          <div class="font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1.5 text-xs">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            響應式設計（Responsive Design）提示
+          </div>
+          <p class="text-slate-600 dark:text-slate-300">
+            匯出的代碼預設採用<strong>行動優先（Mobile-First）</strong>原則：在手機等窄螢幕裝置上（&lt; 768px）會自動平鋪為易於上下滑動的<strong>單欄佈局 (1 Column)</strong>，在平板與桌機上才會展開為您所配置的 Bento 跨欄跨列排版，兼具視覺美感與最佳使用者體驗！
+          </p>
+        </section>
+      </div>
+
+      <!-- 底部關閉按鈕 -->
+      <div class="p-4 px-6 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-surface-900/50 flex justify-end">
+        <button id="btnCloseGuideModalBottom" class="px-5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-xs font-semibold text-white shadow-lg shadow-brand-500/20 transition active:scale-95">
+          我知道了，開始排版！
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // ===== 1. INDEXEDDB PERSISTENCE MODULE =====
+    const DB_NAME = 'BentoStudioDB';
+    const DB_VERSION = 1;
+    const STORE_NAME = 'layouts';
+
+    function openDatabase() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(STORE_NAME)) {
+            db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function dbSaveLayout(layout) {
+      const db = await openDatabase();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        const store = tx.objectStore(STORE_NAME);
+        store.put(layout);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function dbGetLayout(id) {
+      const db = await openDatabase();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.get(id);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function dbGetAllLayouts() {
+      const db = await openDatabase();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const store = tx.objectStore(STORE_NAME);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // ===== 2. APP STATE DEFINITION (10 PRESETS) =====
+    const themes = {
+      light: {
+        name: '簡約純白 (Clean Minimal)',
+        bg: 'bg-white',
+        border: 'border-slate-200/90 shadow-sm',
+        text: 'text-slate-800',
+        subtext: 'text-slate-500',
+        badgeBg: 'bg-slate-100 text-slate-700 font-semibold',
+        preview: 'bg-white border-slate-300'
+      },
+      dark: {
+        name: '黑曜夜幕 (Onyx Black)',
+        bg: 'bg-slate-950',
+        border: 'border-slate-800 shadow-md',
+        text: 'text-white',
+        subtext: 'text-slate-400',
+        badgeBg: 'bg-slate-800 text-slate-300 font-semibold',
+        preview: 'bg-slate-950 border-slate-700'
+      },
+      indigo: {
+        name: '皇家蔚藍 (Electric Indigo)',
+        bg: 'bg-gradient-to-br from-indigo-600 via-indigo-700 to-blue-800',
+        border: 'border-indigo-400/40 shadow-indigo-500/20 shadow-md',
+        text: 'text-white',
+        subtext: 'text-indigo-100/85',
+        badgeBg: 'bg-white/20 text-white font-semibold backdrop-blur-sm',
+        preview: 'bg-gradient-to-br from-indigo-500 to-blue-700 border-indigo-400'
+      },
+      emerald: {
+        name: '極光薄荷 (Aurora Mint)',
+        bg: 'bg-gradient-to-br from-emerald-500 to-teal-700',
+        border: 'border-emerald-300/40 shadow-emerald-500/20 shadow-md',
+        text: 'text-white',
+        subtext: 'text-emerald-100/90',
+        badgeBg: 'bg-emerald-950/40 text-emerald-200 font-semibold backdrop-blur-sm',
+        preview: 'bg-gradient-to-br from-emerald-400 to-teal-600 border-emerald-400'
+      },
+      sunset: {
+        name: '暖陽日落 (Sunset Blaze)',
+        bg: 'bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600',
+        border: 'border-orange-300/40 shadow-orange-500/20 shadow-md',
+        text: 'text-white',
+        subtext: 'text-orange-100/90',
+        badgeBg: 'bg-black/25 text-white font-semibold backdrop-blur-sm',
+        preview: 'bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 border-amber-300'
+      },
+      fuchsia: {
+        name: '霓虹洋紅 (Cyber Magenta)',
+        bg: 'bg-gradient-to-br from-pink-500 via-rose-500 to-purple-600',
+        border: 'border-pink-300/40 shadow-pink-500/20 shadow-md',
+        text: 'text-white',
+        subtext: 'text-pink-100/90',
+        badgeBg: 'bg-black/25 text-pink-100 font-semibold backdrop-blur-sm',
+        preview: 'bg-gradient-to-br from-pink-500 to-purple-600 border-pink-400'
+      },
+      cyber: {
+        name: '科技青藍 (Hyper Cyan)',
+        bg: 'bg-gradient-to-br from-cyan-500 to-blue-600',
+        border: 'border-cyan-300/40 shadow-cyan-500/20 shadow-md',
+        text: 'text-white',
+        subtext: 'text-cyan-100/90',
+        badgeBg: 'bg-cyan-950/40 text-cyan-200 font-semibold backdrop-blur-sm',
+        preview: 'bg-gradient-to-br from-cyan-400 to-blue-600 border-cyan-300'
+      },
+      violet: {
+        name: '夢幻粉紫 (Cosmic Violet)',
+        bg: 'bg-gradient-to-br from-violet-600 via-purple-700 to-indigo-900',
+        border: 'border-purple-400/40 shadow-purple-500/20 shadow-md',
+        text: 'text-white',
+        subtext: 'text-purple-100/85',
+        badgeBg: 'bg-white/20 text-purple-100 font-semibold backdrop-blur-sm',
+        preview: 'bg-gradient-to-br from-violet-500 to-purple-800 border-purple-400'
+      },
+      pastelCream: {
+        name: '燕麥暖米 (Oat Milk)',
+        bg: 'bg-amber-50/90 dark:bg-amber-950/30',
+        border: 'border-amber-200/80 dark:border-amber-800/50 shadow-sm',
+        text: 'text-amber-950 dark:text-amber-100',
+        subtext: 'text-amber-800/75 dark:text-amber-300/70',
+        badgeBg: 'bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 font-semibold',
+        preview: 'bg-[#fef8ee] border-amber-300'
+      },
+      frostGlass: {
+        name: '極光毛玻璃 (Frosted Glass)',
+        bg: 'bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl',
+        border: 'border-slate-300/80 dark:border-white/20 shadow-sm',
+        text: 'text-slate-800 dark:text-white',
+        subtext: 'text-slate-500 dark:text-slate-300',
+        badgeBg: 'bg-slate-200/80 dark:bg-white/15 text-slate-800 dark:text-white font-semibold',
+        preview: 'bg-gradient-to-tr from-slate-100 via-white to-slate-200 border-slate-300'
+      }
+    };
+
+    let currentLayout = {
+      id: 'default-bento',
+      name: '預設便當盒版型',
+      updatedAt: Date.now(),
+      grid: {
+        columns: 4,
+        cellHeight: 160,
+        gap: 16,
+        borderRadius: 20
+      },
+      cards: [
+        { id: 'c-1', col: 1, row: 1, w: 2, h: 2, theme: 'indigo', customBg: '', customText: '', tag: 'ANALYTICS', title: '即時視覺數據中心', subtitle: '支援實時流體圖形與微互動檢測' },
+        { id: 'c-2', col: 3, row: 1, w: 2, h: 1, theme: 'light', customBg: '', customText: '', tag: 'SECURITY', title: '端對端安全加密', subtitle: '純前端無狀態隱私保護' },
+        { id: 'c-3', col: 3, row: 2, w: 1, h: 1, theme: 'emerald', customBg: '', customText: '', tag: 'STATUS', title: '99.9%', subtitle: '在線運行率' },
+        { id: 'c-4', col: 4, row: 2, w: 1, h: 1, theme: 'sunset', customBg: '', customText: '', tag: 'GLOBAL', title: '120+ 國家', subtitle: '快速邊緣分發' },
+        { id: 'c-5', col: 1, row: 3, w: 4, h: 1, theme: 'frostGlass', customBg: '', customText: '', tag: 'SUMMARY', title: '全景生態整合系統', subtitle: '彈性、現代化且極速的跨平台解決方案' },
+      ]
+    };
+
+    let selectedCardId = null;
+    let autoSaveTimeout = null;
+
+    // ===== 3. LIGHT/DARK THEME MANAGEMENT (DEFAULT LIGHT) =====
+    const htmlEl = document.documentElement;
+    const btnThemeToggle = document.getElementById('btnThemeToggle');
+    const sunIcon = document.getElementById('sunIcon');
+    const moonIcon = document.getElementById('moonIcon');
+
+    function applyAppTheme(mode) {
+      if (mode === 'dark') {
+        htmlEl.classList.add('dark');
+        htmlEl.classList.remove('light');
+        sunIcon.classList.remove('hidden');
+        moonIcon.classList.add('hidden');
+      } else {
+        htmlEl.classList.remove('dark');
+        htmlEl.classList.add('light');
+        sunIcon.classList.add('hidden');
+        moonIcon.classList.remove('hidden');
+      }
+      renderCards();
+    }
+
+    btnThemeToggle.addEventListener('click', () => {
+      const isDark = htmlEl.classList.contains('dark');
+      const targetTheme = isDark ? 'light' : 'dark';
+      applyAppTheme(targetTheme);
+    });
+
+    // ===== 4. COLLISION DETECTION ENGINE (AABB ALGORITHM) =====
+    function isColliding(candidate, cards, ignoreId = null) {
+      if (candidate.col < 1 || (candidate.col + candidate.w - 1) > currentLayout.grid.columns) {
+        return true;
+      }
+      if (candidate.row < 1) {
+        return true;
+      }
+
+      for (const c of cards) {
+        if (c.id === ignoreId) continue;
+        const overlap = (
+          candidate.col < c.col + c.w &&
+          candidate.col + candidate.w > c.col &&
+          candidate.row < c.row + c.h &&
+          candidate.row + candidate.h > c.row
+        );
+        if (overlap) return true;
+      }
+      return false;
+    }
+
+    function getMaxRows() {
+      let max = 3;
+      for (const c of currentLayout.cards) {
+        if (c.row + c.h - 1 > max) {
+          max = c.row + c.h - 1;
+        }
+      }
+      return max + 1;
+    }
+
+    function findNextAvailablePosition(w = 1, h = 1) {
+      const maxRows = getMaxRows() + 2;
+      for (let r = 1; r <= maxRows; r++) {
+        for (let c = 1; c <= currentLayout.grid.columns - w + 1; c++) {
+          if (!isColliding({ col: c, row: r, w, h }, currentLayout.cards)) {
+            return { col: c, row: r };
+          }
+        }
+      }
+      return { col: 1, row: maxRows };
+    }
+    // ===== 5. DOM RENDERING PIPELINE =====
+    const canvasEl = document.getElementById('bentoCanvas');
+    const guidesEl = document.getElementById('gridGuides');
+    const ghostEl = document.getElementById('ghostIndicator');
+
+    function syncCssVariables() {
+      document.documentElement.style.setProperty('--grid-cols', currentLayout.grid.columns);
+      document.documentElement.style.setProperty('--grid-gap', `${currentLayout.grid.gap}px`);
+      document.documentElement.style.setProperty('--cell-height', `${currentLayout.grid.cellHeight}px`);
+      document.documentElement.style.setProperty('--card-radius', `${currentLayout.grid.borderRadius}px`);
+    }
+
+    function renderGuides() {
+      guidesEl.innerHTML = '';
+      const totalRows = getMaxRows();
+      const totalCells = currentLayout.grid.columns * totalRows;
+
+      for (let i = 0; i < totalCells; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'border border-dashed border-slate-300 dark:border-slate-800/80 rounded-2xl flex items-center justify-center opacity-60 dark:opacity-40 pointer-events-none transition-colors';
+        guidesEl.appendChild(cell);
+      }
+    }
+
+    function renderCards() {
+      syncCssVariables();
+      renderGuides();
+      canvasEl.innerHTML = '';
+
+      currentLayout.cards.forEach(card => {
+        const t = themes[card.theme] || themes.light;
+        const cardDiv = document.createElement('div');
+        cardDiv.id = `card-${card.id}`;
+        cardDiv.dataset.cardId = card.id;
+
+        const isSelected = card.id === selectedCardId;
+        const hasCustomBg = Boolean(card.customBg && card.customBg.trim());
+        const hasCustomText = Boolean(card.customText && card.customText.trim());
+
+        // 組裝卡片外觀 class 與 inline style
+        cardDiv.className = `bento-card-item relative group border p-6 flex flex-col justify-between overflow-hidden cursor-default shadow-sm dark:shadow-md select-none transition-all ${!hasCustomBg ? t.bg : ''} ${t.border} ${isSelected ? 'ring-2 ring-brand-500 border-transparent shadow-brand-500/20' : 'hover:border-slate-400 dark:hover:border-slate-700'}`;
+        
+        cardDiv.style.gridColumn = `${card.col} / span ${card.w}`;
+        cardDiv.style.gridRow = `${card.row} / span ${card.h}`;
+        cardDiv.style.borderRadius = `${currentLayout.grid.borderRadius}px`;
+
+        if (hasCustomBg) {
+          cardDiv.style.backgroundColor = card.customBg;
+        } else {
+          cardDiv.style.backgroundColor = '';
+        }
+
+        const textColorClass = !hasCustomText ? t.text : '';
+        const subtextColorClass = !hasCustomText ? (t.subtext || 'text-slate-400') : 'opacity-80';
+
+        cardDiv.innerHTML = `
+          <!-- 頂部拖曳把手與標籤 -->
+          <div class="flex items-start justify-between relative z-10">
+            <span class="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md ${t.badgeBg}">${escapeHtml(card.tag || 'CARD')}</span>
+            <div class="drag-handle p-1 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-white cursor-grab active:cursor-grabbing rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition" title="按住拖曳移動">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- 卡片主要內容 -->
+          <div class="my-auto py-2 relative z-10 pointer-events-none" ${hasCustomText ? `style="color: ${card.customText};"` : ''}>
+            <h4 class="text-base font-bold tracking-tight line-clamp-1 ${textColorClass}">${escapeHtml(card.title || 'Untitled Card')}</h4>
+            <p class="text-xs mt-1 line-clamp-2 leading-relaxed ${subtextColorClass}">${escapeHtml(card.subtitle || '')}</p>
+          </div>
+
+          <!-- 底部微資訊 -->
+          <div class="flex items-center justify-between text-[11px] font-mono relative z-10 pointer-events-none opacity-60" ${hasCustomText ? `style="color: ${card.customText};"` : ''}>
+            <span>${card.w} × ${card.h}</span>
+          </div>
+
+          <!-- 右下角拉伸把手 -->
+          <div class="resize-handle" title="拖動調整大小">
+            <svg class="w-3.5 h-3.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M22 22H20V20H22V22ZM22 18H20V16H22V18ZM18 22H16V20H18V22ZM22 14H20V12H22V14ZM18 18H16V16H18V18ZM14 22H12V20H14V22Z"/>
+            </svg>
+          </div>
+        `;
+
+        cardDiv.addEventListener('pointerdown', (e) => {
+          if (!e.target.closest('.resize-handle') && !e.target.closest('.drag-handle')) {
+            selectCard(card.id);
+          }
+        });
+
+        const dragHandle = cardDiv.querySelector('.drag-handle');
+        dragHandle.addEventListener('pointerdown', (e) => startCardDrag(e, card));
+
+        const resizeHandle = cardDiv.querySelector('.resize-handle');
+        resizeHandle.addEventListener('pointerdown', (e) => startCardResize(e, card));
+
+        canvasEl.appendChild(cardDiv);
+      });
+
+      updateSelectionSidebar();
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      );
+    }
+    // ===== 6. POINTER DRAG & RESIZE MECHANISM =====
+    function getGridMetric() {
+      const rect = canvasEl.getBoundingClientRect();
+      const cols = currentLayout.grid.columns;
+      const gap = currentLayout.grid.gap;
+      const colWidth = (rect.width - (cols - 1) * gap) / cols;
+      const rowHeight = currentLayout.grid.cellHeight;
+      return { rect, colWidth, rowHeight, gap, cols };
+    }
+
+    function pointToGridCoord(clientX, clientY) {
+      const { rect, colWidth, rowHeight, gap, cols } = getGridMetric();
+      const relX = clientX - rect.left;
+      const relY = clientY - rect.top;
+
+      let col = Math.floor((relX + gap / 2) / (colWidth + gap)) + 1;
+      let row = Math.floor((relY + gap / 2) / (rowHeight + gap)) + 1;
+
+      col = Math.max(1, Math.min(cols, col));
+      row = Math.max(1, row);
+      return { col, row };
+    }
+
+    function updateGhost(col, row, w, h, valid) {
+      const { colWidth, rowHeight, gap } = getGridMetric();
+      ghostEl.classList.remove('hidden');
+
+      const left = (col - 1) * (colWidth + gap);
+      const top = (row - 1) * (rowHeight + gap);
+      const width = w * colWidth + (w - 1) * gap;
+      const height = h * rowHeight + (h - 1) * gap;
+
+      ghostEl.style.left = `${left}px`;
+      ghostEl.style.top = `${top}px`;
+      ghostEl.style.width = `${width}px`;
+      ghostEl.style.height = `${height}px`;
+
+      if (valid) {
+        ghostEl.className = 'absolute z-10 rounded-2xl border-2 border-brand-500 bg-brand-500/20 backdrop-blur-xs transition-all pointer-events-none shadow-lg shadow-brand-500/20';
+      } else {
+        ghostEl.className = 'absolute z-10 rounded-2xl border-2 border-red-500 bg-red-500/25 backdrop-blur-xs transition-all pointer-events-none shadow-lg shadow-red-500/20';
+      }
+    }
+
+    function hideGhost() {
+      ghostEl.classList.add('hidden');
+    }
+
+    function startCardDrag(e, card) {
+      e.preventDefault();
+      e.stopPropagation();
+      selectCard(card.id);
+
+      const cardEl = document.getElementById(`card-${card.id}`);
+      cardEl.classList.add('is-dragging');
+
+      const startCoord = { col: card.col, row: card.row };
+      let lastTarget = { ...startCoord };
+
+      updateGhost(card.col, card.row, card.w, card.h, true);
+
+      function onPointerMove(moveEvent) {
+        const currentCoord = pointToGridCoord(moveEvent.clientX, moveEvent.clientY);
+        let targetCol = Math.min(currentCoord.col, currentLayout.grid.columns - card.w + 1);
+        let targetRow = currentCoord.row;
+
+        const candidate = { col: targetCol, row: targetRow, w: card.w, h: card.h, id: card.id };
+        const collided = isColliding(candidate, currentLayout.cards, card.id);
+
+        lastTarget = candidate;
+        updateGhost(targetCol, targetRow, card.w, card.h, !collided);
+      }
+
+      function onPointerUp() {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', onPointerUp);
+
+        cardEl.classList.remove('is-dragging');
+        hideGhost();
+
+        const collided = isColliding(lastTarget, currentLayout.cards, card.id);
+        if (!collided) {
+          card.col = lastTarget.col;
+          card.row = lastTarget.row;
+          triggerAutoSave();
+        }
+        renderCards();
+      }
+
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', onPointerUp);
+    }
+
+    function startCardResize(e, card) {
+      e.preventDefault();
+      e.stopPropagation();
+      selectCard(card.id);
+
+      const cardEl = document.getElementById(`card-${card.id}`);
+      cardEl.classList.add('is-resizing');
+
+      let lastTargetW = card.w;
+      let lastTargetH = card.h;
+
+      updateGhost(card.col, card.row, card.w, card.h, true);
+
+      function onResizeMove(moveEvent) {
+        const currentCoord = pointToGridCoord(moveEvent.clientX, moveEvent.clientY);
+
+        let newW = Math.max(1, currentCoord.col - card.col + 1);
+        let newH = Math.max(1, currentCoord.row - card.row + 1);
+        newW = Math.min(newW, currentLayout.grid.columns - card.col + 1);
+
+        const candidate = { col: card.col, row: card.row, w: newW, h: newH, id: card.id };
+        const collided = isColliding(candidate, currentLayout.cards, card.id);
+
+        lastTargetW = newW;
+        lastTargetH = newH;
+        updateGhost(card.col, card.row, newW, newH, !collided);
+      }
+
+      function onResizeUp() {
+        window.removeEventListener('pointermove', onResizeMove);
+        window.removeEventListener('pointerup', onResizeUp);
+
+        cardEl.classList.remove('is-resizing');
+        hideGhost();
+
+        const candidate = { col: card.col, row: card.row, w: lastTargetW, h: lastTargetH, id: card.id };
+        if (!isColliding(candidate, currentLayout.cards, card.id)) {
+          card.w = lastTargetW;
+          card.h = lastTargetH;
+          triggerAutoSave();
+        }
+        renderCards();
+      }
+
+      window.addEventListener('pointermove', onResizeMove);
+      window.addEventListener('pointerup', onResizeUp);
+    }
+    // ===== 7. SIDEBAR CONTROLS & COLOR PICKERS =====
+    function selectCard(id) {
+      selectedCardId = id;
+      renderCards();
+    }
+
+    function getSelectedCard() {
+      return currentLayout.cards.find(c => c.id === selectedCardId);
+    }
+
+    // 初始化 10 組預設主題按鈕
+    function buildThemePresetButtons() {
+      const grid = document.getElementById('presetThemesGrid');
+      grid.innerHTML = '';
+
+      Object.entries(themes).forEach(([key, conf]) => {
+        const btn = document.createElement('button');
+        btn.dataset.theme = key;
+        btn.title = conf.name;
+        btn.className = `theme-preset-btn h-8 rounded-lg border transition-transform active:scale-90 ${conf.preview}`;
+        btn.addEventListener('click', () => {
+          const card = getSelectedCard();
+          if (card) {
+            card.theme = key;
+            card.customBg = ''; // 切換預設時清空 customBg
+            triggerAutoSave();
+            renderCards();
+          }
+        });
+        grid.appendChild(btn);
+      });
+    }
+
+    function updateSelectionSidebar() {
+      const card = getSelectedCard();
+      const controls = document.getElementById('cardPropertyControls');
+      const noSelectMsg = document.getElementById('noSelectionMsg');
+      const badge = document.getElementById('selectedCardBadge');
+
+      if (!card) {
+        controls.classList.add('opacity-50', 'pointer-events-none');
+        noSelectMsg.classList.remove('hidden');
+        badge.textContent = '未選取';
+        return;
+      }
+
+      controls.classList.remove('opacity-50', 'pointer-events-none');
+      noSelectMsg.classList.add('hidden');
+      badge.textContent = `#${card.id}`;
+
+      document.getElementById('propSpanW').textContent = card.w;
+      document.getElementById('propSpanH').textContent = card.h;
+      document.getElementById('inputCardTag').value = card.tag || '';
+      document.getElementById('inputCardTitle').value = card.title || '';
+      document.getElementById('inputCardSubtitle').value = card.subtitle || '';
+      document.getElementById('currentThemeLabel').textContent = themes[card.theme]?.name || card.theme;
+
+      // 同步自訂色碼控制欄
+      const pickerBg = document.getElementById('pickerCustomBg');
+      const inputBg = document.getElementById('inputCustomBg');
+      const pickerText = document.getElementById('pickerCustomText');
+      const inputText = document.getElementById('inputCustomText');
+
+      inputBg.value = card.customBg || '';
+      inputText.value = card.customText || '';
+
+      if (card.customBg && card.customBg.startsWith('#') && card.customBg.length === 7) {
+        pickerBg.value = card.customBg;
+      }
+      if (card.customText && card.customText.startsWith('#') && card.customText.length === 7) {
+        pickerText.value = card.customText;
+      }
+    }
+
+    // 自訂背景顏色即時綁定
+    const inputCustomBg = document.getElementById('inputCustomBg');
+    const pickerCustomBg = document.getElementById('pickerCustomBg');
+
+    inputCustomBg.addEventListener('input', (e) => {
+      const card = getSelectedCard();
+      if (!card) return;
+      card.customBg = e.target.value;
+      if (e.target.value.startsWith('#') && e.target.value.length === 7) {
+        pickerCustomBg.value = e.target.value;
+      }
+      triggerAutoSave();
+      renderCards();
+    });
+
+    pickerCustomBg.addEventListener('input', (e) => {
+      const card = getSelectedCard();
+      if (!card) return;
+      card.customBg = e.target.value;
+      inputCustomBg.value = e.target.value;
+      triggerAutoSave();
+      renderCards();
+    });
+
+    // 自訂文字顏色即時綁定
+    const inputCustomText = document.getElementById('inputCustomText');
+    const pickerCustomText = document.getElementById('pickerCustomText');
+
+    inputCustomText.addEventListener('input', (e) => {
+      const card = getSelectedCard();
+      if (!card) return;
+      card.customText = e.target.value;
+      if (e.target.value.startsWith('#') && e.target.value.length === 7) {
+        pickerCustomText.value = e.target.value;
+      }
+      triggerAutoSave();
+      renderCards();
+    });
+
+    pickerCustomText.addEventListener('input', (e) => {
+      const card = getSelectedCard();
+      if (!card) return;
+      card.customText = e.target.value;
+      inputCustomText.value = e.target.value;
+      triggerAutoSave();
+      renderCards();
+    });
+
+    // 清空自訂色碼重設回主題預設
+    document.getElementById('btnClearCustomColor').addEventListener('click', () => {
+      const card = getSelectedCard();
+      if (!card) return;
+      card.customBg = '';
+      card.customText = '';
+      inputCustomBg.value = '';
+      inputCustomText.value = '';
+      triggerAutoSave();
+      renderCards();
+    });
+
+    // 跨度 Stepper 事件
+    document.getElementById('btnIncW').addEventListener('click', () => {
+      const card = getSelectedCard();
+      if (!card) return;
+      const candidate = { ...card, w: card.w + 1 };
+      if (!isColliding(candidate, currentLayout.cards, card.id)) {
+        card.w += 1;
+        triggerAutoSave();
+        renderCards();
+      }
+    });
+
+    document.getElementById('btnDecW').addEventListener('click', () => {
+      const card = getSelectedCard();
+      if (!card || card.w <= 1) return;
+      card.w -= 1;
+      triggerAutoSave();
+      renderCards();
+    });
+
+    document.getElementById('btnIncH').addEventListener('click', () => {
+      const card = getSelectedCard();
+      if (!card) return;
+      const candidate = { ...card, h: card.h + 1 };
+      if (!isColliding(candidate, currentLayout.cards, card.id)) {
+        card.h += 1;
+        triggerAutoSave();
+        renderCards();
+      }
+    });
+
+    document.getElementById('btnDecH').addEventListener('click', () => {
+      const card = getSelectedCard();
+      if (!card || card.h <= 1) return;
+      card.h -= 1;
+      triggerAutoSave();
+      renderCards();
+    });
+
+    // 文字屬性即時綁定
+    document.getElementById('inputCardTag').addEventListener('input', (e) => {
+      const card = getSelectedCard();
+      if (card) {
+        card.tag = e.target.value;
+        triggerAutoSave();
+        renderCards();
+      }
+    });
+
+    document.getElementById('inputCardTitle').addEventListener('input', (e) => {
+      const card = getSelectedCard();
+      if (card) {
+        card.title = e.target.value;
+        triggerAutoSave();
+        renderCards();
+      }
+    });
+
+    document.getElementById('inputCardSubtitle').addEventListener('input', (e) => {
+      const card = getSelectedCard();
+      if (card) {
+        card.subtitle = e.target.value;
+        triggerAutoSave();
+        renderCards();
+      }
+    });
+
+    // 刪除選中卡片
+    document.getElementById('btnDeleteCard').addEventListener('click', () => {
+      if (!selectedCardId) return;
+      currentLayout.cards = currentLayout.cards.filter(c => c.id !== selectedCardId);
+      selectedCardId = null;
+      triggerAutoSave();
+      renderCards();
+    });
+
+    // 全域網格滑桿控制
+    const inputCols = document.getElementById('inputCols');
+    inputCols.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      document.getElementById('colVal').textContent = val;
+      currentLayout.grid.columns = val;
+      currentLayout.cards.forEach(c => {
+        if (c.col + c.w - 1 > val) {
+          c.w = Math.max(1, val - c.col + 1);
+        }
+      });
+      triggerAutoSave();
+      renderCards();
+    });
+
+    const inputGap = document.getElementById('inputGap');
+    inputGap.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      document.getElementById('gapVal').textContent = `${val}px`;
+      currentLayout.grid.gap = val;
+      triggerAutoSave();
+      syncCssVariables();
+      renderGuides();
+    });
+
+    const inputCellHeight = document.getElementById('inputCellHeight');
+    inputCellHeight.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      document.getElementById('cellHeightVal').textContent = `${val}px`;
+      currentLayout.grid.cellHeight = val;
+      triggerAutoSave();
+      syncCssVariables();
+      renderGuides();
+    });
+
+    const inputRadius = document.getElementById('inputRadius');
+    inputRadius.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      document.getElementById('radiusVal').textContent = `${val}px`;
+      currentLayout.grid.borderRadius = val;
+      triggerAutoSave();
+      renderCards();
+    });
+
+    // 新增區塊按鈕
+    document.getElementById('btnAddCard').addEventListener('click', () => {
+      const pos = findNextAvailablePosition(1, 1);
+      const isDark = htmlEl.classList.contains('dark');
+      const newCard = {
+        id: 'c-' + Math.random().toString(36).substr(2, 6),
+        col: pos.col,
+        row: pos.row,
+        w: 1,
+        h: 1,
+        theme: isDark ? 'dark' : 'light',
+        customBg: '',
+        customText: '',
+        tag: 'NEW',
+        title: '新 Bento 區塊',
+        subtitle: '雙擊編輯詳細內容'
+      };
+      currentLayout.cards.push(newCard);
+      selectedCardId = newCard.id;
+      triggerAutoSave();
+      renderCards();
+    });
+
+    // 隨機重組版型
+    document.getElementById('btnShuffle').addEventListener('click', () => {
+      const templates = [
+        [
+          { id: 'c-1', col: 1, row: 1, w: 2, h: 2, theme: 'indigo', customBg: '', customText: '', tag: 'HERO', title: '全景旗艦視窗', subtitle: '核心特色聚焦於此處' },
+          { id: 'c-2', col: 3, row: 1, w: 2, h: 1, theme: 'cyber', customBg: '', customText: '', tag: 'SPEED', title: '微秒級延遲', subtitle: '全鏈路邊緣加速' },
+          { id: 'c-3', col: 3, row: 2, w: 1, h: 1, theme: 'emerald', customBg: '', customText: '', tag: 'SECURE', title: '100% 離線', subtitle: '零傳輸保證' },
+          { id: 'c-4', col: 4, row: 2, w: 1, h: 1, theme: 'fuchsia', customBg: '', customText: '', tag: 'PRO', title: '多維視角', subtitle: '支援響應式' }
+        ],
+        [
+          { id: 'c-1', col: 1, row: 1, w: 2, h: 1, theme: 'violet', customBg: '', customText: '', tag: 'METRIC', title: '500,000+ 用戶', subtitle: '全球創作者首選' },
+          { id: 'c-2', col: 3, row: 1, w: 2, h: 2, theme: 'sunset', customBg: '', customText: '', tag: 'SHOWCASE', title: '互動式展示畫布', subtitle: '點擊把手直覺縮放' },
+          { id: 'c-3', col: 1, row: 2, w: 1, h: 1, theme: 'emerald', customBg: '', customText: '', tag: 'API', title: 'REST / GraphQL', subtitle: '快速串接' },
+          { id: 'c-4', col: 2, row: 2, w: 1, h: 1, theme: 'pastelCream', customBg: '', customText: '', tag: 'FREE', title: '開源架構', subtitle: '自託管自由' }
+        ]
+      ];
+      const selected = templates[Math.floor(Math.random() * templates.length)];
+      currentLayout.cards = JSON.parse(JSON.stringify(selected));
+      selectedCardId = currentLayout.cards[0].id;
+      triggerAutoSave();
+      renderCards();
+    });
+    // ===== 8. MULTI-FORMAT CODE GENERATOR (SUPPORTS CUSTOM HEX) =====
+    function generateTailwindCode() {
+      const cols = currentLayout.grid.columns;
+      const gap = currentLayout.grid.gap;
+      const radius = currentLayout.grid.borderRadius;
+      const height = currentLayout.grid.cellHeight;
+
+      let cardsHtml = currentLayout.cards.map(c => {
+        const bgStyle = c.customBg ? `style="background-color: ${c.customBg};${c.customText ? ` color: ${c.customText};` : ''}"` : '';
+        const bgClass = c.customBg ? '' : (themes[c.theme]?.bg || 'bg-slate-900');
+        const textClass = c.customText ? '' : (themes[c.theme]?.text || 'text-white');
+
+        return `  <!-- Card: ${c.title || c.id} -->
+  <div class="col-span-1 md:col-span-${c.w} md:row-span-${c.h} rounded-[${radius}px] p-6 ${bgClass} ${textClass} border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-md" ${bgStyle}>
+    <div class="flex items-center justify-between">
+      <span class="text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-md bg-black/10 dark:bg-white/10 uppercase">${escapeHtml(c.tag || 'TAG')}</span>
+    </div>
+    <div class="my-auto py-3">
+      <h3 class="text-base font-bold">${escapeHtml(c.title || '')}</h3>
+      <p class="text-xs opacity-75 mt-1 leading-relaxed">${escapeHtml(c.subtitle || '')}</p>
+    </div>
+    <div class="text-[11px] font-mono opacity-50">${c.w} × ${c.h}</div>
+  </div>`;
+      }).join('\n');
+
+      return `<!-- Bento Grid Layout Generated with Bento Studio -->
+<div class="grid grid-cols-1 md:grid-cols-${cols} gap-[${gap}px] auto-rows-[${height}px] max-w-6xl mx-auto p-6">
+${cardsHtml}
+</div>`;
+    }
+
+    function generateVanillaCssCode() {
+      const cols = currentLayout.grid.columns;
+      const gap = currentLayout.grid.gap;
+      const height = currentLayout.grid.cellHeight;
+      const radius = currentLayout.grid.borderRadius;
+
+      let cardStyles = currentLayout.cards.map((c, index) => {
+        let extra = '';
+        if (c.customBg) extra += `\n  background-color: ${c.customBg};`;
+        if (c.customText) extra += `\n  color: ${c.customText};`;
+        return `.bento-card:nth-child(${index + 1}) {
+  grid-column: span ${c.w};
+  grid-row: span ${c.h};${extra}
+}`;
+      }).join('\n');
+
+      let cardsHtml = currentLayout.cards.map(c => {
+        return `  <div class="bento-card">
+    <span class="bento-tag">${escapeHtml(c.tag || 'TAG')}</span>
+    <div class="bento-body">
+      <h3>${escapeHtml(c.title || '')}</h3>
+      <p>${escapeHtml(c.subtitle || '')}</p>
+    </div>
+  </div>`;
+      }).join('\n');
+
+      return `/* --- Bento Grid CSS Styles --- */
+.bento-container {
+  display: grid;
+  grid-template-columns: repeat(${cols}, minmax(0, 1fr));
+  grid-auto-rows: ${height}px;
+  gap: ${gap}px;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.bento-card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: ${radius}px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  color: #1e293b;
+}
+
+${cardStyles}
+
+@media (max-width: 768px) {
+  .bento-container {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+  }
+  .bento-card {
+    grid-column: span 1 !important;
+    grid-row: span 1 !important;
+  }
+}
+
+/* --- HTML Structure --- */
+<div class="bento-container">
+${cardsHtml}
+</div>`;
+    }
+
+    function generateJsonCode() {
+      return JSON.stringify(currentLayout, null, 2);
+    }
+
+    // ===== 9. EXPORT MODAL MANAGEMENT =====
+    const exportModal = document.getElementById('exportModal');
+    const codeBlock = document.getElementById('codeOutputBlock');
+    let currentFormat = 'tailwind';
+
+    function updateExportCode() {
+      if (currentFormat === 'tailwind') {
+        codeBlock.textContent = generateTailwindCode();
+        document.getElementById('btnDownloadJson').classList.add('hidden');
+      } else if (currentFormat === 'css') {
+        codeBlock.textContent = generateVanillaCssCode();
+        document.getElementById('btnDownloadJson').classList.add('hidden');
+      } else if (currentFormat === 'json') {
+        codeBlock.textContent = generateJsonCode();
+        document.getElementById('btnDownloadJson').classList.remove('hidden');
+      }
+    }
+
+    document.getElementById('btnOpenExportModal').addEventListener('click', () => {
+      updateExportCode();
+      exportModal.classList.remove('hidden');
+    });
+
+    document.getElementById('btnCloseModal').addEventListener('click', () => {
+      exportModal.classList.add('hidden');
+      document.getElementById('copySuccessPrompt').classList.add('hidden');
+    });
+
+    document.querySelectorAll('.export-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.export-tab-btn').forEach(b => {
+          b.className = 'export-tab-btn py-2 text-xs font-bold border-b-2 border-transparent text-slate-400 hover:text-slate-700 dark:hover:text-slate-200';
+        });
+        btn.className = 'export-tab-btn py-2 text-xs font-bold border-b-2 border-brand-500 text-brand-600 dark:text-brand-400';
+        currentFormat = btn.dataset.format;
+        updateExportCode();
+      });
+    });
+
+    // 複製代碼 (安全兼容 iframe)
+    document.getElementById('btnCopyCode').addEventListener('click', () => {
+      const code = codeBlock.textContent;
+      const textArea = document.createElement('textarea');
+      textArea.value = code;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        const prompt = document.getElementById('copySuccessPrompt');
+        prompt.classList.remove('hidden');
+        setTimeout(() => prompt.classList.add('hidden'), 2500);
+      } catch (err) {
+        console.error('複製代碼失敗:', err);
+      }
+      document.body.removeChild(textArea);
+    });
+
+    // 下載 JSON 規格檔
+    document.getElementById('btnDownloadJson').addEventListener('click', () => {
+      const blob = new Blob([generateJsonCode()], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bento-layout-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // ===== 9.1 GUIDE MODAL MANAGEMENT =====
+    const guideModal = document.getElementById('guideModal');
+    const btnOpenGuideModal = document.getElementById('btnOpenGuideModal');
+    const btnCloseGuideModal = document.getElementById('btnCloseGuideModal');
+    const btnCloseGuideModalBottom = document.getElementById('btnCloseGuideModalBottom');
+
+    function openGuide() {
+      guideModal.classList.remove('hidden');
+    }
+
+    function closeGuide() {
+      guideModal.classList.add('hidden');
+    }
+
+    btnOpenGuideModal.addEventListener('click', openGuide);
+    btnCloseGuideModal.addEventListener('click', closeGuide);
+    btnCloseGuideModalBottom.addEventListener('click', closeGuide);
+
+    // 點擊彈窗背景遮罩關閉
+    guideModal.addEventListener('click', (e) => {
+      if (e.target === guideModal) {
+        closeGuide();
+      }
+    });
+
+    // ===== 10. INDEXEDDB AUTO-SAVE & PROJECT SWITCHING =====
+    function triggerAutoSave() {
+      const statusText = document.getElementById('saveStatusText');
+      statusText.textContent = '正在儲存...';
+
+      clearTimeout(autoSaveTimeout);
+      autoSaveTimeout = setTimeout(async () => {
+        currentLayout.updatedAt = Date.now();
+        await dbSaveLayout(currentLayout);
+        statusText.textContent = '已同步至 IndexedDB';
+      }, 300);
+    }
+
+    async function loadProjectOptions() {
+      const layouts = await dbGetAllLayouts();
+      const select = document.getElementById('projectSelect');
+      select.innerHTML = '';
+
+      layouts.forEach(l => {
+        const opt = document.createElement('option');
+        opt.value = l.id;
+        opt.textContent = l.name;
+        opt.selected = l.id === currentLayout.id;
+        select.appendChild(opt);
+      });
+    }
+
+    document.getElementById('projectSelect').addEventListener('change', async (e) => {
+      const target = await dbGetLayout(e.target.value);
+      if (target) {
+        currentLayout = target;
+        selectedCardId = null;
+        renderCards();
+      }
+    });
+
+    document.getElementById('btnNewProject').addEventListener('click', async () => {
+      const newId = 'bento-' + Date.now().toString(36);
+      const newLayout = {
+        id: newId,
+        name: `新版型 ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        updatedAt: Date.now(),
+        grid: { columns: 4, cellHeight: 160, gap: 16, borderRadius: 20 },
+        cards: [
+          { id: 'c-init', col: 1, row: 1, w: 2, h: 2, theme: 'light', customBg: '', customText: '', tag: 'START', title: '點選此處開始配置', subtitle: '按住上方把手拖曳或拉伸右下角' }
+        ]
+      };
+      await dbSaveLayout(newLayout);
+      currentLayout = newLayout;
+      selectedCardId = 'c-init';
+      await loadProjectOptions();
+      renderCards();
+    });
+
+    // 初始化應用程式
+    window.onload = async () => {
+      buildThemePresetButtons();
+      applyAppTheme('light'); // 預設開啟淺色模式
+
+      try {
+        const stored = await dbGetLayout(currentLayout.id);
+        if (stored) {
+          currentLayout = stored;
+        } else {
+          await dbSaveLayout(currentLayout);
+        }
+        await loadProjectOptions();
+      } catch (err) {
+        console.warn('IndexedDB 初始化回退至記憶體模式:', err);
+      }
+      renderCards();
+    };
+  </script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
