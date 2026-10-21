@@ -64,7 +64,8 @@ my-spa-tools/
 │  ├─ design-decision-explainer/ 設計決策解釋器（設計稿元素分析、三種語氣決策卡、風險與 Q&A、DOCX／PDF）
 │  ├─ palette-lore/
 │  ├─ semantic-color-tokenizer/  Semantic Color Tokenizer 語意化色彩與 Token 產生器
-│  └─ status-badge-workshop/     UI 狀態徽章與標籤合成器（形態／幾何／配色／動態、WCAG 與多格式程式碼）
+│  ├─ status-badge-workshop/     UI 狀態徽章與標籤合成器（形態／幾何／配色／動態、WCAG 與多格式程式碼）
+│  └─ infographic-builder/       Infographic Builder 資訊圖表產生器（文字拆分、版型主題與 PNG／JSON 匯出）
 └─ diagram/                      流程與圖表建模
    ├─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器
    └─ vba-dependency-explorer/   VBA Dependency Explorer 依賴關係分析與視覺化
@@ -134,7 +135,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 54 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 55 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

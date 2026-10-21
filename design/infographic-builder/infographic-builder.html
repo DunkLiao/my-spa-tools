@@ -1,0 +1,4143 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Infographic Builder — 從文字到資訊圖</title>
+<meta name="description" content="Local-first 資訊圖表編輯器：貼上文字、選版型、匯出 PNG。所有內容只在瀏覽器本機處理。">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0}
+:root{
+  --bg:#eef1f5;
+  --panel:#ffffff;
+  --panel-2:#f7f9fb;
+  --border:#e1e6ec;
+  --border-strong:#c9d2dc;
+  --text:#151a21;
+  --muted:#66707c;
+  --accent:#2563eb;
+  --accent-soft:#e9efff;
+  --danger:#c62828;
+  --danger-soft:#fdecec;
+  --warn:#a15c07;
+  --warn-soft:#fff8e6;
+  --ok:#177245;
+  --ok-soft:#eaf7f0;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.06);
+  --shadow-md:0 10px 30px rgba(16,24,40,.10),0 2px 6px rgba(16,24,40,.06);
+  --r-sm:8px; --r-md:12px; --r-lg:16px;
+  --font:"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC","Hiragino Sans TC",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+}
+body{
+  font-family:var(--font); color:var(--text); background:var(--bg);
+  font-size:14px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ---------- top bar ---------- */
+.app{display:grid;grid-template-rows:auto auto 1fr;min-height:100vh;height:100vh;overflow:hidden}
+.topbar{
+  grid-row:1;
+  display:flex;align-items:center;gap:14px;padding:0 14px;height:58px;
+  background:var(--panel);border-bottom:1px solid var(--border);position:relative;z-index:20;
+}
+.brand{display:flex;align-items:center;gap:8px;flex:0 0 auto}
+.logo{
+  width:26px;height:26px;border-radius:7px;display:grid;place-items:center;
+  background:linear-gradient(140deg,#2563eb,#5b21b6);color:#fff;font-size:14px;font-weight:700;
+}
+.brand-name{font-weight:700;letter-spacing:.2px;font-size:15px}
+.pill{
+  font-size:11px;color:var(--muted);border:1px solid var(--border);
+  padding:1px 7px;border-radius:999px;background:var(--panel-2);
+}
+.name-field{display:flex;align-items:center;gap:6px;flex:1 1 auto;min-width:120px;max-width:420px}
+.name-input{
+  width:100%;border:1px solid transparent;background:transparent;border-radius:var(--r-sm);
+  padding:6px 8px;font-weight:600;min-width:0;
+}
+.name-input:hover{border-color:var(--border)}
+.name-input:focus{border-color:var(--accent);background:#fff}
+.dirty{width:8px;height:8px;border-radius:50%;background:transparent;flex:0 0 auto;transition:background .2s}
+.dirty.on{background:#e8a33d}
+.top-actions{display:flex;align-items:center;gap:6px;flex:0 0 auto;margin-left:auto}
+.divider{width:1px;height:22px;background:var(--border);margin:0 4px}
+.btn{
+  border:1px solid var(--border);background:var(--panel);border-radius:var(--r-sm);
+  padding:7px 11px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text);
+  transition:background .15s,border-color .15s,color .15s,opacity .15s;white-space:nowrap;
+}
+.btn:hover:not(:disabled){background:var(--panel-2);border-color:var(--border-strong)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover:not(:disabled){background:#1d4fd7;border-color:#1d4fd7}
+.btn.icon{width:34px;height:34px;padding:0;display:inline-grid;place-items:center;font-size:16px}
+.btn.small{padding:4px 8px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.danger{border-color:#f0c9c9;color:var(--danger);background:#fff}
+
+/* ---------- workspace ---------- */
+.workspace{
+  grid-row:3;
+  display:grid;grid-template-columns:320px minmax(0,1fr) 320px;
+  gap:12px;padding:12px;min-height:0;overflow:hidden;
+}
+.panel{
+  display:flex;flex-direction:column;min-height:0;background:var(--panel);
+  border:1px solid var(--border);border-radius:var(--r-md);box-shadow:var(--shadow-sm);overflow:hidden;
+}
+.panel-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:12px 14px;border-bottom:1px solid var(--border);flex:0 0 auto;background:var(--panel);
+}
+.panel-head h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.4px;color:var(--muted);text-transform:none}
+.panel-body{padding:14px;overflow-y:auto;overscroll-behavior:contain;flex:1 1 auto}
+
+/* ---------- form ---------- */
+.field{margin-bottom:14px}
+.field > label,.label-row label{display:block;font-weight:600;font-size:12.5px;margin-bottom:5px;color:#333c47}
+.label-row{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+.label-row label{margin:0}
+.req{color:var(--danger)}
+.counter{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.counter.over{color:var(--warn);font-weight:700}
+.input{
+  width:100%;border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;
+  background:#fff;transition:border-color .15s,box-shadow .15s;font-size:13.5px;
+}
+.input:hover{border-color:var(--border-strong)}
+.input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+textarea.input{resize:vertical;min-height:64px;line-height:1.6}
+.input.invalid{border-color:var(--danger);background:var(--danger-soft)}
+.input.warn{border-color:#e9cf95;background:#fffdf5}
+.hint{margin:5px 0 0;font-size:11.5px;color:var(--muted);line-height:1.5}
+.hint.warn{color:var(--warn)}
+.hint.error{color:var(--danger)}
+
+.items-head{display:flex;align-items:center;justify-content:space-between;margin:18px 0 4px}
+.items-head h3{margin:0;font-size:13px;font-weight:700}
+.chip{
+  display:inline-block;font-size:11px;font-weight:600;color:var(--muted);
+  background:var(--panel-2);border:1px solid var(--border);border-radius:999px;padding:1px 7px;margin-left:4px;
+}
+.chip.accent{color:var(--accent);border-color:#c7d7ff;background:var(--accent-soft)}
+.chip.warn{color:var(--warn);border-color:#f0dcae;background:var(--warn-soft)}
+.items-list{display:flex;flex-direction:column;gap:10px}
+.item-card{border:1px solid var(--border);border-radius:var(--r-sm);background:var(--panel-2);padding:10px}
+.item-card.is-empty{border-style:dashed}
+.item-card.is-warn{border-color:#e9cf95;background:#fffdf5}
+.item-warn{color:var(--warn);font-size:14px;line-height:1;padding:4px 4px 0;cursor:help}
+.item-top{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.item-no{
+  width:20px;height:20px;border-radius:50%;background:#e8edf4;color:#4a5563;
+  display:grid;place-items:center;font-size:11px;font-weight:700;flex:0 0 auto;
+}
+.item-tools{margin-left:auto;display:flex;gap:3px}
+.icon-btn{
+  border:1px solid transparent;background:transparent;border-radius:6px;width:26px;height:26px;
+  display:grid;place-items:center;cursor:pointer;color:var(--muted);font-size:13px;line-height:1;
+}
+.icon-btn:hover:not(:disabled){background:#fff;border-color:var(--border);color:var(--text)}
+.icon-btn:disabled{opacity:.3;cursor:not-allowed}
+.icon-btn.del:hover:not(:disabled){color:var(--danger);border-color:#f0c9c9;background:#fff}
+.item-card .input{padding:6px 8px;font-size:13px;background:#fff}
+.item-card .field{margin-bottom:8px}
+.item-card .field:last-child{margin-bottom:0}
+.item-2col{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.icon-pick{display:flex;align-items:center;gap:6px}
+.icon-pick .icon-preview{
+  width:32px;height:32px;border-radius:7px;border:1px solid var(--border);background:#fff;
+  display:grid;place-items:center;flex:0 0 auto;color:#33404f;
+}
+.icon-pick .icon-preview svg{width:19px;height:19px}
+.empty-state{padding:26px 14px;text-align:center;color:var(--muted);border:1px dashed var(--border-strong);border-radius:var(--r-md);background:var(--panel-2)}
+.empty-state strong{display:block;color:var(--text);margin-bottom:6px;font-size:14px}
+.empty-state .btn{margin:10px 4px 0}
+
+/* ---------- preview ---------- */
+.preview-toolbar{
+  display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--border);
+  background:var(--panel);flex:0 0 auto;flex-wrap:wrap;
+}
+.zoom{display:flex;align-items:center;gap:4px}
+.zoom-label{min-width:52px;text-align:center;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer}
+.toggle input{accent-color:var(--accent)}
+.status-badge{
+  margin-left:auto;font-size:11.5px;font-weight:700;border-radius:999px;padding:3px 10px;
+  border:1px solid var(--border);background:var(--panel-2);color:var(--muted);
+}
+.status-badge.ok{color:var(--ok);background:var(--ok-soft);border-color:#bfe6d1}
+.status-badge.warn{color:var(--warn);background:var(--warn-soft);border-color:#f0dcae}
+.status-badge.error{color:var(--danger);background:var(--danger-soft);border-color:#f2c4c4}
+.stage{
+  flex:1 1 auto;min-height:0;overflow:auto;padding:18px;display:grid;place-items:center;
+  background:
+    linear-gradient(45deg,#f0f2f6 25%,transparent 25%,transparent 75%,#f0f2f6 75%,#f0f2f6) 0 0/18px 18px,
+    linear-gradient(45deg,#f0f2f6 25%,transparent 25%,transparent 75%,#f0f2f6 75%,#f0f2f6) 9px 9px/18px 18px,
+    #f7f8fa;
+}
+.sheet{background:#fff;box-shadow:var(--shadow-md);line-height:0;border-radius:2px;overflow:hidden}
+.sheet svg{display:block;width:100%;height:auto}
+.preview-foot{
+  flex:0 0 auto;padding:6px 12px;border-top:1px solid var(--border);font-size:11.5px;color:var(--muted);
+  display:flex;justify-content:space-between;gap:10px;background:var(--panel);
+}
+
+/* ---------- right panel ---------- */
+.group{padding-bottom:14px;margin-bottom:14px;border-bottom:1px solid var(--border)}
+.group:last-child{border-bottom:0;margin-bottom:0;padding-bottom:0}
+.group > h3{margin:0 0 8px;font-size:12.5px;font-weight:700;color:#333c47}
+.template-list{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.template-card{
+  border:1px solid var(--border);background:#fff;border-radius:var(--r-sm);padding:8px;
+  cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:2px;transition:border-color .15s,background .15s;
+}
+.template-card:hover{border-color:var(--border-strong);background:var(--panel-2)}
+.template-card[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.template-card .t-name{font-weight:700;font-size:12.5px}
+.template-card .t-desc{font-size:10.5px;color:var(--muted);line-height:1.35}
+.template-card .t-cap{font-size:10px;color:var(--accent);font-weight:700}
+.theme-list{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.theme-swatch{
+  border:1px solid var(--border);border-radius:var(--r-sm);padding:5px;cursor:pointer;background:#fff;
+  display:flex;flex-direction:column;gap:4px;text-align:left;
+}
+.theme-swatch[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.theme-dots{display:flex;height:16px;border-radius:4px;overflow:hidden}
+.theme-dots span{flex:1}
+.theme-swatch .t-name{font-size:10px;color:var(--muted);line-height:1.2;font-weight:600}
+.color-fields{display:flex;flex-direction:column;gap:7px}
+.color-row{display:flex;align-items:center;gap:8px}
+.color-row label{flex:1 1 auto;font-size:12px;color:#3c4652}
+.color-row .hex{width:78px;font-family:var(--mono);font-size:11px;text-transform:uppercase;padding:5px 7px}
+.color-row input[type=color]{
+  width:30px;height:30px;padding:0;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;flex:0 0 auto;
+}
+.slider-fields{display:flex;flex-direction:column;gap:8px}
+.slider-row{display:grid;grid-template-columns:78px 1fr 46px;align-items:center;gap:8px}
+.slider-row label{font-size:12px;color:#3c4652}
+.slider-row input[type=range]{width:100%;accent-color:var(--accent)}
+.slider-row output{font-size:11px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.check-list{display:flex;flex-direction:column;gap:6px}
+.check-item{display:flex;gap:7px;align-items:flex-start;font-size:11.5px;line-height:1.45;padding:6px 8px;border-radius:7px;border:1px solid var(--border);background:var(--panel-2)}
+.check-item .dot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex:0 0 auto;background:var(--muted)}
+.check-item.ok{background:var(--ok-soft);border-color:#bfe6d1}
+.check-item.ok .dot{background:var(--ok)}
+.check-item.warn{background:var(--warn-soft);border-color:#f0dcae}
+.check-item.warn .dot{background:var(--warn)}
+.check-item.error{background:var(--danger-soft);border-color:#f2c4c4}
+.check-item.error .dot{background:var(--danger)}
+.check-item .txt{min-width:0}
+.check-item button.alink{border:0;background:none;padding:0;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;text-decoration:underline}
+
+/* ---------- mobile tabs ---------- */
+.tabbar{display:none}
+@media (max-width:1023px){
+  .app{height:100dvh}
+  .topbar{height:auto;padding:8px 10px;flex-wrap:wrap;gap:8px}
+  .brand-name{font-size:14px}
+  .pill{display:none}
+  .name-field{order:3;flex-basis:100%;max-width:none}
+  .top-actions{order:2;flex:1 1 100%;flex-wrap:wrap;gap:4px;margin-left:0}
+  .top-actions .btn{padding:6px 8px;font-size:12px;flex:0 0 auto}
+  .workspace{display:block;height:100%;overflow:hidden;padding:8px;padding-bottom:64px;gap:0}
+  .panel{display:none;height:100%;border-radius:var(--r-md)}
+  .panel.active{display:flex}
+  #toasts{bottom:70px}
+  .preview-foot #zoomHint{display:none}
+  .project-meta{white-space:normal;line-height:1.4}
+  .tabbar{
+    display:grid;grid-template-columns:repeat(3,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;
+    background:var(--panel);border-top:1px solid var(--border);
+  }
+  .tabbar button{
+    border:0;background:none;padding:10px 4px 12px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;
+  }
+  .tabbar button.active{color:var(--accent);box-shadow:inset 0 2px 0 var(--accent)}
+  .stage{padding:10px}
+}
+
+/* ---------- dialogs ---------- */
+dialog{
+  border:0;border-radius:var(--r-lg);padding:0;max-width:min(560px,calc(100vw - 32px));
+  width:100%;box-shadow:var(--shadow-md);color:var(--text);background:var(--panel);
+}
+dialog::backdrop{background:rgba(15,23,42,.42);backdrop-filter:blur(2px)}
+dialog.wide{max-width:min(700px,calc(100vw - 32px))}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.dlg-head h2{margin:0;font-size:15px}
+.dlg-body{padding:16px 18px;max-height:min(62vh,620px);overflow:auto}
+.dlg-foot{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border);background:var(--panel-2)}
+.dlg-close{border:0;background:none;font-size:18px;cursor:pointer;color:var(--muted);line-height:1;padding:4px}
+.issue-list{margin:10px 0 0;padding-left:18px;font-size:12.5px;line-height:1.7}
+.issue-list li.error{color:var(--danger)}
+.issue-list li.warn{color:var(--warn)}
+.icon-search{margin-bottom:10px}
+.icon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}
+.icon-cell{
+  display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;border:1px solid var(--border);
+  border-radius:var(--r-sm);background:#fff;cursor:pointer;font-size:10.5px;color:#3c4652;line-height:1.2;
+}
+.icon-cell:hover{border-color:var(--accent);background:var(--accent-soft)}
+.icon-cell[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.icon-cell svg{width:22px;height:22px;color:#22303f}
+.paste-area{font-family:var(--mono);font-size:12px;min-height:180px}
+.dlg-note{font-size:12px;color:var(--muted);line-height:1.6;margin:8px 0 0}
+
+/* project library */
+.projects-toolbar{display:flex;gap:8px;margin-bottom:12px;align-items:center}
+.projects-toolbar .input{flex:1 1 auto;min-width:0}
+.project-list{display:flex;flex-direction:column;gap:6px;min-height:140px}
+.project-row{display:flex;align-items:center;gap:6px;border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:#fff}
+.project-row.current{border-color:var(--accent);background:var(--accent-soft)}
+.project-open{flex:1 1 auto;text-align:left;border:0;background:none;padding:0;cursor:pointer;min-width:0}
+.project-open:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.project-name{display:block;font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.project-meta{display:block;font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.project-badge{font-size:10px;font-weight:700;color:var(--accent);border:1px solid #c7d7ff;background:#fff;border-radius:999px;padding:0 6px;margin-left:6px;vertical-align:1px}
+.project-actions{display:flex;gap:2px;flex:0 0 auto}
+.project-empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--border-strong);border-radius:10px;font-size:12.5px;background:var(--panel-2)}
+.prompt-input{width:100%}
+
+/* ---------- toast + banner ---------- */
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:60;max-width:min(360px,calc(100vw - 32px))}
+.toast{
+  background:#1b2430;color:#fff;padding:10px 13px;border-radius:10px;font-size:12.5px;line-height:1.5;
+  box-shadow:var(--shadow-md);animation:toastIn .18s ease-out;
+}
+.toast.ok{background:#14623c}
+.toast.warn{background:#8a5106}
+.toast.error{background:#a72323}
+@keyframes toastIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.banner{
+  grid-row:2;display:none;gap:8px;align-items:center;padding:8px 14px;font-size:12.5px;
+  background:var(--warn-soft);color:var(--warn);border-bottom:1px solid #f0dcae;
+}
+.banner.on{display:flex}
+.banner.error{background:var(--danger-soft);color:var(--danger);border-bottom-color:#f2c4c4}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* self-test panel */
+#selftest{
+  position:fixed;inset:0;z-index:100;background:#0c1118;color:#e6edf3;overflow:auto;padding:24px;
+  font-family:var(--mono);font-size:12.5px;line-height:1.6;
+}
+#selftest h1{font-family:var(--font);font-size:18px;margin:0 0 4px}
+#selftest .summary{font-family:var(--font);margin:0 0 16px;color:#9fb0c3}
+#selftest .case{padding:2px 0;display:flex;gap:8px}
+#selftest .pass{color:#4ade80}
+#selftest .fail{color:#f87171;white-space:pre-wrap}
+#selftest .case .name{color:#cbd5e1}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo" aria-hidden="true">▦</span>
+      <span class="brand-name">Infographic Builder</span>
+      <span class="pill">Local-first</span>
+    </div>
+    <div class="name-field">
+      <label class="sr-only" for="projectName">專案名稱</label>
+      <input id="projectName" class="name-input" maxlength="80" autocomplete="off" placeholder="未命名專案">
+      <span id="dirtyDot" class="dirty" title="有未儲存的變更" aria-hidden="true"></span>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="btnProjects" title="專案清單（新增／開啟／更名／複製／刪除）">專案</button>
+      <button class="btn" id="btnNew" title="新增專案">新建</button>
+      <button class="btn" id="btnSample" title="載入範例內容">範例</button>
+      <button class="btn" id="btnOpen" title="匯入 .infographic.json">開啟 JSON</button>
+      <input id="fileInput" type="file" accept=".json,application/json,.infographic.json" aria-label="選擇專案 JSON 檔" hidden>
+      <button class="btn" id="btnSave" title="下載 .infographic.json (Ctrl+S)">儲存 JSON</button>
+      <span class="divider" aria-hidden="true"></span>
+      <button class="btn icon" id="btnUndo" aria-label="復原" title="復原 (Ctrl+Z)" disabled>↶</button>
+      <button class="btn icon" id="btnRedo" aria-label="重做" title="重做 (Ctrl+Shift+Z)" disabled>↷</button>
+      <button class="btn primary" id="btnExport" title="匯出 PNG">匯出 PNG</button>
+    </div>
+  </header>
+  <div class="banner" id="banner" role="status"></div>
+
+  <main class="workspace">
+    <section class="panel active" data-panel="content" aria-label="內容編輯">
+      <div class="panel-head">
+        <h2>內容編輯</h2>
+        <button class="btn small" id="btnPaste">貼上全文解析</button>
+      </div>
+      <div class="panel-body">
+        <div class="field">
+          <div class="label-row">
+            <label for="fTitle">主標題 <span class="req" aria-hidden="true">*</span></label>
+            <span class="counter" id="cTitle">0 / 30</span>
+          </div>
+          <input id="fTitle" class="input" maxlength="120" autocomplete="off" placeholder="例：AI 落地三大重點" aria-required="true">
+          <p class="hint">必填，建議 8–30 個中文字</p>
+        </div>
+        <div class="field">
+          <div class="label-row">
+            <label for="fSubtitle">副標題</label>
+            <span class="counter" id="cSubtitle">0</span>
+          </div>
+          <input id="fSubtitle" class="input" maxlength="200" autocomplete="off" placeholder="選填">
+        </div>
+        <div class="field">
+          <div class="label-row">
+            <label for="fSummary">摘要</label>
+            <span class="counter" id="cSummary">0 / 120</span>
+          </div>
+          <textarea id="fSummary" class="input" rows="3" maxlength="1000" placeholder="選填：一句話說明這張圖卡的重點"></textarea>
+        </div>
+
+        <div class="items-head">
+          <h3>重點項目 <span class="chip" id="itemCount">0</span></h3>
+          <button class="btn small" id="btnAddItem">＋ 新增</button>
+        </div>
+        <p class="hint" id="capacityHint"></p>
+        <div id="itemsList" class="items-list"></div>
+
+        <div class="field" style="margin-top:18px">
+          <div class="label-row">
+            <label for="fFooter">來源／署名</label>
+            <span class="counter" id="cFooter">0</span>
+          </div>
+          <input id="fFooter" class="input" maxlength="200" autocomplete="off" placeholder="選填，例：資料來源：行政院">
+        </div>
+        <p class="hint" id="textLengthHint"></p>
+      </div>
+    </section>
+
+    <section class="panel" data-panel="preview" aria-label="即時預覽">
+      <div class="preview-toolbar">
+        <div class="zoom">
+          <button class="btn icon" id="btnZoomOut" aria-label="縮小">−</button>
+          <button class="btn small" id="btnZoomFit">符合視窗</button>
+          <span class="zoom-label" id="zoomLabel">—</span>
+          <button class="btn icon" id="btnZoomIn" aria-label="放大">＋</button>
+        </div>
+        <label class="toggle"><input type="checkbox" id="chkSafe"> 安全區</label>
+        <div class="status-badge" id="statusBadge" role="status">—</div>
+      </div>
+      <div class="stage" id="stage">
+        <div class="sheet" id="sheet"></div>
+      </div>
+      <div class="preview-foot">
+        <span id="canvasMeta">—</span>
+        <span id="zoomHint">預覽為等比縮放，輸出為標示像素</span>
+      </div>
+    </section>
+
+    <aside class="panel" data-panel="settings" aria-label="視覺設定">
+      <div class="panel-head"><h2>視覺設定</h2></div>
+      <div class="panel-body">
+        <section class="group">
+          <h3>模板</h3>
+          <div class="template-list" id="templateList" role="group" aria-label="模板選擇"></div>
+          <p class="hint" id="templateHint"></p>
+        </section>
+        <section class="group">
+          <h3>畫布尺寸</h3>
+          <label class="sr-only" for="canvasSelect">畫布尺寸</label>
+          <select id="canvasSelect" class="input"></select>
+          <p class="hint" id="canvasHint"></p>
+        </section>
+        <section class="group">
+          <h3>主題</h3>
+          <div class="theme-list" id="themeList" role="group" aria-label="主題選擇"></div>
+        </section>
+        <section class="group">
+          <h3>色票</h3>
+          <div class="color-fields" id="colorFields"></div>
+        </section>
+        <section class="group">
+          <h3>排版</h3>
+          <div class="slider-fields" id="sliderFields"></div>
+        </section>
+        <section class="group">
+          <h3>檢查</h3>
+          <div class="check-list" id="contrastList"></div>
+          <div class="check-list" id="warnList" style="margin-top:8px"></div>
+        </section>
+      </div>
+    </aside>
+  </main>
+
+  <nav class="tabbar" aria-label="面板切換">
+    <button data-tab="content" class="active" aria-pressed="true">內容</button>
+    <button data-tab="preview" aria-pressed="false">預覽</button>
+    <button data-tab="settings" aria-pressed="false">設定</button>
+  </nav>
+</div>
+
+<dialog id="dlgConfirm" aria-labelledby="dlgConfirmTitle">
+  <div class="dlg-head">
+    <h2 id="dlgConfirmTitle">確認</h2>
+    <button class="dlg-close" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg-body">
+    <p id="dlgConfirmMsg" style="margin:0;white-space:pre-wrap"></p>
+    <ul class="issue-list" id="dlgConfirmList"></ul>
+  </div>
+  <div class="dlg-foot">
+    <button class="btn" id="dlgConfirmCancel" data-close>取消</button>
+    <button class="btn primary" id="dlgConfirmOk">確定</button>
+  </div>
+</dialog>
+
+<dialog id="dlgPaste" aria-labelledby="dlgPasteTitle">
+  <div class="dlg-head">
+    <h2 id="dlgPasteTitle">貼上全文</h2>
+    <button class="dlg-close" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-note" style="margin-top:0">
+      以規則拆分：第一個非空行作為主標題，條列符號（-、•、1. 等）作為重點項目，其餘文字放入摘要。
+      此為規則式拆分，<strong>不是 AI 摘要</strong>，不會新增你未提供的事實。單篇上限 15,000 字元。
+    </p>
+    <label class="sr-only" for="pasteText">貼上文字</label>
+    <textarea id="pasteText" class="input paste-area" placeholder="範例：
+AI 落地三大重點
+- 海運物流：視覺辨識輔助港區作業
+- 醫療教育：虛擬情境支援訓練
+- 公部門：文件比對輔助行政流程"></textarea>
+    <p class="hint" id="pasteCount">0 / 15000</p>
+    <p class="hint error" id="pasteError" hidden></p>
+  </div>
+  <div class="dlg-foot">
+    <button class="btn" id="pasteSample" type="button">填入範例</button>
+    <button class="btn" data-close>取消</button>
+    <button class="btn primary" id="pasteApply">解析並套用</button>
+  </div>
+</dialog>
+
+<dialog id="dlgIcons" aria-labelledby="dlgIconsTitle">
+  <div class="dlg-head">
+    <h2 id="dlgIconsTitle">選擇圖示</h2>
+    <button class="dlg-close" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg-body">
+    <label class="sr-only" for="iconSearch">搜尋圖示</label>
+    <input id="iconSearch" class="input icon-search" placeholder="搜尋：物流、醫療、數據、目標…" autocomplete="off">
+    <div class="icon-grid" id="iconGrid"></div>
+  </div>
+  <div class="dlg-foot">
+    <button class="btn" id="iconClear" type="button">清除圖示</button>
+    <button class="btn" data-close>取消</button>
+  </div>
+</dialog>
+
+<dialog id="dlgProjects" class="wide" aria-labelledby="dlgProjectsTitle">
+  <div class="dlg-head">
+    <h2 id="dlgProjectsTitle">專案</h2>
+    <button class="dlg-close" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg-body">
+    <div class="projects-toolbar">
+      <label class="sr-only" for="projectSearch">搜尋專案</label>
+      <input id="projectSearch" class="input" placeholder="搜尋專案名稱…" autocomplete="off">
+      <button class="btn primary" id="btnCreateProject">＋ 新專案</button>
+    </div>
+    <div id="projectList" class="project-list" aria-live="polite"></div>
+    <p class="dlg-note" id="projectStorageNote">專案只存在這台裝置的瀏覽器中，不會上傳。刪除後無法復原。</p>
+  </div>
+  <div class="dlg-foot">
+    <button class="btn" id="btnImportFromManager" type="button">匯入 JSON…</button>
+    <button class="btn" data-close>關閉</button>
+  </div>
+</dialog>
+
+<dialog id="dlgPrompt" aria-labelledby="dlgPromptTitle">
+  <div class="dlg-head">
+    <h2 id="dlgPromptTitle">更名</h2>
+    <button class="dlg-close" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg-body">
+    <p class="dlg-note" id="dlgPromptMsg" style="margin:0 0 8px"></p>
+    <label class="sr-only" for="dlgPromptInput">名稱</label>
+    <input id="dlgPromptInput" class="input prompt-input" maxlength="80" autocomplete="off">
+    <p class="hint error" id="dlgPromptError" hidden></p>
+  </div>
+  <div class="dlg-foot">
+    <button class="btn" id="dlgPromptCancel" data-close>取消</button>
+    <button class="btn primary" id="dlgPromptOk">確定</button>
+  </div>
+</dialog>
+
+<div id="toasts" aria-live="polite"></div>
+
+<script type="module">
+'use strict';
+/* =========================================================================
+   Infographic Builder — single-file local-first SPA
+   Sections: CONST · UTIL · SCHEMA · TEXT · TEMPLATES/LAYOUT · RENDER
+             · VALIDATE · STORE/HISTORY · PERSIST · PROJECT FILES
+             · UI · SELFTEST · BOOT
+   ========================================================================= */
+
+/* ------------------------------ 1. CONST ------------------------------ */
+const APP_NAME = 'Infographic Builder';
+const SCHEMA_VERSION = 1;
+
+const FONT_STACK = '"Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC","Hiragino Sans TC",system-ui,-apple-system,"Segoe UI",sans-serif';
+
+const CANVAS_PRESETS = {
+  square:       { name: '正方形',      width: 1080, height: 1080, hint: 'Instagram 貼文、FB 方圖' },
+  portrait:     { name: '直式圖卡',    width: 1080, height: 1350, hint: 'IG 直式、Threads 圖卡' },
+  story:        { name: '限時動態',    width: 1080, height: 1920, hint: 'IG / FB Story' },
+  landscape:    { name: '橫式圖卡',    width: 1200, height: 675,  hint: 'FB 連結預覽、部落格' },
+  presentation: { name: '16:9 簡報',   width: 1920, height: 1080, hint: '簡報、投影' },
+  'a4-preview': { name: 'A4 比例圖卡', width: 1240, height: 1754, hint: '非列印精準尺寸' }
+};
+const CANVAS_IDS = Object.keys(CANVAS_PRESETS);
+
+const TEMPLATE_IDS = ['three-highlights', 'steps', 'timeline', 'comparison', 'kpi-cards'];
+const TEMPLATES = {
+  'three-highlights': { name: '三大重點', desc: '標題＋摘要＋3 張重點卡片', min: 3, max: 3, cap: '固定 3 項', uses: ['icon'] },
+  steps:              { name: '步驟流程', desc: '連續編號步驟，適合流程說明', min: 3, max: 6, cap: '3–6 項', uses: ['icon'] },
+  timeline:           { name: '時間軸',   desc: '節點標籤＋內文，適合歷程', min: 3, max: 6, cap: '3–6 項', uses: ['label'] },
+  comparison:         { name: '雙欄比較', desc: '左右對照，適合優劣分析', min: 2, max: 2, cap: '2 項', uses: ['icon'] },
+  'kpi-cards':        { name: 'KPI 指標', desc: '數字、單位與說明', min: 2, max: 4, cap: '2–4 項', uses: ['value'] }
+};
+
+const THEMES = {
+  business: {
+    name: '專業商務',
+    colors: { background: '#F7F9FC', heading: '#14213D', body: '#243247', accent: '#2563EB', card: '#FFFFFF' },
+    fontScale: 1, cornerRadius: 20, spacing: 24, padding: 64
+  },
+  'tech-dark': {
+    name: '科技深色',
+    colors: { background: '#0B1220', heading: '#E6F1FF', body: '#A8B8CC', accent: '#22D3EE', card: '#111C31' },
+    fontScale: 1, cornerRadius: 18, spacing: 22, padding: 64
+  },
+  education: {
+    name: '清新教育',
+    colors: { background: '#FBF7EE', heading: '#1E3A2F', body: '#37503F', accent: '#2F855A', card: '#FFFFFF' },
+    fontScale: 1, cornerRadius: 18, spacing: 24, padding: 60
+  },
+  mono: {
+    name: '極簡黑白',
+    colors: { background: '#FFFFFF', heading: '#0A0A0A', body: '#2E2E2E', accent: '#111111', card: '#F4F4F4' },
+    fontScale: 1, cornerRadius: 4, spacing: 20, padding: 68
+  },
+  social: {
+    name: '活力社群',
+    colors: { background: '#FFF1EA', heading: '#3B1D12', body: '#5A3527', accent: '#FF5A36', card: '#FFFFFF' },
+    fontScale: 1, cornerRadius: 26, spacing: 22, padding: 58
+  },
+  nature: {
+    name: '柔和自然',
+    colors: { background: '#F3F5EE', heading: '#263B2C', body: '#445A4A', accent: '#6B8F71', card: '#FFFFFF' },
+    fontScale: 1, cornerRadius: 22, spacing: 24, padding: 62
+  }
+};
+const THEME_IDS = Object.keys(THEMES);
+
+const COLOR_SLOTS = [
+  { key: 'background', label: '背景' },
+  { key: 'heading', label: '標題' },
+  { key: 'body', label: '內文' },
+  { key: 'accent', label: '強調' },
+  { key: 'card', label: '卡片' }
+];
+
+const SLIDER_DEFS = [
+  { key: 'fontScale', label: '字級倍率', min: 0.8, max: 1.3, step: 0.02, fmt: v => v.toFixed(2) + '×' },
+  { key: 'cornerRadius', label: '卡片圓角', min: 0, max: 48, step: 1, fmt: v => v + 'px' },
+  { key: 'spacing', label: '卡片間距', min: 8, max: 48, step: 1, fmt: v => v + 'px' },
+  { key: 'padding', label: '邊距', min: 32, max: 120, step: 1, fmt: v => v + 'px' }
+];
+
+const LIMITS = {
+  title: 120, titleSoftMin: 8, titleSoftMax: 30,
+  subtitle: 200, summary: 1000, summarySoft: 120,
+  itemTitle: 120, itemBody: 600, footer: 200,
+  items: 20, text: 15000, jsonBytes: 1024 * 1024, name: 80
+};
+
+const FORBIDDEN_START = '。，、；：！？）」』】》〉…·!?,.;:)]}%‰℃';
+const FORBIDDEN_END = '（「『【《〈([{“‘';
+const BULLET_RE = /^\s*(?:[-*•·▪◦‣●○■□◆◇※]|\(?\d+[.)．、]|[①-⑳]|[一二三四五六七八九十]+[、.])\s*/;
+
+const SAMPLE_TEXT = `AI 落地三大重點
+從流程自動化走向實際產業應用
+- 海運物流：視覺辨識輔助港區作業
+- 醫療教育：虛擬情境支援訓練
+- 公部門：文件比對輔助行政流程
+來源：示範內容，非新聞事實查證`;
+
+/* ------------------------- icon registry (whitelist) ------------------- */
+/* Generated from lucide-static (ISC License, https://lucide.dev) and
+   normalized to plain SVG path data so both SVG preview and Canvas export
+   use the exact same geometry. No arbitrary SVG is ever executed. */
+const ICONS = {
+  'ship': { label: '海運物流', keys: 'ship 海運 物流 港口 船 shipping', paths: ["M12 2v2","M12 9.189V13","M19 12V6a2 2 0 00-2-2H7a2 2 0 00-2 2v6","M19.38 19A11.6 11.6 0 0021 13l-8.188-3.639a2 2 0 00-1.624 0L3 13.001a11.6 11.6 0 002.81 7.76","M2 20c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1s1.2 1 2.5 1c2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"] },
+  'heart-pulse': { label: '醫療健康', keys: 'heart pulse 醫療 健康 心跳 照護', paths: ["M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5","M3.22 13H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27"] },
+  'landmark': { label: '公部門', keys: 'landmark 政府 公部門 政策 機構', paths: ["M10 18v-7","M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z","M14 18v-7","M18 18v-7","M3 22h18","M6 18v-7"] },
+  'target': { label: '目標聚焦', keys: 'target 目標 聚焦 準確', paths: ["M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0","M6 12a6 6 0 1 0 12 0a6 6 0 1 0 -12 0","M10 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"] },
+  'rocket': { label: '成長啟動', keys: 'rocket 成長 啟動 發射 加速', paths: ["M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5","M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09","M9 12a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.4 22.4 0 0 1-4 2z","M9 12H4s.55-3.03 2-4c1.62-1.08 5 .05 5 .05"] },
+  'lightbulb': { label: '洞察靈感', keys: 'lightbulb 想法 靈感 洞察 點子', paths: ["M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5","M9 18h6","M10 22h4"] },
+  'shield-check': { label: '安全防護', keys: 'shield check 安全 防護 合規 風險', paths: ["M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z","m9 12 2 2 4-4"] },
+  'chart-line': { label: '數據成長', keys: 'chart line 數據 成長 趨勢 折線', paths: ["M3 3v16a2 2 0 0 0 2 2h16","m19 9-5 5-4-4-3 3"] },
+  'chart-bar': { label: '統計分析', keys: 'chart bar 統計 分析 長條 報表', paths: ["M3 3v16a2 2 0 0 0 2 2h16","M7 16h8","M7 11h12","M7 6h3"] },
+  'trending-up': { label: '上升趨勢', keys: 'trending up 上升 趨勢 成長', paths: ["M16 7h6v6","m22 7-8.5 8.5-5-5L2 17"] },
+  'users': { label: '團隊用戶', keys: 'users 團隊 用戶 人群 社群', paths: ["M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2","M16 3.128a4 4 0 0 1 0 7.744","M22 21v-2a4 4 0 0 0-3-3.87","M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"] },
+  'user-check': { label: '客戶核准', keys: 'user check 客戶 核准 審核 會員', paths: ["m16 11 2 2 4-4","M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2","M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"] },
+  'briefcase': { label: '商務工作', keys: 'briefcase 商務 工作 專案 職涯', paths: ["M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16","M4 6h16a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2Z"] },
+  'building-2': { label: '企業大樓', keys: 'building 企業 大樓 公司 辦公', paths: ["M10 12h4","M10 8h4","M14 21v-3a2 2 0 0 0-4 0v3","M6 10H4a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-2","M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"] },
+  'factory': { label: '製造產業', keys: 'factory 製造 產業 工廠 生產', paths: ["M12 16h.01","M16 16h.01","M3 19a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.5a.5.5 0 0 0-.769-.422l-4.462 2.844A.5.5 0 0 1 15 10.5v-2a.5.5 0 0 0-.769-.422L9.77 10.922A.5.5 0 0 1 9 10.5V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2z","M8 16h.01"] },
+  'truck': { label: '運輸配送', keys: 'truck 運輸 配送 貨運 物流', paths: ["M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2","M15 18H9","M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14","M15 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0","M5 18a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"] },
+  'package': { label: '產品包裹', keys: 'package 產品 包裹 出貨 庫存', paths: ["M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z","M12 22V12","M3.29 7L12 12L20.71 7","m7.5 4.27 9 5.15"] },
+  'shopping-cart': { label: '電商銷售', keys: 'cart 電商 銷售 購物 訂單', paths: ["m2.05 2.05 1.099-.028a1 1 0 0 1 1.008.815l2.69 14.347A1 1 0 0 0 7.83 18H18","M4.563 5h16.435a1 1 0 0 1 .981 1.204l-1.026 6.226A2 2 0 0 1 18.962 14H6.25","M16 20a2 2 0 1 0 4 0a2 2 0 1 0 -4 0","M6 20a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"] },
+  'credit-card': { label: '支付金融', keys: 'credit card 支付 金融 交易 刷卡', paths: ["M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2Z","Mundefined undefinedLundefined undefined","M6 14h2"] },
+  'wallet': { label: '財務預算', keys: 'wallet 財務 預算 錢包 支出', paths: ["M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1","M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"] },
+  'piggy-bank': { label: '儲蓄節省', keys: 'piggy bank 儲蓄 節省 存款', paths: ["M11 17h3v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-3a3.16 3.16 0 0 0 2-2h1a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1h-1a5 5 0 0 0-2-4V3a4 4 0 0 0-3.2 1.6l-.3.4H11a6 6 0 0 0-6 6v1a5 5 0 0 0 2 4v3a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1z","M16 10h.01","M2 8v1a2 2 0 0 0 2 2h1"] },
+  'coins': { label: '成本收益', keys: 'coins 成本 收益 硬幣 費用', paths: ["M13.744 17.736a6 6 0 1 1-7.48-7.48","M15 6h1v4","m6.134 14.768.866-.5 2 3.464","M10 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0"] },
+  'banknote': { label: '現金營收', keys: 'banknote 現金 營收 收入 鈔票', paths: ["M4 6h16a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-8a2 2 0 0 1 2 -2Z","M10 12a2 2 0 1 0 4 0a2 2 0 1 0 -4 0","M6 12h.01M18 12h.01"] },
+  'calculator': { label: '計算成本', keys: 'calculator 計算 成本 估算 數字', paths: ["M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-16a2 2 0 0 1 2 -2Z","Mundefined undefinedLundefined undefined","Mundefined undefinedLundefined undefined","M16 10h.01","M12 10h.01","M8 10h.01","M12 14h.01","M8 14h.01","M12 18h.01","M8 18h.01"] },
+  'clock': { label: '時間效率', keys: 'clock 時間 效率 時程', paths: ["M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0","M12 6v6l4 2"] },
+  'calendar': { label: '排程日期', keys: 'calendar 排程 日期 行事曆 計畫', paths: ["M8 2v3","M16 2v3","M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2Z","M3 9h18"] },
+  'timer': { label: '期限速度', keys: 'timer 期限 速度 倒數 計時', paths: ["Mundefined undefinedLundefined undefined","Mundefined undefinedLundefined undefined","M4 14a8 8 0 1 0 16 0a8 8 0 1 0 -16 0"] },
+  'zap': { label: '效能能源', keys: 'zap 效能 能源 電力 快速', paths: ["M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"] },
+  'cpu': { label: '科技運算', keys: 'cpu 科技 運算 晶片 處理器', paths: ["M12 20v2","M12 2v2","M17 20v2","M17 2v2","M2 12h2","M2 17h2","M2 7h2","M20 12h2","M20 17h2","M20 7h2","M7 20v2","M7 2v2","M6 4h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2Z","M9 8h6a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-6a1 1 0 0 1 -1 -1v-6a1 1 0 0 1 1 -1Z"] },
+  'database': { label: '資料儲存', keys: 'database 資料 儲存 資料庫', paths: ["M3 5a9 3 0 1 0 18 0a9 3 0 1 0 -18 0","M3 5V19A9 3 0 0 0 21 19V5","M3 12A9 3 0 0 0 21 12"] },
+  'cloud': { label: '雲端服務', keys: 'cloud 雲端 服務 上傳', paths: ["M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"] },
+  'server': { label: '系統架構', keys: 'server 系統 架構 伺服器', paths: ["M4 2h16a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2Z","M4 14h16a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2Z","Mundefined undefinedLundefined undefined","Mundefined undefinedLundefined undefined"] },
+  'code': { label: '開發程式', keys: 'code 開發 程式 代碼 工程', paths: ["m16 18 6-6-6-6","m8 6-6 6 6 6"] },
+  'smartphone': { label: '行動應用', keys: 'smartphone 行動 APP 手機 應用', paths: ["M7 2h10a2 2 0 0 1 2 2v16a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-16a2 2 0 0 1 2 -2Z","M12 18h.01"] },
+  'monitor': { label: '平台螢幕', keys: 'monitor 平台 螢幕 顯示 桌面', paths: ["M4 3h16a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2Z","Mundefined undefinedLundefined undefined","Mundefined undefinedLundefined undefined"] },
+  'globe': { label: '全球國際', keys: 'globe 全球 國際 世界 網路', paths: ["M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0","M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20","M2 12h20"] },
+  'mail': { label: '通知聯繫', keys: 'mail 通知 聯繫 郵件 訊息', paths: ["m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7","M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-16a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2Z"] },
+  'message-circle': { label: '溝通回饋', keys: 'message 溝通 回饋 對話 評論', paths: ["M2.992 16.342a2 2 0 0 1 .094 1.167l-1.065 3.29a1 1 0 0 0 1.236 1.168l3.413-.998a2 2 0 0 1 1.099.092 10 10 0 1 0-4.777-4.719"] },
+  'phone': { label: '客服電話', keys: 'phone 客服 電話 聯絡 支援', paths: ["M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384"] },
+  'book-open': { label: '學習知識', keys: 'book 學習 知識 閱讀 教材', paths: ["M12 5v16","M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z"] },
+  'graduation-cap': { label: '教育培訓', keys: 'graduation 教育 培訓 畢業 課程', paths: ["M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z","M22 10v6","M6 12.5V16a6 3 0 0 0 12 0v-3.5"] },
+  'award': { label: '成就獎項', keys: 'award 成就 獎項 認證 肯定', paths: ["m15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526","M6 8a6 6 0 1 0 12 0a6 6 0 1 0 -12 0"] },
+  'star': { label: '重點推薦', keys: 'star 重點 推薦 精選 星等', paths: ["M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"] },
+  'flag': { label: '里程碑目標', keys: 'flag 里程碑 目標 旗標 階段', paths: ["M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528"] },
+  'map-pin': { label: '位置地區', keys: 'map pin 位置 地區 據點 地點', paths: ["M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0","M9 10a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"] },
+  'route': { label: '流程路徑', keys: 'route 流程 路徑 路線 導引', paths: ["M3 19a3 3 0 1 0 6 0a3 3 0 1 0 -6 0","M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15","M15 5a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"] },
+  'workflow': { label: '協作流程', keys: 'workflow 協作 流程 工作流 串接', paths: ["M5 3h4a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2Z","M7 11v4a2 2 0 0 0 2 2h4","M15 13h4a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-4a2 2 0 0 1 -2 -2v-4a2 2 0 0 1 2 -2Z"] },
+  'circle-check': { label: '完成確認', keys: 'check circle 完成 確認 通過 勾選', paths: ["M2 12a10 10 0 1 0 20 0a10 10 0 1 0 -20 0","m16 9-5.5 5.5L8 12"] },
+  'triangle-alert': { label: '風險警示', keys: 'alert triangle 風險 警示 注意 警告', paths: ["m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3","M12 9v4","M12 17h.01"] },
+  'leaf': { label: '永續環保', keys: 'leaf 永續 環保 綠能 自然', paths: ["M11 20a10 10 0 0010-10 25.9 25.9 0 00-1.04-7.281 1 1 0 00-1.755-.325C15.833 5.5 13 5.5 9.8 6.1A7 7 0 0011 20","M2 21a5 5 0 012.911-4.544C7.613 15.212 8.351 15.24 11 13"] },
+  'flask-conical': { label: '實驗研究', keys: 'flask 實驗 研究 測試 科學', paths: ["M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2","M6.453 15h11.094","M8.5 2h7"] },
+  'scale': { label: '法規衡量', keys: 'scale 法規 衡量 平衡 公平', paths: ["M12 3v18","m19 8 3 8a5 5 0 0 1-6 0zV7","M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1","m5 8 3 8a5 5 0 0 1-6 0zV7","M7 21h10"] }
+};
+
+/* ------------------------------ 2. UTIL ------------------------------- */
+const $ = id => document.getElementById(id);
+const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+const clone = v => (typeof structuredClone === 'function' ? structuredClone(v) : JSON.parse(JSON.stringify(v)));
+const nowISO = () => new Date().toISOString();
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+function uid(prefix = 'id') {
+  return prefix + '-' + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
+}
+function svgEl(tag, attrs) {
+  const node = document.createElementNS(SVGNS, tag);
+  if (attrs) for (const k in attrs) {
+    const v = attrs[k];
+    if (v !== null && v !== undefined) node.setAttribute(k, String(v));
+  }
+  return node;
+}
+function setText(node, text) {
+  if (node.textContent !== text) node.textContent = text;
+}
+function isHexColor(v) {
+  return typeof v === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim());
+}
+function normalizeHex(v, fallback) {
+  if (!isHexColor(v)) return fallback;
+  let s = v.trim().toLowerCase();
+  if (s.length === 4) s = '#' + s[1] + s[1] + s[2] + s[2] + s[3] + s[3];
+  return s;
+}
+function hexToRgb(hex) {
+  const s = normalizeHex(hex, '#000000');
+  return {
+    r: parseInt(s.slice(1, 3), 16),
+    g: parseInt(s.slice(3, 5), 16),
+    b: parseInt(s.slice(5, 7), 16)
+  };
+}
+function luminance(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const f = c => {
+    const s = c / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+function contrastRatio(a, b) {
+  const l1 = luminance(a), l2 = luminance(b);
+  const hi = Math.max(l1, l2), lo = Math.min(l1, l2);
+  return (hi + 0.05) / (lo + 0.05);
+}
+function mixHex(a, b, t) {
+  const A = hexToRgb(a), B = hexToRgb(b);
+  const ch = k => Math.round(A[k] + (B[k] - A[k]) * t).toString(16).padStart(2, '0');
+  return '#' + ch('r') + ch('g') + ch('b');
+}
+function sanitizeFilename(input, ext) {
+  let base = String(input || '').trim()
+    .replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-')
+    .replace(/\s+/g, ' ')
+    .replace(/^[.\s-]+|[.\s-]+$/g, '')
+    .slice(0, 60);
+  if (!base) base = 'infographic';
+  const tail = ext ? '.' + String(ext).replace(/^\.+/, '') : '';
+  return base + tail;
+}
+function download(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+function formatDateTime(iso) {
+  try {
+    return new Intl.DateTimeFormat('zh-TW', {
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit'
+    }).format(new Date(iso));
+  } catch (e) { return String(iso || ''); }
+}
+function charLen(s) { return Array.from(String(s || '')).length; }
+
+/* ------------------------------ 3. SCHEMA ----------------------------- */
+function emptyProject(overrides) {
+  const base = {
+    schemaVersion: SCHEMA_VERSION,
+    metadata: { id: uid('proj'), name: '未命名專案', createdAt: nowISO(), updatedAt: nowISO() },
+    content: { title: '', subtitle: '', summary: '', items: [], footer: '', originalText: '' },
+    templateId: 'three-highlights',
+    canvas: { preset: 'portrait', width: 1080, height: 1350 },
+    theme: {
+      presetId: 'business',
+      colors: { ...THEMES.business.colors },
+      fontScale: 1, cornerRadius: 20, spacing: 24, padding: 64
+    }
+  };
+  return Object.assign(base, overrides || {});
+}
+
+function sampleProject() {
+  const p = emptyProject();
+  p.metadata.name = 'AI 應用三大重點';
+  p.content.title = 'AI 落地三大重點';
+  p.content.subtitle = '從概念驗證走向規模化導入';
+  p.content.summary = '從流程自動化走向實際產業應用，先從高重複、可驗證的場景開始。';
+  p.content.items = [
+    { id: uid('item'), title: '海運物流', body: '視覺辨識輔助港區作業，降低人工比對時間。', iconId: 'ship' },
+    { id: uid('item'), title: '醫療教育', body: '虛擬情境支援訓練，讓新進人員反覆演練。', iconId: 'heart-pulse' },
+    { id: uid('item'), title: '公部門', body: '文件比對輔助行政流程，保留人工複核。', iconId: 'landmark' }
+  ];
+  p.content.footer = '示範內容，非新聞事實查證';
+  p.templateId = 'three-highlights';
+  p.canvas = { preset: 'portrait', width: 1080, height: 1350 };
+  return p;
+}
+
+function newItem(fields) {
+  return Object.assign({ id: uid('item'), title: '', body: '', iconId: '', value: '', unit: '', label: '' }, fields || {});
+}
+
+function normalizeCanvas(canvas) {
+  const preset = canvas && CANVAS_PRESETS[canvas.preset] ? canvas.preset : 'portrait';
+  const def = CANVAS_PRESETS[preset];
+  return { preset, width: def.width, height: def.height };
+}
+
+function clampTheme(theme) {
+  const base = THEMES[theme && THEMES[theme.presetId] ? theme.presetId : 'business'];
+  const colorsIn = (theme && theme.colors) || {};
+  const colors = {};
+  for (const slot of COLOR_SLOTS) {
+    colors[slot.key] = normalizeHex(colorsIn[slot.key], base.colors[slot.key]);
+  }
+  return {
+    presetId: theme && THEMES[theme.presetId] ? theme.presetId : 'custom',
+    colors,
+    fontScale: clamp(Number(theme && theme.fontScale) || 1, 0.8, 1.3),
+    cornerRadius: clamp(Math.round(numOr(theme && theme.cornerRadius, base.cornerRadius)), 0, 48),
+    spacing: clamp(Math.round(numOr(theme && theme.spacing, base.spacing)), 8, 48),
+    padding: clamp(Math.round(numOr(theme && theme.padding, base.padding)), 32, 120)
+  };
+}
+function numOr(v, fallback) {
+  return (typeof v === 'number' && isFinite(v)) ? v : fallback;
+}
+
+/**
+ * Version migrations. Each entry upgrades from its key version to key+1.
+ * v1 is the current format; keep this registry for future v1.x formats so
+ * older project files can be imported instead of rejected.
+ */
+const MIGRATIONS = {
+  // 0: raw => Object.assign({}, raw, { schemaVersion: 1 })  // reserved
+};
+
+function migrateProject(raw) {
+  let data = raw;
+  let guard = 0;
+  while (data && Number.isInteger(data.schemaVersion) &&
+         data.schemaVersion < SCHEMA_VERSION && guard++ < 10) {
+    const step = MIGRATIONS[data.schemaVersion];
+    if (!step) break;
+    data = step(data);
+  }
+  return data;
+}
+
+/**
+ * Hand-written validator (single source of truth for project files).
+ * Returns { ok, errors:[{path,msg}], project, notes:[string], tooNew }
+ * Never throws on malformed input.
+ */
+function validateProject(raw) {
+  const errors = [];
+  const notes = [];
+  const err = (path, msg) => errors.push({ path, msg });
+
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) {
+    return { ok: false, errors: [{ path: '', msg: '檔案內容必須是 JSON 物件' }], notes, project: null };
+  }
+
+  if (Number.isInteger(raw.schemaVersion) && raw.schemaVersion < SCHEMA_VERSION) {
+    const migrated = migrateProject(raw);
+    if (migrated !== raw) {
+      notes.push(`專案格式已從版本 ${raw.schemaVersion} 升級至 ${SCHEMA_VERSION}。`);
+      raw = migrated;
+    }
+  }
+
+  if (raw.schemaVersion === undefined) {
+    err('schemaVersion', '缺少 schemaVersion，無法確認專案格式版本');
+  } else if (!Number.isInteger(raw.schemaVersion)) {
+    err('schemaVersion', 'schemaVersion 必須是整數');
+  } else if (raw.schemaVersion > SCHEMA_VERSION) {
+    return {
+      ok: false, tooNew: true, notes, project: null,
+      errors: [{ path: 'schemaVersion', msg: `此檔案版本為 ${raw.schemaVersion}，目前版本僅支援 ${SCHEMA_VERSION}。請更新此工具後再匯入。` }]
+    };
+  } else if (raw.schemaVersion < 1) {
+    err('schemaVersion', `不支援的版本 ${raw.schemaVersion}`);
+  }
+
+  const md = raw.metadata;
+  if (md === null || typeof md !== 'object' || Array.isArray(md)) {
+    err('metadata', '缺少 metadata 物件');
+  } else {
+    if (md.name !== undefined && (typeof md.name !== 'string' || charLen(md.name) > LIMITS.name)) {
+      err('metadata.name', `專案名稱必須是字串，且不超過 ${LIMITS.name} 字`);
+    }
+    for (const key of ['createdAt', 'updatedAt']) {
+      if (md[key] !== undefined && (typeof md[key] !== 'string' || isNaN(Date.parse(md[key])))) {
+        err('metadata.' + key, `${key} 必須是 ISO 8601 日期字串`);
+      }
+    }
+  }
+
+  const c = raw.content;
+  if (c === null || typeof c !== 'object' || Array.isArray(c)) {
+    err('content', '缺少 content 物件');
+  } else {
+    const checkStr = (val, path, max, required) => {
+      if (val === undefined || val === null) {
+        if (required) err(path, '此欄位為必填');
+        return;
+      }
+      if (typeof val !== 'string') { err(path, '必須是文字'); return; }
+      if (charLen(val) > max) err(path, `長度不可超過 ${max} 字（目前 ${charLen(val)} 字）`);
+    };
+    checkStr(c.title, 'content.title', LIMITS.title, true);
+    checkStr(c.subtitle, 'content.subtitle', LIMITS.subtitle, false);
+    checkStr(c.summary, 'content.summary', LIMITS.summary, false);
+    checkStr(c.footer, 'content.footer', LIMITS.footer, false);
+    checkStr(c.originalText, 'content.originalText', LIMITS.text, false);
+
+    if (!Array.isArray(c.items)) {
+      err('content.items', '重點項目必須是陣列');
+    } else {
+      if (c.items.length > LIMITS.items) err('content.items', `重點項目不可超過 ${LIMITS.items} 項`);
+      c.items.forEach((it, i) => {
+        const p = `content.items[${i}]`;
+        if (it === null || typeof it !== 'object' || Array.isArray(it)) { err(p, '必須是物件'); return; }
+        checkStr(it.title, p + '.title', LIMITS.itemTitle, false);
+        checkStr(it.body, p + '.body', LIMITS.itemBody, false);
+        checkStr(it.value, p + '.value', 40, false);
+        checkStr(it.unit, p + '.unit', 20, false);
+        checkStr(it.label, p + '.label', 40, false);
+        if (it.iconId !== undefined && it.iconId !== null && typeof it.iconId !== 'string') {
+          err(p + '.iconId', 'iconId 必須是字串');
+        }
+      });
+    }
+  }
+
+  if (!TEMPLATE_IDS.includes(raw.templateId)) {
+    err('templateId', `不支援的模板：${String(raw.templateId)}`);
+  }
+
+  if (!raw.canvas || typeof raw.canvas !== 'object' || Array.isArray(raw.canvas)) {
+    err('canvas', '缺少 canvas 物件');
+  } else if (!CANVAS_PRESETS[raw.canvas.preset]) {
+    err('canvas.preset', `不支援的畫布尺寸：${String(raw.canvas.preset)}`);
+  } else {
+    const def = CANVAS_PRESETS[raw.canvas.preset];
+    if (raw.canvas.width !== def.width || raw.canvas.height !== def.height) {
+      notes.push(`畫布尺寸已依 preset「${def.name}」正規化為 ${def.width}×${def.height}。`);
+    }
+  }
+
+  const t = raw.theme;
+  if (!t || typeof t !== 'object' || Array.isArray(t)) {
+    err('theme', '缺少 theme 物件');
+  } else {
+    if (t.colors && typeof t.colors === 'object') {
+      for (const slot of COLOR_SLOTS) {
+        if (t.colors[slot.key] !== undefined && !isHexColor(t.colors[slot.key])) {
+          err('theme.colors.' + slot.key, `顏色需為 #RGB 或 #RRGGBB（目前：${String(t.colors[slot.key])}）`);
+        }
+      }
+    }
+    const numChecks = [
+      ['fontScale', 0.8, 1.3], ['cornerRadius', 0, 48], ['spacing', 8, 48], ['padding', 32, 120]
+    ];
+    for (const [key, min, max] of numChecks) {
+      if (t[key] !== undefined && (typeof t[key] !== 'number' || !isFinite(t[key]))) {
+        err('theme.' + key, `${key} 必須是數字`);
+      } else if (t[key] !== undefined && (t[key] < min || t[key] > max)) {
+        notes.push(`theme.${key} 超出允許範圍（${min}–${max}），已調整。`);
+      }
+    }
+  }
+
+  if (errors.length) return { ok: false, errors, notes, project: null };
+
+  const project = {
+    schemaVersion: SCHEMA_VERSION,
+    metadata: {
+      id: (md && typeof md.id === 'string' && md.id) || uid('proj'),
+      name: (md && typeof md.name === 'string' && md.name.trim()) || '未命名專案',
+      createdAt: (md && typeof md.createdAt === 'string') ? md.createdAt : nowISO(),
+      updatedAt: (md && typeof md.updatedAt === 'string') ? md.updatedAt : nowISO()
+    },
+    content: {
+      title: typeof c.title === 'string' ? c.title : '',
+      subtitle: typeof c.subtitle === 'string' ? c.subtitle : '',
+      summary: typeof c.summary === 'string' ? c.summary : '',
+      footer: typeof c.footer === 'string' ? c.footer : '',
+      originalText: typeof c.originalText === 'string' ? c.originalText : '',
+      items: (c.items || []).map(it => ({
+        id: (typeof it.id === 'string' && it.id) ? it.id : uid('item'),
+        title: typeof it.title === 'string' ? it.title : '',
+        body: typeof it.body === 'string' ? it.body : '',
+        iconId: (typeof it.iconId === 'string' && ICONS[it.iconId]) ? it.iconId : '',
+        value: typeof it.value === 'string' ? it.value : '',
+        unit: typeof it.unit === 'string' ? it.unit : '',
+        label: typeof it.label === 'string' ? it.label : ''
+      }))
+    },
+    templateId: raw.templateId,
+    canvas: normalizeCanvas(raw.canvas),
+    theme: clampTheme(t)
+  };
+
+  const droppedIcons = (c.items || []).filter(it => it && it.iconId && !ICONS[it.iconId]).length;
+  if (droppedIcons) notes.push(`有 ${droppedIcons} 個圖示不在內建清單中，已清除該圖示設定。`);
+
+  return { ok: true, errors: [], notes, project };
+}
+
+/* ---------------------------- 4. TEXT ENGINE -------------------------- */
+let _measureCanvas = null, _measureCtx = null;
+function measureCtx() {
+  if (!_measureCtx) {
+    _measureCanvas = document.createElement('canvas');
+    _measureCanvas.width = 8; _measureCanvas.height = 8;
+    _measureCtx = _measureCanvas.getContext('2d');
+  }
+  return _measureCtx;
+}
+function fontCss(font) {
+  return `${font.weight || 400} ${font.size}px ${FONT_STACK}`;
+}
+const _widthCache = new Map();
+function textWidth(text, font) {
+  const key = font.size + '|' + font.weight + '|' + text;
+  const hit = _widthCache.get(key);
+  if (hit !== undefined) return hit;
+  const ctx = measureCtx();
+  ctx.font = fontCss(font);
+  const w = ctx.measureText(text).width;
+  if (_widthCache.size > 6000) _widthCache.clear();
+  _widthCache.set(key, w);
+  return w;
+}
+const _ascentCache = new Map();
+function ascentOf(font) {
+  const key = font.size + '|' + font.weight;
+  if (_ascentCache.has(key)) return _ascentCache.get(key);
+  const ctx = measureCtx();
+  ctx.font = fontCss(font);
+  const m = ctx.measureText('國Ag');
+  const asc = (m.fontBoundingBoxAscent || m.actualBoundingBoxAscent || font.size * 0.8);
+  const value = Math.round(asc);
+  _ascentCache.set(key, value);
+  return value;
+}
+
+const CJK_RE = /[\u1100-\u11FF\u2E80-\u9FFF\uA960-\uA97F\uAC00-\uD7AF\uF900-\uFAFF\uFE10-\uFE1F\uFE30-\uFE6F\uFF00-\uFFEF]/;
+const needsSpaceScript = /[A-Za-z0-9@#$%&]/;
+
+/** Split a paragraph into breakable tokens: CJK chars individually, latin words whole. */
+function tokenize(text) {
+  const chars = Array.from(text);
+  const out = [];
+  let buf = '';
+  const flush = () => { if (buf) { out.push(buf); buf = ''; } };
+  for (const ch of chars) {
+    if (ch === ' ' || ch === '\t') { flush(); out.push(' '); continue; }
+    if (CJK_RE.test(ch)) {
+      flush();
+      // keep latin punctuation attached to preceding word
+      out.push(ch);
+      continue;
+    }
+    if (/[.,!?;:%)\]}'"]/.test(ch) && buf === '' && out.length && !/^\s$/.test(out[out.length - 1])) {
+      out[out.length - 1] += ch;
+      continue;
+    }
+    buf += ch;
+    if (/[-/]$/.test(ch)) flush();
+  }
+  flush();
+  return out;
+}
+
+function hardBreak(token, maxWidth, font) {
+  const pieces = [];
+  let cur = '';
+  for (const ch of Array.from(token)) {
+    const next = cur + ch;
+    if (cur && textWidth(next, font) > maxWidth) { pieces.push(cur); cur = ch; }
+    else cur = next;
+  }
+  if (cur) pieces.push(cur);
+  return pieces;
+}
+
+function applyForbidden(lines) {
+  for (let i = 1; i < lines.length; i++) {
+    let guard = 0;
+    while (lines[i] && FORBIDDEN_START.includes(Array.from(lines[i])[0]) && Array.from(lines[i - 1]).length > 1 && guard++ < 6) {
+      const prev = Array.from(lines[i - 1]);
+      const moved = prev.pop();
+      lines[i - 1] = prev.join('');
+      lines[i] = moved + lines[i];
+    }
+  }
+  for (let i = 0; i < lines.length - 1; i++) {
+    const arr = Array.from(lines[i]);
+    if (arr.length > 1 && FORBIDDEN_END.includes(arr[arr.length - 1])) {
+      const moved = arr.pop();
+      lines[i] = arr.join('');
+      lines[i + 1] = moved + lines[i + 1];
+    }
+  }
+  return lines;
+}
+
+/** Word-wrap with CJK breaking + punctuation rules. Never truncates. */
+function trimLines(lines, maxWidth, font) {
+  for (let i = 0; i < lines.length; i++) {
+    let guard = 0;
+    while (lines[i] && textWidth(lines[i], font) > maxWidth + 0.5 && guard++ < 400) {
+      const arr = Array.from(lines[i]);
+      if (arr.length <= 1) break;
+      const last = arr.pop();
+      lines[i] = arr.join('');
+      if (i + 1 < lines.length) lines[i + 1] = last + lines[i + 1];
+      else lines.push(last);
+    }
+  }
+  return lines;
+}
+
+function wrapText(text, maxWidth, font) {
+  if (text === undefined || text === null) return [];
+  const src = String(text).replace(/\r\n?/g, '\n');
+  if (!src.trim()) return [];
+  if (!(maxWidth > 0)) return [];
+  const out = [];
+  for (const para of src.split('\n')) {
+    if (!para.trim()) { out.push(''); continue; }
+    const tokens = tokenize(para);
+    let line = [];
+    const lineStr = () => line.join('');
+    const flush = () => { out.push(lineStr().replace(/\s+$/, '')); line = []; };
+    for (const tok of tokens) {
+      if (tok === ' ') { if (line.length) line.push(' '); continue; }
+      if (!line.length) {
+        if (textWidth(tok, font) > maxWidth) {
+          const pieces = hardBreak(tok, maxWidth, font);
+          for (let i = 0; i < pieces.length - 1; i++) out.push(pieces[i]);
+          line = [pieces[pieces.length - 1] || ''];
+        } else {
+          line = [tok];
+        }
+        continue;
+      }
+      const candidate = lineStr() + tok;
+      if (textWidth(candidate.replace(/\s+$/, ''), font) <= maxWidth) { line.push(tok); continue; }
+
+      /* break before tok; if tok would start the new line with a forbidden
+         character, pull the previous token down as well (禁則處理). */
+      let carry = [];
+      if (FORBIDDEN_START.includes(Array.from(tok)[0])) {
+        let idx = line.length;
+        while (idx > 0 && line[idx - 1] === ' ') idx--;
+        if (idx > 1) { carry = line.slice(idx - 1); line = line.slice(0, idx - 1); }
+      }
+      while (line.length && line[line.length - 1] === ' ') line.pop();
+      flush();
+      line = carry.concat([tok]);
+      if (textWidth(lineStr(), font) > maxWidth) {
+        const pieces = hardBreak(lineStr(), maxWidth, font);
+        for (let i = 0; i < pieces.length - 1; i++) out.push(pieces[i]);
+        line = [pieces[pieces.length - 1] || ''];
+      }
+    }
+    if (lineStr().trim()) flush();
+  }
+  const lines = applyForbidden(out);
+  return trimLines(lines, maxWidth, font);
+}
+
+/* ------------------------ plain text → structure ---------------------- */
+function parsePlainText(raw) {
+  const text = String(raw || '').replace(/\r\n?/g, '\n');
+  const lines = text.split('\n').map(l => l.trim());
+  const nonEmpty = lines.filter(Boolean);
+  const result = { title: '', subtitle: '', summary: '', footer: '', items: [] };
+  if (!nonEmpty.length) return result;
+
+  let rest = nonEmpty.slice();
+  result.title = rest.shift().replace(BULLET_RE, '').trim().slice(0, LIMITS.title);
+
+  // trailing source/credit line
+  const footerIdx = rest.findIndex(l => /^(來源|出處|資料來源|參考資料|圖片來源|credit|source)\s*[:：]/i.test(l));
+  if (footerIdx >= 0) {
+    result.footer = rest.splice(footerIdx, 1)[0].slice(0, LIMITS.footer);
+  }
+  // explicit summary line
+  const summaryIdx = rest.findIndex(l => /^(摘要|重點摘要|簡介|說明|概述)\s*[:：]/.test(l));
+  if (summaryIdx >= 0) {
+    result.summary = rest.splice(summaryIdx, 1)[0].replace(/^[^:：]+[:：]\s*/, '').slice(0, LIMITS.summary);
+  }
+
+  const loose = [];
+  for (const line of rest) {
+    if (BULLET_RE.test(line)) {
+      const clean = line.replace(BULLET_RE, '').trim();
+      if (!clean) continue;
+      const m = clean.match(/^([^:：]{1,40})\s*[:：]\s*(.+)$/);
+      const item = newItem();
+      if (m) { item.title = m[1].trim().slice(0, LIMITS.itemTitle); item.body = m[2].trim().slice(0, LIMITS.itemBody); }
+      else item.title = clean.slice(0, LIMITS.itemTitle);
+      result.items.push(item);
+    } else {
+      loose.push(line);
+    }
+  }
+  if (loose.length) {
+    result.summary = (result.summary ? result.summary + '\n' : '') + loose.join('\n');
+  }
+  return result;
+}
+
+/* ------------------------- template capacity rules ------------------- */
+function templateLimit(templateId, count) {
+  const tpl = TEMPLATES[templateId];
+  if (!tpl) return { visible: count, hidden: 0, belowMin: 0, over: false, under: false };
+  const visible = Math.min(count, tpl.max);
+  return {
+    visible,
+    hidden: Math.max(0, count - tpl.max),
+    belowMin: Math.max(0, tpl.min - count),
+    over: count > tpl.max,
+    under: count < tpl.min
+  };
+}
+/* --------------------------- 5. LAYOUT ENGINE ------------------------ */
+function metrics(project) {
+  const width = project.canvas.width;
+  const height = project.canvas.height;
+  const s = Math.sqrt((width * height) / (1080 * 1350));
+  const fs = project.theme.fontScale || 1;
+  const px = base => Math.max(11, Math.round(base * s * fs));
+  return {
+    s, width, height, fs,
+    pad: clamp(Math.round(project.theme.padding * s), 12, Math.min(width, height) * 0.18),
+    gap: clamp(Math.round(project.theme.spacing * s), 6, Math.min(width, height) * 0.08),
+    radius: clamp(Math.round(project.theme.cornerRadius * s), 0, 80),
+    wide: width / height > 1.15,
+    font: {
+      title:    { size: px(62), weight: 800, lineHeight: 1.24 },
+      subtitle: { size: px(30), weight: 500, lineHeight: 1.4 },
+      summary:  { size: px(27), weight: 400, lineHeight: 1.6 },
+      cardTitle:{ size: px(36), weight: 700, lineHeight: 1.3 },
+      cardBody: { size: px(24), weight: 400, lineHeight: 1.6 },
+      small:    { size: px(22), weight: 600, lineHeight: 1.4 },
+      stepNo:   { size: px(28), weight: 700, lineHeight: 1 },
+      kpiValue: { size: px(84), weight: 800, lineHeight: 1.1 },
+      kpiUnit:  { size: px(30), weight: 600, lineHeight: 1.2 },
+      footer:   { size: px(19), weight: 400, lineHeight: 1.4 }
+    }
+  };
+}
+
+function makeText(opts) {
+  const lines0 = wrapText(opts.text, opts.width, opts.font);
+  const maxLines = opts.maxLines > 0 ? opts.maxLines : 0;
+  const lines = maxLines ? lines0.slice(0, maxLines) : lines0;
+  const lineHeight = Math.max(1, Math.round(opts.font.size * opts.font.lineHeight));
+  const prim = {
+    type: 'text',
+    x: opts.x, y: opts.y, width: opts.width,
+    lines, size: opts.font.size, weight: opts.font.weight,
+    color: opts.color, align: opts.align || 'left',
+    lineHeight, baseline: ascentOf(opts.font), opacity: opts.opacity == null ? 1 : opts.opacity,
+    height: lines.length * lineHeight
+  };
+  return { prim, truncated: lines0.length > lines.length, hidden: Math.max(0, lines0.length - lines.length), total: lines0.length };
+}
+
+function pushText(scene, opts) {
+  if (!opts.text || !String(opts.text).trim()) {
+    return { bottom: opts.y, lines: 0, truncated: false, hidden: 0, total: 0 };
+  }
+  const made = makeText(opts);
+  if (!made.prim.lines.length) return { bottom: opts.y, lines: 0, truncated: false, hidden: 0, total: 0 };
+  scene.primitives.push(made.prim);
+  return {
+    bottom: made.prim.y + made.prim.height,
+    lines: made.prim.lines.length,
+    truncated: made.truncated,
+    hidden: made.hidden,
+    total: made.total,
+    prim: made.prim
+  };
+}
+
+function addIcon(scene, iconId, x, y, size, color) {
+  const icon = ICONS[iconId];
+  if (!icon) return false;
+  scene.primitives.push({
+    type: 'icon', x, y, size, color,
+    strokeWidth: 1.9,
+    paths: icon.paths
+  });
+  return true;
+}
+
+function addIconBadge(scene, iconId, x, y, iconSize, colors) {
+  const pad = Math.round(iconSize * 0.32);
+  const size = iconSize + pad * 2;
+  scene.primitives.push({
+    type: 'rect', x, y, w: size, h: size, r: Math.round(size * 0.26),
+    fill: mixHex(colors.accent, colors.card, 0.88)
+  });
+  addIcon(scene, iconId, x + pad, y + pad, iconSize, colors.accent);
+  return size;
+}
+
+function addCard(scene, x, y, w, h, fill, radius, opts) {
+  scene.primitives.push(Object.assign({
+    type: 'rect', x, y, w, h, r: radius, fill
+  }, opts || {}));
+}
+
+function textAreaHeight(block) { return block.lines * block.lineHeight; }
+
+function layoutHeader(scene, project, m, box) {
+  const colors = project.theme.colors;
+  const c = project.content;
+  let y = box.y;
+  if (c.title && c.title.trim()) {
+    const r = pushText(scene, {
+      x: box.x, y, width: box.w, text: c.title, font: m.font.title, color: colors.heading, maxLines: 4
+    });
+    if (r.truncated) {
+      scene.warn('title-truncated', 'error', '主標題過長，輸出會被截斷，請縮短標題或降低字級倍率。');
+    }
+    y = r.bottom;
+    const barH = Math.max(4, Math.round(6 * m.s));
+    y += Math.round(18 * m.s);
+    scene.primitives.push({ type: 'rect', x: box.x, y, w: Math.round(72 * m.s), h: barH, r: barH / 2, fill: colors.accent });
+    y += barH + Math.round(22 * m.s);
+  }
+  if (c.subtitle && c.subtitle.trim()) {
+    const r = pushText(scene, {
+      x: box.x, y, width: box.w, text: c.subtitle, font: m.font.subtitle, color: colors.accent, maxLines: 3
+    });
+    if (r.truncated) scene.warn('subtitle-truncated', 'warning', '副標題偏長，部分內容未顯示。');
+    y = r.bottom + Math.round(14 * m.s);
+  }
+  if (c.summary && c.summary.trim()) {
+    const r = pushText(scene, {
+      x: box.x, y, width: box.w, text: c.summary, font: m.font.summary, color: colors.body, maxLines: 4
+    });
+    if (r.truncated) scene.warn('summary-truncated', 'warning', '摘要偏長，部分內容未顯示，建議縮短。');
+    y = r.bottom;
+  }
+  return { bottom: y };
+}
+
+function layoutFooter(scene, project, m, box) {
+  const text = project.content.footer;
+  if (!text || !text.trim()) return box.y + box.h;
+  const f = m.font.footer;
+  const lh = Math.max(1, Math.round(f.size * f.lineHeight));
+  const made = makeText({ x: box.x, y: 0, width: box.w, text, font: f, color: project.theme.colors.body, maxLines: 2 });
+  if (!made.prim.lines.length) return box.y + box.h;
+  const h = made.prim.lines.length * lh;
+  const top = box.y + box.h - h;
+  const dividerY = top - Math.round(14 * m.s);
+  scene.primitives.push({
+    type: 'line', x1: box.x, y1: dividerY, x2: box.x + box.w, y2: dividerY,
+    color: project.theme.colors.body, width: 1, opacity: 0.18
+  });
+  made.prim.y = top;
+  made.prim.opacity = 0.72;
+  scene.primitives.push(made.prim);
+  if (made.truncated) scene.warn('footer-truncated', 'warning', '來源／署名偏長，僅顯示前 2 行。');
+  return dividerY - Math.round(10 * m.s);
+}
+
+function contentArea(scene, project, m, box) {
+  const footerTop = layoutFooter(scene, project, m, box);
+  const header = layoutHeader(scene, project, m, box);
+  const top = header.bottom + Math.round((header.bottom > box.y ? 1 : 0) * m.gap * 1.4);
+  const area = { x: box.x, y: top, w: box.w, h: footerTop - top };
+  if (area.h < 40) {
+    scene.warn('no-space', 'error', '可用版面空間不足，請縮短標題／摘要或減少項目。');
+    area.h = Math.max(area.h, 0);
+  }
+  return area;
+}
+
+function cardTextWarnings(scene, idx, block, label, region) {
+  if (block.truncated) {
+    const severe = block.hidden >= Math.max(2, block.lines) || block.lines <= 1;
+    scene.warn(
+      'item-truncated', severe ? 'error' : 'warning',
+      `第 ${idx + 1} 項${label}超出可用空間，已隱藏 ${block.hidden} 行` +
+      `${severe ? '（嚴重遮蔽，匯出將被阻擋）' : '（可確認後匯出）'}。請縮短內文、降低字級或改用更大的畫布。`,
+      region || null,
+      { itemIndex: idx }
+    );
+  }
+}
+
+function naturalBlockHeight(text, width, font, cap) {
+  if (!text || !String(text).trim()) return 0;
+  const lines = wrapText(text, width, font);
+  return Math.min(lines.length, cap || 99) * Math.max(1, Math.round(font.size * font.lineHeight));
+}
+
+/* -------- template: three-highlights -------- */
+function tplThreeHighlights(ctx) {
+  const { project, m, scene, area } = ctx;
+  const colors = project.theme.colors;
+  const items = project.content.items.slice(0, 3);
+  const n = items.length;
+  if (!n) return;
+  const gap = m.gap;
+  const tf = m.font.cardTitle;
+  const bf = m.font.cardBody;
+
+  if (m.wide) {
+    const cardW = (area.w - gap * (n - 1)) / n;
+    const cardH = Math.min(area.h, Math.round(600 * m.s));
+    const top = area.y + Math.max(0, Math.round((area.h - cardH) / 2));
+    items.forEach((it, i) => {
+      const x = area.x + i * (cardW + gap);
+      addCard(scene, x, top, cardW, cardH, colors.card, m.radius);
+      const region = { x, y: top, w: cardW, h: cardH, label: '溢出' };
+      const inner = Math.round(26 * m.s);
+      const tw = cardW - inner * 2;
+      const hasIcon = !!(it.iconId && ICONS[it.iconId]);
+      const iconSize = Math.round(clamp(Math.min(42 * m.s, cardH * 0.2), 22, 58));
+      const badgeSize = hasIcon ? iconSize + Math.round(iconSize * 0.64) : 0;
+      const titleH = naturalBlockHeight(it.title, tw, tf, 2);
+      const bodyH = naturalBlockHeight(it.body, tw, bf, 6);
+      const contentH = (hasIcon ? badgeSize + Math.round(18 * m.s) : 0) + titleH +
+        (bodyH ? Math.round(8 * m.s) + bodyH : 0);
+      const offset = Math.max(0, Math.round((cardH - inner * 2 - contentH) / 2));
+      let ty = top + inner + offset;
+      if (hasIcon) {
+        addIconBadge(scene, it.iconId, x + inner, ty, iconSize, colors);
+        ty += badgeSize + Math.round(18 * m.s);
+      }
+      const t = pushText(scene, {
+        x: x + inner, y: ty, width: tw, text: it.title || '', font: tf, color: colors.heading, maxLines: 2
+      });
+      cardTextWarnings(scene, i, t, '標題', region);
+      ty = t.bottom + Math.round(8 * m.s);
+      const bodyLH = Math.max(1, Math.round(bf.size * bf.lineHeight));
+      const maxLines = Math.floor((top + cardH - inner - ty) / bodyLH);
+      const b = pushText(scene, {
+        x: x + inner, y: ty, width: tw, text: it.body || '', font: bf, color: colors.body, maxLines: Math.max(0, maxLines)
+      });
+      cardTextWarnings(scene, i, b, '內文', region);
+    });
+    return;
+  }
+
+  const cardH = Math.min((area.h - gap * (n - 1)) / n, Math.round(330 * m.s));
+  const groupTop = area.y + Math.max(0, Math.round((area.h - (cardH * n + gap * (n - 1))) / 2));
+  items.forEach((it, i) => {
+    const y = groupTop + i * (cardH + gap);
+    addCard(scene, area.x, y, area.w, cardH, colors.card, m.radius);
+    const region = { x: area.x, y, w: area.w, h: cardH, label: '溢出' };
+    const inner = Math.round(24 * m.s);
+    const hasIcon = !!(it.iconId && ICONS[it.iconId]);
+    const iconSize = Math.round(clamp(Math.min(38 * m.s, cardH * 0.2), 20, 52));
+    const badgeSize = hasIcon ? iconSize + Math.round(iconSize * 0.64) : 0;
+    const iconCol = hasIcon ? badgeSize + Math.round(20 * m.s) : 0;
+    const textX = area.x + inner + iconCol;
+    const tw = area.x + area.w - inner - textX;
+    const titleH = naturalBlockHeight(it.title, tw, tf, 2);
+    const bodyH = naturalBlockHeight(it.body, tw, bf, 6);
+    const textH = titleH + (bodyH ? Math.round(6 * m.s) + bodyH : 0);
+    const contentH = Math.max(hasIcon ? badgeSize : 0, textH);
+    const offset = Math.max(0, Math.round((cardH - inner * 2 - contentH) / 2));
+    const startY = y + inner + offset;
+
+    if (hasIcon) addIconBadge(scene, it.iconId, area.x + inner, startY, iconSize, colors);
+    const t = pushText(scene, {
+      x: textX, y: startY, width: tw, text: it.title || '', font: tf, color: colors.heading, maxLines: 2
+    });
+    cardTextWarnings(scene, i, t, '標題', region);
+    const bodyY = t.bottom + Math.round(6 * m.s);
+    const bodyLH = Math.max(1, Math.round(bf.size * bf.lineHeight));
+    const maxLines = Math.floor((y + cardH - inner - bodyY) / bodyLH);
+    const b = pushText(scene, {
+      x: textX, y: bodyY, width: tw, text: it.body || '', font: bf, color: colors.body, maxLines: Math.max(0, maxLines)
+    });
+    cardTextWarnings(scene, i, b, '內文', region);
+  });
+}
+
+/* -------- template: steps -------- */
+function tplSteps(ctx) {
+  const { project, m, scene, area } = ctx;
+  const colors = project.theme.colors;
+  const items = project.content.items.slice(0, 6);
+  if (!items.length) return;
+  const cols = m.wide ? 2 : 1;
+  const rows = Math.ceil(items.length / cols);
+  const colGap = m.gap * 1.6;
+  const colW = (area.w - colGap * (cols - 1)) / cols;
+  const rowH = Math.min(area.h / rows, Math.round(230 * m.s));
+  const baseY = area.y + Math.max(0, Math.round((area.h - rowH * rows) / 2));
+  const badgeR = Math.round(clamp(rowH * 0.15, 15 * m.s, 26 * m.s));
+
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    const col = Math.floor(i / rows);
+    const row = i % rows;
+    const cx = area.x + col * (colW + colGap) + badgeR;
+    const cy = baseY + row * rowH + badgeR + Math.round(4 * m.s);
+    const nextSameCol = i + 1 < items.length && Math.floor((i + 1) / rows) === col;
+    if (nextSameCol) {
+      scene.primitives.push({
+        type: 'line', x1: cx, y1: cy + badgeR + Math.round(6 * m.s),
+        x2: cx, y2: baseY + (row + 1) * rowH + badgeR - Math.round(6 * m.s),
+        color: colors.accent, width: Math.max(2, Math.round(2.5 * m.s)), opacity: 0.28
+      });
+    }
+    scene.primitives.push({ type: 'rect', x: cx - badgeR, y: cy - badgeR, w: badgeR * 2, h: badgeR * 2, r: badgeR, fill: colors.accent });
+    const noFont = { size: Math.round(badgeR * 1.05), weight: 700, lineHeight: 1 };
+    const noPrim = makeText({ x: cx - badgeR, y: cy - Math.round(badgeR * 0.62), width: badgeR * 2, text: String(i + 1), font: noFont, color: colors.background, align: 'center' });
+    noPrim.prim.lines = [String(i + 1)];
+    noPrim.prim.height = Math.round(badgeR * 1.2);
+    scene.primitives.push(noPrim.prim);
+
+    const textX = cx + badgeR + Math.round(18 * m.s);
+    const textW = area.x + col * (colW + colGap) + colW - textX;
+    const region = { x: cx - badgeR, y: cy - badgeR, w: textW + badgeR * 2, h: rowH, label: '溢出' };
+    const t = pushText(scene, {
+      x: textX, y: cy - badgeR - Math.round(2 * m.s), width: textW,
+      text: it.title || '', font: m.font.cardTitle, color: colors.heading, maxLines: 2
+    });
+    cardTextWarnings(scene, i, t, '標題', region);
+    const bodyY = t.bottom + Math.round(5 * m.s);
+    const bodyLH = Math.max(1, Math.round(m.font.cardBody.size * m.font.cardBody.lineHeight));
+    const maxLines = Math.floor((baseY + (row + 1) * rowH - bodyY - Math.round(6 * m.s)) / bodyLH);
+    if (maxLines > 0 && it.body) {
+      const b = pushText(scene, {
+        x: textX, y: bodyY, width: textW, text: it.body, font: m.font.cardBody, color: colors.body, maxLines
+      });
+      cardTextWarnings(scene, i, b, '內文', region);
+    }
+  }
+}
+
+/* -------- template: timeline -------- */
+function tplTimeline(ctx) {
+  const { project, m, scene, area } = ctx;
+  const colors = project.theme.colors;
+  const items = project.content.items.slice(0, 6);
+  const n = items.length;
+  if (!n) return;
+  const nodeR = Math.round(clamp(area.h * 0.02, 7 * m.s, 13 * m.s));
+
+  if (m.wide) {
+    const step = area.w / n;
+    const lineY = area.y + Math.round(10 * m.s);
+    scene.primitives.push({
+      type: 'line', x1: area.x + step * 0.12, y1: lineY, x2: area.x + area.w - step * 0.12, y2: lineY,
+      color: colors.accent, width: Math.max(2, Math.round(2.5 * m.s)), opacity: 0.35
+    });
+    items.forEach((it, i) => {
+      const cx = area.x + step * i + step / 2;
+      scene.primitives.push({ type: 'rect', x: cx - nodeR, y: lineY - nodeR, w: nodeR * 2, h: nodeR * 2, r: nodeR, fill: colors.accent });
+      const colX = cx - step * 0.44;
+      const colW = step * 0.88;
+      let y = lineY + nodeR + Math.round(14 * m.s);
+      if (it.label && it.label.trim()) {
+        const l = pushText(scene, { x: colX, y, width: colW, text: it.label, font: m.font.small, color: colors.accent, align: 'center', maxLines: 1 });
+        y = l.bottom + Math.round(4 * m.s);
+      }
+      const t = pushText(scene, { x: colX, y, width: colW, text: it.title || '', font: m.font.cardTitle, color: colors.heading, align: 'center', maxLines: 2 });
+      cardTextWarnings(scene, i, t, '標題', { x: colX, y: lineY - nodeR, w: colW, h: area.y + area.h - (lineY - nodeR), label: '溢出' });
+      y = t.bottom + Math.round(6 * m.s);
+      const bodyLH = Math.max(1, Math.round(m.font.cardBody.size * m.font.cardBody.lineHeight));
+      const maxLines = Math.floor((area.y + area.h - y) / bodyLH);
+      if (maxLines > 0 && it.body) {
+        const b = pushText(scene, { x: colX, y, width: colW, text: it.body, font: m.font.cardBody, color: colors.body, align: 'center', maxLines });
+        cardTextWarnings(scene, i, b, '內文', { x: colX, y: lineY - nodeR, w: colW, h: area.y + area.h - (lineY - nodeR), label: '溢出' });
+      }
+    });
+    return;
+  }
+
+  const railX = area.x + nodeR;
+  const rowH = Math.min(area.h / n, Math.round(230 * m.s));
+  const baseY = area.y + Math.max(0, Math.round((area.h - rowH * n) / 2));
+  const firstCy = baseY + nodeR + Math.round(6 * m.s);
+  const lastCy = baseY + rowH * (n - 1) + nodeR + Math.round(6 * m.s);
+  scene.primitives.push({
+    type: 'line', x1: railX, y1: firstCy, x2: railX, y2: lastCy,
+    color: colors.accent, width: Math.max(2, Math.round(2.5 * m.s)), opacity: 0.3
+  });
+  items.forEach((it, i) => {
+    const cy = baseY + rowH * i + nodeR + Math.round(6 * m.s);
+    scene.primitives.push({ type: 'rect', x: railX - nodeR, y: cy - nodeR, w: nodeR * 2, h: nodeR * 2, r: nodeR, fill: colors.accent });
+    const textX = railX + nodeR + Math.round(20 * m.s);
+    const textW = area.x + area.w - textX;
+    let y = cy - Math.round(nodeR * 0.2);
+    if (it.label && it.label.trim()) {
+      const l = pushText(scene, { x: textX, y, width: textW, text: it.label, font: m.font.small, color: colors.accent, maxLines: 1 });
+      y = l.bottom + Math.round(3 * m.s);
+    }
+    const t = pushText(scene, { x: textX, y, width: textW, text: it.title || '', font: m.font.cardTitle, color: colors.heading, maxLines: 2 });
+    cardTextWarnings(scene, i, t, '標題', { x: textX, y: cy - nodeR, w: textW, h: rowH, label: '溢出' });
+    y = t.bottom + Math.round(4 * m.s);
+    const bodyLH = Math.max(1, Math.round(m.font.cardBody.size * m.font.cardBody.lineHeight));
+    const maxLines = Math.floor((baseY + rowH * (i + 1) - y) / bodyLH);
+    if (maxLines > 0 && it.body) {
+      const b = pushText(scene, { x: textX, y, width: textW, text: it.body, font: m.font.cardBody, color: colors.body, maxLines });
+      cardTextWarnings(scene, i, b, '內文', { x: textX, y: cy - nodeR, w: textW, h: rowH, label: '溢出' });
+    }
+  });
+}
+
+/* -------- template: comparison -------- */
+function tplComparison(ctx) {
+  const { project, m, scene, area } = ctx;
+  const colors = project.theme.colors;
+  const items = project.content.items.slice(0, 2);
+  if (!items.length) return;
+  const colGap = m.gap;
+  const colW = items.length === 2 ? (area.w - colGap) / 2 : area.w;
+  const cardH = Math.min(area.h, Math.round(620 * m.s));
+  const cardTop = area.y + Math.max(0, Math.round((area.h - cardH) / 2));
+  const tf = m.font.cardTitle;
+  const bf = m.font.cardBody;
+
+  items.forEach((it, i) => {
+    const x = area.x + i * (colW + colGap);
+    addCard(scene, x, cardTop, colW, cardH, colors.card, m.radius);
+    const inner = Math.round(28 * m.s);
+    const tw = colW - inner * 2;
+    const hasIcon = !!(it.iconId && ICONS[it.iconId]);
+    const iconSize = Math.round(clamp(Math.min(42 * m.s, colW * 0.12), 22, 56));
+    const badgeSize = hasIcon ? iconSize + Math.round(iconSize * 0.64) : 0;
+    const titleH = naturalBlockHeight(it.title, tw, tf, 3);
+    const bodyH = naturalBlockHeight(it.body, tw, bf, 8);
+    const contentH = (hasIcon ? badgeSize + Math.round(16 * m.s) : 0) + titleH +
+      (bodyH ? Math.round(12 * m.s) + bodyH : 0);
+    const offset = Math.min(inner, Math.max(0, Math.round((cardH - inner * 2 - contentH) / 2)));
+    let y = cardTop + inner + offset;
+    if (hasIcon) {
+      addIconBadge(scene, it.iconId, x + inner, y, iconSize, colors);
+      y += badgeSize + Math.round(16 * m.s);
+    }
+    const t = pushText(scene, { x: x + inner, y, width: tw, text: it.title || '', font: tf, color: colors.heading, maxLines: 3 });
+    cardTextWarnings(scene, i, t, '標題', { x, y: cardTop, w: colW, h: cardH, label: '溢出' });
+    y = t.bottom + Math.round(12 * m.s);
+    const bodyLH = Math.max(1, Math.round(bf.size * bf.lineHeight));
+    const maxLines = Math.floor((cardTop + cardH - inner - y) / bodyLH);
+    if (maxLines > 0 && it.body) {
+      const b = pushText(scene, { x: x + inner, y, width: tw, text: it.body, font: bf, color: colors.body, maxLines });
+      cardTextWarnings(scene, i, b, '內文', { x, y: cardTop, w: colW, h: cardH, label: '溢出' });
+    }
+  });
+
+  if (items.length === 2) {
+    const cx = area.x + area.w / 2;
+    const cy = cardTop + cardH / 2;
+    const r = Math.round(clamp(Math.min(colW * 0.1, area.h * 0.07), 20 * m.s, 38 * m.s));
+    scene.primitives.push({ type: 'rect', x: cx - r, y: cy - r, w: r * 2, h: r * 2, r, fill: colors.accent });
+    const badge = makeText({
+      x: cx - r, y: cy - Math.round(r * 0.52), width: r * 2, text: 'VS',
+      font: { size: Math.round(r * 0.72), weight: 800, lineHeight: 1 }, color: colors.background, align: 'center'
+    });
+    badge.prim.height = Math.round(r * 1.1);
+    scene.primitives.push(badge.prim);
+  } else {
+    scene.warn('comparison-missing', 'warning', '雙欄比較需要 2 個項目，目前僅有 1 項，右欄留空。');
+  }
+}
+
+/* -------- template: kpi-cards -------- */
+function tplKpiCards(ctx) {
+  const { project, m, scene, area } = ctx;
+  const colors = project.theme.colors;
+  const items = project.content.items.slice(0, 4);
+  const n = items.length;
+  if (!n) return;
+  const cols = m.wide ? n : (n >= 3 ? 2 : n);
+  const rows = Math.ceil(n / cols);
+  const colGap = m.gap;
+  const rowGap = m.gap;
+  const tileW = (area.w - colGap * (cols - 1)) / cols;
+  const tileH = Math.min((area.h - rowGap * (rows - 1)) / rows, Math.round(430 * m.s));
+  const gridTop = area.y + Math.max(0, Math.round((area.h - (tileH * rows + rowGap * (rows - 1))) / 2));
+
+  items.forEach((it, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const x = area.x + col * (tileW + colGap);
+    const y = gridTop + row * (tileH + rowGap);
+    const hasValue = !!(it.value && it.value.trim());
+    addCard(scene, x, y, tileW, tileH, colors.card, m.radius,
+      hasValue ? null : { stroke: colors.accent, strokeWidth: 2, dash: [10, 8] });
+
+    const inner = Math.round(24 * m.s);
+    const tw = tileW - inner * 2;
+    const valueText = hasValue ? it.value.trim() : '待填';
+    const vFont = hasValue ? m.font.kpiValue : { size: Math.round(m.font.kpiValue.size * 0.6), weight: 600, lineHeight: 1.15 };
+    const labelH = naturalBlockHeight(it.label, tw, m.font.small, 1);
+    const valueH = Math.min(wrapText(valueText, tw, vFont).length, 2) * Math.max(1, Math.round(vFont.size * vFont.lineHeight));
+    const hasUnit = hasValue && !!(it.unit && it.unit.trim());
+    const unitH = hasUnit ? Math.round(m.font.kpiUnit.size * 1.2) : 0;
+    const titleH = naturalBlockHeight(it.title, tw, m.font.cardTitle, 2);
+    const bodyH = naturalBlockHeight(it.body, tw, m.font.cardBody, 6);
+    const g6 = Math.round(6 * m.s);
+
+    const contentH = (labelH ? labelH + g6 : 0) + valueH +
+      (unitH ? unitH + Math.round(4 * m.s) : 0) +
+      (titleH ? Math.round(10 * m.s) + titleH : 0) +
+      (bodyH ? g6 + bodyH : 0);
+    const offset = Math.max(0, Math.round((tileH - inner * 2 - contentH) / 2));
+    let cursor = y + inner + offset;
+
+    if (it.label && it.label.trim()) {
+      const l = pushText(scene, { x: x + inner, y: cursor, width: tw, text: it.label, font: m.font.small, color: colors.accent, maxLines: 1 });
+      cursor = l.bottom + g6;
+    }
+
+    const v = pushText(scene, {
+      x: x + inner, y: cursor, width: tw, text: valueText, font: vFont,
+      color: hasValue ? colors.heading : colors.body, maxLines: 2, opacity: hasValue ? 1 : 0.55
+    });
+    if (v.truncated) scene.warn('kpi-value-truncated', 'warning', `第 ${i + 1} 項 KPI 數值過長，已截斷顯示。`);
+    cursor = v.bottom;
+
+    if (hasUnit) {
+      const unitMade = makeText({
+        x: x + inner, y: cursor, width: tw, text: it.unit.trim(),
+        font: m.font.kpiUnit, color: colors.accent, maxLines: 1
+      });
+      if (unitMade.prim.lines.length) {
+        if (v.lines === 1) {
+          const vw = textWidth(valueText, vFont);
+          unitMade.prim.x = x + inner + Math.min(vw, Math.max(0, tw - 24)) + Math.round(7 * m.s);
+          unitMade.prim.width = Math.max(24, x + inner + tw - unitMade.prim.x);
+          unitMade.prim.y = v.prim.y + v.prim.baseline - unitMade.prim.baseline;
+          scene.primitives.push(unitMade.prim);
+          cursor = v.bottom + Math.round(4 * m.s);
+        } else {
+          unitMade.prim.y = v.bottom;
+          scene.primitives.push(unitMade.prim);
+          cursor = unitMade.prim.y + unitMade.prim.height + Math.round(4 * m.s);
+        }
+      }
+    }
+
+    if (it.title && it.title.trim()) {
+      const t = pushText(scene, {
+        x: x + inner, y: cursor + Math.round(10 * m.s), width: tw, text: it.title,
+        font: m.font.cardTitle, color: colors.heading, maxLines: 2
+      });
+      cardTextWarnings(scene, i, t, '標題', { x, y, w: tileW, h: tileH, label: '溢出' });
+      cursor = t.bottom + g6;
+    }
+
+    const bodyLH = Math.max(1, Math.round(m.font.cardBody.size * m.font.cardBody.lineHeight));
+    const maxLines = Math.floor((y + tileH - inner - cursor) / bodyLH);
+    if (maxLines > 0 && it.body) {
+      const b = pushText(scene, {
+        x: x + inner, y: cursor, width: tw, text: it.body, font: m.font.cardBody, color: colors.body, maxLines
+      });
+      cardTextWarnings(scene, i, b, '內文', { x, y, w: tileW, h: tileH, label: '溢出' });
+    }
+    if (!hasValue) {
+      scene.warn('missing-kpi-value', 'warning', `第 ${i + 1} 項 KPI 尚未填寫數值（不會自動推測）。`, { x, y, w: tileW, h: tileH, label: '待填' });
+    }
+  });
+}
+
+const ADAPTERS = {
+  'three-highlights': tplThreeHighlights,
+  steps: tplSteps,
+  timeline: tplTimeline,
+  comparison: tplComparison,
+  'kpi-cards': tplKpiCards
+};
+
+function buildScene(project) {
+  const m = metrics(project);
+  const scene = {
+    width: m.width, height: m.height,
+    primitives: [], warnings: [], regions: [], metrics: m,
+    warn(code, severity, message, region, extra) {
+      this.warnings.push(Object.assign({ code, severity, message }, extra || {}));
+      if (region) this.regions.push(Object.assign({ severity }, region));
+    }
+  };
+  scene.primitives.push({ type: 'rect', x: 0, y: 0, w: m.width, h: m.height, r: 0, fill: project.theme.colors.background });
+  const box = { x: m.pad, y: m.pad, w: m.width - m.pad * 2, h: m.height - m.pad * 2 };
+  const area = contentArea(scene, project, m, box);
+  const adapter = ADAPTERS[project.templateId] || ADAPTERS['three-highlights'];
+  try {
+    if (area.h > 0) adapter({ project, m, scene, box, area });
+    else scene.warn('empty-area', 'error', '版面空間不足，無法排列內容。');
+  } catch (e) {
+    scene.warn('render-error', 'error', '排版發生錯誤：' + (e && e.message ? e.message : e));
+  }
+  validateBounds(scene, project);
+  return scene;
+}
+
+function primBBox(p) {
+  if (p.type === 'rect') return { x: p.x, y: p.y, w: p.w, h: p.h };
+  if (p.type === 'text') return { x: p.x, y: p.y, w: p.width, h: p.height };
+  if (p.type === 'icon') return { x: p.x, y: p.y, w: p.size, h: p.size };
+  if (p.type === 'line') return {
+    x: Math.min(p.x1, p.x2), y: Math.min(p.y1, p.y2),
+    w: Math.abs(p.x2 - p.x1), h: Math.abs(p.y2 - p.y1)
+  };
+  return { x: 0, y: 0, w: 0, h: 0 };
+}
+
+function validateBounds(scene, project) {
+  const margin = 2;
+  for (const p of scene.primitives) {
+    const b = primBBox(p);
+    if (b.x < -margin || b.y < -margin || b.x + b.w > scene.width + margin || b.y + b.h > scene.height + margin) {
+      scene.warn('out-of-bounds', 'error', '有元素超出畫布邊界，輸出可能被裁切。', {
+        x: Math.max(0, b.x), y: Math.max(0, b.y),
+        w: Math.min(b.w, scene.width), h: Math.min(b.h, scene.height), label: '超出邊界'
+      });
+      break;
+    }
+  }
+  if (!project.content.title.trim()) {
+    scene.warn('missing-title', 'error', '主標題為必填欄位，請先填寫再匯出。');
+  }
+  const lim = templateLimit(project.templateId, project.content.items.length);
+  const tpl = TEMPLATES[project.templateId];
+  if (lim.over) {
+    scene.warn('item-limit', 'warning',
+      `本模板僅呈現前 ${tpl.max} 項，其餘 ${lim.hidden} 項不會出現在輸出（資料仍完整保存）。`, null);
+  }
+  if (lim.under) {
+    scene.warn('item-under', 'warning', `此模板建議至少 ${tpl.min} 項，目前只有 ${project.content.items.length} 項。`);
+  }
+}
+
+function sceneIssues(project, scene) {
+  const built = scene || buildScene(project);
+  const errors = built.warnings.filter(w => w.severity === 'error');
+  const warnings = built.warnings.filter(w => w.severity === 'warning');
+  return { errors, warnings, all: built.warnings, scene: built };
+}
+/* --------------------------- 6. RENDERERS ---------------------------- */
+const _path2dCache = new Map();
+function getPath2D(d) {
+  if (_path2dCache.has(d)) return _path2dCache.get(d);
+  const p = new Path2D(d);
+  if (_path2dCache.size > 400) _path2dCache.clear();
+  _path2dCache.set(d, p);
+  return p;
+}
+
+function appendSvgPrimitive(parent, p) {
+  if (p.type === 'rect') {
+    const attrs = {
+      x: p.x, y: p.y, width: p.w, height: p.h,
+      rx: Math.min(p.r || 0, Math.min(p.w, p.h) / 2),
+      fill: p.fill || 'none'
+    };
+    if (p.stroke) { attrs.stroke = p.stroke; attrs['stroke-width'] = p.strokeWidth || 1; }
+    if (p.dash) attrs['stroke-dasharray'] = p.dash.join(' ');
+    if (p.opacity != null && p.opacity !== 1) attrs.opacity = p.opacity;
+    parent.appendChild(svgEl('rect', attrs));
+    return;
+  }
+  if (p.type === 'line') {
+    parent.appendChild(svgEl('line', {
+      x1: p.x1, y1: p.y1, x2: p.x2, y2: p.y2, stroke: p.color,
+      'stroke-width': p.width || 1, 'stroke-linecap': 'round',
+      opacity: p.opacity == null ? 1 : p.opacity
+    }));
+    return;
+  }
+  if (p.type === 'icon') {
+    const g = svgEl('g', {
+      transform: `translate(${p.x} ${p.y}) scale(${p.size / 24})`,
+      fill: 'none', stroke: p.color, 'stroke-width': p.strokeWidth || 2,
+      'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+    });
+    for (const d of p.paths) g.appendChild(svgEl('path', { d }));
+    parent.appendChild(g);
+    return;
+  }
+  if (p.type === 'text') {
+    const anchorX = p.align === 'center' ? p.x + p.width / 2 : p.align === 'right' ? p.x + p.width : p.x;
+    const t = svgEl('text', {
+      x: anchorX,
+      'font-family': FONT_STACK,
+      'font-size': p.size,
+      'font-weight': p.weight,
+      'text-anchor': p.align === 'center' ? 'middle' : p.align === 'right' ? 'end' : 'start',
+      fill: p.color,
+      opacity: p.opacity == null ? 1 : p.opacity,
+      'xml:space': 'preserve'
+    });
+    p.lines.forEach((line, i) => {
+      const span = svgEl('tspan', { x: anchorX, y: p.y + i * p.lineHeight + p.baseline });
+      span.textContent = line;
+      t.appendChild(span);
+    });
+    parent.appendChild(t);
+  }
+}
+
+function buildSvgElement(scene, opts) {
+  const o = opts || {};
+  const scale = o.scale || 1;
+  const svg = svgEl('svg', {
+    viewBox: `0 0 ${scene.width} ${scene.height}`,
+    width: Math.round(scene.width * scale),
+    height: Math.round(scene.height * scale),
+    xmlns: SVGNS,
+    role: 'img',
+    'aria-label': o.label || '資訊圖預覽'
+  });
+  for (const p of scene.primitives) appendSvgPrimitive(svg, p);
+
+  if (o.safeArea) {
+    const m = scene.metrics || metrics(state.project);
+    svg.appendChild(svgEl('rect', {
+      x: m.pad, y: m.pad, width: scene.width - m.pad * 2, height: scene.height - m.pad * 2,
+      fill: 'none', stroke: '#2563eb', 'stroke-width': Math.max(1, scene.width / 540),
+      'stroke-dasharray': `${scene.width / 90} ${scene.width / 90}`, opacity: 0.55
+    }));
+    for (let i = 1; i <= 2; i++) {
+      const x = (scene.width / 3) * i;
+      const y = (scene.height / 3) * i;
+      svg.appendChild(svgEl('line', {
+        x1: x, y1: 0, x2: x, y2: scene.height, stroke: '#2563eb',
+        'stroke-width': Math.max(1, scene.width / 1080), opacity: 0.22
+      }));
+      svg.appendChild(svgEl('line', {
+        x1: 0, y1: y, x2: scene.width, y2: y, stroke: '#2563eb',
+        'stroke-width': Math.max(1, scene.width / 1080), opacity: 0.22
+      }));
+    }
+  }
+
+  if (o.regions && scene.regions.length) {
+    for (const region of scene.regions) {
+      svg.appendChild(svgEl('rect', {
+        x: region.x, y: region.y, width: region.w, height: region.h,
+        fill: region.severity === 'error' ? 'rgba(198,40,40,.12)' : 'rgba(161,92,7,.10)',
+        stroke: region.severity === 'error' ? '#c62828' : '#a15c07',
+        'stroke-width': Math.max(2, scene.width / 360),
+        'stroke-dasharray': `${scene.width / 60} ${scene.width / 90}`
+      }));
+    }
+  }
+  return svg;
+}
+
+function traceRoundRect(ctx, x, y, w, h, r) {
+  const rr = clamp(r || 0, 0, Math.min(w, h) / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+
+function paintScene(canvas, scene) {
+  const ctx = canvas.getContext('2d');
+  canvas.width = scene.width;
+  canvas.height = scene.height;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, scene.width, scene.height);
+  ctx.fillStyle = scene.primitives[0] && scene.primitives[0].fill ? scene.primitives[0].fill : '#fff';
+  ctx.fillRect(0, 0, scene.width, scene.height);
+
+  for (const p of scene.primitives) {
+    ctx.globalAlpha = p.opacity == null ? 1 : p.opacity;
+    if (p.type === 'rect' && p.w > 0 && p.h > 0) {
+      traceRoundRect(ctx, p.x, p.y, p.w, p.h, p.r || 0);
+      ctx.fillStyle = p.fill || 'none';
+      if (p.fill) ctx.fill();
+      if (p.stroke) {
+        ctx.strokeStyle = p.stroke;
+        ctx.lineWidth = p.strokeWidth || 1;
+        ctx.setLineDash(p.dash || []);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    } else if (p.type === 'line') {
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.width || 1;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(p.x1, p.y1);
+      ctx.lineTo(p.x2, p.y2);
+      ctx.stroke();
+    } else if (p.type === 'icon') {
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.scale(p.size / 24, p.size / 24);
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = p.strokeWidth || 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const d of p.paths) ctx.stroke(getPath2D(d));
+      ctx.restore();
+    } else if (p.type === 'text') {
+      ctx.fillStyle = p.color;
+      ctx.font = fontCss({ size: p.size, weight: p.weight });
+      ctx.textBaseline = 'alphabetic';
+      ctx.textAlign = p.align === 'center' ? 'center' : p.align === 'right' ? 'right' : 'left';
+      const anchorX = p.align === 'center' ? p.x + p.width / 2 : p.align === 'right' ? p.x + p.width : p.x;
+      p.lines.forEach((line, i) => {
+        if (!line) return;
+        ctx.fillText(line, anchorX, p.y + i * p.lineHeight + p.baseline);
+      });
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* ------------------------- 7. VALIDATION (PDF-ready) ----------------- */
+function contrastReport(project) {
+  const c = project.theme.colors;
+  const rows = [
+    { label: '標題 / 背景', fg: c.heading, bg: c.background, large: true },
+    { label: '內文 / 背景', fg: c.body, bg: c.background, large: false },
+    { label: '標題 / 卡片', fg: c.heading, bg: c.card, large: true },
+    { label: '內文 / 卡片', fg: c.body, bg: c.card, large: false },
+    { label: '強調色 / 背景', fg: c.accent, bg: c.background, large: true }
+  ];
+  return rows.map(r => {
+    const ratio = contrastRatio(r.fg, r.bg);
+    const need = r.large ? 3 : 4.5;
+    return Object.assign({}, r, { ratio, need, pass: ratio >= need });
+  });
+}
+
+/* --------------------------- 8. EXPORT ------------------------------- */
+function exportFilename(project, ext) {
+  const preset = project.canvas.preset;
+  const base = `${project.metadata.name || 'infographic'}-${preset}-${project.canvas.width}x${project.canvas.height}`;
+  return sanitizeFilename(base, ext);
+}
+
+async function renderPngBlob(project) {
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (e) { /* non-fatal */ }
+  }
+  const scene = buildScene(project);
+  const canvas = document.createElement('canvas');
+  paintScene(canvas, scene);
+  const blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(b => b ? resolve(b) : reject(new Error('PNG 編碼失敗（瀏覽器未產生影像）')), 'image/png');
+  });
+  return { blob, scene, width: canvas.width, height: canvas.height };
+}
+
+let _exporting = false;
+async function doExportPng() {
+  if (_exporting) return;
+  const scene = buildScene(state.project);
+  const issues = sceneIssues(state.project, scene);
+
+  if (issues.errors.length) {
+    await confirmDialog({
+      title: '無法匯出：需要先修正',
+      message: '以下問題會造成輸出缺漏或不可讀，請先修正後再匯出。',
+      items: issues.errors.map(e => ({ text: e.message, level: 'error' })),
+      okText: '我知道了',
+      hideCancel: true
+    });
+    return;
+  }
+  if (issues.warnings.length) {
+    const ok = await confirmDialog({
+      title: '輸出前確認',
+      message: '以下情況會影響輸出結果，仍要繼續匯出嗎？',
+      items: issues.warnings.map(w => ({ text: w.message, level: 'warn' })),
+      okText: '仍要匯出'
+    });
+    if (!ok) return;
+  }
+
+  _exporting = true;
+  const btn = $('btnExport');
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '匯出中…';
+  try {
+    const result = await renderPngBlob(state.project);
+    download(result.blob, exportFilename(state.project, 'png'));
+    toast(`已匯出 PNG（${result.width}×${result.height}）`, 'ok');
+  } catch (err) {
+    await confirmDialog({
+      title: '匯出失敗',
+      message: `無法產生 PNG：${err && err.message ? err.message : err}\n\n可嘗試：改用 Chrome/Edge、關閉無痕模式、或降低字級後重試。目前編輯內容仍完整保留。`,
+      items: [],
+      okText: '關閉',
+      hideCancel: true
+    });
+  } finally {
+    _exporting = false;
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
+/* ------------------------ 9. PROJECT FILES --------------------------- */
+function projectJson(project) {
+  return JSON.stringify(project, null, 2);
+}
+
+function saveProjectJson() {
+  try {
+    const json = projectJson(state.project);
+    const blob = new Blob([json], { type: 'application/json' });
+    download(blob, exportFilename(state.project, 'infographic.json'));
+    state.ui.lastSaveAt = nowISO();
+    renderTopbar();
+    toast('已下載專案 JSON，可用「開啟 JSON」或專案清單匯入。', 'ok');
+    persistProject().catch(() => {});
+  } catch (err) {
+    toast('無法產生 JSON：' + (err && err.message ? err.message : err), 'error');
+  }
+}
+
+async function importProjectFile(file) {
+  try {
+    if (!file) return;
+    if (file.size > LIMITS.jsonBytes) {
+      await confirmDialog({
+        title: '檔案過大',
+        message: `JSON 專案檔上限為 1 MB，此檔案為 ${(file.size / 1024).toFixed(0)} KB。目前編輯內容未被修改。`,
+        items: [], okText: '關閉', hideCancel: true
+      });
+      return;
+    }
+    const text = await file.text();
+    let raw;
+    try { raw = JSON.parse(text); }
+    catch (e) {
+      await showImportErrors('JSON 格式錯誤', [{ path: '', msg: '無法解析為 JSON：' + e.message }]);
+      return;
+    }
+    const result = validateProject(raw);
+    if (!result.ok) {
+      await showImportErrors(result.tooNew ? '版本不支援' : '專案格式不符', result.errors);
+      return;
+    }
+    /* Import always creates a new project record; the current one is untouched. */
+    await flushAutosave();
+    let collision = null;
+    try { collision = await getProjectRecord(result.project.metadata.id); }
+    catch (e) { collision = null; }
+    if (collision) result.project.metadata.id = uid('proj');
+    result.project.metadata.updatedAt = nowISO();
+    applyProject(result.project, { history: true });
+    if ($('dlgProjects').open) await refreshProjectList();
+    if (result.notes.length) toast(result.notes.join(' '), 'warn');
+    else toast('已匯入為新專案：' + (result.project.metadata.name || '未命名專案'), 'ok');
+  } catch (err) {
+    await showImportErrors('匯入失敗', [{ path: '', msg: String(err && err.message ? err.message : err) }]);
+  } finally {
+    $('fileInput').value = '';
+  }
+}
+
+async function showImportErrors(title, errors) {
+  await confirmDialog({
+    title,
+    message: '目前編輯中的內容保持不變。請修正檔案後再試。',
+    items: errors.slice(0, 12).map(e => ({
+      text: (e.path ? e.path + '：' : '') + e.msg, level: 'error'
+    })),
+    okText: '關閉',
+    hideCancel: true
+  });
+}
+
+function hasContent(project) {
+  const c = project.content;
+  return !!(c.title.trim() || c.summary.trim() || c.items.some(i => i.title || i.body));
+}
+
+/* ------------------------ 10. PERSISTENCE (project library) ---------- */
+const DB_NAME = 'infographic-builder';
+const DB_VERSION = 2;
+const STORE_PROJECTS = 'projects';
+const STORE_META = 'meta';
+const META_KEY = 'state';
+const AUTOSAVE_DELAY = 800;
+
+const storageBlocked = location.protocol === 'file:' || !('indexedDB' in window) || !window.indexedDB;
+const autosave = { lastSavedAt: null, error: '', timer: 0, pending: false };
+
+function openDb() {
+  return new Promise((resolve, reject) => {
+    if (storageBlocked) {
+      reject(new Error(location.protocol === 'file:' ? 'file:// 不支援 IndexedDB' : '瀏覽器未提供 IndexedDB'));
+      return;
+    }
+    let req;
+    try { req = indexedDB.open(DB_NAME, DB_VERSION); }
+    catch (e) { reject(e); return; }
+
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      const tx = req.transaction;
+      if (!db.objectStoreNames.contains(STORE_PROJECTS)) {
+        db.createObjectStore(STORE_PROJECTS, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(STORE_META)) {
+        db.createObjectStore(STORE_META);
+      }
+      /* v1 → v2: move the single draft into the project library. */
+      if (db.objectStoreNames.contains('drafts')) {
+        const legacy = tx.objectStore('drafts');
+        const read = legacy.get('current');
+        read.onsuccess = () => {
+          const value = read.result;
+          if (value && value.project && value.project.metadata && value.project.metadata.id) {
+            const id = value.project.metadata.id;
+            tx.objectStore(STORE_PROJECTS).put({
+              id, project: value.project, savedAt: value.savedAt || nowISO(), migrated: true
+            });
+            tx.objectStore(STORE_META).put({ projectId: id }, META_KEY);
+            legacy.delete('current');
+          }
+        };
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('無法開啟 IndexedDB'));
+    req.onblocked = () => reject(new Error('IndexedDB 被其他分頁鎖定'));
+  });
+}
+
+function idbRequest(store, mode, run) {
+  return openDb().then(db => new Promise((resolve, reject) => {
+    const tx = db.transaction(store, mode);
+    let result;
+    const req = run(tx.objectStore(store));
+    if (req) {
+      req.onsuccess = () => { result = req.result; };
+      req.onerror = () => reject(req.error || new Error('IndexedDB 操作失敗'));
+    }
+    tx.oncomplete = () => { db.close(); resolve(result); };
+    tx.onerror = () => { db.close(); reject(tx.error || new Error('IndexedDB 交易失敗')); };
+    tx.onabort = () => { db.close(); reject(tx.error || new Error('IndexedDB 交易中止')); };
+  }));
+}
+
+async function listProjectRecords() {
+  const rows = await idbRequest(STORE_PROJECTS, 'readonly', s => s.getAll());
+  return (rows || []).sort((a, b) => String(b.savedAt || '').localeCompare(String(a.savedAt || '')));
+}
+
+function getProjectRecord(id) {
+  return idbRequest(STORE_PROJECTS, 'readonly', s => s.get(id));
+}
+
+function putProjectRecord(record) {
+  return idbRequest(STORE_PROJECTS, 'readwrite', s => s.put(record));
+}
+
+function deleteProjectRecord(id) {
+  return idbRequest(STORE_PROJECTS, 'readwrite', s => s.delete(id));
+}
+
+function getMeta() {
+  return idbRequest(STORE_META, 'readonly', s => s.get(META_KEY));
+}
+
+function setMeta(value) {
+  return idbRequest(STORE_META, 'readwrite', s => s.put(value, META_KEY));
+}
+
+/** Persist the current project (Create or Update). */
+async function persistProject() {
+  if (storageBlocked) return false;
+  const id = state.project.metadata.id;
+  try {
+    await putProjectRecord({
+      id,
+      project: clone(state.project),
+      savedAt: nowISO()
+    });
+    try { await setMeta({ projectId: id }); } catch (e) { /* meta is best-effort */ }
+    autosave.lastSavedAt = nowISO();
+    autosave.error = '';
+    state.ui.dirty = false;
+    setBanner('');
+    renderTopbar();
+    return true;
+  } catch (err) {
+    autosave.error = err && err.message ? err.message : String(err);
+    setBanner('無法自動儲存（' + autosave.error + '）。仍可編輯，請用「儲存 JSON」手動備份。', 'warn');
+    return false;
+  }
+}
+
+function scheduleAutosave() {
+  clearTimeout(autosave.timer);
+  if (storageBlocked) return;
+  autosave.timer = setTimeout(() => { persistProject(); }, AUTOSAVE_DELAY);
+}
+
+/** Make sure pending edits are written before switching projects. */
+async function flushAutosave() {
+  clearTimeout(autosave.timer);
+  if (storageBlocked || !state.ui.dirty) return;
+  await persistProject();
+}
+
+/* ------------------------ 10b. PROJECT CRUD -------------------------- */
+function projectSummary(record) {
+  const p = record.project || emptyProject();
+  const tpl = TEMPLATES[p.templateId] || TEMPLATES['three-highlights'];
+  const preset = CANVAS_PRESETS[p.canvas.preset] || CANVAS_PRESETS.portrait;
+  return {
+    name: (p.metadata && p.metadata.name) || '未命名專案',
+    template: tpl.name,
+    preset: preset.name,
+    size: preset.width + '×' + preset.height,
+    items: (p.content.items || []).length,
+    savedAt: record.savedAt || (p.metadata && p.metadata.updatedAt) || ''
+  };
+}
+
+async function newProjectRecord(seedProject, options) {
+  const opts = options || {};
+  await flushAutosave();
+  const project = seedProject || emptyProject();
+  project.schemaVersion = SCHEMA_VERSION;
+  project.metadata.id = project.metadata.id || uid('proj');
+  project.metadata.createdAt = project.metadata.createdAt || nowISO();
+  project.metadata.updatedAt = nowISO();
+  if (!project.metadata.name) project.metadata.name = '未命名專案';
+
+  state.project = project;
+  state.history.clear();
+  state.ui.dirty = true;
+  refresh({ form: true, settings: true, preview: true, topbar: true });
+  if (!storageBlocked) {
+    await persistProject().catch(() => {});
+  }
+  if (opts.toast !== false) toast(opts.message || '已建立新專案', 'ok');
+  return project;
+}
+
+async function openProjectRecord(id) {
+  await flushAutosave();
+  let record;
+  try { record = await getProjectRecord(id); }
+  catch (err) { toast('無法讀取專案：' + (err && err.message ? err.message : err), 'error'); return false; }
+  if (!record) { toast('找不到該專案，可能已被刪除。', 'warn'); return false; }
+  const result = validateProject(record.project);
+  if (!result.ok) {
+    await confirmDialog({
+      title: '無法開啟專案',
+      message: '這個專案的內容格式不符，已保留目前編輯內容。',
+      items: result.errors.map(e => ({ text: (e.path ? e.path + '：' : '') + e.msg, level: 'error' })),
+      okText: '關閉', hideCancel: true
+    });
+    return false;
+  }
+  state.project = result.project;
+  state.history.clear();
+  state.ui.dirty = false;
+  try { await setMeta({ projectId: result.project.metadata.id }); } catch (e) { /* ignore */ }
+  refresh({ form: true, settings: true, preview: true, topbar: true });
+  toast('已開啟專案「' + (result.project.metadata.name || '未命名專案') + '」', 'ok');
+  return true;
+}
+
+async function renameProjectRecord(id, name) {
+  const clean = String(name || '').trim().slice(0, LIMITS.name) || '未命名專案';
+  if (state.project.metadata.id === id) {
+    commit(p => { p.metadata.name = clean; }, { refresh: { topbar: true, preview: true } });
+    await persistProject();
+    return;
+  }
+  let record;
+  try { record = await getProjectRecord(id); } catch (e) { record = null; }
+  if (!record) { toast('找不到該專案。', 'warn'); return; }
+  record.project.metadata.name = clean;
+  record.project.metadata.updatedAt = nowISO();
+  record.savedAt = nowISO();
+  await putProjectRecord(record);
+  toast('已更名為「' + clean + '」', 'ok');
+}
+
+async function duplicateProjectRecord(id) {
+  let record;
+  try { record = await getProjectRecord(id); } catch (e) { record = null; }
+  if (!record) { toast('找不到該專案。', 'warn'); return; }
+  const copy = validateProject(record.project);
+  if (!copy.ok) { toast('此專案格式不符，無法複製。', 'error'); return; }
+  const project = clone(copy.project);
+  project.metadata.id = uid('proj');
+  project.metadata.name = (copy.project.metadata.name || '未命名專案') + ' 複本';
+  project.metadata.createdAt = nowISO();
+  project.metadata.updatedAt = nowISO();
+  await putProjectRecord({ id: project.metadata.id, project, savedAt: nowISO() });
+  toast('已建立複本「' + project.metadata.name + '」', 'ok');
+}
+
+async function deleteProjectRecordWithConfirm(id) {
+  await flushAutosave();
+  let record;
+  try { record = await getProjectRecord(id); } catch (e) { record = null; }
+  if (!record) { toast('找不到該專案。', 'warn'); return; }
+  const name = (record.project.metadata && record.project.metadata.name) || '未命名專案';
+  const ok = await confirmDialog({
+    title: '刪除專案',
+    message: `確定要刪除「${name}」嗎？此操作無法復原（但已下載的 JSON 不受影響）。`,
+    items: [], okText: '刪除', cancelText: '取消'
+  });
+  if (!ok) return;
+  try { await deleteProjectRecord(id); }
+  catch (err) { toast('刪除失敗：' + (err && err.message ? err.message : err), 'error'); return; }
+
+  if (state.project.metadata.id === id) {
+    let next = null;
+    try { const list = await listProjectRecords(); next = list[0] || null; } catch (e) { next = null; }
+    if (next) {
+      await openProjectRecord(next.id);
+    } else {
+      state.project = emptyProject();
+      state.history.clear();
+      state.ui.dirty = false;
+      refresh({ form: true, settings: true, preview: true, topbar: true });
+    }
+  }
+  toast('已刪除專案', 'ok');
+  await refreshProjectList();
+}
+
+/* ------------------------ 10c. PROJECT MANAGER UI -------------------- */
+function projectRow(record) {
+  const info = projectSummary(record);
+  const isCurrent = state.project.metadata.id === record.id;
+  const row = document.createElement('div');
+  row.className = 'project-row' + (isCurrent ? ' current' : '');
+  row.dataset.id = record.id;
+
+  const open = document.createElement('button');
+  open.type = 'button';
+  open.className = 'project-open';
+  open.dataset.pact = 'open';
+  open.setAttribute('aria-label', `開啟專案 ${info.name}`);
+  const name = document.createElement('span');
+  name.className = 'project-name';
+  name.textContent = info.name;
+  if (isCurrent) {
+    const badge = document.createElement('span');
+    badge.className = 'project-badge';
+    badge.textContent = '目前';
+    name.appendChild(badge);
+  }
+  const meta = document.createElement('span');
+  meta.className = 'project-meta';
+  meta.textContent = `${info.template} · ${info.preset} ${info.size} · ${info.items} 項 · ${formatDateTime(info.savedAt)}`;
+  open.append(name, meta);
+  row.appendChild(open);
+
+  const actions = document.createElement('div');
+  actions.className = 'project-actions';
+  const defs = [
+    { act: 'rename', label: '✎', title: '更名', aria: '更名' },
+    { act: 'duplicate', label: '⧉', title: '建立複本', aria: '建立複本' },
+    { act: 'delete', label: '✕', title: '刪除', aria: '刪除', cls: 'del' }
+  ];
+  for (const def of defs) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'icon-btn' + (def.cls ? ' ' + def.cls : '');
+    b.dataset.pact = def.act;
+    b.title = def.title;
+    b.setAttribute('aria-label', `${def.aria}專案 ${info.name}`);
+    b.textContent = def.label;
+    actions.appendChild(b);
+  }
+  row.appendChild(actions);
+  return row;
+}
+
+async function refreshProjectList() {
+  const wrap = $('projectList');
+  const note = $('projectStorageNote');
+  wrap.replaceChildren();
+  if (storageBlocked) {
+    note.textContent = '此環境無法使用 IndexedDB，專案清單不會保存。請改用本機靜態伺服器，或使用 JSON 下載備份。';
+    note.className = 'dlg-note error';
+    const empty = document.createElement('div');
+    empty.className = 'project-empty';
+    empty.textContent = '目前環境不支援本機專案庫。仍可編輯並以 JSON 下載。';
+    wrap.appendChild(empty);
+    return;
+  }
+  let records = [];
+  try {
+    records = await listProjectRecords();
+    note.className = 'dlg-note';
+    note.textContent = `共 ${records.length} 個專案，只存在這台裝置的瀏覽器中，不會上傳。刪除後無法復原。`;
+  } catch (err) {
+    note.className = 'dlg-note error';
+    note.textContent = '無法讀取專案清單：' + (err && err.message ? err.message : err);
+    return;
+  }
+  const q = $('projectSearch').value.trim().toLowerCase();
+  const filtered = records.filter(r => {
+    const name = ((r.project && r.project.metadata && r.project.metadata.name) || '').toLowerCase();
+    return !q || name.includes(q);
+  });
+  if (!filtered.length) {
+    const empty = document.createElement('div');
+    empty.className = 'project-empty';
+    empty.textContent = q ? '找不到符合的專案。' : '還沒有任何專案，按「＋ 新專案」開始。';
+    wrap.appendChild(empty);
+    return;
+  }
+  for (const record of filtered) wrap.appendChild(projectRow(record));
+}
+
+async function openProjectManager() {
+  $('projectSearch').value = '';
+  $('dlgProjects').showModal();
+  await refreshProjectList();
+}
+
+let promptResolve = null;
+function promptDialog(opts) {
+  const dlg = $('dlgPrompt');
+  $('dlgPromptTitle').textContent = opts.title || '輸入名稱';
+  $('dlgPromptMsg').textContent = opts.message || '';
+  const input = $('dlgPromptInput');
+  input.value = opts.value || '';
+  input.maxLength = opts.maxlength || LIMITS.name;
+  const err = $('dlgPromptError');
+  err.hidden = true;
+  err.textContent = '';
+  $('dlgPromptOk').textContent = opts.okText || '確定';
+  return new Promise(resolve => {
+    promptResolve = resolve;
+    dlg.returnValue = '';
+    if (!dlg.open) dlg.showModal();
+    setTimeout(() => { input.focus(); input.select(); }, 30);
+  });
+}
+
+function resolvePrompt(value) {
+  const dlg = $('dlgPrompt');
+  if (dlg.open) dlg.close('');
+  const fn = promptResolve;
+  promptResolve = null;
+  if (fn) fn(value);
+}
+
+/* --------------------------- 11. HISTORY ----------------------------- */
+class History {
+  constructor(limit) {
+    this.limit = limit || 50;
+    this.past = [];
+    this.future = [];
+  }
+  record(snap, key, at) {
+    const time = at || Date.now();
+    const last = this.past[this.past.length - 1];
+    this.future.length = 0;
+    if (key && last && last.key === key && time - last.at < 700) {
+      last.at = time;
+      return false;
+    }
+    this.past.push({ snap, key: key || null, at: time });
+    if (this.past.length > this.limit) this.past.shift();
+    return true;
+  }
+  undo(current) {
+    if (!this.past.length) return null;
+    const entry = this.past.pop();
+    this.future.push({ snap: current, at: Date.now() });
+    return entry.snap;
+  }
+  redo(current) {
+    if (!this.future.length) return null;
+    const entry = this.future.pop();
+    this.past.push({ snap: current, at: Date.now(), key: null });
+    return entry.snap;
+  }
+  get canUndo() { return this.past.length > 0; }
+  get canRedo() { return this.future.length > 0; }
+  clear() { this.past.length = 0; this.future.length = 0; }
+}
+
+/* ---------------------------- 12. STATE ------------------------------ */
+const state = {
+  project: emptyProject(),
+  history: new History(50),
+  ui: {
+    tab: 'content', zoom: 1, fit: true, safe: false,
+    dirty: false, lastSaveAt: null,
+    iconTargetItem: null, selftest: false
+  },
+  scene: null,
+  issues: null
+};
+/* ---------------------------- 13. UI CORE ---------------------------- */
+let pendingRefresh = null;
+let rafId = 0;
+
+function refresh(opts) {
+  const o = Object.assign({ form: false, settings: false, preview: true, topbar: true }, opts || {});
+  pendingRefresh = pendingRefresh ? {
+    form: pendingRefresh.form || o.form,
+    settings: pendingRefresh.settings || o.settings,
+    preview: true,
+    topbar: true
+  } : o;
+  if (!rafId) rafId = requestAnimationFrame(flushRefresh);
+}
+
+function flushRefresh() {
+  rafId = 0;
+  const o = pendingRefresh || { form: true, settings: true, preview: true, topbar: true };
+  pendingRefresh = null;
+  if (o.preview) renderPreview();
+  if (o.form) renderContent();
+  if (o.settings) renderSettings();
+  if (o.topbar) renderTopbar();
+}
+
+function toast(message, kind) {
+  const t = document.createElement('div');
+  t.className = 'toast' + (kind ? ' ' + kind : '');
+  t.textContent = message;
+  $('toasts').appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .2s'; }, 3800);
+  setTimeout(() => t.remove(), 4200);
+}
+
+function setBanner(message, kind) {
+  const b = $('banner');
+  if (!message) { b.classList.remove('on', 'error'); b.textContent = ''; return; }
+  b.textContent = message;
+  b.className = 'banner on' + (kind === 'error' ? ' error' : '');
+}
+
+function iconSvg(iconId, size) {
+  const icon = ICONS[iconId];
+  if (!icon) return null;
+  const svg = svgEl('svg', {
+    viewBox: '0 0 24 24', width: size || 22, height: size || 22,
+    fill: 'none', stroke: 'currentColor', 'stroke-width': 1.9,
+    'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'aria-hidden': 'true'
+  });
+  for (const d of icon.paths) svg.appendChild(svgEl('path', { d }));
+  return svg;
+}
+
+function makeInput(attrs) {
+  const input = document.createElement('input');
+  input.type = attrs.type || 'text';
+  input.className = attrs.className || 'input';
+  if (attrs.value != null) input.value = attrs.value;
+  if (attrs.placeholder) input.placeholder = attrs.placeholder;
+  if (attrs.maxlength) input.maxLength = attrs.maxlength;
+  if (attrs.dataset) for (const k in attrs.dataset) input.dataset[k] = attrs.dataset[k];
+  if (attrs.ariaLabel) input.setAttribute('aria-label', attrs.ariaLabel);
+  return input;
+}
+
+function fieldWrap(labelText, control, hint) {
+  const wrap = document.createElement('div');
+  wrap.className = 'field';
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  wrap.appendChild(label);
+  wrap.appendChild(control);
+  if (hint) {
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = hint;
+    wrap.appendChild(p);
+  }
+  return wrap;
+}
+
+/* --------------------------- 14. RENDER: TOP ------------------------- */
+function renderTopbar() {
+  const nameInput = $('projectName');
+  if (document.activeElement !== nameInput) nameInput.value = state.project.metadata.name;
+  $('dirtyDot').classList.toggle('on', !!state.ui.dirty);
+  $('btnUndo').disabled = !state.history.canUndo;
+  $('btnRedo').disabled = !state.history.canRedo;
+}
+
+/* -------------------------- 15. RENDER: CONTENT ---------------------- */
+function updateCounters() {
+  const c = state.project.content;
+  const tLen = charLen(c.title), sLen = charLen(c.summary);
+  const ct = $('cTitle');
+  ct.textContent = `${tLen} / ${LIMITS.titleSoftMax}`;
+  ct.classList.toggle('over', tLen > LIMITS.titleSoftMax || (tLen > 0 && tLen < LIMITS.titleSoftMin));
+  $('cSubtitle').textContent = String(charLen(c.subtitle));
+  const cs = $('cSummary');
+  cs.textContent = `${sLen} / ${LIMITS.summarySoft}`;
+  cs.classList.toggle('over', sLen > LIMITS.summarySoft);
+  $('cFooter').textContent = String(charLen(c.footer));
+
+  const totalChars = tLen + charLen(c.subtitle) + sLen + charLen(c.footer) +
+    c.items.reduce((n, it) => n + charLen(it.title) + charLen(it.body) + charLen(it.value) + charLen(it.unit) + charLen(it.label), 0);
+  const hint = $('textLengthHint');
+  let text = `目前內容合計約 ${totalChars} 字元`;
+  if (c.originalText && c.originalText.trim()) text += `（原始貼上 ${charLen(c.originalText)} / ${LIMITS.text} 字元）`;
+  hint.textContent = text;
+  hint.className = 'hint';
+
+  const tpl = TEMPLATES[state.project.templateId];
+  const lim = templateLimit(state.project.templateId, c.items.length);
+  const chip = $('itemCount');
+  chip.textContent = `${c.items.length} 項`;
+  chip.className = 'chip' + (lim.over ? ' warn' : lim.under ? '' : ' accent');
+
+  const cap = $('capacityHint');
+  if (lim.over) {
+    cap.textContent = `${tpl.name}僅呈現前 ${tpl.max} 項，其餘 ${lim.hidden} 項不會出現在輸出（資料仍完整保存）。`;
+    cap.className = 'hint warn';
+  } else if (lim.under && c.items.length > 0) {
+    cap.textContent = `${tpl.name}建議 ${tpl.min}–${tpl.max} 項，目前 ${c.items.length} 項。`;
+    cap.className = 'hint warn';
+  } else {
+    cap.textContent = `${tpl.name}：${tpl.cap}`;
+    cap.className = 'hint';
+  }
+}
+
+function itemCard(item, index, total, warn) {
+  const tplId = state.project.templateId;
+  const card = document.createElement('div');
+  card.className = 'item-card' + ((item.title || item.body) ? '' : ' is-empty');
+  if (warn) card.classList.add('is-warn');
+  card.dataset.id = item.id;
+
+  const top = document.createElement('div');
+  top.className = 'item-top';
+  const no = document.createElement('span');
+  no.className = 'item-no';
+  no.textContent = String(index + 1);
+  top.appendChild(no);
+
+  if (tplId !== 'kpi-cards') {
+    const pick = document.createElement('div');
+    pick.className = 'icon-pick';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'icon-btn icon-preview';
+    btn.dataset.act = 'icon';
+    btn.title = '選擇圖示';
+    btn.setAttribute('aria-label', `第 ${index + 1} 項圖示`);
+    const svg = item.iconId ? iconSvg(item.iconId, 19) : null;
+    if (svg) btn.appendChild(svg);
+    else btn.textContent = '＋';
+    pick.appendChild(btn);
+    top.appendChild(pick);
+  }
+
+  const tools = document.createElement('div');
+  tools.className = 'item-tools';
+  if (warn) {
+    const flag = document.createElement('span');
+    flag.className = 'item-warn';
+    flag.textContent = '⚠';
+    flag.title = warn.message;
+    flag.setAttribute('role', 'img');
+    flag.setAttribute('aria-label', '此項目有版面提醒');
+    tools.appendChild(flag);
+  }
+  const acts = [
+    { act: 'up', label: '↑', title: '上移', disabled: index === 0, aria: '上移' },
+    { act: 'down', label: '↓', title: '下移', disabled: index === total - 1, aria: '下移' },
+    { act: 'dup', label: '⧉', title: '複製', aria: '複製' },
+    { act: 'del', label: '✕', title: '刪除', aria: '刪除', cls: 'del' }
+  ];
+  for (const a of acts) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'icon-btn' + (a.cls ? ' ' + a.cls : '');
+    b.dataset.act = a.act;
+    b.textContent = a.label;
+    b.title = a.title;
+    b.setAttribute('aria-label', `第 ${index + 1} 項${a.aria}`);
+    b.disabled = !!a.disabled;
+    tools.appendChild(b);
+  }
+  top.appendChild(tools);
+  card.appendChild(top);
+
+  if (tplId === 'timeline') {
+    const label = makeInput({
+      value: item.label || '', maxlength: 40, placeholder: '例：2026 Q1',
+      dataset: { field: 'label' }, ariaLabel: `第 ${index + 1} 項節點標籤`
+    });
+    card.appendChild(fieldWrap('節點標籤（日期／階段）', label));
+  }
+  if (tplId === 'kpi-cards') {
+    const label = makeInput({
+      value: item.label || '', maxlength: 40, placeholder: '例：年度成長率',
+      dataset: { field: 'label' }, ariaLabel: `第 ${index + 1} 項指標名稱`
+    });
+    card.appendChild(fieldWrap('指標名稱', label));
+
+    const row = document.createElement('div');
+    row.className = 'item-2col';
+    const value = makeInput({
+      value: item.value || '', maxlength: 40, placeholder: '例：38',
+      dataset: { field: 'value' }, ariaLabel: `第 ${index + 1} 項數值`, inputmode: 'decimal'
+    });
+    const unit = makeInput({
+      value: item.unit || '', maxlength: 20, placeholder: '例：%',
+      dataset: { field: 'unit' }, ariaLabel: `第 ${index + 1} 項單位`
+    });
+    row.appendChild(fieldWrap('數值（必填才有數字）', value));
+    row.appendChild(fieldWrap('單位', unit));
+    card.appendChild(row);
+  }
+
+  const title = makeInput({
+    value: item.title || '', maxlength: LIMITS.itemTitle,
+    placeholder: tplId === 'comparison' ? '例：導入前' : '例：海運物流',
+    dataset: { field: 'title' }, ariaLabel: `第 ${index + 1} 項標題`
+  });
+  card.appendChild(fieldWrap(tplId === 'kpi-cards' ? '說明標題' : '標題', title));
+
+  const body = document.createElement('textarea');
+  body.className = 'input';
+  body.rows = 2;
+  body.maxLength = LIMITS.itemBody;
+  body.value = item.body || '';
+  body.placeholder = '例：一句話說明這個重點';
+  body.dataset.field = 'body';
+  body.setAttribute('aria-label', `第 ${index + 1} 項內文`);
+  card.appendChild(fieldWrap('內文', body));
+
+  return card;
+}
+
+function updateFieldStates() {
+  const codes = new Set((state.issues ? state.issues.all : []).map(w => w.code));
+  $('fTitle').classList.toggle('invalid', codes.has('missing-title'));
+  $('fTitle').classList.toggle('warn', codes.has('title-truncated'));
+  $('fSubtitle').classList.toggle('warn', codes.has('subtitle-truncated'));
+  $('fSummary').classList.toggle('warn', codes.has('summary-truncated'));
+  $('fFooter').classList.toggle('warn', codes.has('footer-truncated'));
+}
+
+function updateItemWarnings() {
+  const cards = document.querySelectorAll('#itemsList .item-card');
+  const byIndex = new Map();
+  for (const w of (state.issues ? state.issues.all : [])) {
+    if (w.itemIndex != null && !byIndex.has(w.itemIndex)) byIndex.set(w.itemIndex, w);
+  }
+  cards.forEach((card, i) => {
+    const warn = byIndex.get(i);
+    card.classList.toggle('is-warn', !!warn);
+    let flag = card.querySelector('.item-warn');
+    if (warn) {
+      if (!flag) {
+        flag = document.createElement('span');
+        flag.className = 'item-warn';
+        flag.textContent = '⚠';
+        flag.setAttribute('role', 'img');
+        flag.setAttribute('aria-label', '此項目有版面提醒');
+        const tools = card.querySelector('.item-tools');
+        if (tools) tools.insertBefore(flag, tools.firstChild);
+        else card.querySelector('.item-top').appendChild(flag);
+      }
+      flag.title = warn.message;
+    } else if (flag) {
+      flag.remove();
+    }
+  });
+}
+
+function renderContent() {
+  const c = state.project.content;
+  const fTitle = $('fTitle');
+  if (fTitle.value !== c.title) fTitle.value = c.title;
+  const fSub = $('fSubtitle');
+  if (fSub.value !== c.subtitle) fSub.value = c.subtitle;
+  const fSum = $('fSummary');
+  if (fSum.value !== c.summary) fSum.value = c.summary;
+  const fFoot = $('fFooter');
+  if (fFoot.value !== c.footer) fFoot.value = c.footer;
+
+  updateFieldStates();
+
+  const list = $('itemsList');
+  list.replaceChildren();
+  const warnByItem = new Map();
+  for (const w of (state.issues ? state.issues.all : [])) {
+    if (w.itemIndex != null && !warnByItem.has(w.itemIndex)) warnByItem.set(w.itemIndex, w);
+  }
+  if (!c.items.length) {
+    const empty = document.createElement('div');
+    empty.className = 'empty-state';
+    empty.innerHTML = '<strong>尚未新增重點項目</strong>輸入標題與內容，或先載入範例看看效果。';
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn small';
+    addBtn.textContent = '＋ 新增第一個重點';
+    addBtn.dataset.act = 'add-first';
+    empty.appendChild(addBtn);
+    list.appendChild(empty);
+  } else {
+    c.items.forEach((it, i) => list.appendChild(itemCard(it, i, c.items.length, warnByItem.get(i))));
+  }
+  updateItemWarnings();
+
+  const addHint = $('btnAddItem');
+  addHint.disabled = c.items.length >= LIMITS.items;
+  addHint.title = c.items.length >= LIMITS.items ? `最多 ${LIMITS.items} 項` : '新增重點項目';
+
+  updateCounters();
+}
+
+/* ------------------------- 16. RENDER: SETTINGS ---------------------- */
+function renderSettings() {
+  const p = state.project;
+
+  const tplWrap = $('templateList');
+  tplWrap.replaceChildren();
+  for (const id of TEMPLATE_IDS) {
+    const tpl = TEMPLATES[id];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'template-card';
+    b.dataset.template = id;
+    b.setAttribute('aria-pressed', String(p.templateId === id));
+    const name = document.createElement('span');
+    name.className = 't-name';
+    name.textContent = tpl.name;
+    const desc = document.createElement('span');
+    desc.className = 't-desc';
+    desc.textContent = tpl.desc;
+    const cap = document.createElement('span');
+    cap.className = 't-cap';
+    cap.textContent = tpl.cap;
+    b.append(name, desc, cap);
+    tplWrap.appendChild(b);
+  }
+  const tpl = TEMPLATES[p.templateId];
+  $('templateHint').textContent = `${tpl.name}：${tpl.cap}${tpl.uses.includes('value') ? '；數值需自行提供，不會自動推算。' : ''}`;
+
+  const sel = $('canvasSelect');
+  if (!sel.options.length) {
+    for (const id of CANVAS_IDS) {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = `${CANVAS_PRESETS[id].name}（${CANVAS_PRESETS[id].width} × ${CANVAS_PRESETS[id].height}）`;
+      sel.appendChild(opt);
+    }
+  }
+  sel.value = p.canvas.preset;
+  const cp = CANVAS_PRESETS[p.canvas.preset];
+  $('canvasHint').textContent = `${cp.hint}；預覽為縮放顯示，輸出固定 ${cp.width}×${cp.height} px。`;
+
+  const themeWrap = $('themeList');
+  themeWrap.replaceChildren();
+  for (const id of THEME_IDS) {
+    const theme = THEMES[id];
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'theme-swatch';
+    b.dataset.theme = id;
+    b.setAttribute('aria-pressed', String(p.theme.presetId === id));
+    b.title = theme.name;
+    const dots = document.createElement('span');
+    dots.className = 'theme-dots';
+    for (const key of ['background', 'heading', 'accent', 'card']) {
+      const s = document.createElement('span');
+      s.style.background = theme.colors[key];
+      dots.appendChild(s);
+    }
+    const name = document.createElement('span');
+    name.className = 't-name';
+    name.textContent = theme.name;
+    b.append(dots, name);
+    themeWrap.appendChild(b);
+  }
+
+  const colorWrap = $('colorFields');
+  colorWrap.replaceChildren();
+  for (const slot of COLOR_SLOTS) {
+    const row = document.createElement('div');
+    row.className = 'color-row';
+    const label = document.createElement('label');
+    label.textContent = slot.label;
+    label.setAttribute('for', 'color-' + slot.key);
+    const picker = document.createElement('input');
+    picker.type = 'color';
+    picker.id = 'color-' + slot.key;
+    picker.value = p.theme.colors[slot.key];
+    picker.dataset.color = slot.key;
+    const hex = makeInput({
+      value: p.theme.colors[slot.key].toUpperCase(), maxlength: 7, className: 'input hex',
+      dataset: { hex: slot.key }, ariaLabel: slot.label + '色碼'
+    });
+    row.append(label, hex, picker);
+    colorWrap.appendChild(row);
+  }
+
+  const sliderWrap = $('sliderFields');
+  sliderWrap.replaceChildren();
+  for (const def of SLIDER_DEFS) {
+    const row = document.createElement('div');
+    row.className = 'slider-row';
+    const label = document.createElement('label');
+    label.textContent = def.label;
+    label.setAttribute('for', 'slider-' + def.key);
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.id = 'slider-' + def.key;
+    input.min = String(def.min);
+    input.max = String(def.max);
+    input.step = String(def.step);
+    input.value = String(p.theme[def.key]);
+    input.dataset.slider = def.key;
+    const out = document.createElement('output');
+    out.textContent = def.fmt(p.theme[def.key]);
+    out.id = 'out-' + def.key;
+    row.append(label, input, out);
+    sliderWrap.appendChild(row);
+  }
+}
+
+/* -------------------------- 17. RENDER: PREVIEW ---------------------- */
+function computeFit(scene, stage) {
+  const availW = Math.max(120, stage.clientWidth - 40);
+  const availH = Math.max(120, stage.clientHeight - 40);
+  return Math.min(availW / scene.width, availH / scene.height, 1);
+}
+
+function renderPreview() {
+  const scene = buildScene(state.project);
+  state.scene = scene;
+  state.issues = sceneIssues(state.project, scene);
+
+  const stage = $('stage');
+  const sheet = $('sheet');
+  const fit = computeFit(scene, stage);
+  const scale = clamp(fit * state.ui.zoom, 0.02, 1.5);
+
+  const svg = buildSvgElement(scene, {
+    scale,
+    safeArea: state.ui.safe,
+    regions: true,
+    label: `${scene.width} × ${scene.height} 資訊圖預覽`
+  });
+  sheet.replaceChildren(svg);
+  sheet.style.width = Math.round(scene.width * scale) + 'px';
+
+  $('zoomLabel').textContent = Math.round(scale * 100) + '%';
+  const cp = CANVAS_PRESETS[state.project.canvas.preset];
+  $('canvasMeta').textContent = `${cp.name} · 輸出 ${scene.width} × ${scene.height} px`;
+
+  renderChecks();
+}
+
+function renderChecks() {
+  updateFieldStates();
+  updateItemWarnings();
+  const contrastWrap = $('contrastList');
+  contrastWrap.replaceChildren();
+  for (const row of contrastReport(state.project)) {
+    const div = document.createElement('div');
+    div.className = 'check-item ' + (row.pass ? 'ok' : 'warn');
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    const txt = document.createElement('span');
+    txt.className = 'txt';
+    const ratio = row.ratio.toFixed(2);
+    txt.textContent = `${row.label} ${ratio}:1 ${row.pass ? '（達 ' + row.need + ':1）' : '（未達 ' + row.need + ':1，僅為提示）'}`;
+    div.append(dot, txt);
+    contrastWrap.appendChild(div);
+  }
+
+  const warnWrap = $('warnList');
+  warnWrap.replaceChildren();
+  const issues = state.issues || { all: [], errors: [], warnings: [] };
+  if (!issues.all.length) {
+    const div = document.createElement('div');
+    div.className = 'check-item ok';
+    div.innerHTML = '<span class="dot"></span><span class="txt">版面檢查通過：沒有溢出或缺少欄位。</span>';
+    warnWrap.appendChild(div);
+  } else {
+    for (const w of issues.all) {
+      const div = document.createElement('div');
+      div.className = 'check-item ' + (w.severity === 'error' ? 'error' : 'warn');
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      const txt = document.createElement('span');
+      txt.className = 'txt';
+      txt.textContent = w.message;
+      div.append(dot, txt);
+      warnWrap.appendChild(div);
+    }
+  }
+
+  const badge = $('statusBadge');
+  if (issues.errors.length) {
+    badge.className = 'status-badge error';
+    badge.textContent = `需修正 ${issues.errors.length} 項`;
+  } else if (issues.warnings.length) {
+    badge.className = 'status-badge warn';
+    badge.textContent = `${issues.warnings.length} 則提醒`;
+  } else {
+    badge.className = 'status-badge ok';
+    badge.textContent = '版面檢查通過';
+  }
+}
+
+/* --------------------------- 18. DIALOGS ----------------------------- */
+let confirmResolve = null;
+
+function confirmDialog(opts) {
+  const dlg = $('dlgConfirm');
+  $('dlgConfirmTitle').textContent = opts.title || '確認';
+  $('dlgConfirmMsg').textContent = opts.message || '';
+  const list = $('dlgConfirmList');
+  list.replaceChildren();
+  for (const item of opts.items || []) {
+    const li = document.createElement('li');
+    li.className = item.level === 'error' ? 'error' : 'warn';
+    li.textContent = item.text;
+    list.appendChild(li);
+  }
+  list.hidden = !(opts.items && opts.items.length);
+  $('dlgConfirmOk').textContent = opts.okText || '確定';
+  const cancel = $('dlgConfirmCancel');
+  cancel.textContent = opts.cancelText || '取消';
+  cancel.hidden = !!opts.hideCancel;
+  return new Promise(resolve => {
+    confirmResolve = resolve;
+    dlg.returnValue = '';
+    if (!dlg.open) dlg.showModal();
+  });
+}
+
+function bindDialogBasics() {
+  document.addEventListener('click', e => {
+    const closer = e.target.closest('[data-close]');
+    if (closer) {
+      const dlg = closer.closest('dialog');
+      if (dlg) dlg.close('');
+    }
+  });
+  $('dlgConfirmOk').addEventListener('click', () => $('dlgConfirm').close('ok'));
+  $('dlgConfirm').addEventListener('close', () => {
+    const result = $('dlgConfirm').returnValue === 'ok';
+    const fn = confirmResolve;
+    confirmResolve = null;
+    if (fn) fn(result);
+  });
+
+  $('dlgPromptOk').addEventListener('click', () => {
+    const value = $('dlgPromptInput').value.trim();
+    if (!value) {
+      const err = $('dlgPromptError');
+      err.textContent = '名稱不可空白。';
+      err.hidden = false;
+      $('dlgPromptInput').focus();
+      return;
+    }
+    resolvePrompt(value);
+  });
+  $('dlgPromptInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); $('dlgPromptOk').click(); }
+  });
+  $('dlgPrompt').addEventListener('close', () => {
+    const fn = promptResolve;
+    promptResolve = null;
+    if (fn) fn(null);
+  });
+  $('dlgProjects').addEventListener('close', () => { /* nothing to persist */ });
+}
+
+/* ---------------------- 19. STORE MUTATIONS -------------------------- */
+function commit(mutator, opts) {
+  const o = opts || {};
+  const before = clone(state.project);
+  mutator(state.project);
+  state.project.schemaVersion = SCHEMA_VERSION;
+  state.project.metadata.updatedAt = nowISO();
+  state.history.record(before, o.coalesce || null);
+  state.ui.dirty = true;
+  scheduleAutosave();
+  refresh(o.refresh || { preview: true, topbar: true });
+}
+
+function applyProject(project, opts) {
+  const o = opts || {};
+  if (o.history !== false) state.history.record(clone(state.project), null);
+  state.project = Object.assign({}, project, {
+    schemaVersion: SCHEMA_VERSION,
+    metadata: Object.assign({ id: uid('proj'), name: '未命名專案', createdAt: nowISO() }, project.metadata || {}),
+    content: Object.assign({ title: '', subtitle: '', summary: '', footer: '', originalText: '', items: [] }, project.content || {}),
+    canvas: normalizeCanvas(project.canvas),
+    theme: clampTheme(project.theme)
+  });
+  state.ui.dirty = true;
+  refresh({ form: true, settings: true, preview: true, topbar: true });
+  persistProject().catch(() => {});
+}
+
+function doUndo() {
+  const snap = state.history.undo(clone(state.project));
+  if (!snap) return;
+  state.project = snap;
+  state.ui.dirty = true;
+  scheduleAutosave();
+  refresh({ form: true, settings: true, preview: true, topbar: true });
+  toast('已復原');
+}
+
+function doRedo() {
+  const snap = state.history.redo(clone(state.project));
+  if (!snap) return;
+  state.project = snap;
+  state.ui.dirty = true;
+  scheduleAutosave();
+  refresh({ form: true, settings: true, preview: true, topbar: true });
+  toast('已重做');
+}
+
+async function switchTemplate(id) {
+  if (!TEMPLATES[id] || state.project.templateId === id) return;
+  const lim = templateLimit(id, state.project.content.items.length);
+  if (lim.over) {
+    const ok = await confirmDialog({
+      title: '此模板只能顯示部分項目',
+      message: `「${TEMPLATES[id].name}」最多呈現 ${TEMPLATES[id].max} 項，目前有 ${state.project.content.items.length} 項。\n其餘 ${lim.hidden} 項不會出現在輸出中，但資料仍會完整保存在專案裡。`,
+      items: [], okText: '切換並保留資料'
+    });
+    if (!ok) return;
+  }
+  commit(p => { p.templateId = id; }, { refresh: { form: true, settings: true, preview: true, topbar: true } });
+}
+
+function addItem(afterId) {
+  if (state.project.content.items.length >= LIMITS.items) {
+    toast(`最多 ${LIMITS.items} 項`, 'warn');
+    return;
+  }
+  commit(p => {
+    const item = newItem();
+    const idx = afterId ? p.content.items.findIndex(i => i.id === afterId) : -1;
+    if (idx >= 0) p.content.items.splice(idx + 1, 0, item);
+    else p.content.items.push(item);
+  }, { refresh: { form: true, preview: true, topbar: true } });
+  requestAnimationFrame(() => {
+    const cards = $('itemsList').querySelectorAll('.item-card');
+    const last = cards[cards.length - 1];
+    if (last) {
+      const input = last.querySelector('[data-field="title"]') || last.querySelector('input,textarea');
+      if (input) input.focus();
+    }
+  });
+}
+
+async function deleteItem(id) {
+  const idx = state.project.content.items.findIndex(i => i.id === id);
+  if (idx < 0) return;
+  const it = state.project.content.items[idx];
+  if (it.title || it.body) {
+    const ok = await confirmDialog({
+      title: '刪除重點項目',
+      message: `確定刪除第 ${idx + 1} 項「${(it.title || it.body).slice(0, 24)}」？（可用 Ctrl+Z 復原）`,
+      items: [], okText: '刪除', cancelText: '取消'
+    });
+    if (!ok) return;
+  }
+  commit(p => { p.content.items = p.content.items.filter(i => i.id !== id); },
+    { refresh: { form: true, preview: true, topbar: true } });
+}
+
+function moveItem(id, dir) {
+  commit(p => {
+    const idx = p.content.items.findIndex(i => i.id === id);
+    const next = idx + dir;
+    if (idx < 0 || next < 0 || next >= p.content.items.length) return;
+    const [item] = p.content.items.splice(idx, 1);
+    p.content.items.splice(next, 0, item);
+  }, { refresh: { form: true, preview: true, topbar: true } });
+}
+
+function duplicateItem(id) {
+  if (state.project.content.items.length >= LIMITS.items) {
+    toast(`最多 ${LIMITS.items} 項`, 'warn');
+    return;
+  }
+  commit(p => {
+    const idx = p.content.items.findIndex(i => i.id === id);
+    if (idx < 0) return;
+    const copy = Object.assign({}, p.content.items[idx], { id: uid('item') });
+    p.content.items.splice(idx + 1, 0, copy);
+  }, { refresh: { form: true, preview: true, topbar: true } });
+}
+
+function setThemePreset(id) {
+  const theme = THEMES[id];
+  if (!theme) return;
+  commit(p => {
+    p.theme = {
+      presetId: id,
+      colors: Object.assign({}, theme.colors),
+      fontScale: theme.fontScale,
+      cornerRadius: theme.cornerRadius,
+      spacing: theme.spacing,
+      padding: theme.padding
+    };
+  }, { refresh: { settings: true, preview: true, topbar: true } });
+}
+
+/* --------------------------- 20. PROJECT ACTIONS -------------------- */
+async function newProject() {
+  if (storageBlocked && hasContent(state.project)) {
+    const ok = await confirmDialog({
+      title: '新增專案',
+      message: '此環境無法自動儲存，目前內容尚未備份。建立新專案會清除目前編輯內容（可先「儲存 JSON」）。要繼續嗎？',
+      items: [], okText: '建立新專案'
+    });
+    if (!ok) return;
+  }
+  await newProjectRecord(emptyProject(), { message: '已建立新專案' });
+}
+
+async function loadSample() {
+  const sample = sampleProject();
+  sample.metadata.name = 'AI 應用三大重點（範例）';
+  await newProjectRecord(sample, { message: '已建立範例專案，可直接修改' });
+}
+
+/* ------------------------- 21. PASTE / ICONS ------------------------- */
+function openPasteDialog() {
+  $('pasteText').value = '';
+  $('pasteCount').textContent = `0 / ${LIMITS.text}`;
+  $('pasteError').hidden = true;
+  $('dlgPaste').showModal();
+  setTimeout(() => $('pasteText').focus(), 30);
+}
+
+async function applyPaste() {
+  const raw = $('pasteText').value;
+  const errEl = $('pasteError');
+  if (charLen(raw) > LIMITS.text) {
+    errEl.textContent = `內容超過 ${LIMITS.text} 字元上限（目前 ${charLen(raw)}），請分批處理。現有內容未被修改。`;
+    errEl.hidden = false;
+    return;
+  }
+  if (!raw.trim()) {
+    errEl.textContent = '請先貼上文字。';
+    errEl.hidden = false;
+    return;
+  }
+  const parsed = parsePlainText(raw);
+  if (state.ui.dirty && hasContent(state.project)) {
+    const ok = await confirmDialog({
+      title: '套用解析結果',
+      message: `將以解析結果取代目前的標題、摘要與 ${state.project.content.items.length} 個項目（可用 Ctrl+Z 復原）。要繼續嗎？`,
+      items: [], okText: '套用'
+    });
+    if (!ok) return;
+  }
+  commit(p => {
+    p.content.title = parsed.title;
+    p.content.subtitle = parsed.subtitle;
+    p.content.summary = parsed.summary;
+    p.content.footer = parsed.footer || p.content.footer;
+    p.content.items = parsed.items.slice(0, LIMITS.items);
+    p.content.originalText = raw;
+    if (!p.metadata.name || p.metadata.name === '未命名專案') {
+      p.metadata.name = (parsed.title || '').trim().slice(0, LIMITS.name) || '未命名專案';
+    }
+  }, { refresh: { form: true, settings: true, preview: true, topbar: true } });
+  $('dlgPaste').close('');
+  const hidden = Math.max(0, parsed.items.length - LIMITS.items);
+  toast(`已解析：標題 1、重點 ${Math.min(parsed.items.length, LIMITS.items)} 項${hidden ? `（超過 ${LIMITS.items} 項的部分未加入）` : ''}`, 'ok');
+  if (!parsed.items.length) toast('未偵測到條列項目，內容已放入摘要，可手動新增重點。', 'warn');
+}
+
+function openIconDialog(itemId) {
+  state.ui.iconTargetItem = itemId;
+  $('iconSearch').value = '';
+  renderIconGrid('');
+  $('dlgIcons').showModal();
+}
+
+function renderIconGrid(query) {
+  const grid = $('iconGrid');
+  grid.replaceChildren();
+  const q = String(query || '').trim().toLowerCase();
+  const item = state.project.content.items.find(i => i.id === state.ui.iconTargetItem);
+  for (const [id, icon] of Object.entries(ICONS)) {
+    if (q && !(icon.label.toLowerCase().includes(q) || icon.keys.toLowerCase().includes(q) || id.includes(q))) continue;
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'icon-cell';
+    b.dataset.icon = id;
+    b.setAttribute('aria-pressed', String(!!item && item.iconId === id));
+    b.setAttribute('aria-label', icon.label);
+    const svg = iconSvg(id, 22);
+    if (svg) b.appendChild(svg);
+    const span = document.createElement('span');
+    span.textContent = icon.label;
+    b.appendChild(span);
+    grid.appendChild(b);
+  }
+  if (!grid.children.length) {
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = '找不到符合的圖示，換個關鍵字試試（例如：物流、數據、目標）。';
+    grid.appendChild(p);
+  }
+}
+
+/* --------------------------- 22. EVENTS ------------------------------ */
+function bindEvents() {
+  /* top bar */
+  $('btnNew').addEventListener('click', newProject);
+  $('btnSample').addEventListener('click', loadSample);
+  $('btnSave').addEventListener('click', saveProjectJson);
+  $('btnOpen').addEventListener('click', () => $('fileInput').click());
+  $('fileInput').addEventListener('change', e => importProjectFile(e.target.files && e.target.files[0]));
+  $('btnUndo').addEventListener('click', doUndo);
+  $('btnRedo').addEventListener('click', doRedo);
+  $('btnExport').addEventListener('click', doExportPng);
+
+  $('projectName').addEventListener('input', e => {
+    const value = e.target.value.slice(0, LIMITS.name);
+    commit(p => { p.metadata.name = value || '未命名專案'; }, { coalesce: 'meta:name', refresh: { preview: true, topbar: true } });
+  });
+  $('projectName').addEventListener('blur', () => { if (!state.project.metadata.name.trim()) { commit(p => { p.metadata.name = '未命名專案'; }, { refresh: { topbar: true } }); } });
+
+  /* content fields */
+  $('fTitle').addEventListener('input', e => {
+    const value = e.target.value;
+    commit(p => {
+      p.content.title = value;
+      if (!p.metadata.name || p.metadata.name === '未命名專案') {
+        p.metadata.name = value.trim().slice(0, LIMITS.name) || '未命名專案';
+      }
+    }, { coalesce: 'content:title', refresh: { preview: true, topbar: true } });
+    updateCounters();
+  });
+  $('fSubtitle').addEventListener('input', e => {
+    const value = e.target.value;
+    commit(p => { p.content.subtitle = value; }, { coalesce: 'content:subtitle', refresh: { preview: true } });
+    updateCounters();
+  });
+  $('fSummary').addEventListener('input', e => {
+    const value = e.target.value;
+    commit(p => { p.content.summary = value; }, { coalesce: 'content:summary', refresh: { preview: true } });
+    updateCounters();
+  });
+  $('fFooter').addEventListener('input', e => {
+    const value = e.target.value;
+    commit(p => { p.content.footer = value; }, { coalesce: 'content:footer', refresh: { preview: true } });
+    updateCounters();
+  });
+
+  /* items */
+  $('itemsList').addEventListener('input', e => {
+    const field = e.target.dataset.field;
+    if (!field) return;
+    const card = e.target.closest('.item-card');
+    if (!card) return;
+    const id = card.dataset.id;
+    const value = e.target.value;
+    commit(p => {
+      const item = p.content.items.find(i => i.id === id);
+      if (item) item[field] = value;
+    }, { coalesce: `item:${id}:${field}`, refresh: { preview: true } });
+  });
+
+  $('itemsList').addEventListener('click', e => {
+    const btn = e.target.closest('[data-act]');
+    if (!btn) return;
+    const act = btn.dataset.act;
+    if (act === 'add-first') { addItem(); return; }
+    const card = btn.closest('.item-card');
+    if (!card) return;
+    const id = card.dataset.id;
+    if (act === 'up') moveItem(id, -1);
+    else if (act === 'down') moveItem(id, 1);
+    else if (act === 'dup') duplicateItem(id);
+    else if (act === 'del') deleteItem(id);
+    else if (act === 'icon') openIconDialog(id);
+  });
+
+  $('btnAddItem').addEventListener('click', () => addItem());
+  $('btnPaste').addEventListener('click', openPasteDialog);
+
+  /* paste dialog */
+  $('pasteText').addEventListener('input', e => {
+    const len = charLen(e.target.value);
+    const over = len > LIMITS.text;
+    const counter = $('pasteCount');
+    counter.textContent = `${len} / ${LIMITS.text}`;
+    counter.className = over ? 'hint error' : 'hint';
+    $('pasteError').hidden = true;
+  });
+  $('pasteSample').addEventListener('click', () => {
+    $('pasteText').value = SAMPLE_TEXT;
+    $('pasteCount').textContent = `${charLen(SAMPLE_TEXT)} / ${LIMITS.text}`;
+    $('pasteError').hidden = true;
+  });
+  $('pasteApply').addEventListener('click', applyPaste);
+
+  /* icons */
+  $('iconSearch').addEventListener('input', e => renderIconGrid(e.target.value));
+  $('iconGrid').addEventListener('click', e => {
+    const btn = e.target.closest('[data-icon]');
+    if (!btn) return;
+    const iconId = btn.dataset.icon;
+    const id = state.ui.iconTargetItem;
+    commit(p => {
+      const item = p.content.items.find(i => i.id === id);
+      if (item) item.iconId = iconId;
+    }, { refresh: { form: true, preview: true } });
+    $('dlgIcons').close('');
+  });
+  $('iconClear').addEventListener('click', () => {
+    const id = state.ui.iconTargetItem;
+    commit(p => {
+      const item = p.content.items.find(i => i.id === id);
+      if (item) item.iconId = '';
+    }, { refresh: { form: true, preview: true } });
+    $('dlgIcons').close('');
+  });
+
+  /* settings */
+  $('templateList').addEventListener('click', e => {
+    const btn = e.target.closest('[data-template]');
+    if (btn) switchTemplate(btn.dataset.template);
+  });
+  $('canvasSelect').addEventListener('change', e => {
+    const preset = e.target.value;
+    if (!CANVAS_PRESETS[preset]) return;
+    commit(p => {
+      p.canvas = normalizeCanvas({ preset });
+    }, { refresh: { preview: true, settings: true, topbar: true } });
+    toast(`畫布改為 ${CANVAS_PRESETS[preset].name}（${CANVAS_PRESETS[preset].width}×${CANVAS_PRESETS[preset].height}），輸出將使用此像素尺寸。`);
+  });
+  $('themeList').addEventListener('click', e => {
+    const btn = e.target.closest('[data-theme]');
+    if (btn) setThemePreset(btn.dataset.theme);
+  });
+  $('colorFields').addEventListener('input', e => {
+    const key = e.target.dataset.color;
+    if (!key) return;
+    const value = e.target.value;
+    commit(p => { p.theme.colors[key] = value; p.theme.presetId = 'custom'; },
+      { coalesce: 'color:' + key, refresh: { preview: true } });
+    const hex = $('colorFields').querySelector(`[data-hex="${key}"]`);
+    if (hex) hex.value = value.toUpperCase();
+  });
+  $('colorFields').addEventListener('change', e => {
+    const key = e.target.dataset.hex;
+    if (!key) return;
+    const value = e.target.value.trim();
+    if (!isHexColor(value)) {
+      toast('色碼格式需為 #RGB 或 #RRGGBB', 'warn');
+      e.target.value = state.project.theme.colors[key].toUpperCase();
+      return;
+    }
+    commit(p => { p.theme.colors[key] = normalizeHex(value, p.theme.colors[key]); p.theme.presetId = 'custom'; },
+      { refresh: { settings: true, preview: true } });
+  });
+  $('sliderFields').addEventListener('input', e => {
+    const key = e.target.dataset.slider;
+    if (!key) return;
+    const def = SLIDER_DEFS.find(d => d.key === key);
+    const value = clamp(Number(e.target.value), def.min, def.max);
+    commit(p => { p.theme[key] = value; }, { coalesce: 'slider:' + key, refresh: { preview: true } });
+    const out = $('out-' + key);
+    if (out) out.textContent = def.fmt(value);
+  });
+
+  /* preview controls */
+  $('btnZoomIn').addEventListener('click', () => { state.ui.zoom = clamp(state.ui.zoom * 1.15, 0.25, 4); renderPreview(); });
+  $('btnZoomOut').addEventListener('click', () => { state.ui.zoom = clamp(state.ui.zoom / 1.15, 0.25, 4); renderPreview(); });
+  $('btnZoomFit').addEventListener('click', () => { state.ui.zoom = 1; renderPreview(); });
+  $('chkSafe').addEventListener('change', e => { state.ui.safe = e.target.checked; renderPreview(); });
+
+  /* tabs */
+  document.querySelectorAll('.tabbar button').forEach(btn => {
+    btn.addEventListener('click', () => setTab(btn.dataset.tab));
+  });
+  setTab('content');
+
+  /* keyboard */
+  document.addEventListener('keydown', e => {
+    const target = e.target;
+    const inField = target && (target.closest('input, textarea, [contenteditable="true"]'));
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      saveProjectJson();
+      return;
+    }
+    if (inField) return; /* keep native text undo inside fields (FR-009) */
+    if (mod && e.key.toLowerCase() === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) doRedo(); else doUndo();
+    } else if (mod && e.key.toLowerCase() === 'y') {
+      e.preventDefault();
+      doRedo();
+    }
+  });
+
+  /* project manager */
+  $('btnProjects').addEventListener('click', openProjectManager);
+  $('btnCreateProject').addEventListener('click', async () => {
+    $('dlgProjects').close('');
+    await newProject();
+  });
+  $('btnImportFromManager').addEventListener('click', () => $('fileInput').click());
+  $('projectSearch').addEventListener('input', () => { refreshProjectList(); });
+  $('projectList').addEventListener('click', async e => {
+    const row = e.target.closest('.project-row');
+    if (!row) return;
+    const id = row.dataset.id;
+    const btn = e.target.closest('[data-pact]');
+    const act = btn ? btn.dataset.pact : 'open';
+    if (act === 'open') {
+      const ok = await openProjectRecord(id);
+      if (ok) { $('dlgProjects').close(''); }
+      return;
+    }
+    if (act === 'rename') {
+      let record = null;
+      try { record = await getProjectRecord(id); } catch (err) { record = null; }
+      const currentName = (record && record.project.metadata.name) || '';
+      const name = await promptDialog({
+        title: '專案更名',
+        message: '名稱會用在匯出檔名與專案清單。',
+        value: currentName,
+        okText: '儲存'
+      });
+      if (name) {
+        await renameProjectRecord(id, name);
+        await refreshProjectList();
+      }
+      return;
+    }
+    if (act === 'duplicate') {
+      await duplicateProjectRecord(id);
+      await refreshProjectList();
+      return;
+    }
+    if (act === 'delete') {
+      await deleteProjectRecordWithConfirm(id);
+    }
+  });
+
+  /* resize */
+  let resizeTimer = 0;
+  const ro = new ResizeObserver(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (state.scene) renderPreview(); }, 120);
+  });
+  ro.observe($('stage'));
+
+  /* best-effort flush when the page is hidden or closed */
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushAutosave();
+  });
+  window.addEventListener('pagehide', () => { flushAutosave(); });
+}
+
+function setTab(tab) {
+  state.ui.tab = tab;
+  document.querySelectorAll('.panel[data-panel]').forEach(p => {
+    p.classList.toggle('active', p.dataset.panel === tab);
+  });
+  document.querySelectorAll('.tabbar button').forEach(b => {
+    const on = b.dataset.tab === tab;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+  if (tab === 'preview') renderPreview();
+}
+/* --------------------------- 23. SELFTESTS --------------------------- */
+const SELFTESTS = [];
+function test(name, fn) { SELFTESTS.push({ name, fn }); }
+function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+function eq(actual, expected, msg) {
+  const a = JSON.stringify(actual), b = JSON.stringify(expected);
+  if (a !== b) throw new Error(`${msg || 'not equal'}：期望 ${b}，實際 ${a}`);
+}
+function near(actual, expected, tol, msg) {
+  if (Math.abs(actual - expected) > tol) throw new Error(`${msg || 'not near'}：期望 ${expected}±${tol}，實際 ${actual}`);
+}
+function matrixProject(templateId, preset, count) {
+  const p = emptyProject();
+  p.metadata.name = '測試專案';
+  p.content.title = '測試標題與重點整理';
+  p.content.subtitle = '副標題說明這個圖卡的目的';
+  p.content.summary = '這是一段摘要，用來說明整體內容，長度適中。';
+  p.content.footer = '資料來源：測試資料';
+  p.templateId = templateId;
+  p.canvas = normalizeCanvas({ preset });
+  p.content.items = Array.from({ length: count }, (_, i) => newItem({
+    title: `重點 ${i + 1}`,
+    body: '以一句短句說明這個重點的內容。',
+    iconId: 'target',
+    value: String((i + 1) * 12),
+    unit: '%',
+    label: '2026 Q' + (i + 1)
+  }));
+  return p;
+}
+
+test('validator：合法專案通過', () => {
+  const r = validateProject(sampleProject());
+  assert(r.ok, r.errors.map(e => e.msg).join(';'));
+  eq(r.project.content.items.length, 3);
+  eq(r.project.canvas.width, 1080);
+});
+
+test('validator：缺少 schemaVersion 會失敗', () => {
+  const p = sampleProject();
+  delete p.schemaVersion;
+  const r = validateProject(p);
+  assert(!r.ok);
+  assert(r.errors.some(e => e.path === 'schemaVersion'), '未回報 schemaVersion 錯誤');
+});
+
+test('validator：未知未來版本提供友善錯誤', () => {
+  const p = sampleProject();
+  p.schemaVersion = 99;
+  const r = validateProject(p);
+  assert(!r.ok && r.tooNew);
+  assert(/更新/.test(r.errors[0].msg));
+});
+
+test('validator：錯誤型別與超長欄位', () => {
+  const p = sampleProject();
+  p.content.items = 'not-an-array';
+  p.content.title = '字'.repeat(LIMITS.title + 1);
+  const r = validateProject(p);
+  assert(!r.ok);
+  assert(r.errors.some(e => e.path === 'content.items'));
+  assert(r.errors.some(e => e.path === 'content.title'));
+});
+
+test('validator：畫布尺寸依 preset 正規化', () => {
+  const p = sampleProject();
+  p.canvas = { preset: 'story', width: 100, height: 100 };
+  const r = validateProject(p);
+  assert(r.ok);
+  eq([r.project.canvas.width, r.project.canvas.height], [1080, 1920]);
+  assert(r.notes.length > 0, '應有正規化提示');
+});
+
+test('validator：主題數值會被夾在安全範圍', () => {
+  const p = sampleProject();
+  p.theme.fontScale = 9;
+  p.theme.padding = -5;
+  p.theme.colors.accent = 'red';
+  const r = validateProject(p);
+  assert(!r.ok, '非法色碼應被拒絕');
+  p.theme.colors.accent = '#abc';
+  const r2 = validateProject(p);
+  assert(r2.ok);
+  near(r2.project.theme.fontScale, 1.3, 0.001);
+  eq(r2.project.theme.padding, 32);
+});
+
+test('validator：未知圖示會被清除並提示', () => {
+  const p = sampleProject();
+  p.content.items[0].iconId = 'not-real-icon';
+  const r = validateProject(p);
+  assert(r.ok);
+  eq(r.project.content.items[0].iconId, '');
+  assert(r.notes.some(n => /圖示/.test(n)));
+});
+
+const WRAP_FONT = { size: 24, weight: 400, lineHeight: 1.6 };
+
+test('換行：空字串回傳空陣列', () => {
+  eq(wrapText('', 200, WRAP_FONT), []);
+  eq(wrapText('   ', 200, WRAP_FONT), []);
+});
+
+test('換行：CJK 逐字換行且不超出寬度', () => {
+  const lines = wrapText('繁體中文資訊圖表需要穩定的換行與標點處理，避免行首出現禁則字元。', 240, WRAP_FONT);
+  assert(lines.length > 1, '應換成多行');
+  for (const line of lines) assert(textWidth(line, WRAP_FONT) <= 241, `行寬超標：${line}`);
+});
+
+test('換行：英數單字不被切斷', () => {
+  const lines = wrapText('hello world', 90, WRAP_FONT);
+  eq(lines, ['hello', 'world']);
+});
+
+test('換行：行首禁則標點會退回上一行處理', () => {
+  const lines = wrapText('測試，測試，測試，測試，測試，測試。', 130, WRAP_FONT);
+  for (let i = 1; i < lines.length; i++) {
+    const first = Array.from(lines[i])[0];
+    assert(!FORBIDDEN_START.includes(first), `第 ${i + 1} 行以禁則字元開頭：${lines[i]}`);
+  }
+});
+
+test('換行：保留段落換行', () => {
+  const lines = wrapText('第一段\n第二段', 400, WRAP_FONT);
+  eq(lines, ['第一段', '第二段']);
+});
+
+test('換行：超長無空白英數字串會硬切', () => {
+  const lines = wrapText('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 100, WRAP_FONT);
+  assert(lines.length > 1, '應硬切成多行');
+  for (const line of lines) assert(textWidth(line, WRAP_FONT) <= 101, '硬切後仍超寬');
+});
+
+test('對比度：黑白為 21:1，同色為 1:1', () => {
+  near(contrastRatio('#000000', '#ffffff'), 21, 0.01);
+  near(contrastRatio('#ffffff', '#ffffff'), 1, 0.001);
+  const report = contrastReport(sampleProject());
+  eq(report.length, 5);
+});
+
+test('檔名清理：移除非法字元並限制長度', () => {
+  eq(sanitizeFilename('a/b:c*?"<>|', 'png'), 'a-b-c.png');
+  eq(sanitizeFilename('   ', 'png'), 'infographic.png');
+  assert(sanitizeFilename('字'.repeat(200), 'png').length <= 65, '檔名過長');
+  eq(exportFilename({ metadata: { name: '報告 2026' }, canvas: { preset: 'square', width: 1080, height: 1080 } }, 'png'), '報告 2026-square-1080x1080.png');
+});
+
+test('解析：全文拆分為標題／條列／來源', () => {
+  const parsed = parsePlainText(SAMPLE_TEXT);
+  eq(parsed.title, 'AI 落地三大重點');
+  eq(parsed.items.length, 3);
+  eq(parsed.items[0].title, '海運物流');
+  assert(parsed.items[0].body.includes('港區'), '條列內文未拆出');
+  assert(parsed.footer.includes('來源'), '來源列未辨識');
+});
+
+test('解析：未加條列的文字進入摘要', () => {
+  const parsed = parsePlainText('我的標題\n這是一段沒有條列的說明文字。');
+  eq(parsed.title, '我的標題');
+  eq(parsed.items.length, 0);
+  eq(parsed.summary, '這是一段沒有條列的說明文字。');
+});
+
+test('模板容量：超過上限只呈現前 N 項但資料保留', () => {
+  const lim = templateLimit('three-highlights', 6);
+  eq(lim.visible, 3);
+  eq(lim.hidden, 3);
+  assert(lim.over);
+  const p = matrixProject('three-highlights', 'portrait', 6);
+  const scene = buildScene(p);
+  assert(scene.warnings.some(w => w.code === 'item-limit'), '缺少項目上限提示');
+  eq(p.content.items.length, 6);
+});
+
+test('KPI：缺數值顯示待填且有警示', () => {
+  const p = matrixProject('kpi-cards', 'square', 2);
+  p.content.items[0].value = '';
+  const scene = buildScene(p);
+  assert(scene.warnings.some(w => w.code === 'missing-kpi-value'), '缺少待填警示');
+});
+
+test('歷史：上限 50 筆、合併輸入、可復原', () => {
+  const h = new History(50);
+  for (let i = 0; i < 60; i++) h.record({ n: i }, 'unique-' + i, 1000000 + i * 1000);
+  eq(h.past.length, 50);
+  const merged = new History(50);
+  merged.record({ n: 0 }, 'same', 1000);
+  merged.record({ n: 1 }, 'same', 1200);
+  eq(merged.past.length, 1);
+  const u = h.undo({ n: 60 });
+  assert(u && u.n === 59, 'undo 結果不正確');
+  const r = h.redo({ n: 59 });
+  assert(r && r.n === 60, 'redo 結果不正確');
+});
+
+test('JSON：round-trip 後內容一致', () => {
+  const p = sampleProject();
+  const parsed = JSON.parse(projectJson(p));
+  const r = validateProject(parsed);
+  assert(r.ok);
+  eq(r.project.content.items.map(i => i.title), p.content.items.map(i => i.title));
+  eq(r.project.templateId, p.templateId);
+  eq(r.project.canvas, p.canvas);
+  const lower = {};
+  for (const k in p.theme.colors) lower[k] = p.theme.colors[k].toLowerCase();
+  eq(r.project.theme.colors, lower);
+});
+
+test('PNG：輸出尺寸等於畫布設定', () => {
+  const p = matrixProject('three-highlights', 'landscape', 3);
+  const scene = buildScene(p);
+  const canvas = document.createElement('canvas');
+  paintScene(canvas, scene);
+  eq([canvas.width, canvas.height], [1200, 675]);
+  assert(canvas.toDataURL('image/png').startsWith('data:image/png'));
+});
+
+test('模板 × 畫布：30 組皆可渲染且不超出邊界', () => {
+  const failures = [];
+  for (const tpl of TEMPLATE_IDS) {
+    for (const preset of CANVAS_IDS) {
+      const p = matrixProject(tpl, preset, tpl === 'comparison' ? 2 : 3);
+      const scene = buildScene(p);
+      const presetDef = CANVAS_PRESETS[preset];
+      if (scene.primitives.length < 4) failures.push(`${tpl}/${preset}: 場景為空`);
+      if (scene.width !== presetDef.width || scene.height !== presetDef.height) failures.push(`${tpl}/${preset}: 尺寸不符`);
+      const bad = scene.warnings.filter(w => w.code === 'out-of-bounds' || w.code === 'render-error' || w.code === 'no-space');
+      if (bad.length) failures.push(`${tpl}/${preset}: ${bad.map(w => w.code + ' ' + w.message).join(' | ')}`);
+    }
+  }
+  assert(!failures.length, failures.join('\n'));
+});
+
+test('模板 × 畫布：最大項目數仍不超出邊界', () => {
+  const failures = [];
+  for (const tpl of TEMPLATE_IDS) {
+    for (const preset of CANVAS_IDS) {
+      const count = TEMPLATES[tpl].max;
+      const p = matrixProject(tpl, preset, count);
+      const scene = buildScene(p);
+      const bad = scene.warnings.filter(w => w.code === 'out-of-bounds' || w.code === 'render-error');
+      if (bad.length) failures.push(`${tpl}/${preset}/${count}項: ${bad.map(w => w.message).join(' | ')}`);
+    }
+  }
+  assert(!failures.length, failures.join('\n'));
+});
+
+test('長標題會產生可理解的溢出警示', () => {
+  const p = matrixProject('three-highlights', 'square', 3);
+  p.content.title = '這是一個非常長的標題'.repeat(8);
+  const scene = buildScene(p);
+  const w = scene.warnings.find(x => x.code === 'title-truncated');
+  assert(w, '缺少標題溢出警示');
+  eq(w.severity, 'error');
+});
+
+test('缺少主標題時阻擋匯出（error 級警示）', () => {
+  const p = matrixProject('steps', 'portrait', 3);
+  p.content.title = '';
+  const issues = sceneIssues(p);
+  assert(issues.errors.some(e => e.code === 'missing-title'), '缺少必填標題警示');
+});
+
+test('內建圖示皆有可用的 path 資料', () => {
+  const ids = Object.keys(ICONS);
+  assert(ids.length >= 48, '圖示數量不足');
+  for (const id of ids) {
+    assert(ICONS[id].paths.length > 0, id + ' 沒有 path');
+    assert(ICONS[id].label, id + ' 缺少中文標籤');
+  }
+});
+
+async function runSelfTests() {
+  const results = [];
+  for (const t of SELFTESTS) {
+    try {
+      await t.fn();
+      results.push({ name: t.name, ok: true });
+    } catch (err) {
+      results.push({ name: t.name, ok: false, error: (err && err.message) ? err.message : String(err) });
+    }
+  }
+  const passed = results.filter(r => r.ok).length;
+  const failed = results.length - passed;
+  const payload = { total: results.length, passed, failed, results };
+  window.__SELFTEST__ = payload;
+
+  const panel = document.createElement('div');
+  panel.id = 'selftest';
+  const h1 = document.createElement('h1');
+  h1.textContent = 'Infographic Builder — Self Test';
+  const summary = document.createElement('p');
+  summary.className = 'summary';
+  summary.textContent = `${passed} / ${results.length} 通過` + (failed ? ` · ${failed} 失敗` : ' · 全部通過');
+  panel.append(h1, summary);
+  for (const r of results) {
+    const row = document.createElement('div');
+    row.className = 'case';
+    const mark = document.createElement('span');
+    mark.className = r.ok ? 'pass' : 'fail';
+    mark.textContent = r.ok ? '✓' : '✗';
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.textContent = r.name + (r.ok ? '' : ' — ' + r.error);
+    row.append(mark, name);
+    panel.appendChild(row);
+  }
+  document.body.appendChild(panel);
+  return payload;
+}
+
+/* ----------------------------- 24. BOOT ------------------------------ */
+async function restoreLastProject() {
+  if (storageBlocked) {
+    setBanner('目前以 file:// 開啟或瀏覽器不支援 IndexedDB：無法使用專案庫與自動儲存。建議用本機靜態伺服器（例如 python -m http.server），或定期按「儲存 JSON」備份。');
+    return;
+  }
+  try {
+    const meta = await getMeta();
+    let record = null;
+    if (meta && meta.projectId) {
+      record = await getProjectRecord(meta.projectId);
+    }
+    if (!record) {
+      const list = await listProjectRecords();
+      record = list[0] || null;
+    }
+    if (!record) return;
+    const result = validateProject(record.project);
+    if (!result.ok) {
+      toast('上次的專案格式不符，已建立空白專案。', 'warn');
+      return;
+    }
+    state.project = result.project;
+    state.history.clear();
+    state.ui.dirty = false;
+    refresh({ form: true, settings: true, preview: true, topbar: true });
+    toast('已開啟上次專案「' + (result.project.metadata.name || '未命名專案') + '」· 專案清單可管理多個專案', 'ok');
+  } catch (err) {
+    autosave.error = err && err.message ? err.message : String(err);
+    setBanner('無法讀取本機專案庫（' + autosave.error + '）。仍可編輯、匯出，請用「儲存 JSON」備份。');
+  }
+}
+
+function boot() {
+  bindDialogBasics();
+  bindEvents();
+  refresh({ form: true, settings: true, preview: true, topbar: true });
+  const params = new URLSearchParams(location.search);
+  if (params.get('selftest') === '1') {
+    document.documentElement.dataset.selftest = '1';
+    runSelfTests();
+    return;
+  }
+  restoreLastProject();
+}
+
+window.__IB__ = {
+  version: '1.0.0',
+  get state() { return state; },
+  project: () => state.project,
+  loadProject: p => applyProject(p, { history: true }),
+  buildScene: p => buildScene(p || state.project),
+  issues: () => state.issues,
+  renderPngBlob: p => renderPngBlob(p || state.project),
+  pngMeta: async p => {
+    const r = await renderPngBlob(p || state.project);
+    return { width: r.width, height: r.height, bytes: r.blob.size, type: r.blob.type };
+  },
+  validateProject, wrapText, parsePlainText, contrastRatio, contrastReport,
+  sanitizeFilename, exportFilename, History, templateLimit, metrics,
+  saveProjectJson, sampleProject, emptyProject, setTab,
+  selftest: runSelfTests
+};
+
+boot();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
