@@ -1,0 +1,3253 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UI 狀態徽章與標籤合成器 | Status Badge & Micro-Tag Workshop</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-elevated: #334155;
+      --surface-subtle: #172033;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-faint: #64748b;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-focus: rgba(59, 130, 246, 0.25);
+      --border: #334155;
+      --border-subtle: #1e293b;
+      --radius-sm: 6px;
+      --radius: 10px;
+      --radius-lg: 14px;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.25);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-elevated: #f1f5f9;
+      --surface-subtle: #f8fafc;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --text-faint: #94a3b8;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-focus: rgba(37, 99, 235, 0.2);
+      --border: #e2e8f0;
+      --border-subtle: #cbd5e1;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Keyframe Animations */
+    @keyframes badge-pulse-scale {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.4); opacity: 0.2; }
+      100% { transform: scale(1.8); opacity: 0; }
+    }
+    @keyframes badge-spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes badge-fade-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .animate-spin-fast {
+      animation: badge-spin 1.2s linear infinite;
+    }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      backdrop-filter: blur(8px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #3b82f6, #10b981);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .brand-title {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-subtitle {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons & Inputs */
+    button, .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.8rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.825rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    button:hover, .btn:hover {
+      background: var(--surface-elevated);
+      border-color: var(--text-faint);
+    }
+
+    button:active, .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff !important;
+      border-color: var(--primary);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border-color: transparent;
+    }
+
+    .btn-ghost:hover {
+      background: var(--surface-elevated);
+      border-color: var(--border);
+    }
+
+    .btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+
+    .btn-danger {
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    .btn-danger:hover {
+      background: #ef4444;
+      color: white;
+    }
+
+    input, select, textarea {
+      font-family: inherit;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      padding: 0.4rem 0.65rem;
+      font-size: 0.825rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-focus);
+    }
+
+    /* Main App Layout */
+    .app-container {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      flex: 1;
+      height: calc(100vh - 58px);
+      overflow: hidden;
+    }
+
+    @media (max-width: 1024px) {
+      .app-container {
+        grid-template-columns: 1fr;
+        height: auto;
+        overflow: visible;
+      }
+    }
+
+    /* Left Sidebar: Controls */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .tabs-header {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 0.65rem 0.5rem;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      font-size: 0.775rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: var(--surface);
+    }
+
+    .tab-content {
+      display: none;
+      padding: 1.25rem;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .tab-content.active {
+      display: flex;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.775rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .control-label span.value-badge {
+      font-family: var(--font-mono);
+      font-size: 0.725rem;
+      color: var(--primary);
+      text-transform: none;
+      background: var(--surface-elevated);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+    }
+
+    .segmented-control {
+      display: flex;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .seg-item {
+      flex: 1;
+      text-align: center;
+      padding: 0.35rem 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s;
+      user-select: none;
+    }
+
+    .seg-item:hover {
+      color: var(--text);
+    }
+
+    .seg-item.active {
+      background: var(--surface-elevated);
+      color: var(--text);
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .color-preset-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+
+    .preset-card {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.45rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      background: var(--surface-subtle);
+      transition: all 0.15s;
+    }
+
+    .preset-card:hover {
+      border-color: var(--primary);
+    }
+
+    .preset-card.active {
+      border-color: var(--primary);
+      background: var(--surface-elevated);
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+
+    .color-swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .preset-name {
+      font-size: 0.75rem;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .icon-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.4rem;
+    }
+
+    .icon-opt {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0.5rem 0.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      gap: 0.3rem;
+      background: var(--surface-subtle);
+      transition: all 0.15s;
+    }
+
+    .icon-opt:hover {
+      border-color: var(--primary);
+      background: var(--surface-elevated);
+    }
+
+    .icon-opt.active {
+      border-color: var(--primary);
+      background: var(--surface-elevated);
+      box-shadow: 0 0 0 1px var(--primary);
+      color: var(--primary);
+    }
+
+    .icon-opt span {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    .icon-opt.active span {
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--surface-elevated);
+      outline: none;
+      -webkit-appearance: none;
+      padding: 0;
+      border: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    }
+
+    /* Right Main Panel */
+    .main-workspace {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow-y: auto;
+      background: var(--bg);
+    }
+
+    /* Focused Inspector Section */
+    .inspector-section {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .inspector-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .inspector-title {
+      font-size: 0.825rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .inspector-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .canvas-viewport {
+      position: relative;
+      min-height: 180px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 2rem;
+      transition: background 0.2s ease;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Canvas Background Variations */
+    .bg-checker {
+      background-color: #1e293b;
+      background-image: linear-gradient(45deg, #0f172a 25%, transparent 25%),
+                        linear-gradient(-45deg, #0f172a 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #0f172a 75%),
+                        linear-gradient(-45deg, transparent 75%, #0f172a 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+
+    [data-theme="light"] .bg-checker {
+      background-color: #ffffff;
+      background-image: linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+                        linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+                        linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+                        linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+    }
+
+    .bg-light-pure { background: #ffffff !important; color: #0f172a; }
+    .bg-dim-slate { background: #f8fafc !important; color: #0f172a; }
+    .bg-dark-slate { background: #0f172a !important; color: #f8fafc; }
+    .bg-dark-zinc { background: #18181b !important; color: #f8fafc; }
+    .bg-radiant-gradient {
+      background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #ec4899 100%) !important;
+      color: #ffffff;
+    }
+
+    .badge-stage {
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      transform-origin: center center;
+    }
+
+    /* WCAG Contrast Bar */
+    .wcag-indicator-bar {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.9rem;
+      font-size: 0.775rem;
+      flex-wrap: wrap;
+    }
+
+    .wcag-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-weight: 700;
+      padding: 0.15rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.7rem;
+    }
+
+    .wcag-tag.pass {
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .wcag-tag.fail {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .wcag-detail {
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 0.725rem;
+    }
+
+    /* Matrix Context Grid */
+    .matrix-section {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .matrix-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .matrix-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .matrix-card-header {
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--surface-subtle);
+    }
+
+    .matrix-card-body {
+      padding: 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 90px;
+    }
+
+    /* Real UI Mockups Section */
+    .mockups-section {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mockup-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .mockup-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .mockup-header {
+      padding: 0.5rem 0.85rem;
+      background: var(--surface-subtle);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Table Mockup */
+    .mock-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: left;
+    }
+
+    .mock-table th {
+      padding: 0.6rem 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-subtle);
+    }
+
+    .mock-table td {
+      padding: 0.65rem 0.85rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+
+    .mock-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Profile Mockup */
+    .mock-profile {
+      padding: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .profile-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6366f1, #3b82f6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: white;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+
+    .profile-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .profile-name-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .profile-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .profile-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Dashboard Mockup */
+    .mock-dashboard {
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .dash-left {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .dash-crumb {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .dash-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    /* Code Export Section */
+    .code-export-section {
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: var(--surface);
+    }
+
+    .code-export-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .code-tabs {
+      display: flex;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .code-tab-btn {
+      padding: 0.35rem 0.65rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .code-tab-btn.active {
+      background: var(--surface-elevated);
+      color: var(--text);
+    }
+
+    .code-box-container {
+      position: relative;
+    }
+
+    .code-block {
+      background: #090d16;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      font-family: var(--font-mono);
+      font-size: 0.775rem;
+      color: #e2e8f0;
+      overflow-x: auto;
+      max-height: 240px;
+      white-space: pre;
+      line-height: 1.6;
+    }
+
+    /* Modal / Dialog */
+    dialog {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      box-shadow: var(--shadow-lg);
+      margin: auto;
+      max-width: 520px;
+      width: 90%;
+      padding: 1.5rem;
+      outline: none;
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+    }
+
+    .dialog-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    .dialog-body {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+    }
+
+    .preset-list-manage {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      max-height: 250px;
+      overflow-y: auto;
+      margin-top: 0.5rem;
+    }
+
+    .preset-item-manage {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+
+    /* Toast Notification */
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-lg);
+      padding: 0.65rem 1rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      animation: badge-fade-in 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: auto;
+    }
+
+    .toast-success {
+      border-left: 4px solid #10b981;
+    }
+
+    .toast-info {
+      border-left: 4px solid #3b82f6;
+    }
+
+    .toast-error {
+      border-left: 4px solid #ef4444;
+    }
+
+    /* Micro-tag standard styling styles inside previews */
+    .badge-component {
+      display: inline-flex;
+      align-items: center;
+      white-space: nowrap;
+      user-select: none;
+      transition: all 0.15s ease;
+      box-sizing: border-box;
+      line-height: 1;
+    }
+
+    .badge-icon-svg {
+      flex-shrink: 0;
+      display: inline-block;
+    }
+
+    .badge-dismiss-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: none;
+      background: transparent;
+      color: inherit;
+      opacity: 0.65;
+      cursor: pointer;
+      border-radius: 50%;
+      transition: opacity 0.15s, background-color 0.15s;
+    }
+    .badge-dismiss-btn:hover {
+      opacity: 1;
+      background-color: rgba(0, 0, 0, 0.12);
+    }
+
+    /* Pulse Dot Keyframe for vanilla css rendering */
+    .pulse-halo-effect {
+      position: absolute;
+      inset: 0;
+      border-radius: 9999px;
+      animation: badge-pulse-scale 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Navigation Bar -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+        </svg>
+      </div>
+      <div class="brand-title">
+        <span>UI 狀態徽章與標籤合成器</span>
+        <span class="brand-subtitle">Status Badge & Micro-Tag Workshop</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Quick Semantic Selector -->
+      <select id="quick-preset-select" style="min-width: 140px;" title="快速選擇語意色彩">
+        <option value="success">🟢 正常 / Active</option>
+        <option value="warning">🟡 警告 / Pending</option>
+        <option value="error">🔴 異常 / Critical</option>
+        <option value="info">🔵 資訊 / In-Progress</option>
+        <option value="neutral">⚪ 中性 / Draft</option>
+        <option value="custom">🎨 自訂品牌色</option>
+      </select>
+
+      <button id="btn-save-preset" title="將目前徽章配置儲存至個人資料庫">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        儲存預設
+      </button>
+
+      <button id="btn-manage-presets" title="管理自訂預設庫">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        庫存管理
+      </button>
+
+      <button id="btn-share-link" class="btn-primary" title="產生帶有當前狀態的分享連結">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        分享設計
+      </button>
+
+      <button id="btn-reset" title="重設為預設配置">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
+
+      <button id="btn-theme-toggle" title="切換編輯器深淺外觀">
+        <svg id="theme-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace Container -->
+  <div class="app-container">
+    
+    <!-- LEFT PANEL: Controls & Settings -->
+    <aside class="sidebar">
+      <div class="tabs-header">
+        <button class="tab-btn active" data-tab="tab-anatomy">1. 形態槽位</button>
+        <button class="tab-btn" data-tab="tab-style">2. 幾何外觀</button>
+        <button class="tab-btn" data-tab="tab-color">3. 語意配色</button>
+        <button class="tab-btn" data-tab="tab-animation">4. 動態特效</button>
+      </div>
+
+      <!-- Tab 1: Tag Anatomy (Leading, Text, Trailing) -->
+      <div id="tab-anatomy" class="tab-content active">
+        <!-- Label Content -->
+        <div class="control-group">
+          <label class="control-label" for="inp-label-text">
+            <span>標籤文字 (Text Label)</span>
+          </label>
+          <input type="text" id="inp-label-text" value="Active System" placeholder="輸入徽章標籤文字">
+        </div>
+
+        <!-- Leading Accessory -->
+        <div class="control-group">
+          <label class="control-label">
+            <span>前置元素 (Leading Accessory)</span>
+          </label>
+          <div class="segmented-control" id="seg-leading-type">
+            <div class="seg-item" data-val="none">無</div>
+            <div class="seg-item" data-val="dot">固態點</div>
+            <div class="seg-item active" data-val="pulse">呼吸燈</div>
+            <div class="seg-item" data-val="icon">圖示</div>
+          </div>
+        </div>
+
+        <!-- Icon Picker (Visible if Leading = icon) -->
+        <div class="control-group" id="icon-picker-group" style="display: none;">
+          <label class="control-label">
+            <span>選擇前置圖示 (SVG Icon)</span>
+          </label>
+          <div class="icon-picker-grid" id="icon-picker-grid">
+            <div class="icon-opt active" data-icon="check">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Check</span>
+            </div>
+            <div class="icon-opt" data-icon="alert">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Alert</span>
+            </div>
+            <div class="icon-opt" data-icon="clock">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>Clock</span>
+            </div>
+            <div class="icon-opt" data-icon="spinner">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+              <span>Spin</span>
+            </div>
+            <div class="icon-opt" data-icon="sparkle">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>
+              <span>Star</span>
+            </div>
+            <div class="icon-opt" data-icon="info">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              <span>Info</span>
+            </div>
+            <div class="icon-opt" data-icon="shield">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>Shield</span>
+            </div>
+            <div class="icon-opt" data-icon="zap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+              <span>Zap</span>
+            </div>
+            <div class="icon-opt" data-icon="tag">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m20.59 13.41-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+              <span>Tag</span>
+            </div>
+            <div class="icon-opt" data-icon="heart">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+              <span>Heart</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trailing Accessory -->
+        <div class="control-group">
+          <label class="control-label">
+            <span>後置元素 (Trailing Accessory)</span>
+          </label>
+          <div class="segmented-control" id="seg-trailing-type">
+            <div class="seg-item active" data-val="none">無</div>
+            <div class="seg-item" data-val="count">計數器</div>
+            <div class="seg-item" data-val="dismiss">移除鈕 (X)</div>
+            <div class="seg-item" data-val="chevron">箭頭</div>
+          </div>
+        </div>
+
+        <!-- Trailing Count Value (if Trailing = count) -->
+        <div class="control-group" id="trailing-count-group" style="display: none;">
+          <label class="control-label" for="inp-count-text">
+            <span>計數文字 (Count Value)</span>
+          </label>
+          <input type="text" id="inp-count-text" value="+12" placeholder="例: +12 或 99+">
+        </div>
+
+        <!-- Typography Settings -->
+        <div class="control-group">
+          <label class="control-label">
+            <span>字級大小 (Font Size)</span>
+            <span class="value-badge" id="val-badge-font-size">12px</span>
+          </label>
+          <div class="segmented-control" id="seg-font-size">
+            <div class="seg-item" data-val="11px">11px</div>
+            <div class="seg-item active" data-val="12px">12px</div>
+            <div class="seg-item" data-val="13px">13px</div>
+            <div class="seg-item" data-val="14px">14px</div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">
+            <span>字體粗細 (Font Weight)</span>
+            <span class="value-badge" id="val-badge-font-weight">500 Medium</span>
+          </label>
+          <div class="segmented-control" id="seg-font-weight">
+            <div class="seg-item" data-val="400">Regular 400</div>
+            <div class="seg-item active" data-val="500">Medium 500</div>
+            <div class="seg-item" data-val="600">Semibold 600</div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">
+            <span>大小寫轉換 (Text Transform)</span>
+          </label>
+          <div class="segmented-control" id="seg-text-transform">
+            <div class="seg-item active" data-val="none">原始</div>
+            <div class="seg-item" data-val="uppercase">大寫 (UPPER)</div>
+            <div class="seg-item" data-val="capitalize">字首 (Capital)</div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">
+            <span>字距微調 (Letter Spacing)</span>
+            <span class="value-badge" id="val-badge-letter-spacing">正常</span>
+          </label>
+          <div class="segmented-control" id="seg-letter-spacing">
+            <div class="seg-item active" data-val="normal">正常</div>
+            <div class="seg-item" data-val="0.025em">稍寬 (+0.025)</div>
+            <div class="seg-item" data-val="0.05em">明顯 (+0.05)</div>
+            <div class="seg-item" data-val="0.1em">特寬 (+0.1)</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Geometry & Visual Variants -->
+      <div id="tab-style" class="tab-content">
+        <!-- Style Variants -->
+        <div class="control-group">
+          <label class="control-label">
+            <span>風格模式 (Style Variant)</span>
+          </label>
+          <div class="segmented-control" id="seg-style-variant">
+            <div class="seg-item active" data-val="soft">Soft 柔和</div>
+            <div class="seg-item" data-val="outline">Outline 外框</div>
+            <div class="seg-item" data-val="solid">Solid 實心</div>
+            <div class="seg-item" data-val="glass">Glass 磨砂</div>
+            <div class="seg-item" data-val="ghost">Ghost 極簡</div>
+          </div>
+        </div>
+
+        <!-- Geometry: Size -->
+        <div class="control-group">
+          <label class="control-label">
+            <span>尺寸規格 (Size Spec)</span>
+          </label>
+          <div class="segmented-control" id="seg-badge-size">
+            <div class="seg-item" data-val="sm">SM (20px)</div>
+            <div class="seg-item active" data-val="md">MD (24px)</div>
+            <div class="seg-item" data-val="lg">LG (28px)</div>
+          </div>
+        </div>
+
+        <!-- Geometry: Radius -->
+        <div class="control-group">
+          <label class="control-label">
+            <span>圓角幾何 (Border Radius)</span>
+            <span class="value-badge" id="val-badge-radius">Pill (全圓)</span>
+          </label>
+          <div class="segmented-control" id="seg-badge-radius">
+            <div class="seg-item active" data-val="9999px">Pill</div>
+            <div class="seg-item" data-val="6px">MD (6px)</div>
+            <div class="seg-item" data-val="4px">SM (4px)</div>
+            <div class="seg-item" data-val="0px">Sharp (0px)</div>
+          </div>
+        </div>
+
+        <!-- Padding Controls -->
+        <div class="control-group">
+          <label class="control-label" for="range-padding-x">
+            <span>水平內距 (Padding X)</span>
+            <span class="value-badge" id="val-padding-x">10px</span>
+          </label>
+          <div class="range-wrap">
+            <input type="range" id="range-padding-x" min="4" max="24" step="1" value="10">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label" for="range-padding-y">
+            <span>垂直內距 (Padding Y)</span>
+            <span class="value-badge" id="val-padding-y">4px</span>
+          </label>
+          <div class="range-wrap">
+            <input type="range" id="range-padding-y" min="0" max="12" step="1" value="4">
+          </div>
+        </div>
+
+        <!-- Gap between elements -->
+        <div class="control-group">
+          <label class="control-label" for="range-gap">
+            <span>槽位間距 (Item Gap)</span>
+            <span class="value-badge" id="val-gap">6px</span>
+          </label>
+          <div class="range-wrap">
+            <input type="range" id="range-gap" min="2" max="12" step="1" value="6">
+          </div>
+        </div>
+
+        <!-- Border Width -->
+        <div class="control-group">
+          <label class="control-label">
+            <span>邊框粗細 (Border Width)</span>
+            <span class="value-badge" id="val-border-width">1px</span>
+          </label>
+          <div class="segmented-control" id="seg-border-width">
+            <div class="seg-item" data-val="0px">0px</div>
+            <div class="seg-item active" data-val="1px">1px</div>
+            <div class="seg-item" data-val="1.5px">1.5px</div>
+            <div class="seg-item" data-val="2px">2px</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: Color & Semantic Presets -->
+      <div id="tab-color" class="tab-content">
+        <div class="control-group">
+          <label class="control-label">
+            <span>系統狀態語意庫 (Semantic Presets)</span>
+          </label>
+          <div class="color-preset-grid">
+            <div class="preset-card active" data-color="success">
+              <div class="color-swatch" style="background: #10b981;"></div>
+              <span class="preset-name">Success</span>
+            </div>
+            <div class="preset-card" data-color="warning">
+              <div class="color-swatch" style="background: #f59e0b;"></div>
+              <span class="preset-name">Warning</span>
+            </div>
+            <div class="preset-card" data-color="error">
+              <div class="color-swatch" style="background: #ef4444;"></div>
+              <span class="preset-name">Error</span>
+            </div>
+            <div class="preset-card" data-color="info">
+              <div class="color-swatch" style="background: #0ea5e9;"></div>
+              <span class="preset-name">Info</span>
+            </div>
+            <div class="preset-card" data-color="neutral">
+              <div class="color-swatch" style="background: #64748b;"></div>
+              <span class="preset-name">Neutral</span>
+            </div>
+            <div class="preset-card" data-color="custom">
+              <div class="color-swatch" id="custom-color-indicator" style="background: #8b5cf6;"></div>
+              <span class="preset-name">Custom</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Color Controls (Visible when custom is active) -->
+        <div id="custom-color-controls" style="display: none; flex-direction: column; gap: 0.85rem; padding: 0.85rem; background: var(--surface-subtle); border-radius: var(--radius-sm); border: 1px solid var(--border);">
+          <div class="control-group">
+            <label class="control-label" for="inp-custom-hex">
+              <span>品牌色票 (Hex Color)</span>
+            </label>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+              <input type="color" id="inp-custom-picker" value="#8b5cf6" style="width: 38px; height: 34px; padding: 2px; cursor: pointer;">
+              <input type="text" id="inp-custom-hex" value="#8B5CF6" style="flex: 1; text-transform: uppercase; font-family: var(--font-mono);">
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Contrast Audit Summary inside panel -->
+        <div class="control-group" style="margin-top: 0.5rem;">
+          <label class="control-label">
+            <span>色彩可讀性即時檢測 (WCAG 2.1)</span>
+          </label>
+          <div style="background: var(--surface-subtle); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.75rem; font-size: 0.775rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.35rem;">
+              <span style="color: var(--text-muted);">文字與徽章底色對比:</span>
+              <strong id="side-contrast-ratio" style="font-family: var(--font-mono);">6.82 : 1</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="color: var(--text-muted);">無障礙評級標準:</span>
+              <span id="side-contrast-status" class="wcag-tag pass">AA PASS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 4: Animations & Effects -->
+      <div id="tab-animation" class="tab-content">
+        <div class="control-group">
+          <label class="control-label" for="range-pulse-speed">
+            <span>呼吸燈頻率週期 (Pulse Speed)</span>
+            <span class="value-badge" id="val-pulse-speed">1.5 秒</span>
+          </label>
+          <div class="range-wrap">
+            <input type="range" id="range-pulse-speed" min="0.6" max="3.0" step="0.1" value="1.5">
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">
+            <span>圖示微動態 (Icon Animation)</span>
+          </label>
+          <div class="segmented-control" id="seg-icon-anim">
+            <div class="seg-item active" data-val="none">靜態</div>
+            <div class="seg-item" data-val="spin">旋轉 (Spin)</div>
+            <div class="seg-item" data-val="pulse">呼吸 (Pulse)</div>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label class="control-label">
+            <span>微互動反饋 (Interactive Hover Feedback)</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; cursor: pointer; color: var(--text-muted);">
+            <input type="checkbox" id="chk-hover-glow" checked>
+            <span>懸停微升浮與光暈擴散 (Hover Glow)</span>
+          </label>
+        </div>
+      </div>
+    </aside>
+
+    <!-- RIGHT PANEL: Live Canvas, Context Matrix & Code Export -->
+    <main class="main-workspace">
+      
+      <!-- Focused Inspector View -->
+      <section class="inspector-section">
+        <div class="inspector-toolbar">
+          <div class="inspector-title">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            焦點檢測畫布 (Focused Inspector Canvas)
+          </div>
+
+          <div class="inspector-controls">
+            <!-- Zoom Controls -->
+            <div class="segmented-control" id="seg-canvas-zoom" style="width: auto;">
+              <div class="seg-item" data-zoom="1">100%</div>
+              <div class="seg-item" data-zoom="1.5">150%</div>
+              <div class="seg-item active" data-zoom="2">200%</div>
+              <div class="seg-item" data-zoom="3">300%</div>
+            </div>
+
+            <!-- Canvas Background Switcher -->
+            <select id="canvas-bg-select" title="更換畫布背景測試" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+              <option value="bg-checker">🏁 網格透明 (Checkerboard)</option>
+              <option value="bg-dark-slate" selected>⬛ 深色背景 (#0F172A)</option>
+              <option value="bg-dark-zinc">⬛ 極黑背景 (#18181B)</option>
+              <option value="bg-light-pure">⬜ 純白背景 (#FFFFFF)</option>
+              <option value="bg-dim-slate">◽ 淺灰背景 (#F8FAFC)</option>
+              <option value="bg-radiant-gradient">🌈 炫彩漸層 (Radiant Glass)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Live Canvas Viewport -->
+        <div id="inspector-canvas" class="canvas-viewport bg-dark-slate">
+          <div id="inspector-stage" class="badge-stage" style="transform: scale(2);">
+            <!-- Live Badge will be mounted here -->
+          </div>
+        </div>
+
+        <!-- WCAG Contrast Ratio Bar -->
+        <div class="wcag-indicator-bar">
+          <div style="font-weight: 600; display: flex; align-items: center; gap: 0.4rem;">
+            <span>無障礙對比評級:</span>
+            <span id="wcag-badge-rating" class="wcag-tag pass">WCAG AA 合格</span>
+          </div>
+          <div style="color: var(--text-muted); font-size: 0.725rem;">
+            規範基準：一般文字須達 <strong style="color: var(--text);">4.5:1</strong> (AA)，強化級需 <strong style="color: var(--text);">7.0:1</strong> (AAA)
+          </div>
+          <div class="wcag-detail">
+            <span>文字對比: <strong id="wcag-text-ratio">6.82:1</strong></span>
+            <span>•</span>
+            <span>外框邊界對比: <strong id="wcag-border-ratio">2.31:1</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Multi-Context Matrix Previews -->
+      <section class="matrix-section">
+        <div class="section-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          多情境鏡像矩陣 (Multi-Context Matrix Previews)
+        </div>
+
+        <div class="matrix-grid">
+          <!-- Light Mode Context -->
+          <div class="matrix-card">
+            <div class="matrix-card-header">
+              <span>純淨淺色模式 (#FFFFFF)</span>
+              <span style="font-family: var(--font-mono); font-size: 0.65rem;">Light Theme</span>
+            </div>
+            <div class="matrix-card-body bg-light-pure">
+              <div class="matrix-badge-target" data-context="light"></div>
+            </div>
+          </div>
+
+          <!-- Dark Slate Mode Context -->
+          <div class="matrix-card">
+            <div class="matrix-card-header">
+              <span>高對比深色模式 (#0F172A)</span>
+              <span style="font-family: var(--font-mono); font-size: 0.65rem;">Dark Theme</span>
+            </div>
+            <div class="matrix-card-body bg-dark-slate">
+              <div class="matrix-badge-target" data-context="dark"></div>
+            </div>
+          </div>
+
+          <!-- Glass / Gradient Context -->
+          <div class="matrix-card">
+            <div class="matrix-card-header">
+              <span>複雜彩色漸層 (Gradient / Glass)</span>
+              <span style="font-family: var(--font-mono); font-size: 0.65rem;">Translucency</span>
+            </div>
+            <div class="matrix-card-body bg-radiant-gradient">
+              <div class="matrix-badge-target" data-context="gradient"></div>
+            </div>
+          </div>
+
+          <!-- Dim Slate Minimal Context -->
+          <div class="matrix-card">
+            <div class="matrix-card-header">
+              <span>淡柔中性背景 (#F8FAFC)</span>
+              <span style="font-family: var(--font-mono); font-size: 0.65rem;">Subtle Gray</span>
+            </div>
+            <div class="matrix-card-body bg-dim-slate">
+              <div class="matrix-badge-target" data-context="dim"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Real UI Mockups Section -->
+      <section class="mockups-section">
+        <div class="section-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          真實 UI 載體模擬驗證 (Real-World UI Mockups)
+        </div>
+
+        <div class="mockup-container">
+          <!-- 1. Data Table Row Mockup -->
+          <div class="mockup-box">
+            <div class="mockup-header">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              <span>SaaS 數據資料列模擬 (Data Table Row)</span>
+            </div>
+            <div style="overflow-x: auto;">
+              <table class="mock-table">
+                <thead>
+                  <tr>
+                    <th>服務節點 (Service Name)</th>
+                    <th>區域 (Region)</th>
+                    <th>當前健康狀態 (Status)</th>
+                    <th>負載率 (Load)</th>
+                    <th>最後同步</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="background: rgba(59, 130, 246, 0.05);">
+                    <td style="font-weight: 600;">
+                      <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span style="color: var(--primary);">●</span>
+                        <span>api-gateway-cluster-01</span>
+                      </div>
+                    </td>
+                    <td>us-east-1 (N. Virginia)</td>
+                    <td>
+                      <!-- Target badge mockup 1 -->
+                      <div class="mockup-badge-target" data-mockup="table"></div>
+                    </td>
+                    <td style="font-family: var(--font-mono);">24.8%</td>
+                    <td style="color: var(--text-muted); font-size: 0.725rem;">剛剛</td>
+                  </tr>
+                  <tr>
+                    <td style="font-weight: 500;">auth-worker-node-04</td>
+                    <td>ap-northeast-1 (Tokyo)</td>
+                    <td>
+                      <span class="badge-component" style="background: rgba(16, 185, 129, 0.12); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 9999px; padding: 2px 8px; font-size: 11px;">
+                        <span style="width: 6px; height: 6px; background: #10b981; border-radius: 50%; margin-right: 5px;"></span>
+                        Healthy
+                      </span>
+                    </td>
+                    <td style="font-family: var(--font-mono);">12.1%</td>
+                    <td style="color: var(--text-muted); font-size: 0.725rem;">2 分鐘前</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 2. Profile Card Mockup & Dashboard Header (2 columns) -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;">
+            <!-- Profile Card -->
+            <div class="mockup-box">
+              <div class="mockup-header">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <span>個人資料卡抬頭 (Profile Card Header)</span>
+              </div>
+              <div class="mock-profile">
+                <div class="profile-avatar">SJ</div>
+                <div class="profile-info">
+                  <div class="profile-name-row">
+                    <span class="profile-name">Sarah Jenkins</span>
+                    <!-- Target badge mockup 2 -->
+                    <div class="mockup-badge-target" data-mockup="profile"></div>
+                  </div>
+                  <span class="profile-meta">Principal Design Technologist • @sjenkins</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dashboard Hero Bar -->
+            <div class="mockup-box">
+              <div class="mockup-header">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+                <span>儀表板主導航條 (Dashboard Hero Bar)</span>
+              </div>
+              <div class="mock-dashboard">
+                <div class="dash-left">
+                  <span class="dash-crumb">專案管理 / 核心管線</span>
+                  <span class="dash-title">Production v2.4</span>
+                </div>
+                <!-- Target badge mockup 3 -->
+                <div class="mockup-badge-target" data-mockup="dashboard"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Code Export Panel -->
+      <section class="code-export-section">
+        <div class="code-export-header">
+          <div class="code-tabs">
+            <button class="code-tab-btn active" data-export="tailwind">Tailwind CSS (HTML)</button>
+            <button class="code-tab-btn" data-export="css">純 CSS (Vanilla BEM)</button>
+            <button class="code-tab-btn" data-export="react">React / TSX (Lucide)</button>
+            <button class="code-tab-btn" data-export="tokens">Design Tokens (W3C JSON)</button>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <button id="btn-batch-export" class="btn-sm" title="將 Success/Warning/Error/Info/Neutral 6 種狀態整合成 Design System 元件檔匯出">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              打包整套系統庫
+            </button>
+            <button id="btn-copy-code" class="btn-primary btn-sm">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              複製代碼
+            </button>
+          </div>
+        </div>
+
+        <div class="code-box-container">
+          <pre class="code-block" id="export-code-output"><code>// Generating code...</code></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Dialog: Save Custom Preset -->
+  <dialog id="dlg-save-preset">
+    <div class="dialog-header">
+      <span>儲存當前設計為自訂預設</span>
+      <button class="btn-ghost btn-sm" onclick="document.getElementById('dlg-save-preset').close()">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div>
+        <label for="inp-preset-title" style="font-size: 0.8rem; font-weight: 600; display: block; margin-bottom: 0.35rem;">預設名稱</label>
+        <input type="text" id="inp-preset-title" placeholder="例如: Brand Pro Active, VIP Gold Tag" style="width: 100%;">
+      </div>
+      <div style="font-size: 0.775rem; color: var(--text-muted);">
+        這將會把當前的槽位形態、字型微調、邊界數值與配色方案儲存至瀏覽器本地的 IndexedDB 資料庫中。
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button onclick="document.getElementById('dlg-save-preset').close()">取消</button>
+      <button id="btn-confirm-save-preset" class="btn-primary">確定儲存</button>
+    </div>
+  </dialog>
+
+  <!-- Dialog: Manage Presets & JSON Import/Export -->
+  <dialog id="dlg-manage-presets">
+    <div class="dialog-header">
+      <span>預設庫存管理 (Preset Library)</span>
+      <button class="btn-ghost btn-sm" onclick="document.getElementById('dlg-manage-presets').close()">✕</button>
+    </div>
+    <div class="dialog-body">
+      <div style="display: flex; gap: 0.5rem;">
+        <button id="btn-export-json" class="btn-sm" style="flex: 1;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          匯出備份 (JSON)
+        </button>
+        <button id="btn-import-json-trigger" class="btn-sm" style="flex: 1;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          匯入還原 (JSON)
+        </button>
+        <input type="file" id="file-import-input" accept=".json" style="display: none;">
+      </div>
+
+      <div class="preset-list-manage" id="preset-list-container">
+        <!-- Rendered items -->
+      </div>
+    </div>
+    <div class="dialog-footer">
+      <button onclick="document.getElementById('dlg-manage-presets').close()">關閉</button>
+    </div>
+  </dialog>
+
+  <!-- Toast Feedbacks -->
+  <div id="toast-container"></div>
+
+  <!-- APPLICATION SCRIPTS -->
+  <script>
+    /**
+     * UI 狀態徽章與標籤合成器 (Status Badge & Micro-Tag Workshop)
+     * Standalone Vanilla JS Single-Page Application
+     */
+
+    // --- 1. IndexedDB Helper for Custom Presets ---
+    class StatusBadgeDB {
+      constructor(dbName = 'StatusBadgeWorkshopDB', version = 1, storeName = 'custom_presets') {
+        this.dbName = dbName;
+        this.version = version;
+        this.storeName = storeName;
+        this.db = null;
+      }
+
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(this.dbName, this.version);
+          request.onupgradeneeded = (event) => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains(this.storeName)) {
+              db.createObjectStore(this.storeName, { keyPath: 'id' });
+            }
+          };
+          request.onsuccess = (event) => {
+            this.db = event.target.result;
+            resolve(this.db);
+          };
+          request.onerror = (event) => reject(event.target.error);
+        });
+      }
+
+      async getAll() {
+        await this.init();
+        return this.runTransaction('readonly', store => store.getAll());
+      }
+
+      async put(item) {
+        await this.init();
+        await this.runTransaction('readwrite', store => store.put(item));
+        return item;
+      }
+
+      async putMany(items) {
+        await this.init();
+        await this.runTransaction('readwrite', store => {
+          for (const item of items) store.put(item);
+          return null;
+        });
+      }
+
+      async delete(id) {
+        await this.init();
+        await this.runTransaction('readwrite', store => store.delete(id));
+        return true;
+      }
+
+      async clear() {
+        await this.init();
+        await this.runTransaction('readwrite', store => store.clear());
+        return true;
+      }
+
+      runTransaction(mode, operation) {
+        return new Promise((resolve, reject) => {
+          let tx;
+          let result;
+          let request;
+          let settled = false;
+          const fail = error => {
+            if (settled) return;
+            settled = true;
+            reject(error || new Error('IndexedDB transaction failed'));
+          };
+
+          try {
+            tx = this.db.transaction(this.storeName, mode);
+            request = operation(tx.objectStore(this.storeName));
+            if (request) {
+              request.onsuccess = () => { result = request.result; };
+              request.onerror = () => fail(request.error);
+            }
+            tx.oncomplete = () => {
+              if (settled) return;
+              settled = true;
+              resolve(result);
+            };
+            tx.onerror = () => fail(tx.error);
+            tx.onabort = () => fail(tx.error || new Error('IndexedDB transaction aborted'));
+          } catch (error) {
+            fail(error);
+          }
+        });
+      }
+    }
+
+    const db = new StatusBadgeDB();
+
+    // --- 2. Color System & WCAG 2.1 Engine ---
+    const ColorEngine = {
+      // System Preset Color Palettes
+      presets: {
+        success: {
+          name: 'Success / Active',
+          hue: 152,
+          primaryHex: '#10b981',
+          tailwindName: 'emerald',
+          softBg: 'rgba(16, 185, 129, 0.12)',
+          softBorder: 'rgba(16, 185, 129, 0.28)',
+          softText: '#047857',
+          softTextDark: '#34d399',
+          outlineBorder: '#10b981',
+          outlineText: '#059669',
+          outlineTextDark: '#34d399',
+          solidBg: '#059669',
+          solidText: '#ffffff',
+          solidBorder: '#047857',
+          dotColor: '#10b981',
+          pingColor: '#34d399',
+          bubbleBg: 'rgba(16, 185, 129, 0.2)',
+          bubbleText: '#047857'
+        },
+        warning: {
+          name: 'Warning / Pending',
+          hue: 38,
+          primaryHex: '#f59e0b',
+          tailwindName: 'amber',
+          softBg: 'rgba(245, 158, 11, 0.12)',
+          softBorder: 'rgba(245, 158, 11, 0.3)',
+          softText: '#b45309',
+          softTextDark: '#fbbf24',
+          outlineBorder: '#f59e0b',
+          outlineText: '#d97706',
+          outlineTextDark: '#fbbf24',
+          solidBg: '#d97706',
+          solidText: '#ffffff',
+          solidBorder: '#b45309',
+          dotColor: '#f59e0b',
+          pingColor: '#fbbf24',
+          bubbleBg: 'rgba(245, 158, 11, 0.2)',
+          bubbleText: '#b45309'
+        },
+        error: {
+          name: 'Error / Critical',
+          hue: 0,
+          primaryHex: '#ef4444',
+          tailwindName: 'rose',
+          softBg: 'rgba(239, 68, 68, 0.12)',
+          softBorder: 'rgba(239, 68, 68, 0.28)',
+          softText: '#b91c1c',
+          softTextDark: '#f87171',
+          outlineBorder: '#ef4444',
+          outlineText: '#dc2626',
+          outlineTextDark: '#f87171',
+          solidBg: '#dc2626',
+          solidText: '#ffffff',
+          solidBorder: '#b91c1c',
+          dotColor: '#ef4444',
+          pingColor: '#f87171',
+          bubbleBg: 'rgba(239, 68, 68, 0.2)',
+          bubbleText: '#b91c1c'
+        },
+        info: {
+          name: 'Info / In-Progress',
+          hue: 200,
+          primaryHex: '#0ea5e9',
+          tailwindName: 'sky',
+          softBg: 'rgba(14, 165, 233, 0.12)',
+          softBorder: 'rgba(14, 165, 233, 0.28)',
+          softText: '#0369a1',
+          softTextDark: '#38bdf8',
+          outlineBorder: '#0ea5e9',
+          outlineText: '#0284c7',
+          outlineTextDark: '#38bdf8',
+          solidBg: '#0284c7',
+          solidText: '#ffffff',
+          solidBorder: '#0369a1',
+          dotColor: '#0ea5e9',
+          pingColor: '#38bdf8',
+          bubbleBg: 'rgba(14, 165, 233, 0.2)',
+          bubbleText: '#0369a1'
+        },
+        neutral: {
+          name: 'Neutral / Draft',
+          hue: 215,
+          primaryHex: '#64748b',
+          tailwindName: 'slate',
+          softBg: 'rgba(100, 116, 139, 0.12)',
+          softBorder: 'rgba(100, 116, 139, 0.28)',
+          softText: '#334155',
+          softTextDark: '#cbd5e1',
+          outlineBorder: '#64748b',
+          outlineText: '#475569',
+          outlineTextDark: '#cbd5e1',
+          solidBg: '#475569',
+          solidText: '#ffffff',
+          solidBorder: '#334155',
+          dotColor: '#64748b',
+          pingColor: '#94a3b8',
+          bubbleBg: 'rgba(100, 116, 139, 0.2)',
+          bubbleText: '#475569'
+        }
+      },
+
+      // Parse HEX to RGB {r, g, b}
+      hexToRgb(hex) {
+        let cleanHex = hex.replace('#', '');
+        if (cleanHex.length === 3) {
+          cleanHex = cleanHex.split('').map(c => c + c).join('');
+        }
+        const num = parseInt(cleanHex, 16);
+        return {
+          r: (num >> 16) & 255,
+          g: (num >> 8) & 255,
+          b: num & 255
+        };
+      },
+
+      // RGB to HEX
+      rgbToHex(r, g, b) {
+        return '#' + [r, g, b].map(x => {
+          const hex = Math.round(Math.min(255, Math.max(0, x))).toString(16);
+          return hex.length === 1 ? '0' + hex : hex;
+        }).join('');
+      },
+
+      // Parse RGBA or RGB string
+      parseColorString(str) {
+        if (!str) return { r: 255, g: 255, b: 255, a: 1 };
+        if (str.startsWith('#')) {
+          const rgb = this.hexToRgb(str);
+          return { ...rgb, a: 1 };
+        }
+        const rgbaMatch = str.match(/rgba?\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
+        if (rgbaMatch) {
+          return {
+            r: parseInt(rgbaMatch[1], 10),
+            g: parseInt(rgbaMatch[2], 10),
+            b: parseInt(rgbaMatch[3], 10),
+            a: rgbaMatch[4] !== undefined ? parseFloat(rgbaMatch[4]) : 1
+          };
+        }
+        return { r: 255, g: 255, b: 255, a: 1 };
+      },
+
+      // Alpha composite color over background
+      alphaComposite(fgColor, bgColor) {
+        const fg = typeof fgColor === 'string' ? this.parseColorString(fgColor) : fgColor;
+        const bg = typeof bgColor === 'string' ? this.parseColorString(bgColor) : bgColor;
+        const a = fg.a !== undefined ? fg.a : 1;
+        return {
+          r: fg.r * a + bg.r * (1 - a),
+          g: fg.g * a + bg.g * (1 - a),
+          b: fg.b * a + bg.b * (1 - a)
+        };
+      },
+
+      // Relative Luminance according to WCAG 2.1
+      getRelativeLuminance(rgb) {
+        const [rs, gs, bs] = [rgb.r / 255, rgb.g / 255, rgb.b / 255].map(c => {
+          return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        });
+        return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+      },
+
+      // Calculate WCAG contrast ratio (1:1 to 21:1)
+      calculateContrastRatio(fgRgb, bgRgb) {
+        const l1 = this.getRelativeLuminance(fgRgb);
+        const l2 = this.getRelativeLuminance(bgRgb);
+        const brightest = Math.max(l1, l2);
+        const darkest = Math.min(l1, l2);
+        return (brightest + 0.05) / (darkest + 0.05);
+      },
+
+      // Generate dynamic palette for any custom brand HEX
+      generateCustomPalette(brandHex) {
+        const rgb = this.hexToRgb(brandHex);
+        const luminance = this.getRelativeLuminance(rgb);
+
+        // Adjust text lightness depending on base luminance
+        const darkerText = this.rgbToHex(rgb.r * 0.55, rgb.g * 0.55, rgb.b * 0.55);
+        const lighterText = this.rgbToHex(
+          Math.min(255, rgb.r * 1.35 + 40),
+          Math.min(255, rgb.g * 1.35 + 40),
+          Math.min(255, rgb.b * 1.35 + 40)
+        );
+
+        return {
+          name: 'Custom Brand',
+          primaryHex: brandHex,
+          tailwindName: 'custom',
+          softBg: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.12)`,
+          softBorder: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.28)`,
+          softText: luminance > 0.4 ? '#0f172a' : darkerText,
+          softTextDark: lighterText,
+          outlineBorder: brandHex,
+          outlineText: darkerText,
+          outlineTextDark: lighterText,
+          solidBg: brandHex,
+          solidText: luminance > 0.45 ? '#0f172a' : '#ffffff',
+          solidBorder: darkerText,
+          dotColor: brandHex,
+          pingColor: lighterText,
+          bubbleBg: `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`,
+          bubbleText: darkerText
+        };
+      }
+    };
+
+    // --- 3. Central Application State ---
+    const state = {
+      // Tag Anatomy
+      label: 'Active System',
+      leading: 'pulse', // 'none' | 'dot' | 'pulse' | 'icon'
+      icon: 'check', // 'check' | 'alert' | 'clock' | 'spinner' | 'sparkle' | 'info' | 'shield' | 'zap' | 'tag' | 'heart'
+      trailing: 'none', // 'none' | 'count' | 'dismiss' | 'chevron'
+      countText: '+12',
+      fontSize: '12px',
+      fontWeight: '500',
+      textTransform: 'none', // 'none' | 'uppercase' | 'capitalize'
+      letterSpacing: 'normal', // 'normal' | '0.025em' | '0.05em' | '0.1em'
+
+      // Style & Geometry
+      variant: 'soft', // 'soft' | 'outline' | 'solid' | 'glass' | 'ghost'
+      size: 'md', // 'sm' | 'md' | 'lg'
+      radius: '9999px', // '9999px' | '6px' | '4px' | '0px'
+      paddingX: 10,
+      paddingY: 4,
+      gap: 6,
+      borderWidth: '1px',
+
+      // Color & Semantic
+      colorKey: 'success', // 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'custom'
+      customHex: '#8B5CF6',
+
+      // Dynamic animation & micro-interactions
+      pulseSpeed: 1.5,
+      iconAnim: 'none', // 'none' | 'spin' | 'pulse'
+      hoverGlow: true,
+
+      // UI View controls
+      canvasZoom: 2,
+      canvasBg: 'bg-dark-slate',
+      theme: 'dark', // 'dark' | 'light'
+      exportTab: 'tailwind' // 'tailwind' | 'css' | 'react' | 'tokens'
+    };
+
+    // --- 4. Inline SVG Icon Catalog ---
+    const IconCatalog = {
+      check: `<svg class="badge-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+      alert: `<svg class="badge-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+      clock: `<svg class="badge-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+      spinner: `<svg class="badge-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
+      sparkle: `<svg class="badge-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z"/></svg>`,
+      info: `<svg class="badge-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>`,
+      shield: `<svg class="badge-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+      zap: `<svg class="badge-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+      tag: `<svg class="badge-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m20.59 13.41-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+      heart: `<svg class="badge-icon-svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>`,
+      dismiss: `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+      chevron: `<svg class="badge-icon-svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`
+    };
+
+    function sanitizeBadgeConfig(config) {
+      if (!config || typeof config !== 'object' || Array.isArray(config)) return null;
+      const clean = {};
+      const enums = {
+        leading: ['none', 'dot', 'pulse', 'icon'],
+        icon: Object.keys(IconCatalog),
+        trailing: ['none', 'count', 'dismiss', 'chevron'],
+        fontSize: ['11px', '12px', '13px', '14px'],
+        fontWeight: ['400', '500', '600'],
+        textTransform: ['none', 'uppercase', 'capitalize'],
+        letterSpacing: ['normal', '0.025em', '0.05em', '0.1em'],
+        variant: ['soft', 'outline', 'solid', 'glass', 'ghost'],
+        size: ['sm', 'md', 'lg'],
+        radius: ['9999px', '6px', '4px', '0px'],
+        borderWidth: ['0px', '1px', '1.5px', '2px'],
+        colorKey: ['success', 'warning', 'error', 'info', 'neutral', 'custom'],
+        iconAnim: ['none', 'spin', 'pulse'],
+        canvasBg: ['bg-checker', 'bg-dark-slate', 'bg-dark-zinc', 'bg-light-pure', 'bg-dim-slate', 'bg-radiant-gradient'],
+        theme: ['dark', 'light'],
+        exportTab: ['tailwind', 'css', 'react', 'tokens']
+      };
+      for (const [key, values] of Object.entries(enums)) {
+        if (values.includes(config[key])) clean[key] = config[key];
+      }
+      for (const key of ['label', 'countText']) {
+        if (typeof config[key] === 'string' && config[key].length <= 200) clean[key] = config[key];
+      }
+      if (typeof config.customHex === 'string' && /^#[0-9a-f]{6}$/i.test(config.customHex)) clean.customHex = config.customHex.toUpperCase();
+      for (const [key, min, max] of [['paddingX', 4, 24], ['paddingY', 0, 12], ['gap', 2, 12], ['pulseSpeed', 0.6, 3]]) {
+        if (Number.isFinite(config[key]) && config[key] >= min && config[key] <= max) clean[key] = config[key];
+      }
+      if ([1, 1.5, 2, 3].includes(config.canvasZoom)) clean.canvasZoom = config.canvasZoom;
+      if (typeof config.hoverGlow === 'boolean') clean.hoverGlow = config.hoverGlow;
+      return clean;
+    }
+
+    // --- 5. Computed Properties & CSS Calculation ---
+    function getActivePalette() {
+      if (state.colorKey === 'custom') {
+        return ColorEngine.generateCustomPalette(state.customHex);
+      }
+      return ColorEngine.presets[state.colorKey] || ColorEngine.presets.success;
+    }
+
+    function computeBadgeStyles(isDarkContext = false) {
+      const palette = getActivePalette();
+      let bg = '';
+      let text = '';
+      let border = 'none';
+      let backdrop = 'none';
+      let shadow = 'none';
+
+      // Style Variants logic
+      switch (state.variant) {
+        case 'soft':
+          bg = palette.softBg;
+          text = isDarkContext ? palette.softTextDark : palette.softText;
+          border = `${state.borderWidth} solid ${palette.softBorder}`;
+          break;
+        case 'outline':
+          bg = 'transparent';
+          text = isDarkContext ? palette.outlineTextDark : palette.outlineText;
+          border = `${state.borderWidth} solid ${palette.outlineBorder}`;
+          break;
+        case 'solid':
+          bg = palette.solidBg;
+          text = palette.solidText;
+          border = `${state.borderWidth} solid ${palette.solidBorder}`;
+          shadow = '0 1px 2px rgba(0,0,0,0.15)';
+          break;
+        case 'glass':
+          bg = isDarkContext ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.65)';
+          text = isDarkContext ? '#ffffff' : palette.softText;
+          border = `${state.borderWidth} solid ${isDarkContext ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.8)'}`;
+          backdrop = 'blur(10px)';
+          shadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
+          break;
+        case 'ghost':
+          bg = 'transparent';
+          text = isDarkContext ? palette.softTextDark : palette.softText;
+          border = 'none';
+          break;
+      }
+
+      return {
+        bg,
+        text,
+        border,
+        backdrop,
+        shadow,
+        palette
+      };
+    }
+
+    // --- 6. HTML Renderer for Badge Element ---
+    function renderBadgeHTML(isDarkContext = false) {
+      const style = computeBadgeStyles(isDarkContext);
+      const palette = style.palette;
+
+      // Leading accessory
+      let leadingHTML = '';
+      if (state.leading === 'dot') {
+        leadingHTML = `
+          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background-color:${palette.dotColor}; flex-shrink:0;"></span>
+        `;
+      } else if (state.leading === 'pulse') {
+        leadingHTML = `
+          <span style="position:relative; display:inline-flex; width:6px; height:6px; flex-shrink:0; align-items:center; justify-content:center;">
+            <span class="pulse-halo-effect" style="background-color:${palette.pingColor}; animation-duration:${state.pulseSpeed}s;"></span>
+            <span style="position:relative; display:inline-block; width:6px; height:6px; border-radius:50%; background-color:${palette.dotColor};"></span>
+          </span>
+        `;
+      } else if (state.leading === 'icon') {
+        let animClass = '';
+        if (state.iconAnim === 'spin' || state.icon === 'spinner') animClass = 'animate-spin-fast';
+        leadingHTML = `<span class="${animClass}" style="display:inline-flex; align-items:center; flex-shrink:0;">${IconCatalog[state.icon] || IconCatalog.check}</span>`;
+      }
+
+      // Text label
+      const labelText = state.label || 'Badge';
+      const labelHTML = `<span style="display:inline-block;">${escapeHTML(labelText)}</span>`;
+
+      // Trailing accessory
+      let trailingHTML = '';
+      if (state.trailing === 'count') {
+        trailingHTML = `
+          <span style="display:inline-flex; align-items:center; justify-content:center; padding:1px 5px; border-radius:9999px; font-size:10px; font-weight:600; line-height:1; background-color:${palette.bubbleBg}; color:${style.text}; margin-left:1px;">
+            ${escapeHTML(state.countText || '0')}
+          </span>
+        `;
+      } else if (state.trailing === 'dismiss') {
+        trailingHTML = `
+          <button type="button" class="badge-dismiss-btn" title="關閉" onclick="window.onDismissBadgeClick(event)">
+            ${IconCatalog.dismiss}
+          </button>
+        `;
+      } else if (state.trailing === 'chevron') {
+        trailingHTML = `<span style="display:inline-flex; align-items:center;">${IconCatalog.chevron}</span>`;
+      }
+
+      // Root inline styles
+      const rootStyle = [
+        `background-color: ${style.bg}`,
+        `color: ${style.text}`,
+        `border: ${style.border}`,
+        `border-radius: ${state.radius}`,
+        `padding: ${state.paddingY}px ${state.paddingX}px`,
+        `font-size: ${state.fontSize}`,
+        `font-weight: ${state.fontWeight}`,
+        `text-transform: ${state.textTransform}`,
+        `letter-spacing: ${state.letterSpacing}`,
+        `gap: ${state.gap}px`,
+        `backdrop-filter: ${style.backdrop}`,
+        `-webkit-backdrop-filter: ${style.backdrop}`,
+        `box-shadow: ${style.shadow}`
+      ].join('; ');
+
+      return `
+        <span class="badge-component" style="${rootStyle}">
+          ${leadingHTML}
+          ${labelHTML}
+          ${trailingHTML}
+        </span>
+      `;
+    }
+
+    // Dismiss button click simulation
+    window.onDismissBadgeClick = function(e) {
+      e.stopPropagation();
+      showToast('點擊了移除標籤按鈕 (Dismiss Triggered)', 'info');
+    };
+
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // --- 7. WCAG Contrast Calculation ---
+    function updateContrastAudit() {
+      const palette = getActivePalette();
+      const backgrounds = {
+        'bg-checker': ['#FFFFFF', '#F8FAFC'],
+        'bg-light-pure': ['#FFFFFF'],
+        'bg-dim-slate': ['#F8FAFC'],
+        'bg-dark-slate': ['#0F172A'],
+        'bg-dark-zinc': ['#18181B'],
+        'bg-radiant-gradient': ['#3B82F6', '#8B5CF6', '#EC4899']
+      };
+      const canvasColors = backgrounds[state.canvasBg] || backgrounds['bg-dark-slate'];
+      const isDark = state.canvasBg === 'bg-dark-slate' || state.canvasBg === 'bg-dark-zinc' || state.canvasBg === 'bg-radiant-gradient';
+      const style = computeBadgeStyles(isDark);
+      let borderColor;
+      if (state.variant === 'solid') borderColor = palette.solidBorder;
+      else if (state.variant === 'soft') borderColor = palette.softBorder;
+      else if (state.variant === 'outline') borderColor = palette.outlineBorder;
+      else if (state.variant === 'glass') borderColor = isDark ? 'rgba(255, 255, 255, 0.2)' : 'rgba(255, 255, 255, 0.8)';
+      else borderColor = 'transparent';
+
+      const ratios = canvasColors.map(canvasColor => {
+        const bgColor = style.bg === 'transparent'
+          ? ColorEngine.parseColorString(canvasColor)
+          : ColorEngine.alphaComposite(style.bg, canvasColor);
+        const textRatio = ColorEngine.calculateContrastRatio(
+          ColorEngine.parseColorString(style.text), bgColor
+        );
+        const borderOnCanvas = borderColor === 'transparent'
+          ? ColorEngine.parseColorString(canvasColor)
+          : ColorEngine.alphaComposite(borderColor, canvasColor);
+        const carrier = ColorEngine.parseColorString(canvasColor);
+        const borderRatio = Math.min(
+          ColorEngine.calculateContrastRatio(borderOnCanvas, carrier),
+          ColorEngine.calculateContrastRatio(borderOnCanvas, bgColor)
+        );
+        return { textRatio, borderRatio };
+      });
+      // A gradient has multiple underlying colors; report its least favorable stop.
+      const textRatio = Math.min(...ratios.map(ratio => ratio.textRatio));
+      const borderVisible = state.variant !== 'ghost' && state.borderWidth !== '0px';
+      const borderRatio = borderVisible ? Math.min(...ratios.map(ratio => ratio.borderRatio)) : 1;
+
+      const textRatioFormatted = textRatio.toFixed(2) + ' : 1';
+      const borderRatioFormatted = borderRatio.toFixed(2) + ' : 1';
+
+      // Update inspector DOM
+      document.getElementById('wcag-text-ratio').textContent = textRatioFormatted;
+      document.getElementById('wcag-border-ratio').textContent = borderRatioFormatted;
+      document.getElementById('side-contrast-ratio').textContent = textRatioFormatted;
+
+      const badgeRating = document.getElementById('wcag-badge-rating');
+      const sideStatus = document.getElementById('side-contrast-status');
+
+      if (textRatio >= 7.0) {
+        badgeRating.className = 'wcag-tag pass';
+        badgeRating.textContent = '✓ WCAG AAA 超標合格 (' + textRatio.toFixed(1) + ':1)';
+        sideStatus.className = 'wcag-tag pass';
+        sideStatus.textContent = 'AAA PASS';
+      } else if (textRatio >= 4.5) {
+        badgeRating.className = 'wcag-tag pass';
+        badgeRating.textContent = '✓ WCAG AA 標準合格 (' + textRatio.toFixed(1) + ':1)';
+        sideStatus.className = 'wcag-tag pass';
+        sideStatus.textContent = 'AA PASS';
+      } else if (textRatio >= 3.0) {
+        badgeRating.className = 'wcag-tag fail';
+        badgeRating.textContent = '⚠ WCAG AA 大字體合格 (' + textRatio.toFixed(1) + ':1)';
+        sideStatus.className = 'wcag-tag fail';
+        sideStatus.textContent = 'AA LARGE ONLY';
+      } else {
+        badgeRating.className = 'wcag-tag fail';
+        badgeRating.textContent = '✕ WCAG 未達標 (' + textRatio.toFixed(1) + ':1)';
+        sideStatus.className = 'wcag-tag fail';
+        sideStatus.textContent = 'FAIL';
+      }
+    }
+
+    // --- 8. Code Generators ---
+    const CodeGenerator = {
+      // 1. Tailwind CSS HTML
+      generateTailwind() {
+        const palette = getActivePalette();
+        const style = computeBadgeStyles(false);
+        let leading = '';
+        if (state.leading === 'dot') {
+          leading = `<span class="h-1.5 w-1.5 shrink-0 rounded-full" style="background-color:${palette.dotColor}"></span>`;
+        } else if (state.leading === 'pulse') {
+          leading = `<span class="relative flex h-1.5 w-1.5 shrink-0"><span class="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style="background-color:${palette.pingColor};animation-duration:${state.pulseSpeed}s"></span><span class="relative inline-flex h-1.5 w-1.5 rounded-full" style="background-color:${palette.dotColor}"></span></span>`;
+        } else if (state.leading === 'icon') {
+          const animation = state.iconAnim === 'spin' || state.icon === 'spinner' ? ' animate-spin' : state.iconAnim === 'pulse' ? ' animate-pulse' : '';
+          leading = `<span class="inline-flex shrink-0 items-center${animation}">${IconCatalog[state.icon] || IconCatalog.check}</span>`;
+        }
+
+        let trailing = '';
+        if (state.trailing === 'count') {
+          trailing = `<span class="ml-0.5 inline-flex items-center justify-center rounded-full px-1.5 py-px text-[10px] font-semibold" style="background-color:${palette.bubbleBg};color:${style.text}">${escapeHTML(state.countText)}</span>`;
+        } else if (state.trailing === 'dismiss') {
+          trailing = '<button type="button" class="ml-1 inline-flex rounded-full p-0.5 hover:bg-black/10 dark:hover:bg-white/20" aria-label="Dismiss">' + IconCatalog.dismiss + '</button>';
+        } else if (state.trailing === 'chevron') {
+          trailing = `<span class="inline-flex items-center opacity-60">${IconCatalog.chevron}</span>`;
+        }
+
+        const cssStyle = `background-color:${style.bg};color:${style.text};border:${style.border};border-radius:${state.radius};padding:${state.paddingY}px ${state.paddingX}px;font-size:${state.fontSize};font-weight:${state.fontWeight};text-transform:${state.textTransform};letter-spacing:${state.letterSpacing};gap:${state.gap}px;backdrop-filter:${style.backdrop};box-shadow:${style.shadow};white-space:nowrap`;
+        return `<span class="inline-flex items-center" style="${cssStyle}">${leading}<span>${escapeHTML(state.label)}</span>${trailing}</span>`;
+      },
+
+      generatePureCSS() {
+        const palette = getActivePalette();
+        const style = computeBadgeStyles(false);
+        const cssSnippet = `/* Micro-Badge Component */
+@keyframes badge-ping {
+  0% { transform: scale(0.95); opacity: 0.8; }
+  50% { transform: scale(1.4); opacity: 0.2; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+@keyframes badge-spin { to { transform: rotate(360deg); } }
+@keyframes badge-pulse { 50% { opacity: 0.5; } }
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: ${state.gap}px;
+  padding: ${state.paddingY}px ${state.paddingX}px;
+  border-radius: ${state.radius};
+  font-size: ${state.fontSize};
+  font-weight: ${state.fontWeight};
+  line-height: 1;
+  text-transform: ${state.textTransform};
+  letter-spacing: ${state.letterSpacing};
+  background-color: ${style.bg};
+  color: ${style.text};
+  border: ${style.border};
+  backdrop-filter: ${style.backdrop};
+  -webkit-backdrop-filter: ${style.backdrop};
+  box-shadow: ${style.shadow};
+  white-space: nowrap;
+}
+.badge__dot, .badge__dot-wrapper {
+  position: relative;
+  display: inline-flex;
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  align-items: center;
+  justify-content: center;
+}
+.badge__dot--solid, .badge__dot-core {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: ${palette.dotColor};
+}
+.badge__dot-ping {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background-color: ${palette.pingColor};
+  animation: badge-ping ${state.pulseSpeed}s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+.badge__icon { display: inline-flex; flex: 0 0 auto; align-items: center; }
+.badge__icon--spin { animation: badge-spin 1s linear infinite; }
+.badge__icon--pulse { animation: badge-pulse 1.5s ease-in-out infinite; }
+.badge__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 5px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  background-color: ${palette.bubbleBg};
+  color: ${style.text};
+}
+.badge__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+  padding: 2px;
+  border: 0;
+  border-radius: 9999px;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.badge__dismiss:hover { background: rgba(0, 0, 0, 0.1); }
+.badge__chevron { display: inline-flex; align-items: center; opacity: 0.6; }`;
+
+        let leading = '';
+        if (state.leading === 'dot') leading = '<span class="badge__dot badge__dot--solid"></span>';
+        if (state.leading === 'pulse') leading = '<span class="badge__dot-wrapper"><span class="badge__dot-ping"></span><span class="badge__dot-core"></span></span>';
+        if (state.leading === 'icon') {
+          const animation = state.iconAnim === 'spin' || state.icon === 'spinner' ? ' badge__icon--spin' : state.iconAnim === 'pulse' ? ' badge__icon--pulse' : '';
+          leading = `<span class="badge__icon${animation}">${IconCatalog[state.icon] || IconCatalog.check}</span>`;
+        }
+        let trailing = '';
+        if (state.trailing === 'count') trailing = `<span class="badge__count">${escapeHTML(state.countText)}</span>`;
+        if (state.trailing === 'dismiss') trailing = `<button class="badge__dismiss" type="button" aria-label="Dismiss">${IconCatalog.dismiss}</button>`;
+        if (state.trailing === 'chevron') trailing = `<span class="badge__chevron">${IconCatalog.chevron}</span>`;
+        const htmlSnippet = `<span class="badge">${leading}<span>${escapeHTML(state.label)}</span>${trailing}</span>`;
+        return `${cssSnippet}\n\n<!-- HTML Structure -->\n${htmlSnippet}`;
+      },
+
+      generateReact() {
+        const palette = getActivePalette();
+        const style = computeBadgeStyles(false);
+        const reactStyle = JSON.stringify({
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: `${state.gap}px`,
+          padding: `${state.paddingY}px ${state.paddingX}px`,
+          borderRadius: state.radius,
+          fontSize: state.fontSize,
+          fontWeight: state.fontWeight,
+          lineHeight: 1,
+          textTransform: state.textTransform,
+          letterSpacing: state.letterSpacing,
+          backgroundColor: style.bg,
+          color: style.text,
+          border: style.border,
+          backdropFilter: style.backdrop,
+          boxShadow: style.shadow,
+          whiteSpace: 'nowrap'
+        }, null, 2);
+        const iconEntries = Object.entries(IconCatalog).map(([name, markup]) => {
+          const jsx = markup
+            .replace(/class=/g, 'className=')
+            .replace(/stroke-width=/g, 'strokeWidth=')
+            .replace(/stroke-linecap=/g, 'strokeLinecap=')
+            .replace(/stroke-linejoin=/g, 'strokeLinejoin=');
+          return `  ${name}: (${jsx})`;
+        }).join(',\n');
+        const labelDefault = JSON.stringify(state.label).replace(/</g, '\\u003c');
+        const countDefault = JSON.stringify(state.countText).replace(/</g, '\\u003c');
+
+        return `import React from 'react';
+
+export interface BadgeProps {
+  label?: string;
+  leading?: 'none' | 'dot' | 'pulse' | 'icon';
+  icon?: keyof typeof badgeIcons;
+  trailing?: 'none' | 'count' | 'dismiss' | 'chevron';
+  count?: string | number;
+  onDismiss?: () => void;
+  className?: string;
+}
+
+const badgeIcons = {
+${iconEntries}
+};
+
+export const StatusBadge: React.FC<BadgeProps> = ({
+  label = ${labelDefault},
+  leading = ${JSON.stringify(state.leading)},
+  icon = ${JSON.stringify(state.icon)},
+  trailing = ${JSON.stringify(state.trailing)},
+  count = ${countDefault},
+  onDismiss,
+  className = ''
+}) => (
+  <span className={className} style={${reactStyle}}>
+    {leading === 'dot' && <span style={{ width: 6, height: 6, flex: '0 0 6px', borderRadius: '50%', backgroundColor: ${JSON.stringify(palette.dotColor)} }} />}
+    {leading === 'pulse' && <span className="relative inline-flex h-1.5 w-1.5 shrink-0">
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ backgroundColor: ${JSON.stringify(palette.pingColor)}, animationDuration: ${JSON.stringify(`${state.pulseSpeed}s`)} }} />
+      <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ backgroundColor: ${JSON.stringify(palette.dotColor)} }} />
+    </span>}
+    {leading === 'icon' && <span className={icon === 'spinner' ? 'animate-spin' : ''}>{badgeIcons[icon] || badgeIcons.check}</span>}
+    <span>{label}</span>
+    {trailing === 'count' && <span style={{ marginLeft: 2, padding: '1px 5px', borderRadius: 9999, fontSize: 10, fontWeight: 600, backgroundColor: ${JSON.stringify(palette.bubbleBg)}, color: ${JSON.stringify(style.text)} }}>{count}</span>}
+    {trailing === 'dismiss' && <button type="button" onClick={onDismiss} aria-label="Dismiss" style={{ marginLeft: 2, border: 0, borderRadius: 9999, color: 'inherit', background: 'transparent', cursor: 'pointer' }}>✕</button>}
+    {trailing === 'chevron' && <span style={{ display: 'inline-flex', alignItems: 'center', opacity: 0.6 }}>{badgeIcons.chevron}</span>}
+  </span>
+);`;
+      },
+      // 4. Design Tokens (W3C DTCG Format)
+      generateTokens() {
+        const palette = getActivePalette();
+        const style = computeBadgeStyles(false);
+
+        const tokens = {
+          "$schema": "https://design-tokens.github.io/community-group/format/",
+          "badge": {
+            "typography": {
+              "fontSize": { "$value": state.fontSize, "$type": "dimension" },
+              "fontWeight": { "$value": parseInt(state.fontWeight), "$type": "fontWeight" },
+              "letterSpacing": { "$value": state.letterSpacing, "$type": "dimension" },
+              "textTransform": { "$value": state.textTransform, "$type": "string" }
+            },
+            "geometry": {
+              "borderRadius": { "$value": state.radius, "$type": "dimension" },
+              "paddingX": { "$value": `${state.paddingX}px`, "$type": "dimension" },
+              "paddingY": { "$value": `${state.paddingY}px`, "$type": "dimension" },
+              "gap": { "$value": `${state.gap}px`, "$type": "dimension" },
+              "borderWidth": { "$value": state.borderWidth, "$type": "dimension" }
+            },
+            "color": {
+              "primary": { "$value": palette.primaryHex, "$type": "color" },
+              "background": { "$value": style.bg, "$type": "color" },
+              "text": { "$value": style.text, "$type": "color" },
+              "border": { "$value": style.border, "$type": "color" },
+              "dot": { "$value": palette.dotColor, "$type": "color" },
+              "halo": { "$value": palette.pingColor, "$type": "color" }
+            },
+            "animation": {
+              "pulseDuration": { "$value": `${state.pulseSpeed}s`, "$type": "duration" }
+            }
+          }
+        };
+
+        return JSON.stringify(tokens, null, 2);
+      }
+    };
+
+    // Update code viewer output
+    function updateCodeView() {
+      const codeOutput = document.getElementById('export-code-output');
+      let code = '';
+      switch (state.exportTab) {
+        case 'tailwind':
+          code = CodeGenerator.generateTailwind();
+          break;
+        case 'css':
+          code = CodeGenerator.generatePureCSS();
+          break;
+        case 'react':
+          code = CodeGenerator.generateReact();
+          break;
+        case 'tokens':
+          code = CodeGenerator.generateTokens();
+          break;
+      }
+      codeOutput.textContent = code;
+    }
+
+    // --- 9. Central Render Orchestrator ---
+    function render() {
+      // 1. Render Inspector Stage
+      const inspectorStage = document.getElementById('inspector-stage');
+      const isDark = (state.canvasBg === 'bg-dark-slate' || state.canvasBg === 'bg-dark-zinc' || state.canvasBg === 'bg-radiant-gradient');
+      inspectorStage.innerHTML = renderBadgeHTML(isDark);
+      inspectorStage.style.transform = `scale(${state.canvasZoom})`;
+
+      // 2. Render Context Matrix
+      document.querySelectorAll('.matrix-badge-target').forEach(el => {
+        const ctx = el.getAttribute('data-context');
+        const darkCtx = (ctx === 'dark' || ctx === 'gradient');
+        el.innerHTML = renderBadgeHTML(darkCtx);
+      });
+
+      // 3. Render Mockups
+      document.querySelectorAll('.mockup-badge-target').forEach(el => {
+        el.innerHTML = renderBadgeHTML(state.theme === 'dark');
+      });
+
+      // 4. Update Contrast Ratio Indicators
+      updateContrastAudit();
+
+      // 5. Update Code Snippet
+      updateCodeView();
+
+      // 6. Sync URL Hash
+      syncStateToURLHash();
+    }
+
+    // --- 10. URL Hash Synchronization ---
+    function syncStateToURLHash() {
+      try {
+        const payload = {
+          label: state.label,
+          leading: state.leading,
+          icon: state.icon,
+          trailing: state.trailing,
+          countText: state.countText,
+          fontSize: state.fontSize,
+          fontWeight: state.fontWeight,
+          textTransform: state.textTransform,
+          letterSpacing: state.letterSpacing,
+          variant: state.variant,
+          size: state.size,
+          radius: state.radius,
+          paddingX: state.paddingX,
+          paddingY: state.paddingY,
+          gap: state.gap,
+          borderWidth: state.borderWidth,
+          colorKey: state.colorKey,
+          customHex: state.customHex,
+          pulseSpeed: state.pulseSpeed
+        };
+        const serialized = btoa(encodeURIComponent(JSON.stringify(payload)));
+        history.replaceState(null, '', `#badge=${serialized}`);
+      } catch (err) {
+        console.warn('URL Hash sync warning:', err);
+      }
+    }
+
+    function loadStateFromURLHash() {
+      try {
+        const hash = window.location.hash;
+        if (!hash.includes('badge=')) return;
+        const encoded = hash.split('badge=')[1];
+        if (!encoded) return;
+        const json = decodeURIComponent(atob(encoded));
+        const data = JSON.parse(json);
+        const safeConfig = sanitizeBadgeConfig(data);
+        if (!safeConfig) return;
+        Object.assign(state, safeConfig);
+        syncStateToUIControls();
+      } catch (err) {
+        console.warn('Failed to parse URL hash state:', err);
+      }
+    }
+
+    // Synchronize current state to form inputs
+    function syncStateToUIControls() {
+      // Inputs
+      document.getElementById('inp-label-text').value = state.label;
+      document.getElementById('inp-count-text').value = state.countText;
+      document.getElementById('range-padding-x').value = state.paddingX;
+      document.getElementById('range-padding-y').value = state.paddingY;
+      document.getElementById('range-gap').value = state.gap;
+      document.getElementById('range-pulse-speed').value = state.pulseSpeed;
+
+      // Badges
+      document.getElementById('val-padding-x').textContent = `${state.paddingX}px`;
+      document.getElementById('val-padding-y').textContent = `${state.paddingY}px`;
+      document.getElementById('val-gap').textContent = `${state.gap}px`;
+      document.getElementById('val-pulse-speed').textContent = `${state.pulseSpeed} 秒`;
+      document.getElementById('val-badge-font-size').textContent = state.fontSize;
+      document.getElementById('val-badge-font-weight').textContent = `${state.fontWeight} ${state.fontWeight === '400' ? 'Regular' : state.fontWeight === '600' ? 'Semibold' : 'Medium'}`;
+      document.getElementById('val-badge-radius').textContent = state.radius;
+      document.getElementById('val-border-width').textContent = state.borderWidth;
+
+      // Segmented controls
+      setActiveSegment('seg-leading-type', state.leading);
+      setActiveSegment('seg-trailing-type', state.trailing);
+      setActiveSegment('seg-icon-anim', state.iconAnim);
+      setActiveSegment('seg-font-size', state.fontSize);
+      setActiveSegment('seg-font-weight', state.fontWeight);
+      setActiveSegment('seg-text-transform', state.textTransform);
+      setActiveSegment('seg-letter-spacing', state.letterSpacing);
+      setActiveSegment('seg-style-variant', state.variant);
+      setActiveSegment('seg-badge-size', state.size);
+      setActiveSegment('seg-badge-radius', state.radius);
+      setActiveSegment('seg-border-width', state.borderWidth);
+      setActiveSegment('seg-canvas-zoom', String(state.canvasZoom));
+      document.getElementById('canvas-bg-select').value = state.canvasBg;
+      document.getElementById('inspector-canvas').className = `canvas-viewport ${state.canvasBg}`;
+      document.documentElement.setAttribute('data-theme', state.theme);
+      document.querySelectorAll('.code-tab-btn').forEach(button => {
+        button.classList.toggle('active', button.dataset.export === state.exportTab);
+      });
+
+      // Icon picker & visibility
+      document.getElementById('icon-picker-group').style.display = (state.leading === 'icon') ? 'flex' : 'none';
+      document.getElementById('trailing-count-group').style.display = (state.trailing === 'count') ? 'flex' : 'none';
+
+      document.querySelectorAll('#icon-picker-grid .icon-opt').forEach(el => {
+        el.classList.toggle('active', el.dataset.icon === state.icon);
+      });
+
+      // Presets & Color
+      document.getElementById('quick-preset-select').value = state.colorKey;
+      document.querySelectorAll('.preset-card').forEach(el => {
+        el.classList.toggle('active', el.dataset.color === state.colorKey);
+      });
+      document.getElementById('custom-color-controls').style.display = (state.colorKey === 'custom') ? 'flex' : 'none';
+      document.getElementById('inp-custom-hex').value = state.customHex;
+      document.getElementById('inp-custom-picker').value = state.customHex;
+      document.getElementById('custom-color-indicator').style.backgroundColor = state.customHex;
+    }
+
+    function setActiveSegment(containerId, value) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.querySelectorAll('.seg-item').forEach(item => {
+        const val = item.dataset.val || item.dataset.zoom;
+        item.classList.toggle('active', val === value);
+      });
+    }
+
+    // --- 11. Toast Notifications ---
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      
+      let iconSvg = '';
+      if (type === 'success') {
+        iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>`;
+      } else if (type === 'error') {
+        iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+      } else {
+        iconSvg = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+      }
+
+      toast.innerHTML = `${iconSvg}<span>${escapeHTML(message)}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        toast.style.transition = 'all 0.2s';
+        setTimeout(() => toast.remove(), 200);
+      }, 2600);
+    }
+
+    // --- 12. User Event Listeners & Binding ---
+    function setupEventListeners() {
+      document.getElementById('preset-list-container').addEventListener('click', async (event) => {
+        const button = event.target.closest('button[data-action]');
+        if (!button) return;
+        try {
+          if (button.dataset.action === 'load') await window.loadSavedPreset(button.dataset.id);
+          if (button.dataset.action === 'delete') await window.deleteSavedPreset(button.dataset.id);
+        } catch (error) {
+          showToast('預設操作失敗：' + error.message, 'error');
+        }
+      });
+
+      // Tabs
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          btn.classList.add('active');
+          const target = document.getElementById(btn.dataset.tab);
+          if (target) target.classList.add('active');
+        });
+      });
+
+      // Label Input
+      document.getElementById('inp-label-text').addEventListener('input', (e) => {
+        state.label = e.target.value;
+        render();
+      });
+
+      // Trailing Count Input
+      document.getElementById('inp-count-text').addEventListener('input', (e) => {
+        state.countText = e.target.value;
+        render();
+      });
+
+      // Leading accessory segment
+      document.getElementById('seg-leading-type').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.leading = item.dataset.val;
+        setActiveSegment('seg-leading-type', state.leading);
+        document.getElementById('icon-picker-group').style.display = (state.leading === 'icon') ? 'flex' : 'none';
+        render();
+      });
+
+      // Icon picker
+      document.getElementById('icon-picker-grid').addEventListener('click', (e) => {
+        const opt = e.target.closest('.icon-opt');
+        if (!opt) return;
+        state.icon = opt.dataset.icon;
+        document.querySelectorAll('#icon-picker-grid .icon-opt').forEach(el => el.classList.remove('active'));
+        opt.classList.add('active');
+        render();
+      });
+
+      // Trailing accessory segment
+      document.getElementById('seg-trailing-type').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.trailing = item.dataset.val;
+        setActiveSegment('seg-trailing-type', state.trailing);
+        document.getElementById('trailing-count-group').style.display = (state.trailing === 'count') ? 'flex' : 'none';
+        render();
+      });
+
+      // Typography segments
+      document.getElementById('seg-font-size').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.fontSize = item.dataset.val;
+        setActiveSegment('seg-font-size', state.fontSize);
+        document.getElementById('val-badge-font-size').textContent = state.fontSize;
+        render();
+      });
+
+      document.getElementById('seg-font-weight').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.fontWeight = item.dataset.val;
+        setActiveSegment('seg-font-weight', state.fontWeight);
+        document.getElementById('val-badge-font-weight').textContent = `${state.fontWeight} ${state.fontWeight === '400' ? 'Regular' : state.fontWeight === '600' ? 'Semibold' : 'Medium'}`;
+        render();
+      });
+
+      document.getElementById('seg-text-transform').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.textTransform = item.dataset.val;
+        setActiveSegment('seg-text-transform', state.textTransform);
+        render();
+      });
+
+      document.getElementById('seg-letter-spacing').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.letterSpacing = item.dataset.val;
+        setActiveSegment('seg-letter-spacing', state.letterSpacing);
+        document.getElementById('val-badge-letter-spacing').textContent = item.textContent;
+        render();
+      });
+
+      // Style variants
+      document.getElementById('seg-style-variant').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.variant = item.dataset.val;
+        setActiveSegment('seg-style-variant', state.variant);
+        render();
+      });
+
+      // Badge Size
+      document.getElementById('seg-badge-size').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.size = item.dataset.val;
+        setActiveSegment('seg-badge-size', state.size);
+        if (state.size === 'sm') {
+          state.paddingY = 2;
+          state.paddingX = 8;
+          state.fontSize = '11px';
+        } else if (state.size === 'md') {
+          state.paddingY = 4;
+          state.paddingX = 10;
+          state.fontSize = '12px';
+        } else if (state.size === 'lg') {
+          state.paddingY = 6;
+          state.paddingX = 12;
+          state.fontSize = '13px';
+        }
+        document.getElementById('range-padding-x').value = state.paddingX;
+        document.getElementById('range-padding-y').value = state.paddingY;
+        document.getElementById('val-padding-x').textContent = `${state.paddingX}px`;
+        document.getElementById('val-padding-y').textContent = `${state.paddingY}px`;
+        document.getElementById('val-badge-font-size').textContent = state.fontSize;
+        setActiveSegment('seg-font-size', state.fontSize);
+        render();
+      });
+
+      // Radius
+      document.getElementById('seg-badge-radius').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.radius = item.dataset.val;
+        setActiveSegment('seg-badge-radius', state.radius);
+        document.getElementById('val-badge-radius').textContent = item.textContent;
+        render();
+      });
+
+      // Range sliders
+      document.getElementById('range-padding-x').addEventListener('input', (e) => {
+        state.paddingX = parseInt(e.target.value, 10);
+        document.getElementById('val-padding-x').textContent = `${state.paddingX}px`;
+        render();
+      });
+
+      document.getElementById('range-padding-y').addEventListener('input', (e) => {
+        state.paddingY = parseInt(e.target.value, 10);
+        document.getElementById('val-padding-y').textContent = `${state.paddingY}px`;
+        render();
+      });
+
+      document.getElementById('range-gap').addEventListener('input', (e) => {
+        state.gap = parseInt(e.target.value, 10);
+        document.getElementById('val-gap').textContent = `${state.gap}px`;
+        render();
+      });
+
+      document.getElementById('range-pulse-speed').addEventListener('input', (e) => {
+        state.pulseSpeed = parseFloat(e.target.value);
+        document.getElementById('val-pulse-speed').textContent = `${state.pulseSpeed} 秒`;
+        render();
+      });
+
+      // Border Width
+      document.getElementById('seg-border-width').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.borderWidth = item.dataset.val;
+        setActiveSegment('seg-border-width', state.borderWidth);
+        document.getElementById('val-border-width').textContent = state.borderWidth;
+        render();
+      });
+
+      // Semantic Color Presets
+      document.querySelectorAll('.preset-card').forEach(card => {
+        card.addEventListener('click', () => {
+          const color = card.dataset.color;
+          state.colorKey = color;
+          document.querySelectorAll('.preset-card').forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+          document.getElementById('quick-preset-select').value = color;
+          document.getElementById('custom-color-controls').style.display = (color === 'custom') ? 'flex' : 'none';
+          render();
+        });
+      });
+
+      // Quick Selector in Header
+      document.getElementById('quick-preset-select').addEventListener('change', (e) => {
+        state.colorKey = e.target.value;
+        document.querySelectorAll('.preset-card').forEach(c => {
+          c.classList.toggle('active', c.dataset.color === state.colorKey);
+        });
+        document.getElementById('custom-color-controls').style.display = (state.colorKey === 'custom') ? 'flex' : 'none';
+        render();
+      });
+
+      // Custom Color Inputs
+      const customPicker = document.getElementById('inp-custom-picker');
+      const customHex = document.getElementById('inp-custom-hex');
+
+      customPicker.addEventListener('input', (e) => {
+        state.customHex = e.target.value.toUpperCase();
+        customHex.value = state.customHex;
+        document.getElementById('custom-color-indicator').style.backgroundColor = state.customHex;
+        render();
+      });
+
+      customHex.addEventListener('input', (e) => {
+        let val = e.target.value.trim();
+        if (!val.startsWith('#')) val = '#' + val;
+        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+          state.customHex = val.toUpperCase();
+          customPicker.value = val;
+          document.getElementById('custom-color-indicator').style.backgroundColor = val;
+          render();
+        }
+      });
+
+      // Canvas Zoom Controls
+      document.getElementById('seg-canvas-zoom').addEventListener('click', (e) => {
+        const item = e.target.closest('.seg-item');
+        if (!item) return;
+        state.canvasZoom = parseFloat(item.dataset.zoom);
+        setActiveSegment('seg-canvas-zoom', item.dataset.zoom);
+        render();
+      });
+
+      // Canvas Background Select
+      document.getElementById('canvas-bg-select').addEventListener('change', (e) => {
+        const val = e.target.value;
+        const canvas = document.getElementById('inspector-canvas');
+        canvas.className = `canvas-viewport ${val}`;
+        state.canvasBg = val;
+        render();
+      });
+
+      // Code Export Tabs
+      document.querySelectorAll('.code-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.code-tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.exportTab = btn.dataset.export;
+          updateCodeView();
+        });
+      });
+
+      // Copy Code Button
+      document.getElementById('btn-copy-code').addEventListener('click', () => {
+        const code = document.getElementById('export-code-output').textContent;
+        navigator.clipboard.writeText(code).then(() => {
+          showToast('代碼已成功複製至剪貼簿！', 'success');
+        }).catch(() => {
+          showToast('複製失敗，請手動選取複製', 'error');
+        });
+      });
+
+      // Share Link Button
+      document.getElementById('btn-share-link').addEventListener('click', () => {
+        syncStateToURLHash();
+        navigator.clipboard.writeText(window.location.href).then(() => {
+          showToast('已複製帶有當前狀態的分享連結！', 'success');
+        }).catch(() => {
+          showToast('複製分享連結失敗', 'error');
+        });
+      });
+
+      // Reset Button
+      document.getElementById('btn-reset').addEventListener('click', () => {
+        state.label = 'Active System';
+        state.leading = 'pulse';
+        state.icon = 'check';
+        state.trailing = 'none';
+        state.countText = '+12';
+        state.fontSize = '12px';
+        state.fontWeight = '500';
+        state.textTransform = 'none';
+        state.letterSpacing = 'normal';
+        state.variant = 'soft';
+        state.size = 'md';
+        state.radius = '9999px';
+        state.paddingX = 10;
+        state.paddingY = 4;
+        state.gap = 6;
+        state.borderWidth = '1px';
+        state.colorKey = 'success';
+        state.customHex = '#8B5CF6';
+        state.pulseSpeed = 1.5;
+        syncStateToUIControls();
+        render();
+        showToast('已恢復預設配置', 'info');
+      });
+
+      // Theme toggle (Dark / Light)
+      document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+        const newTheme = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+        document.documentElement.setAttribute('data-theme', newTheme);
+        state.theme = newTheme;
+        showToast(`已切換為 ${newTheme === 'dark' ? '深色' : '淺色'} 外觀`, 'info');
+        render();
+      });
+
+      // Save Preset Dialog
+      document.getElementById('btn-save-preset').addEventListener('click', () => {
+        document.getElementById('inp-preset-title').value = `${state.label} (${getActivePalette().name})`;
+        document.getElementById('dlg-save-preset').showModal();
+      });
+
+      document.getElementById('btn-confirm-save-preset').addEventListener('click', async () => {
+        const title = document.getElementById('inp-preset-title').value.trim() || 'Untitled Badge';
+        const item = {
+          id: 'preset_' + Date.now(),
+          title: title,
+          createdAt: new Date().toISOString(),
+          config: { ...state }
+        };
+        try {
+          await db.put(item);
+          document.getElementById('dlg-save-preset').close();
+          showToast(`成功儲存預設：「${title}」`, 'success');
+        } catch (err) {
+          showToast('儲存失敗：' + err.message, 'error');
+        }
+      });
+
+      // Manage Presets Dialog
+      document.getElementById('btn-manage-presets').addEventListener('click', async () => {
+        try {
+          await refreshPresetList();
+          document.getElementById('dlg-manage-presets').showModal();
+        } catch (err) {
+          showToast('無法讀取預設資料庫：' + err.message, 'error');
+        }
+      });
+
+      // Export JSON
+      document.getElementById('btn-export-json').addEventListener('click', async () => {
+        try {
+          const records = await db.getAll();
+          const exportData = {
+            version: '1.0',
+            appName: 'Status Badge Workshop',
+            exportedAt: new Date().toISOString(),
+            presets: records
+          };
+          const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `badge-presets-backup-${Date.now()}.json`;
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast('已成功匯出 JSON 備份檔', 'success');
+        } catch (error) {
+          showToast('匯出失敗：無法讀取本機預設資料庫', 'error');
+        }
+      });
+
+      // Import JSON Trigger & File Handler
+      document.getElementById('btn-import-json-trigger').addEventListener('click', () => {
+        document.getElementById('file-import-input').click();
+      });
+
+      document.getElementById('file-import-input').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          const presets = Array.isArray(parsed) ? parsed : parsed && parsed.presets;
+          if (!Array.isArray(presets) || presets.some(item =>
+            !item || typeof item !== 'object' || Array.isArray(item) ||
+            typeof item.id !== 'string' || item.id.length < 1 || item.id.length > 200 ||
+            typeof item.title !== 'string' || item.title.length > 200 ||
+            !item.config || typeof item.config !== 'object' || Array.isArray(item.config) ||
+            !sanitizeBadgeConfig(item.config) || Object.keys(sanitizeBadgeConfig(item.config)).length === 0
+          )) throw new Error('Invalid preset backup format');
+          await db.putMany(presets.map(item => ({
+            id: item.id,
+            title: item.title,
+            createdAt: typeof item.createdAt === 'string' ? item.createdAt : new Date().toISOString(),
+            config: sanitizeBadgeConfig(item.config)
+          })));
+          await refreshPresetList();
+          showToast(`成功匯入 ${presets.length} 組預設標籤！`, 'success');
+        } catch (err) {
+          showToast('匯入失敗：請確認 JSON 格式、預設資料欄位與本機資料庫狀態', 'error');
+        } finally {
+          e.target.value = '';
+        }
+      });
+
+      // Batch Export Design System
+      document.getElementById('btn-batch-export').addEventListener('click', () => {
+        const systemBatch = {
+          name: "Design System Status Badges",
+          description: "Complete Status Badge Tokens & Components for SaaS",
+          statuses: Object.keys(ColorEngine.presets).map(key => {
+            const p = ColorEngine.presets[key];
+            return {
+              status: key,
+              name: p.name,
+              primary: p.primaryHex,
+              softBg: p.softBg,
+              softBorder: p.softBorder,
+              softText: p.softText,
+              solidBg: p.solidBg,
+              dotColor: p.dotColor,
+              pingColor: p.pingColor
+            };
+          }),
+          geometryTokens: {
+            sm: { height: "20px", px: "8px", py: "2px", fontSize: "11px", radius: "9999px" },
+            md: { height: "24px", px: "10px", py: "4px", fontSize: "12px", radius: "9999px" },
+            lg: { height: "28px", px: "12px", py: "6px", fontSize: "13px", radius: "9999px" }
+          }
+        };
+
+        const blob = new Blob([JSON.stringify(systemBatch, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `design-system-status-badges-${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('已打包下載完整 Design System 元件檔！', 'success');
+      });
+    }
+
+    // Refresh Preset List in Dialog
+    async function refreshPresetList() {
+      const container = document.getElementById('preset-list-container');
+      const items = await db.getAll();
+      container.replaceChildren();
+      if (items.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'text-align:center;color:var(--text-muted);padding:1.5rem;font-size:0.8rem;';
+        empty.textContent = '目前尚無儲存的自訂預設。點擊工具列「儲存預設」即可建立收藏！';
+        container.append(empty);
+        return;
+      }
+
+      for (const item of items) {
+        const row = document.createElement('div');
+        row.className = 'preset-item-manage';
+        const info = document.createElement('div');
+        const title = document.createElement('div');
+        title.style.cssText = 'font-weight:600;font-size:0.85rem;';
+        title.textContent = item.title || '未命名預設';
+        const date = document.createElement('div');
+        date.style.cssText = 'font-size:0.7rem;color:var(--text-muted);';
+        date.textContent = new Date(item.createdAt).toLocaleString();
+        info.append(title, date);
+        const actions = document.createElement('div');
+        actions.style.cssText = 'display:flex;gap:0.35rem;';
+        for (const [action, text, className] of [['load', '載入', 'btn-sm btn-primary'], ['delete', '刪除', 'btn-sm btn-danger']]) {
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.className = className;
+          button.dataset.action = action;
+          button.dataset.id = item.id;
+          button.textContent = text;
+          actions.append(button);
+        }
+        row.append(info, actions);
+        container.append(row);
+      }
+    }
+
+    window.loadSavedPreset = async function(id) {
+      const items = await db.getAll();
+      const match = items.find(it => it.id === id);
+      const safeConfig = match && sanitizeBadgeConfig(match.config);
+      if (match && safeConfig) {
+        Object.assign(state, safeConfig);
+        syncStateToUIControls();
+        render();
+        document.getElementById('dlg-manage-presets').close();
+        showToast(`已載入預設：「${match.title}」`, 'success');
+      }
+    };
+
+    window.deleteSavedPreset = async function(id) {
+      if (!confirm('確定要刪除這筆預設紀錄嗎？')) return;
+      await db.delete(id);
+      await refreshPresetList();
+      showToast('已刪除預設', 'info');
+    };
+
+    // --- 13. Application Initialization ---
+    window.addEventListener('DOMContentLoaded', async () => {
+      // 1. Initialize IndexedDB
+      let dbInitError = null;
+      try {
+        await db.init();
+      } catch (err) {
+        dbInitError = err;
+      }
+
+      // 2. Setup DOM Listeners
+      setupEventListeners();
+      if (dbInitError) showToast('無法開啟本機預設資料庫：' + dbInitError.message, 'error');
+
+      // 3. Load state from URL hash if present
+      loadStateFromURLHash();
+
+      // 4. Initial Render
+      syncStateToUIControls();
+      render();
+
+      console.log('Status Badge Workshop initialized successfully.');
+    });
+  </script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
