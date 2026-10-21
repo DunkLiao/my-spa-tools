@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>設計決策解釋器 Design Decision Explainer v1.4</title>
+<style>
+:root{--bg:#f5f6f8;--panel:#fff;--text:#1f2430;--muted:#6b7280;--line:#e3e6eb;--pri:#2f6bff;--pri2:#e8efff;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--shadow:0 1px 3px rgba(0,0,0,.08)}
+[data-theme=dark]{--bg:#14161b;--panel:#1d2027;--text:#e6e8ec;--muted:#9aa1ad;--line:#2e323b;--pri:#5b8cff;--pri2:#24304d;--shadow:0 1px 3px rgba(0,0,0,.4)}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+header{display:flex;align-items:center;gap:16px;padding:10px 20px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:20}
+header h1{font-size:17px;margin:0;white-space:nowrap}
+header h1 small{color:var(--muted);font-weight:normal;font-size:12px;margin-left:6px}
+nav{display:flex;gap:4px;flex:1}
+nav button,.tabs button{background:none;border:none;color:var(--text);padding:7px 12px;border-radius:6px;cursor:pointer;font-size:14px}
+nav button.on,.tabs button.on{background:var(--pri2);color:var(--pri);font-weight:bold}
+button.btn{background:var(--pri);color:#fff;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:13px}
+button.btn.sec{background:var(--panel);color:var(--text);border:1px solid var(--line)}
+button.btn.danger{background:var(--bad)}
+button.btn.sm{padding:4px 9px;font-size:12px}
+button:disabled{opacity:.5;cursor:not-allowed}
+main{padding:20px;max-width:1500px;margin:0 auto}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;box-shadow:var(--shadow)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.sp{flex:1}
+input,select,textarea{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:13px;font-family:inherit}
+textarea{width:100%;min-height:90px;resize:vertical}
+label.f{display:block;margin:8px 0 3px;color:var(--muted);font-size:12px}
+.f+input,.f+select,.f+textarea{width:100%}
+.muted{color:var(--muted)}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;background:var(--pri2);color:var(--pri);font-size:12px;margin:2px}
+.lv-高{background:#fde2e2;color:var(--bad)}.lv-中{background:#fef1d6;color:var(--warn)}.lv-低{background:#e3f6e9;color:var(--ok)}
+.ws{display:grid;grid-template-columns:220px 1fr 420px;gap:12px;height:calc(100vh - 110px)}
+.ws>div{overflow:auto}
+.stagewrap{background:repeating-conic-gradient(var(--line) 0 25%,transparent 0 50%) 0 0/20px 20px;border-radius:10px;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
+.stage{position:relative;display:inline-block;user-select:none;max-width:100%}
+.stage img{display:block;max-width:100%;max-height:calc(100vh - 160px);pointer-events:none}
+.box{position:absolute;border:2px solid var(--pri);background:rgba(47,107,255,.08);cursor:move}
+.box.sel{border-color:#ff7a00;background:rgba(255,122,0,.12)}
+.box .lb{position:absolute;top:-20px;left:-2px;background:var(--pri);color:#fff;font-size:11px;padding:1px 5px;border-radius:3px;white-space:nowrap}
+.box.sel .lb{background:#ff7a00}
+.box .hd{position:absolute;right:-6px;bottom:-6px;width:11px;height:11px;background:#ff7a00;cursor:nwse-resize;border-radius:2px}
+.stage.draw{cursor:crosshair}
+.list-item{padding:7px 9px;border-radius:6px;cursor:pointer;display:flex;gap:6px;align-items:center}
+.list-item:hover{background:var(--pri2)}
+.list-item.on{background:var(--pri2);color:var(--pri);font-weight:bold}
+.tabs{display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid var(--line);margin-bottom:10px;padding-bottom:6px}
+.tabs button{font-size:13px;padding:5px 9px}
+.dcard{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:10px}
+.dcard h4{margin:0 0 6px;font-size:14px}
+.swatch{display:inline-flex;align-items:center;gap:6px;margin:3px 10px 3px 0;font-size:12px}
+.swatch i{width:22px;height:22px;border-radius:5px;border:1px solid var(--line);display:inline-block}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid var(--line);padding:6px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:normal}
+.meter{height:8px;background:var(--line);border-radius:4px;overflow:hidden}
+.meter>i{display:block;height:100%;background:var(--pri)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal .card{width:560px;max-width:94vw;max-height:90vh;overflow:auto}
+.toast{position:fixed;bottom:20px;right:20px;background:#111;color:#fff;padding:10px 16px;border-radius:8px;z-index:60;opacity:.92}
+.thumb{height:140px;background:var(--bg);border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:8px}
+.thumb img{max-width:100%;max-height:140px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:20px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.over{border-color:var(--pri);color:var(--pri)}
+pre.md{white-space:pre-wrap;background:var(--bg);padding:12px;border-radius:8px;max-height:420px;overflow:auto;font-size:12px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+h2{font-size:18px;margin:0 0 12px}h3{font-size:15px;margin:14px 0 8px}
+.kbd{font-family:monospace;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:0 5px;font-size:12px}
+@media print{header,.noprint{display:none!important}}
+</style>
+</head>
+<body>
+<header class="noprint">
+  <h1>🧭 設計決策解釋器<small>v1.4</small></h1>
+  <nav id="nav"></nav>
+  <button class="btn sec sm" id="themeBtn" title="切換深色模式">🌓</button>
+</header>
+<main id="app"></main>
+<input type="file" id="fileIn" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple hidden>
+<input type="file" id="jsonIn" accept=".json,application/json" hidden>
+<script>
+'use strict';
+/* ================= 公用 ================= */
+const $=s=>document.querySelector(s);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp=(v,a=0,b=100)=>Math.max(a,Math.min(b,v));
+const pct=v=>(v*100).toFixed(1)+'%';
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200)}
+function download(name,data,type){const b=data instanceof Blob?data:new Blob([data],{type});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
+const blobToDataURL=b=>new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result);f.readAsDataURL(b)});
+const dataURLToBlob=async u=>(await fetch(u)).blob();
+
+/* ================= IndexedDB ================= */
+const STORES=['projects','artboards','elements','analyses','decisions','risks','principles','settings','qa'];
+const DB={db:null,
+ open(){return new Promise((res,rej)=>{const r=indexedDB.open('DDE_DB',1);r.onupgradeneeded=()=>{const d=r.result;STORES.forEach(s=>{if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:s==='settings'?'key':'id'})})};r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
+ req(s,m,fn){return new Promise((res,rej)=>{const q=fn(this.db.transaction(s,m).objectStore(s));q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error)})},
+ all(s){return this.req(s,'readonly',o=>o.getAll())},
+ get(s,k){return this.req(s,'readonly',o=>o.get(k))},
+ put(s,v){return this.req(s,'readwrite',o=>o.put(v))},
+ del(s,k){return this.req(s,'readwrite',o=>o.delete(k))},
+ clear(s){return this.req(s,'readwrite',o=>o.clear())},
+ async where(s,f,v){return (await this.all(s)).filter(x=>x[f]===v)}
+};
+
+/* ================= 常數 ================= */
+const TYPES=['主標題','副標題','內文','主要CTA','次要CTA','圖片','圖示','導覽列','表單','卡片','資訊區塊'];
+const TEXT_TYPES=['主標題','副標題','內文','主要CTA','次要CTA','導覽列'];
+const TYPE_W={'主標題':6,'主要CTA':5.5,'圖片':4,'副標題':4,'次要CTA':3.5,'卡片':3,'資訊區塊':3,'表單':3,'導覽列':2,'內文':2,'圖示':1.5};
+const INDUSTRIES=['金融銀行','保險','科技軟體','電商零售','醫療健康','教育','餐飲','政府公部門','品牌行銷','其他'];
+const TONES={client:'客戶版',manager:'主管版',designer:'設計師版'};
+const HUES={
+ 紅色:{m:'熱情、急迫、警示',use:'促銷、限時、錯誤提示',warn:'在金融與醫療情境易聯想到虧損或危險'},
+ 橘色:{m:'活力、友善、行動',use:'行動呼籲按鈕、年輕化品牌',warn:'大面積使用會顯得廉價'},
+ 黃色:{m:'樂觀、注意、明亮',use:'重點標示、提醒',warn:'白底上可讀性差'},
+ 綠色:{m:'成長、安全、成功',use:'成功狀態、理財成長、健康',warn:'易與「確認」語意混淆'},
+ 青色:{m:'清新、科技、穩定',use:'科技產品、醫療',warn:'飽和度過高顯得冰冷'},
+ 藍色:{m:'信任、專業、穩重',use:'金融、科技、企業品牌',warn:'過度使用會顯得保守'},
+ 紫色:{m:'創意、尊榮、想像',use:'高端會員、創意品牌',warn:'與部分族群偏好落差大'},
+ 粉色:{m:'溫柔、親切、關懷',use:'女性客群、生活風格',warn:'在專業場景說服力較弱'},
+ 中性色:{m:'理性、簡約、中立',use:'背景、內文、分隔',warn:'缺乏重點時畫面平淡'}
+};
+const BUILTIN_PRINCIPLES=[
+ ['色彩心理','色彩心理學','不同色相會引發不同情緒聯想，品牌與功能色應配合溝通目標。','所有具主色的元素'],
+ ['色彩心理','60-30-10 配色法則','主色約 60%、輔色 30%、強調色 10%，讓畫面平衡且有重點。','整體配色'],
+ ['色彩心理','對比強調','強調色與周遭色差越大，越能吸引注意力。','CTA、重點資訊'],
+ ['格式塔原則','接近性','彼此靠近的元素會被視為同一組。','卡片、表單、資訊區塊'],
+ ['格式塔原則','相似性','外觀相似的元素會被認為功能相同。','按鈕、圖示'],
+ ['格式塔原則','連續性','視線會沿著線條與排列方向持續移動。','列表、導覽'],
+ ['格式塔原則','封閉性','人會自動將不完整的形狀補成完整的群組。','卡片、圖示'],
+ ['排版','字級比例（Modular Scale）','用固定比例建立字級，使標題到內文層級清楚。','文字元素'],
+ ['排版','行長與行高','中文每行約 20–40 字、行高 1.5–1.8 倍最易閱讀。','內文'],
+ ['版面','網格系統','以欄格對齊元素，建立秩序與一致性。','對齊分析'],
+ ['版面','8pt 間距系統','以 8 的倍數設定間距，維持節奏一致。','間距'],
+ ['版面','留白','適度留白可降低認知負荷並提升質感。','整體版面'],
+ ['版面','視覺層級','透過大小、顏色、位置區分資訊重要度。','所有元素'],
+ ['互動','Fitts 定律','目標越大、距離越近，點擊越快越準。','按鈕、CTA'],
+ ['互動','Hick 定律','選項越多，決策時間越長。','導覽列、CTA 數量'],
+ ['互動','拇指熱區','行動裝置下方與中間區域最容易以拇指操作。','行動版 CTA'],
+ ['無障礙','WCAG 2.1 對比','一般文字對比至少 4.5:1（AA），大字 3:1；AAA 為 7:1。','文字元素'],
+ ['無障礙','點擊範圍 44×44','可點擊目標至少 44×44 px，以利觸控操作。','按鈕、圖示'],
+ ['閱讀','F 型掃描','文字密集頁面，使用者以 F 型掃描，左側與上方最受注意。','文字密集版面'],
+ ['閱讀','Z 型掃描','視覺導向頁面，視線由左上→右上→左下→右下。','形象頁、登陸頁'],
+ ['閱讀','中心聚焦','對稱置中的版面讓視線集中於中央。','置中版面']
+];
+
+/* ================= 狀態 ================= */
+const S={view:'projects',project:null,artboard:null,elements:[],analysis:null,selected:null,mode:'select',tab:'elements',undo:[],redo:[],settings:{theme:'light',tone:'client'},compare:{a:'',b:''},filter:{q:'',ind:''}};
+
+/* ================= 色彩工具 ================= */
+const hex=c=>'#'+c.map(v=>Math.round(v).toString(16).padStart(2,'0')).join('').toUpperCase();
+function lin(v){v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)}
+const lum=c=>.2126*lin(c[0])+.7152*lin(c[1])+.0722*lin(c[2]);
+function contrast(a,b){const l1=lum(a),l2=lum(b);return (Math.max(l1,l2)+.05)/(Math.min(l1,l2)+.05)}
+function toLab(c){let [r,g,b]=c.map(lin);let x=(r*.4124+g*.3576+b*.1805)/.95047,y=r*.2126+g*.7152+b*.0722,z=(r*.0193+g*.1192+b*.9505)/1.08883;const f=t=>t>.008856?Math.cbrt(t):7.787*t+16/116;x=f(x);y=f(y);z=f(z);return[116*y-16,500*(x-y),200*(y-z)]}
+function deltaE(a,b){const A=toLab(a),B=toLab(b);return Math.hypot(A[0]-B[0],A[1]-B[1],A[2]-B[2])}
+const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1],a[2]-b[2]);
+function hsl(c){let[r,g,b]=c.map(v=>v/255);const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let h=0,s=0,l=(mx+mn)/2;if(mx!==mn){const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);h=mx===r?(g-b)/d+(g<b?6:0):mx===g?(b-r)/d+2:(r-g)/d+4;h*=60}return[h,s,l]}
+function hueName(c){const[h,s,l]=hsl(c);if(s<.15||l<.1||l>.94)return'中性色';if(h<15||h>=340)return'紅色';if(h<40)return'橘色';if(h<65)return'黃色';if(h<160)return'綠色';if(h<195)return'青色';if(h<255)return'藍色';if(h<290)return'紫色';return'粉色'}
+function kmeans(px,k,it=8){if(!px.length)return[];k=Math.min(k,px.length);let C=[];for(let i=0;i<k;i++)C.push(px[Math.floor((i+.5)*px.length/k)].slice());let A=new Array(px.length);
+ // 依亮度排序初始化較穩定
+ const sorted=px.slice().sort((a,b)=>(a[0]+a[1]+a[2])-(b[0]+b[1]+b[2]));C=[];for(let i=0;i<k;i++)C.push(sorted[Math.floor((i+.5)*sorted.length/k)].slice());
+ for(let t=0;t<it;t++){const sum=C.map(()=>[0,0,0,0]);for(let i=0;i<px.length;i++){let bi=0,bd=1e9;for(let j=0;j<k;j++){const d=dist(px[i],C[j]);if(d<bd){bd=d;bi=j}}A[i]=bi;const s=sum[bi];s[0]+=px[i][0];s[1]+=px[i][1];s[2]+=px[i][2];s[3]++}C=C.map((c,j)=>sum[j][3]?[sum[j][0]/sum[j][3],sum[j][1]/sum[j][3],sum[j][2]/sum[j][3]]:c)}
+ const cnt=C.map(()=>0);A.forEach(a=>cnt[a]++);return C.map((c,j)=>({c,share:cnt[j]/px.length})).filter(x=>x.share>0).sort((a,b)=>b.share-a.share)}
+
+/* ================= 影像分析引擎 ================= */
+async function loadPixels(blob,maxW=480){const bmp=await createImageBitmap(blob);const sc=Math.min(1,maxW/bmp.width);const w=Math.max(1,Math.round(bmp.width*sc)),h=Math.max(1,Math.round(bmp.height*sc));const cv=document.createElement('canvas');cv.width=w;cv.height=h;const cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,w,h);cx.drawImage(bmp,0,0,w,h);return{w,h,d:cx.getImageData(0,0,w,h).data,ow:bmp.width,oh:bmp.height}}
+const px=(I,x,y)=>{const i=(y*I.w+x)*4;return[I.d[i],I.d[i+1],I.d[i+2]]};
+function region(I,x0,y0,x1,y1,step=1){const r=[];x0=Math.max(0,Math.floor(x0*I.w));y0=Math.max(0,Math.floor(y0*I.h));x1=Math.min(I.w,Math.ceil(x1*I.w));y1=Math.min(I.h,Math.ceil(y1*I.h));for(let y=y0;y<y1;y+=step)for(let x=x0;x<x1;x+=step)r.push(px(I,x,y));return r}
+const mean=a=>{if(!a.length)return[255,255,255];const s=[0,0,0];a.forEach(p=>{s[0]+=p[0];s[1]+=p[1];s[2]+=p[2]});return s.map(v=>v/a.length)};
+
+async function analyze(ab,els){
+ const t0=performance.now();const I=await loadPixels(ab.blob);
+ const step=Math.max(1,Math.floor(Math.sqrt(I.w*I.h/7000)));const all=region(I,0,0,1,1,step);
+ // 背景色：量化眾數
+ const bk={};all.forEach(p=>{const k=(p[0]>>4)+'_'+(p[1]>>4)+'_'+(p[2]>>4);(bk[k]=bk[k]||[]).push(p)});
+ const bgArr=Object.values(bk).sort((a,b)=>b.length-a.length)[0];const bg=mean(bgArr);
+ const palette=kmeans(all,6,10).map(x=>({hex:hex(x.c),rgb:x.c.map(Math.round),share:x.share,hue:hueName(x.c)}));
+ let ws=0,wx=0,wy=0,wt=0;for(let y=0;y<I.h;y+=step)for(let x=0;x<I.w;x+=step){const p=px(I,x,y);const d=dist(p,bg);if(d<28)ws++;const w=d/441;wx+=w*x;wy+=w*y;wt+=w}
+ const whitespace=ws/all.length;const centroid={x:wt?wx/wt/I.w:.5,y:wt?wy/wt/I.h:.5};
+ const quad=(x,y)=>(y<.33?'上':y>.66?'下':'中')+(x<.33?'左':x>.66?'右':'中');
+ // 版型動線
+ const textN=els.filter(e=>['內文','副標題','資訊區塊'].includes(e.type)).length;
+ let flow='Z 型';if(els.length&&textN/els.length>=.5)flow='F 型';else if(Math.abs(centroid.x-.5)<.07&&els.filter(e=>Math.abs(e.x+e.w/2-.5)<.08).length>=Math.max(2,els.length*.6))flow='中心型';
+ const onFlow=e=>{const x=e.x+e.w/2,y=e.y+e.h/2;if(flow==='F 型')return x<.55||y<.3;if(flow==='中心型')return Math.hypot(x-.5,y-.5)<.3;return y<.3||y>.7||Math.abs(x+y-1)<.22};
+ // 元素
+ const E={};const areaScore=[];
+ for(const e of els){const r=region(I,e.x,e.y,e.x+e.w,e.y+e.h,1);const km=kmeans(r.length>4000?r.filter((_,i)=>i%Math.ceil(r.length/4000)===0):r,2,8);
+  const fill=km[0]?km[0].c:bg;const fg=km[1]&&km[1].share>.03?km[1].c:(km[0]?km[0].c:bg);
+  const ctr=km[1]&&km[1].share>.03?contrast(fill,fg):contrast(fill,bg);
+  const pad=.5;const rx0=e.x-e.w*pad,ry0=e.y-e.h*pad,rx1=e.x+e.w*(1+pad),ry1=e.y+e.h*(1+pad);
+  const ring=region(I,rx0,ry0,rx1,ry1,2).filter((p,i,arr)=>true);
+  // 去除元素內的像素（近似：以整體 ring 平均扣掉 box 平均）
+  const boxM=mean(r),ringAll=mean(ring);const ringN=ring.length,boxN=r.length/4;const ringOut=ringN>boxN?ringAll.map((v,i)=>(v*ringN-boxM[i]*boxN)/(ringN-boxN)):bg;
+  const dE=deltaE(fill,ringOut.map(v=>clamp(v,0,255)));const area=e.w*e.h;
+  const sal=Math.round(clamp(dE*1.1+Math.sqrt(area)*60));
+  const hpx=Math.round(e.h*I.oh),wpx=Math.round(e.w*I.ow);
+  const mainC=TEXT_TYPES.includes(e.type)&&!e.type.includes('CTA')?fg:fill;
+  E[e.id]={fill:hex(fill),fg:hex(fg),main:hex(mainC),hue:hueName(mainC),contrast:+ctr.toFixed(2),aa:ctr>=4.5,aaLarge:ctr>=3,aaa:ctr>=7,dE:+dE.toFixed(1),salience:sal,hpx,wpx,quad:quad(e.x+e.w/2,e.y+e.h/2),onFlow:onFlow(e),area};
+  areaScore.push({id:e.id,s:area*(TYPE_W[e.type]||2)*(1+sal/100)})}
+ areaScore.sort((a,b)=>b.s-a.s).forEach((a,i)=>E[a.id].rank=i+1);
+ // 對齊
+ const tol=.006,near=.02;const groups={left:[],center:[],right:[]};const misalign=[];
+ const edges=els.map(e=>({id:e.id,l:e.x,c:e.x+e.w/2,r:e.x+e.w}));
+ ['l','c','r'].forEach((k,ki)=>{const used=new Set();edges.forEach(a=>{if(used.has(a.id))return;const g=edges.filter(b=>Math.abs(a[k]-b[k])<tol);if(g.length>=2){g.forEach(b=>used.add(b.id));groups[['left','center','right'][ki]].push(g.map(b=>b.id))}})});
+ edges.forEach(a=>{const aligned=['l','c','r'].some(k=>edges.some(b=>b.id!==a.id&&Math.abs(a[k]-b[k])<tol));if(!aligned){const nm=edges.find(b=>b.id!==a.id&&['l','r'].some(k=>{const d=Math.abs(a[k]-b[k]);return d>=tol&&d<near}));if(nm)misalign.push({id:a.id,with:nm.id})}});
+ els.forEach(e=>{const g=Object.entries(groups).find(([k,v])=>v.some(x=>x.includes(e.id)));E[e.id].align=g?{left:'靠左對齊',center:'置中對齊',right:'靠右對齊'}[g[0]]:'獨立配置'});
+ return{id:ab.id,artboardId:ab.id,bg:hex(bg),palette,whitespace,centroid,centroidQuad:quad(centroid.x,centroid.y),flow,elements:E,groups,misalign,size:{w:I.ow,h:I.oh},ms:Math.round(performance.now()-t0),at:Date.now()}
+}
+
+/* ================= 決策產生 ================= */
+function industryHint(ind,hue){const m={金融銀行:{藍色:'金融業最常用藍色建立信任感',綠色:'綠色可連結理財成長的意象',紅色:'金融情境中紅色容易聯想到虧損，需謹慎'},保險:{藍色:'藍色傳遞保障與穩定',綠色:'綠色帶出安心與健康'},醫療健康:{青色:'青綠色系符合醫療的潔淨印象',綠色:'綠色帶出健康意象'},電商零售:{紅色:'紅色能刺激促銷與購買決策',橘色:'橘色能提升點擊意願'},科技軟體:{藍色:'藍色是科技品牌的主流色',紫色:'紫色帶出創新感'}};return(m[ind]||{})[hue]||''}
+function genReasons(el,a,P,an){const R=[];const hp=HUES[a.hue];const ind=P.industry;const isCTA=el.type.includes('CTA');const isText=TEXT_TYPES.includes(el.type)&&!isCTA;
+ // 色彩
+ const ih=industryHint(ind,a.hue);
+ R.push({cat:'色彩',p:['色彩心理學'],
+  d:`主色 ${a.main}（${a.hue}），象徵${hp.m}${ih?'；'+ih:''}。`,
+  c:`選用${a.hue}，是因為它給人「${hp.m}」的感受${ih?'，而且'+ih:''}，符合${P.audience||'目標客群'}的期待。`,
+  m:`${a.hue}＝${hp.m.split('、')[0]}${ih?'，'+ih:''}。`});
+ if(isCTA){R.push({cat:'顯著度',p:['對比強調','視覺層級'],d:`與周邊色差 ΔE=${a.dE}，顯著度 ${a.salience}/100${a.salience>=70?'，屬高顯著':a.salience>=50?'，屬中等顯著':'，顯著度偏低'}。`,c:`按鈕顏色和周圍有明顯差異，使用者${a.salience>=50?'一眼就能找到下一步':'可能需要多花一點時間才會注意到，我們會再加強'}。`,m:`顯著度 ${a.salience}/100。`});
+  R.push({cat:'尺寸',p:['Fitts 定律','點擊範圍 44×44'],d:`尺寸 ${a.wpx}×${a.hpx}px，${a.hpx>=44?'符合 44px 觸控下限與 Fitts 定律':'低於 44px 觸控建議值'}。`,c:`按鈕${a.hpx>=44?'大小足夠，手機上也好點擊':'目前略小，行動裝置上可能不好點'}。`,m:`${a.hpx>=44?'點擊範圍合格':'點擊範圍不足'}（${a.hpx}px）。`})}
+ // 位置
+ R.push({cat:'位置',p:[an.flow==='F 型'?'F 型掃描':an.flow==='中心型'?'中心聚焦':'Z 型掃描'],d:`位於${a.quad}區，${a.onFlow?'落在 '+an.flow+' 閱讀動線上':'不在 '+an.flow+' 主要動線上'}；視覺層級第 ${a.rank} 位，${a.align}。`,c:`放在畫面${a.quad}，${a.onFlow?'剛好是使用者視線自然經過的位置':'是輔助位置，不會搶走主要訊息的焦點'}。`,m:`${a.quad}區、層級第 ${a.rank}、${a.onFlow?'在動線上':'非動線'}。`});
+ if(isText||isCTA){R.push({cat:'無障礙',p:['WCAG 2.1 對比'],d:`文字／底色對比 ${a.contrast}:1，${a.aaa?'通過 AAA':a.aa?'通過 AA':a.aaLarge?'僅大字通過 AA':'未通過 WCAG AA'}。`,c:`文字和背景${a.aa?'對比充足，長輩或在戶外強光下也看得清楚':'對比偏弱，我們會調整以確保清楚易讀'}。`,m:`對比 ${a.contrast}:1（${a.aa?'合格':'不合格'}）。`})}
+ if(['主標題','副標題','內文'].includes(el.type)){R.push({cat:'排版',p:el.type==='內文'?['行長與行高']:['字級比例（Modular Scale）','視覺層級'],d:el.type==='內文'?`內文區塊寬 ${a.wpx}px，建議每行 20–40 字、行高 1.5–1.8。${el.fontSize?'字級 '+el.fontSize+'px。':''}`:`${el.type}以${el.fontSize?el.fontSize+'px ':''}${el.fontWeight?'字重 '+el.fontWeight+' ':''}建立層級，視覺排序第 ${a.rank}。`,c:el.type==='內文'?'內文的寬度與行距經過控制，讀起來不吃力。':`${el.type}的字級明顯大於其他文字，讓重點一眼就被看見。`,m:el.type==='內文'?'閱讀舒適度已控制。':`層級第 ${a.rank}。`})}
+ if(['卡片','表單','資訊區塊'].includes(el.type))R.push({cat:'群組',p:['接近性','封閉性'],d:'以容器與間距將相關資訊群組化，運用接近性與封閉性原則。',c:'相關資訊集中在同一區塊，客戶不必來回尋找。',m:'資訊已群組化。'});
+ if(el.type==='導覽列')R.push({cat:'互動',p:['Hick 定律'],d:'導覽項目應控制在 5–7 項以內，降低選擇負擔（Hick 定律）。',c:'選單項目精簡，使用者能快速找到要去的地方。',m:'導覽精簡。'});
+ if(el.intent)R.push({cat:'設計意圖',p:[],d:el.intent,c:el.intent,m:el.intent});
+ return R}
+function composeDecision(el,a,P,an,tone){const R=genReasons(el,a,P,an);const name=el.label||el.type;const k=tone==='client'?'c':tone==='manager'?'m':'d';
+ const head=tone==='client'?`【${name}】\n設計說明：`:tone==='manager'?`【${name}】重點：`:`【${el.type}：${name}】\n決策：${a.main}，${a.quad}區，${a.wpx}×${a.hpx}px\n理由：`;
+ const body=tone==='manager'?R.map(r=>`${r.cat}｜${r[k]}`).join('\n'):R.map((r,i)=>`${i+1}. ${r.cat}：${r[k]}`).join('\n');
+ const ps=[...new Set(R.flatMap(r=>r.p))];
+ return{content:`${head}\n${body}${tone==='designer'&&ps.length?'\n依據原則：'+ps.join('、'):''}`,principles:ps}}
+
+/* ================= 風險規則 ================= */
+function genRisks(els,an){const R=[];const add=(key,level,rule,message,fix,elId)=>R.push({key,level,rule,message,fix,elId});
+ const ctas=els.filter(e=>e.type==='主要CTA');
+ els.forEach(e=>{const a=an.elements[e.id];if(!a)return;const n=e.label||e.type;
+  if(TEXT_TYPES.includes(e.type)){if(a.contrast<3)add('ctr-'+e.id,'高','WCAG 2.1 對比',`「${n}」對比僅 ${a.contrast}:1，未達 3:1。`,'加深文字色或淡化底色，使對比至少達 4.5:1。',e.id);else if(a.contrast<4.5)add('ctr-'+e.id,'中','WCAG 2.1 對比',`「${n}」對比 ${a.contrast}:1，一般文字未達 AA。`,'若字級小於 24px，請將對比提高至 4.5:1。',e.id)}
+  if(e.type.includes('CTA')||e.type==='圖示'){if(a.hpx<44)add('tap-'+e.id,'中','點擊範圍 44×44',`「${n}」高度 ${a.hpx}px，小於 44px。`,'放大按鈕或擴大可點擊熱區至 44px 以上。',e.id)}
+  if(e.type==='主要CTA'){if(a.salience<50)add('sal-'+e.id,'中','對比強調',`「${n}」顯著度 ${a.salience}/100 偏低。`,'改用與背景互補的強調色，或加大尺寸。',e.id);if(!a.onFlow)add('flow-'+e.id,'中','閱讀動線',`「${n}」不在 ${an.flow} 閱讀動線上。`,'移至動線終點（如 Z 型右下）或首屏明顯位置。',e.id)}
+  if(e.type==='主標題'&&a.rank>2)add('h1-'+e.id,'中','視覺層級',`主標題「${n}」視覺層級排第 ${a.rank}，可能被其他元素搶走焦點。`,'加大主標題字級或降低其他元素的視覺權重。',e.id)});
+ if(ctas.length>1)add('cta-multi','中','Hick 定律',`畫面有 ${ctas.length} 個主要 CTA，會分散決策。`,'保留一個主要 CTA，其餘改為次要樣式。');
+ if(!ctas.length&&els.length)add('cta-none','低','視覺層級','尚未標註主要 CTA，無法評估行動引導。','確認頁面的主要行動，並標註主要 CTA。');
+ const eff=an.palette.filter(p=>p.share>.04).length;if(eff>5)add('pal','低','60-30-10 配色法則',`有效色彩達 ${eff} 種，畫面可能過於繁雜。`,'收斂為主色、輔色、強調色三類。');
+ if(an.whitespace<.15)add('ws-low','中','留白',`留白率僅 ${pct(an.whitespace)}，畫面擁擠。`,'增加區塊間距，建議採 8pt 倍數。');
+ if(an.whitespace>.75)add('ws-high','低','留白',`留白率達 ${pct(an.whitespace)}，資訊可能過於稀疏。`,'確認首屏是否已傳達關鍵訊息。');
+ an.misalign.forEach(m=>{const a=els.find(e=>e.id===m.id),b=els.find(e=>e.id===m.with);if(a&&b)add('al-'+m.id,'低','網格系統',`「${a.label||a.type}」與「${b.label||b.type}」邊緣接近但未對齊。`,'對齊到同一條網格線。',m.id)});
+ return R}
+function genQA(els,an,P){const Q=[];const main=an.palette.find(p=>p.hue!=='中性色');
+ if(main){const h=HUES[main.hue];Q.push({q:`為什麼主色用${main.hue}，不用其他顏色？`,a:`${main.hue}帶給人「${h.m}」的感受，${industryHint(P.industry,main.hue)||'適合'+h.use}。我們也評估過其他色系，但${main.hue}最能傳達${P.tone||'品牌調性'}。`})}
+ if(main&&main.hue!=='紅色')Q.push({q:'為什麼不用紅色比較醒目？',a:`紅色雖然醒目，但${HUES['紅色'].warn}。我們改以色差與位置來提高重點的注意度，同時維持品牌的專業感。`});
+ const cta=els.find(e=>e.type==='主要CTA');if(cta){const a=an.elements[cta.id];Q.push({q:'按鈕可以再大、再明顯一點嗎？',a:`目前按鈕顯著度為 ${a.salience}/100，高度 ${a.hpx}px，${a.hpx>=44?'已符合觸控尺寸':'我們會再放大到 44px 以上'}。若再放大，會壓縮其他資訊的空間，並讓畫面顯得急迫。`})}
+ const txt=els.filter(e=>['內文','副標題'].includes(e.type));if(txt.length)Q.push({q:'這些字會不會太小、長輩看不清楚？',a:`文字對比${txt.every(e=>an.elements[e.id].aa)?'均已通過 WCAG AA 國際無障礙標準':'部分未達 WCAG AA，我們將調整'}，並保留足夠行距，確保各年齡層都容易閱讀。`});
+ if(an.whitespace>.4)Q.push({q:'留白會不會太多，畫面看起來很空？',a:`留白率為 ${pct(an.whitespace)}。適度留白能降低閱讀負擔、提升質感，並讓重點更突出，是高端品牌常見的做法。`});
+ if(an.whitespace<.2)Q.push({q:'畫面會不會太擠？',a:`目前留白率為 ${pct(an.whitespace)}，我們會依 8pt 間距系統調整區塊間距，讓資訊更有呼吸感。`});
+ Q.push({q:'為什麼這樣排版？',a:`這個畫面採 ${an.flow} 動線設計，重要資訊沿著使用者的閱讀路徑排列，${cta?'並讓行動按鈕位於動線上的關鍵位置':'讓重點依序被看見'}。`});
+ Q.push({q:'可以再多放一些資訊嗎？',a:'每增加一項資訊，使用者做決定的時間就會增加（Hick 定律）。建議將次要資訊移到下一層頁面，首屏聚焦在最重要的訊息。'});
+ return Q.map(x=>({...x,id:uid()}))}
+
+/* ================= 資料存取 ================= */
+async function loadArtboard(id){const ab=await DB.get('artboards',id);S.artboard=ab;S.elements=(await DB.where('elements','artboardId',id)).sort((a,b)=>a.z-b.z);S.analysis=await DB.get('analyses',id)||null;S.selected=null;S.undo=[];S.redo=[];setURL()}
+async function saveElements(){const old=await DB.where('elements','artboardId',S.artboard.id);for(const o of old)if(!S.elements.find(e=>e.id===o.id))await DB.del('elements',o.id);for(const e of S.elements)await DB.put('elements',e);touch()}
+async function touch(){if(S.project){S.project.updatedAt=Date.now();await DB.put('projects',S.project)}}
+function snapshot(){S.undo.push(JSON.stringify(S.elements));if(S.undo.length>50)S.undo.shift();S.redo=[]}
+async function runAnalysis(){if(!S.artboard)return;toast('分析中…');const an=await analyze(S.artboard,S.elements);await DB.put('analyses',an);S.analysis=an;
+ const oldR=await DB.where('risks','artboardId',S.artboard.id);const keep={};oldR.forEach(r=>{keep[r.key]=r;});for(const r of oldR)await DB.del('risks',r.id);
+ for(const r of genRisks(S.elements,an)){const k=keep[r.key];await DB.put('risks',{...r,id:S.artboard.id+'|'+r.key,artboardId:S.artboard.id,intentional:k?k.intentional:false,reason:k?k.reason:''})}
+ toast(`分析完成（${an.ms} ms）`);render()}
+function isStale(){const an=S.analysis;if(!an)return true;return S.elements.some(e=>!an.elements[e.id])||Object.keys(an.elements).length!==S.elements.length}
+function pageDecision(an,P,tone){const m=an.palette.find(p=>p.hue!=='中性色');const h=m?HUES[m.hue]:HUES['中性色'];const ih=m?industryHint(P.industry,m.hue):'';const ws=pct(an.whitespace);
+ const R=[{cat:'配色',p:['色彩心理學','60-30-10 配色法則'],d:`基底 ${an.palette[0].hex}（${pct(an.palette[0].share)}）${m?`，主要色 ${m.hex}（${m.hue}）象徵${h.m}`:''}；有效色彩 ${an.palette.filter(p=>p.share>.04).length} 種。${ih}`,c:`整體${m?'以'+m.hue+'為主調，帶出「'+h.m+'」的感受':'以中性色為主，呈現理性、簡約的調性'}${ih?'，'+ih:''}。`,m:`${m?m.hue+'主調':'中性色主調'}，色彩 ${an.palette.filter(p=>p.share>.04).length} 種。`},
+ {cat:'留白',p:['留白'],d:`留白率 ${ws}，${an.whitespace>.75?'偏稀疏':an.whitespace<.15?'偏擁擠':'落在舒適區間'}。`,c:`畫面保留 ${ws} 的留白，${an.whitespace<.15?'資訊較密集，後續會再增加呼吸空間':'讓重點更清楚、閱讀更輕鬆'}。`,m:`留白 ${ws}。`},
+ {cat:'動線',p:[an.flow==='F 型'?'F 型掃描':an.flow==='中心型'?'中心聚焦':'Z 型掃描'],d:`採 ${an.flow} 動線，視覺重心位於${an.centroidQuad}區 (${an.centroid.x.toFixed(2)}, ${an.centroid.y.toFixed(2)})。`,c:`版面依照使用者自然的 ${an.flow} 閱讀路徑安排，視覺焦點落在畫面${an.centroidQuad}。`,m:`${an.flow}動線，重心${an.centroidQuad}。`}];
+ const k=tone==='client'?'c':tone==='manager'?'m':'d';const ps=[...new Set(R.flatMap(r=>r.p))];
+ return{content:`【整體版面】\n`+(tone==='manager'?R.map(r=>`${r.cat}｜${r[k]}`).join('\n'):R.map((r,i)=>`${i+1}. ${r.cat}：${r[k]}`).join('\n'))+(tone==='designer'?'\n依據原則：'+ps.join('、'):''),principles:ps}}
+async function genDecisions(tone){if(!S.artboard)return;tone=tone||S.settings.tone;S._tone=tone;
+ if(isStale()){toast('標註已變更，重新分析中…');S.analysis=await analyze(S.artboard,S.elements);await DB.put('analyses',S.analysis)}
+ const old=await DB.where('decisions','artboardId',S.artboard.id);let n=0;
+ const pid='__page_'+S.artboard.id;const exP=old.find(d=>d.elementId===pid&&d.tone===tone);if(!(exP&&exP.confirmed)){const d=pageDecision(S.analysis,S.project,tone);await DB.put('decisions',{id:pid+'|'+tone,elementId:pid,artboardId:S.artboard.id,tone,content:d.content,principles:d.principles,confirmed:false,at:Date.now()});n++}
+ for(const e of S.elements){const a=S.analysis.elements[e.id];if(!a)continue;const ex=old.find(d=>d.elementId===e.id&&d.tone===tone);if(ex&&ex.confirmed)continue;const d=composeDecision(e,a,S.project,S.analysis,tone);await DB.put('decisions',{id:e.id+'|'+tone,elementId:e.id,artboardId:S.artboard.id,tone,content:d.content,principles:d.principles,confirmed:false,at:Date.now()});n++}
+ toast(S.elements.length?`已產生 ${n} 張決策卡`:'已產生整體版面卡；尚未標註元素，可按「自動偵測元素」');S.tab='decisions';render()}
+
+/* ================= 渲染：導覽 ================= */
+function renderNav(){const items=[['projects','📁 專案'],['principles','📚 原則庫'],['settings','⚙️ 設定']];if(S.project)items.splice(1,0,['workspace','🖼️ 工作區'],['compare','🔀 版本比較'],['export','📤 匯出中心']);
+ $('#nav').innerHTML=items.map(([k,t])=>`<button class="${S.view===k?'on':''}" onclick="go('${k}')">${t}</button>`).join('')+(S.project?`<span class="muted" style="align-self:center;margin-left:8px">目前專案：<b>${esc(S.project.name)}</b>${S.artboard?' / '+esc(S.artboard.name)+' v'+S.artboard.version:''}</span>`:'')}
+async function go(v){if(['workspace','compare','export'].includes(v)&&!S.project){toast('請先開啟專案');return}if(v==='workspace'&&!S.artboard){const abs=await DB.where('artboards','projectId',S.project.id);if(abs.length)await loadArtboard(abs[0].id)}S.view=v;render()}
+async function render(){renderNav();const f={projects:vProjects,workspace:vWorkspace,principles:vPrinciples,settings:vSettings,export:vExport,compare:vCompare}[S.view];await f()}
+
+/* ================= 專案列表 ================= */
+async function vProjects(){let ps=(await DB.all('projects')).sort((a,b)=>b.updatedAt-a.updatedAt);const abs=await DB.all('artboards');
+ const q=S.filter.q.toLowerCase();if(q)ps=ps.filter(p=>(p.name+p.client+(p.goals||'')).toLowerCase().includes(q));if(S.filter.ind)ps=ps.filter(p=>p.industry===S.filter.ind);
+ const thumbs={};for(const p of ps){const a=abs.filter(x=>x.projectId===p.id).sort((x,y)=>x.createdAt-y.createdAt)[0];if(a)thumbs[p.id]=URL.createObjectURL(a.blob)}
+ $('#app').innerHTML=`<div class="row" style="margin-bottom:14px"><h2 style="margin:0">專案列表</h2><span class="sp"></span>
+ <input placeholder="搜尋專案、客戶…" value="${esc(S.filter.q)}" oninput="S.filter.q=this.value;clearTimeout(window._qt);window._qt=setTimeout(vProjects,250)">
+ <select onchange="S.filter.ind=this.value;vProjects()"><option value="">全部產業</option>${INDUSTRIES.map(i=>`<option ${S.filter.ind===i?'selected':''}>${i}</option>`).join('')}</select>
+ <button class="btn" onclick="projectForm()">＋ 新增專案</button></div>
+ ${ps.length?`<div class="grid">${ps.map(p=>`<div class="card"><div class="thumb">${thumbs[p.id]?`<img src="${thumbs[p.id]}">`:'<span class="muted">尚無設計稿</span>'}</div>
+ <b>${esc(p.name)}</b><div class="muted" style="font-size:12px;margin:4px 0">${esc(p.client||'—')}｜${esc(p.industry)}｜${abs.filter(x=>x.projectId===p.id).length} 張設計稿</div>
+ <div class="muted" style="font-size:12px">更新：${new Date(p.updatedAt).toLocaleString('zh-TW')}</div>
+ <div class="row" style="margin-top:10px"><button class="btn sm" onclick="openProject('${p.id}')">開啟</button><button class="btn sec sm" onclick="projectForm('${p.id}')">編輯</button><button class="btn sec sm" onclick="dupProject('${p.id}')">複製</button><span class="sp"></span><button class="btn danger sm" onclick="delProject('${p.id}')">刪除</button></div></div>`).join('')}</div>`
+ :`<div class="card" style="text-align:center;padding:50px"><p class="muted">尚無專案。建立第一個專案，開始把設計稿轉成有依據的設計說明。</p><button class="btn" onclick="projectForm()">＋ 新增專案</button> <button class="btn sec" onclick="loadDemo()">載入範例專案</button></div>`}`}
+async function projectForm(id){const p=id?await DB.get('projects',id):{name:'',client:'',industry:'金融銀行',tone:'',audience:'',goals:''};
+ modal(`<h2>${id?'編輯':'新增'}專案</h2>
+ <label class="f">專案名稱 *</label><input id="pf_name" value="${esc(p.name)}">
+ <label class="f">客戶</label><input id="pf_client" value="${esc(p.client)}">
+ <label class="f">產業別</label><select id="pf_ind">${INDUSTRIES.map(i=>`<option ${p.industry===i?'selected':''}>${i}</option>`).join('')}</select>
+ <label class="f">品牌調性（例：專業、穩重、親切）</label><input id="pf_tone" value="${esc(p.tone)}">
+ <label class="f">目標族群</label><input id="pf_aud" value="${esc(p.audience)}">
+ <label class="f">設計目標</label><textarea id="pf_goals">${esc(p.goals)}</textarea>
+ <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn sec" onclick="closeModal()">取消</button><button class="btn" onclick="saveProject('${id||''}')">儲存</button></div>`)}
+async function saveProject(id){const name=$('#pf_name').value.trim();if(!name){toast('請輸入專案名稱');return}
+ const p=id?await DB.get('projects',id):{id:uid(),createdAt:Date.now()};Object.assign(p,{name,client:$('#pf_client').value,industry:$('#pf_ind').value,tone:$('#pf_tone').value,audience:$('#pf_aud').value,goals:$('#pf_goals').value,updatedAt:Date.now()});
+ await DB.put('projects',p);if(S.project&&S.project.id===p.id)S.project=p;closeModal();toast('已儲存');render()}
+async function openProject(id){S.project=await DB.get('projects',id);S.artboard=null;const abs=await DB.where('artboards','projectId',id);if(abs.length)await loadArtboard(abs.sort((a,b)=>a.createdAt-b.createdAt)[0].id);S.view='workspace';render()}
+async function delProject(id){if(!confirm('確定刪除此專案及所有設計稿、標註與決策？'))return;const abs=await DB.where('artboards','projectId',id);for(const a of abs)await delArtboardData(a.id);await DB.del('projects',id);if(S.project&&S.project.id===id){S.project=null;S.artboard=null}toast('已刪除');render()}
+async function delArtboardData(aid){for(const s of ['elements','decisions','risks','qa']){for(const x of await DB.where(s,'artboardId',aid))await DB.del(s,x.id)}await DB.del('analyses',aid);await DB.del('artboards',aid)}
+async function dupProject(id){const data=await exportProjectData(id);data.project.name+='（複本）';await importProjectData(data,true);toast('已複製');render()}
+
+/* ================= 工作區 ================= */
+async function vWorkspace(){const abs=(await DB.where('artboards','projectId',S.project.id)).sort((a,b)=>a.name.localeCompare(b.name)||a.version-b.version);
+ const left=`<div class="card"><div class="row"><b>設計稿</b><span class="sp"></span><button class="btn sm" onclick="$('#fileIn').click()">＋ 匯入</button></div>
+ <div id="drop" class="drop" style="margin:10px 0;padding:12px;font-size:12px">拖曳圖片到這裡<br>或 Ctrl+V 貼上</div>
+ ${abs.map(a=>`<div class="list-item ${S.artboard&&S.artboard.id===a.id?'on':''}" onclick="selectArtboard('${a.id}')">🖼️ <span class="sp">${esc(a.name)} <span class="muted">v${a.version}</span></span></div>`).join('')||'<p class="muted" style="font-size:12px">尚未匯入設計稿</p>'}
+ ${S.artboard?`<hr style="border:none;border-top:1px solid var(--line)"><div class="row"><button class="btn sec sm" onclick="renameArtboard()">重新命名</button><button class="btn sec sm" onclick="newVersion()">新增版本</button><button class="btn danger sm" onclick="delArtboard()">刪除</button></div>`:''}
+ <hr style="border:none;border-top:1px solid var(--line)"><button class="btn sec sm" onclick="projectForm('${S.project.id}')">專案設定</button>
+ <p class="muted" style="font-size:11px;margin-top:12px">快捷鍵：<span class="kbd">V</span> 選取 <span class="kbd">R</span> 框選 <span class="kbd">Delete</span> 刪除 <span class="kbd">Ctrl+Z</span> 復原 <span class="kbd">Ctrl+Y</span> 重做</p></div>`;
+ const mid=S.artboard?`<div class="stagewrap"><div><div class="row noprint" style="margin-bottom:8px"><button class="btn sm ${S.mode==='select'?'':'sec'}" onclick="setMode('select')">V 選取</button><button class="btn sm ${S.mode==='draw'?'':'sec'}" onclick="setMode('draw')">R 框選</button><button class="btn sec sm" onclick="undo()">↶ 復原</button><button class="btn sec sm" onclick="redo()">↷ 重做</button><span class="sp"></span><button class="btn sm" onclick="runAnalysis()">▶ 執行分析</button></div>
+ <div class="stage ${S.mode==='draw'?'draw':''}" id="stage"><img id="abImg" src="${S._url}">${S.analysis&&S.tab==='analysis'?`<div style="position:absolute;left:${S.analysis.centroid.x*100}%;top:${S.analysis.centroid.y*100}%;width:18px;height:18px;margin:-9px;border-radius:50%;background:#ff3b30;border:3px solid #fff;box-shadow:0 0 0 2px #ff3b30" title="視覺重心"></div>`:''}${S.elements.map(boxHTML).join('')}</div></div></div>`
+ :`<div class="card" style="display:flex;align-items:center;justify-content:center"><div style="text-align:center"><p class="muted">請先匯入設計稿（PNG、JPG、WebP、SVG，單檔 20MB 以內）</p><button class="btn" onclick="$('#fileIn').click()">＋ 匯入設計稿</button></div></div>`;
+ const tabs=[['elements','元素'],['analysis','分析'],['decisions','決策卡'],['risks','風險'],['qa','Q&A 預演']];
+ const right=`<div class="card"><div class="tabs">${tabs.map(([k,t])=>`<button class="${S.tab===k?'on':''}" onclick="S.tab='${k}';vWorkspace()">${t}</button>`).join('')}</div><div id="panel"></div></div>`;
+ $('#app').innerHTML=`<div class="ws"><div>${left}</div>${mid}<div>${right}</div></div>`;
+ bindDrop();if(S.artboard)bindStage();await renderPanel()}
+function boxHTML(e){return`<div class="box ${S.selected===e.id?'sel':''}" data-id="${e.id}" style="left:${e.x*100}%;top:${e.y*100}%;width:${e.w*100}%;height:${e.h*100}%;z-index:${e.z+1}"><span class="lb">${esc(e.label||e.type)}</span><span class="hd"></span></div>`}
+async function selectArtboard(id){await loadArtboard(id);setURL();vWorkspace()}
+function setURL(){if(S._url)URL.revokeObjectURL(S._url);S._url=S.artboard?URL.createObjectURL(S.artboard.blob):''}
+function setMode(m){S.mode=m;vWorkspace()}
+async function importFiles(files){for(const f of files){if(!/image\/(png|jpeg|webp|svg\+xml)/.test(f.type)){toast('不支援的格式：'+f.name);continue}if(f.size>20*1024*1024){toast('超過 20MB：'+f.name);continue}
+  const name=(f.name||'貼上圖片').replace(/\.[^.]+$/,'');const exist=(await DB.where('artboards','projectId',S.project.id)).filter(a=>a.name===name);
+  const ab={id:uid(),projectId:S.project.id,name,version:exist.length?Math.max(...exist.map(a=>a.version))+1:1,blob:f,createdAt:Date.now()};
+  try{const b=await createImageBitmap(f);ab.width=b.width;ab.height=b.height}catch(e){toast('無法讀取圖片：'+f.name);continue}
+  await DB.put('artboards',ab);await loadArtboard(ab.id)}
+ setURL();touch();S.view='workspace';render()}
+function bindDrop(){const d=$('#drop');if(!d)return;d.onclick=()=>$('#fileIn').click();d.ondragover=e=>{e.preventDefault();d.classList.add('over')};d.ondragleave=()=>d.classList.remove('over');d.ondrop=e=>{e.preventDefault();d.classList.remove('over');importFiles([...e.dataTransfer.files])}}
+async function renameArtboard(){const n=prompt('設計稿名稱',S.artboard.name);if(!n)return;S.artboard.name=n.trim();await DB.put('artboards',S.artboard);vWorkspace();renderNav()}
+async function newVersion(){toast('請選擇新版本圖片');S._newVer=true;$('#fileIn').click()}
+async function delArtboard(){if(!confirm('刪除此設計稿與其標註、決策？'))return;await delArtboardData(S.artboard.id);S.artboard=null;const abs=await DB.where('artboards','projectId',S.project.id);if(abs.length)await loadArtboard(abs[0].id);setURL();render()}
+
+function bindStage(){const st=$('#stage');if(!st)return;let drag=null;
+ const rel=ev=>{const r=st.getBoundingClientRect();return{x:clamp((ev.clientX-r.left)/r.width,0,1),y:clamp((ev.clientY-r.top)/r.height,0,1)}};
+ st.onmousedown=ev=>{const p=rel(ev);const bx=ev.target.closest('.box');
+  if(S.mode==='draw'){snapshot();const e={id:uid(),artboardId:S.artboard.id,type:'主要CTA',label:'',x:p.x,y:p.y,w:0,h:0,z:S.elements.length,intent:'',fontSize:'',fontWeight:'',brandColor:''};e.type=S._lastType||'主標題';S.elements.push(e);S.selected=e.id;drag={kind:'new',e,sx:p.x,sy:p.y};st.insertAdjacentHTML('beforeend',boxHTML(e));}
+  else if(bx){const e=S.elements.find(x=>x.id===bx.dataset.id);S.selected=e.id;snapshot();drag={kind:ev.target.classList.contains('hd')?'resize':'move',e,sx:p.x,sy:p.y,ox:e.x,oy:e.y,ow:e.w,oh:e.h};st.querySelectorAll('.box').forEach(b=>b.classList.toggle('sel',b.dataset.id===e.id));S.tab='elements';renderPanel();document.querySelectorAll('.tabs button').forEach((b,i)=>b.classList.toggle('on',i===0))}
+  else{S.selected=null;st.querySelectorAll('.box').forEach(b=>b.classList.remove('sel'));renderPanel()}
+  ev.preventDefault()};
+ window.onmousemove=ev=>{if(!drag)return;const p=rel(ev),e=drag.e;
+  if(drag.kind==='new'){e.x=Math.min(p.x,drag.sx);e.y=Math.min(p.y,drag.sy);e.w=Math.abs(p.x-drag.sx);e.h=Math.abs(p.y-drag.sy)}
+  else if(drag.kind==='move'){e.x=clamp(drag.ox+p.x-drag.sx,0,1-e.w);e.y=clamp(drag.oy+p.y-drag.sy,0,1-e.h)}
+  else{e.w=clamp(drag.ow+p.x-drag.sx,.005,1-e.x);e.h=clamp(drag.oh+p.y-drag.sy,.005,1-e.y)}
+  const b=st.querySelector(`.box[data-id="${e.id}"]`);if(b){b.style.left=e.x*100+'%';b.style.top=e.y*100+'%';b.style.width=e.w*100+'%';b.style.height=e.h*100+'%'}};
+ window.onmouseup=async()=>{if(!drag)return;const d=drag;drag=null;if(d.kind==='new'&&(d.e.w<.008||d.e.h<.006)){S.elements=S.elements.filter(x=>x!==d.e);S.undo.pop();S.selected=null;vWorkspace();return}await saveElements();if(d.kind==='new'){S.tab='elements'}vWorkspace()}}
+async function undo(){if(!S.undo.length)return;S.redo.push(JSON.stringify(S.elements));S.elements=JSON.parse(S.undo.pop());await saveElements();vWorkspace()}
+async function redo(){if(!S.redo.length)return;S.undo.push(JSON.stringify(S.elements));S.elements=JSON.parse(S.redo.pop());await saveElements();vWorkspace()}
+async function delSelected(){if(!S.selected)return;snapshot();const id=S.selected;S.elements=S.elements.filter(e=>e.id!==id);S.selected=null;for(const d of await DB.where('decisions','elementId',id))await DB.del('decisions',d.id);await saveElements();vWorkspace()}
+async function updEl(id,k,v){const e=S.elements.find(x=>x.id===id);if(!e)return;snapshot();e[k]=v;if(k==='type')S._lastType=v;await DB.put('elements',e);const b=document.querySelector(`.box[data-id="${id}"] .lb`);if(b)b.textContent=e.label||e.type}
+async function zOrder(id,dir){const i=S.elements.findIndex(e=>e.id===id),j=i+dir;if(j<0||j>=S.elements.length)return;snapshot();[S.elements[i],S.elements[j]]=[S.elements[j],S.elements[i]];S.elements.forEach((e,k)=>e.z=k);await saveElements();vWorkspace()}
+
+/* ---------- 右側面板 ---------- */
+async function renderPanel(){const P=$('#panel');if(!P)return;if(!S.artboard){P.innerHTML='<p class="muted">請先匯入設計稿。</p>';return}
+ const f={elements:pElements,analysis:pAnalysis,decisions:pDecisions,risks:pRisks,qa:pQA}[S.tab];P.innerHTML=await f()}
+async function pElements(){const sel=S.elements.find(e=>e.id===S.selected);
+ const list=S.elements.slice().reverse().map(e=>`<div class="list-item ${S.selected===e.id?'on':''}" onclick="S.selected='${e.id}';vWorkspace()"><span class="tag">${e.type}</span><span class="sp">${esc(e.label||'')}</span><button class="btn sec sm" onclick="event.stopPropagation();zOrder('${e.id}',1)" title="上移">▲</button><button class="btn sec sm" onclick="event.stopPropagation();zOrder('${e.id}',-1)" title="下移">▼</button></div>`).join('');
+ const form=sel?`<div class="dcard"><h4>元素屬性</h4>
+ <label class="f">元素類型</label><select onchange="updEl('${sel.id}','type',this.value)">${TYPES.map(t=>`<option ${sel.type===t?'selected':''}>${t}</option>`).join('')}</select>
+ <label class="f">元素名稱（例：立即開戶）</label><input value="${esc(sel.label)}" onchange="updEl('${sel.id}','label',this.value)">
+ <label class="f">設計意圖（選填）</label><textarea style="min-height:60px" onchange="updEl('${sel.id}','intent',this.value)">${esc(sel.intent)}</textarea>
+ <div class="row"><div style="flex:1"><label class="f">字級 px</label><input type="number" style="width:100%" value="${esc(sel.fontSize)}" onchange="updEl('${sel.id}','fontSize',this.value)"></div><div style="flex:1"><label class="f">字重</label><select style="width:100%" onchange="updEl('${sel.id}','fontWeight',this.value)">${['','300','400','500','600','700','900'].map(w=>`<option ${sel.fontWeight===w?'selected':''}>${w}</option>`).join('')}</select></div></div>
+ <label class="f">品牌色名稱</label><input value="${esc(sel.brandColor)}" placeholder="例：品牌橘" onchange="updEl('${sel.id}','brandColor',this.value)">
+ <div class="row" style="margin-top:10px"><button class="btn danger sm" onclick="delSelected()">刪除元素</button></div></div>`:'<p class="muted" style="font-size:12px">切換到「R 框選」在設計稿上拖曳框出元素，點選元素即可編輯屬性。</p>';
+ return form+`<div class="row"><h3 class="sp">元素清單（${S.elements.length}）</h3><button class="btn sec sm" onclick="autoDetect()">🪄 自動偵測</button></div>`+(list||'<p class="muted">尚無標註</p>')}
+async function pAnalysis(){const an=S.analysis;if(!an)return`<p class="muted">尚未分析。</p><button class="btn" onclick="runAnalysis()">▶ 執行分析</button>`;
+ const rows=S.elements.map(e=>{const a=an.elements[e.id];if(!a)return'';return`<tr><td>${esc(e.label||e.type)}<br><span class="muted">${e.type}</span></td><td><span class="swatch"><i style="background:${a.main}"></i>${a.hue}</span></td><td class="${a.aa?'ok':a.aaLarge?'warn':'bad'}">${a.contrast}:1<br>${a.aaa?'AAA':a.aa?'AA':a.aaLarge?'大字AA':'未通過'}</td><td>${a.salience}<div class="meter"><i style="width:${a.salience}%"></i></div></td><td>#${a.rank}</td><td>${a.onFlow?'✅':'—'}</td></tr>`}).join('');
+ const stale=S.elements.some(e=>!an.elements[e.id])||Object.keys(an.elements).length!==S.elements.length;
+ return`${stale?'<p class="warn">⚠ 標註已變更，請重新執行分析。</p>':''}<div class="row"><span class="muted">分析於 ${new Date(an.at).toLocaleString('zh-TW')}（${an.ms} ms）</span><span class="sp"></span><button class="btn sm" onclick="runAnalysis()">重新分析</button></div>
+ <h3>主色萃取</h3>${an.palette.map(p=>`<span class="swatch"><i style="background:${p.hex}"></i>${p.hex} ${p.hue} ${pct(p.share)}</span>`).join('')}
+ <h3>版面指標</h3><table><tr><th>背景色</th><td><span class="swatch"><i style="background:${an.bg}"></i>${an.bg}</span></td></tr><tr><th>留白率</th><td>${pct(an.whitespace)}</td></tr><tr><th>視覺重心</th><td>(${an.centroid.x.toFixed(2)}, ${an.centroid.y.toFixed(2)})，${an.centroidQuad}區（畫面紅點）</td></tr><tr><th>閱讀動線</th><td>${an.flow}</td></tr><tr><th>對齊群組</th><td>靠左 ${an.groups.left.length}、置中 ${an.groups.center.length}、靠右 ${an.groups.right.length}；未對齊 ${an.misalign.length}</td></tr><tr><th>原始尺寸</th><td>${an.size.w}×${an.size.h}px</td></tr></table>
+ <h3>元素分析</h3><table><tr><th>元素</th><th>主色</th><th>對比</th><th>顯著度</th><th>層級</th><th>動線</th></tr>${rows}</table>`}
+async function pDecisions(){const tone=S._tone||S.settings.tone;const ds=await DB.where('decisions','artboardId',S.artboard.id);
+ const pid='__page_'+S.artboard.id;const list=[{id:pid,label:'整體版面',type:'整體版面'},...S.elements.slice().sort((a,b)=>(S.analysis?.elements[a.id]?.rank||99)-(S.analysis?.elements[b.id]?.rank||99))];const cards=list.map(e=>{const d=ds.find(x=>x.elementId===e.id&&x.tone===tone);if(!d)return'';return`<div class="dcard"><div class="row"><h4 class="sp">${esc(e.label||e.type)}</h4>${d.confirmed?'<span class="tag lv-低">✔ 已人工確認</span>':'<span class="tag">自動產生</span>'}</div>
+ <textarea style="min-height:150px" onchange="editDecision('${d.id}',this.value)">${esc(d.content)}</textarea>
+ <div class="row">${d.principles.map(p=>`<span class="tag">${esc(p)}</span>`).join('')}<span class="sp"></span><button class="btn sm ${d.confirmed?'sec':''}" onclick="confirmDecision('${d.id}')">${d.confirmed?'取消確認':'確認'}</button>${e.type==='整體版面'?'':`<button class="btn sec sm" onclick="regenOne('${e.id}')">重新產生</button>`}</div></div>`}).join('');
+ return`<div class="row"><span>語氣：</span><select onchange="S._tone=this.value;renderPanel()">${Object.entries(TONES).map(([k,v])=>`<option value="${k}" ${tone===k?'selected':''}>${v}</option>`).join('')}</select><span class="sp"></span><button class="btn sm" onclick="genDecisions('${tone}')">產生決策卡</button></div><p class="muted" style="font-size:12px">客戶版＝白話、商業導向；主管版＝精簡重點；設計師版＝專業術語與數據。已確認的卡片不會被覆寫。</p>${S.elements.length?'':`<div class="dcard" style="border-color:var(--warn)"><b class="warn">⚠ 尚未標註任何元素</b><p class="muted" style="margin:6px 0">決策卡以「元素」為單位產生。請用「R 框選」標註，或讓系統自動偵測。</p><button class="btn sm" onclick="autoDetect()">🪄 自動偵測元素</button></div>`}${cards||'<p class="muted">尚未產生，請先執行分析後按「產生決策卡」。</p>'}`}
+async function editDecision(id,v){const d=await DB.get('decisions',id);d.content=v;await DB.put('decisions',d);toast('已儲存')}
+async function confirmDecision(id){const d=await DB.get('decisions',id);d.confirmed=!d.confirmed;await DB.put('decisions',d);renderPanel()}
+async function regenOne(eid){const tone=S._tone||S.settings.tone;const e=S.elements.find(x=>x.id===eid),a=S.analysis?.elements[eid];if(!a){toast('請先重新分析');return}const d=composeDecision(e,a,S.project,S.analysis,tone);await DB.put('decisions',{id:eid+'|'+tone,elementId:eid,artboardId:S.artboard.id,tone,content:d.content,principles:d.principles,confirmed:false,at:Date.now()});renderPanel()}
+async function pRisks(){const rs=(await DB.where('risks','artboardId',S.artboard.id)).sort((a,b)=>'高中低'.indexOf(a.level)-'高中低'.indexOf(b.level));if(!S.analysis)return'<p class="muted">請先執行分析。</p>';
+ const c=l=>rs.filter(r=>r.level===l&&!r.intentional).length;
+ return`<div class="row"><span class="tag lv-高">高 ${c('高')}</span><span class="tag lv-中">中 ${c('中')}</span><span class="tag lv-低">低 ${c('低')}</span><span class="sp"></span><span class="muted">刻意設計 ${rs.filter(r=>r.intentional).length}</span></div>
+ ${rs.map(r=>`<div class="dcard" style="${r.intentional?'opacity:.6':''}"><div class="row"><span class="tag lv-${r.level}">${r.level}</span><b class="sp">${esc(r.rule)}</b>${r.elId?`<button class="btn sec sm" onclick="S.selected='${r.elId}';vWorkspace()">定位</button>`:''}</div><p style="margin:6px 0">${esc(r.message)}</p><p class="muted" style="margin:0 0 6px">💡 ${esc(r.fix)}</p>
+ <label class="row" style="font-size:12px"><input type="checkbox" ${r.intentional?'checked':''} onchange="markIntent('${r.id}',this.checked)">標記為刻意設計</label>${r.intentional?`<input style="width:100%;margin-top:4px" placeholder="刻意設計的理由" value="${esc(r.reason)}" onchange="intentReason('${r.id}',this.value)">`:''}</div>`).join('')||'<p class="ok">✅ 未發現違反設計原則的項目。</p>'}`}
+async function markIntent(id,v){const r=await DB.get('risks',id);r.intentional=v;await DB.put('risks',r);renderPanel()}
+async function intentReason(id,v){const r=await DB.get('risks',id);r.reason=v;await DB.put('risks',r);toast('已儲存')}
+async function pQA(){const qs=await DB.where('qa','artboardId',S.artboard.id);
+ return`<div class="row"><span class="muted">提案前預演客戶可能提出的質疑</span><span class="sp"></span><button class="btn sm" onclick="genQAs()">${qs.length?'重新產生':'產生題目'}</button><button class="btn sec sm" onclick="addQA()">＋ 自訂</button></div>
+ ${qs.sort((a,b)=>a.order-b.order).map((x,i)=>`<div class="dcard"><label class="f">Q${i+1}</label><input style="width:100%" value="${esc(x.q)}" onchange="updQA('${x.id}','q',this.value)"><label class="f">建議回答</label><textarea style="min-height:70px" onchange="updQA('${x.id}','a',this.value)">${esc(x.a)}</textarea><div class="row"><span class="sp"></span><button class="btn danger sm" onclick="delQA('${x.id}')">刪除</button></div></div>`).join('')||'<p class="muted">尚無題目，請先執行分析再產生。</p>'}
+ ${qs.length?'<button class="btn sec sm" onclick="exportQA()">匯出準備清單（Markdown）</button>':''}`}
+async function genQAs(){if(!S.analysis){toast('請先執行分析');return}for(const x of await DB.where('qa','artboardId',S.artboard.id))await DB.del('qa',x.id);let i=0;for(const q of genQA(S.elements,S.analysis,S.project))await DB.put('qa',{...q,artboardId:S.artboard.id,order:i++});renderPanel()}
+async function addQA(){const n=(await DB.where('qa','artboardId',S.artboard.id)).length;await DB.put('qa',{id:uid(),artboardId:S.artboard.id,q:'新問題',a:'',order:n});renderPanel()}
+async function updQA(id,k,v){const x=await DB.get('qa',id);x[k]=v;await DB.put('qa',x)}
+async function delQA(id){await DB.del('qa',id);renderPanel()}
+async function exportQA(){const qs=(await DB.where('qa','artboardId',S.artboard.id)).sort((a,b)=>a.order-b.order);download(`${S.project.name}_${S.artboard.name}_QA預演.md`,`# ${S.project.name}｜${S.artboard.name} 提案 Q&A 準備清單\n\n`+qs.map((x,i)=>`## Q${i+1}. ${x.q}\n\n${x.a}\n`).join('\n'),'text/markdown')}
+
+async function autoDetect(){if(!S.artboard)return;const I=await loadPixels(S.artboard.blob,320);const W=I.w,H=I.h;
+ const all=region(I,0,0,1,1,2);const bk={};all.forEach(p=>{const k=(p[0]>>4)+'_'+(p[1]>>4)+'_'+(p[2]>>4);(bk[k]=bk[k]||[]).push(p)});const bg=mean(Object.values(bk).sort((a,b)=>b.length-a.length)[0]);
+ const m=new Uint8Array(W*H);for(let y=0;y<H;y++)for(let x=0;x<W;x++)m[y*W+x]=dist(px(I,x,y),bg)>30?1:0;
+ const r=Math.max(2,Math.round(W/110));const d=new Uint8Array(W*H);for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(!m[y*W+x])continue;for(let dy=-r;dy<=r;dy++)for(let dx=-r*2;dx<=r*2;dx++){const yy=y+dy,xx=x+dx;if(yy>=0&&yy<H&&xx>=0&&xx<W)d[yy*W+xx]=1}}
+ const seen=new Uint8Array(W*H),boxes=[];for(let i=0;i<W*H;i++){if(!d[i]||seen[i])continue;let x0=W,y0=H,x1=0,y1=0,c=0;const st=[i];seen[i]=1;while(st.length){const j=st.pop();const x=j%W,y=(j/W)|0;c++;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;for(const k of[j-1,j+1,j-W,j+W]){if(k<0||k>=W*H||seen[k]||!d[k])continue;if(Math.abs((k%W)-x)>1)continue;seen[k]=1;st.push(k)}}
+  const bw=(x1-x0+1)/W,bh=(y1-y0+1)/H;if(bw*bh<.0015||c<20)continue;if(bw>.97&&bh>.9)continue;boxes.push({x:x0/W,y:y0/H,w:bw,h:bh})}
+ boxes.sort((a,b)=>b.w*b.h-a.w*a.h);const top=boxes.slice(0,15);if(!top.length){toast('未偵測到明顯元素，請手動框選');return}
+ snapshot();let z=S.elements.length,hasH=false,hasCTA=false;
+ top.sort((a,b)=>a.y-b.y||a.x-b.x).forEach(b=>{const reg=region(I,b.x,b.y,b.x+b.w,b.y+b.h,1);const km=kmeans(reg,2,6);const sat=km[0]?hsl(km[0].c)[1]:0;const ratio=b.w/b.h*(I.w/I.h)*(H/W)*(W/H);const ar=(b.w*W)/(b.h*H);let t;
+  if(b.y<.12&&b.w>.6&&b.h<.18)t='導覽列';else if(b.w*b.h>.12)t='圖片';else if(!hasCTA&&ar>1.8&&ar<8&&b.h<.15&&sat>.45&&km[0]&&km[0].share>.5){t='主要CTA';hasCTA=true}else if(ar>1.8&&ar<8&&b.h<.15&&km[0]&&km[0].share>.5)t='次要CTA';else if(!hasH&&ar>3&&b.y<.5){t='主標題';hasH=true}else if(ar>4)t='內文';else if(b.w<.08&&b.h<.12)t='圖示';else t='資訊區塊';
+  S.elements.push({id:uid(),artboardId:S.artboard.id,type:t,label:'',x:b.x,y:b.y,w:b.w,h:b.h,z:z++,intent:'',fontSize:'',fontWeight:'',brandColor:''})});
+ await saveElements();toast(`已偵測 ${top.length} 個元素，請檢查類型後再產生決策卡`);S.tab='elements';await runAnalysis()}
+/* ================= 版本比較 ================= */
+async function metrics(abId){const an=await DB.get('analyses',abId);if(!an)return null;const els=await DB.where('elements','artboardId',abId);const rs=(await DB.where('risks','artboardId',abId)).filter(r=>!r.intentional);
+ const vals=els.map(e=>an.elements[e.id]).filter(Boolean);const txt=els.filter(e=>TEXT_TYPES.includes(e.type)).map(e=>an.elements[e.id]).filter(Boolean);const cta=els.filter(e=>e.type==='主要CTA').map(e=>an.elements[e.id]).filter(Boolean);
+ return{an,'留白率':+(an.whitespace*100).toFixed(1),'有效色彩數':an.palette.filter(p=>p.share>.04).length,'主要 CTA 顯著度':cta.length?Math.round(cta.reduce((s,a)=>s+a.salience,0)/cta.length):null,'CTA 在動線上':cta.length?cta.filter(a=>a.onFlow).length+'/'+cta.length:null,'文字對比合格率':txt.length?+(txt.filter(a=>a.aa).length/txt.length*100).toFixed(0):null,'未對齊元素':an.misalign.length,'高風險數':rs.filter(r=>r.level==='高').length,'中風險數':rs.filter(r=>r.level==='中').length,'元素數':vals.length,'閱讀動線':an.flow}}
+async function vCompare(){const abs=(await DB.where('artboards','projectId',S.project.id)).sort((a,b)=>a.name.localeCompare(b.name)||a.version-b.version);const opt=v=>abs.map(a=>`<option value="${a.id}" ${v===a.id?'selected':''}>${esc(a.name)} v${a.version}</option>`).join('');
+ if(!S.compare.a&&abs[0])S.compare.a=abs[0].id;if(!S.compare.b&&abs[1])S.compare.b=abs[abs.length-1].id;
+ let body='<p class="muted">請選擇兩張已分析的設計稿。</p>';
+ if(S.compare.a&&S.compare.b&&S.compare.a!==S.compare.b){const A=await metrics(S.compare.a),B=await metrics(S.compare.b);const aa=abs.find(x=>x.id===S.compare.a),bb=abs.find(x=>x.id===S.compare.b);
+  if(!A||!B)body='<p class="warn">⚠ 有設計稿尚未執行分析，請先到工作區分析。</p>';else{const better={'留白率':0,'有效色彩數':-1,'主要 CTA 顯著度':1,'文字對比合格率':1,'未對齊元素':-1,'高風險數':-1,'中風險數':-1};
+   const rows=Object.keys(A).filter(k=>k!=='an').map(k=>{let d='';if(typeof A[k]==='number'&&typeof B[k]==='number'){const diff=+(B[k]-A[k]).toFixed(1);const g=better[k];d=diff===0?'—':`<span class="${g===undefined||g===0?'':(diff*g>0?'ok':'bad')}">${diff>0?'+':''}${diff}</span>`}else d=A[k]===B[k]?'—':'變更';return`<tr><th>${k}</th><td>${A[k]??'—'}</td><td>${B[k]??'—'}</td><td>${d}</td></tr>`}).join('');
+   S._changeNote=changeNote(aa,bb,A,B);
+   body=`<div class="row" style="align-items:flex-start">${[aa,bb].map(x=>`<div class="card" style="flex:1"><b>${esc(x.name)} v${x.version}</b><div class="thumb" style="height:320px"><img style="max-height:320px" src="${URL.createObjectURL(x.blob)}"></div></div>`).join('')}</div>
+   <div class="card" style="margin-top:12px"><h3>指標差異</h3><table><tr><th>指標</th><th>A：${esc(aa.name)} v${aa.version}</th><th>B：${esc(bb.name)} v${bb.version}</th><th>差異（B−A）</th></tr>${rows}</table>
+   <h3>改版說明（可編輯）</h3><textarea id="cmpNote" style="min-height:160px">${esc(S._changeNote)}</textarea><div class="row" style="margin-top:6px"><button class="btn sm" onclick="navigator.clipboard.writeText($('#cmpNote').value);toast('已複製')">複製</button><button class="btn sec sm" onclick="download('改版說明.md',$('#cmpNote').value,'text/markdown')">下載 Markdown</button></div></div>`}}
+ $('#app').innerHTML=`<h2>版本比較</h2><div class="card row">A：<select onchange="S.compare.a=this.value;vCompare()">${opt(S.compare.a)}</select> B：<select onchange="S.compare.b=this.value;vCompare()">${opt(S.compare.b)}</select></div><div style="margin-top:12px">${body}</div>`}
+function changeNote(aa,bb,A,B){const L=[];const f=(k,u='')=>{if(typeof A[k]!=='number'||typeof B[k]!=='number'||A[k]===B[k])return;L.push(`${k}由 ${A[k]}${u} ${B[k]>A[k]?'提升':'降低'}至 ${B[k]}${u}`)};
+ f('主要 CTA 顯著度');f('文字對比合格率','%');f('留白率','%');f('有效色彩數',' 種');f('未對齊元素',' 項');f('高風險數',' 項');f('中風險數',' 項');
+ if(A['閱讀動線']!==B['閱讀動線'])L.push(`閱讀動線由 ${A['閱讀動線']} 調整為 ${B['閱讀動線']}`);
+ return`【改版說明】${aa.name} v${aa.version} → ${bb.name} v${bb.version}\n\n本次改版重點如下：\n${L.length?L.map((x,i)=>`${i+1}. ${x}。`).join('\n'):'1. 兩版主要量化指標相同，屬細節調整。'}\n\n整體而言，${(B['高風險數']+B['中風險數'])<(A['高風險數']+A['中風險數'])?'新版降低了設計風險，使用體驗與可讀性更佳。':(B['高風險數']+B['中風險數'])>(A['高風險數']+A['中風險數'])?'新版風險項目增加，建議檢視風險清單後再定稿。':'新版維持原有的設計品質。'}`}
+
+/* ================= 原則知識庫 ================= */
+async function vPrinciples(){const ps=(await DB.all('principles')).sort((a,b)=>a.category.localeCompare(b.category));const cats=[...new Set(ps.map(p=>p.category))];
+ $('#app').innerHTML=`<div class="row" style="margin-bottom:12px"><h2 style="margin:0">設計原則知識庫（${ps.length}）</h2><span class="sp"></span><button class="btn" onclick="principleForm()">＋ 新增原則</button><button class="btn sec" onclick="exportPrinciples()">匯出 JSON</button><button class="btn sec" onclick="S._jsonMode='principles';$('#jsonIn').click()">匯入 JSON</button></div>
+ ${cats.map(c=>`<div class="card" style="margin-bottom:12px"><h3 style="margin-top:0">${esc(c)}</h3><table><tr><th style="width:180px">原則</th><th>說明</th><th style="width:180px">適用條件</th><th style="width:130px"></th></tr>${ps.filter(p=>p.category===c).map(p=>`<tr><td><b>${esc(p.name)}</b> ${p.builtin?'<span class="tag">內建</span>':'<span class="tag lv-低">團隊</span>'}</td><td>${esc(p.description)}</td><td class="muted">${esc(p.condition)}</td><td><button class="btn sec sm" onclick="principleForm('${p.id}')">編輯</button> <button class="btn danger sm" onclick="delPrinciple('${p.id}')">刪除</button></td></tr>`).join('')}</table></div>`).join('')}`}
+async function principleForm(id){const p=id?await DB.get('principles',id):{category:'',name:'',description:'',condition:''};
+ modal(`<h2>${id?'編輯':'新增'}原則</h2><label class="f">分類</label><input id="pr_c" list="cats" value="${esc(p.category)}"><datalist id="cats">${['色彩心理','格式塔原則','排版','版面','互動','無障礙','閱讀','團隊規範'].map(c=>`<option>${c}</option>`).join('')}</datalist>
+ <label class="f">名稱 *</label><input id="pr_n" value="${esc(p.name)}"><label class="f">說明</label><textarea id="pr_d">${esc(p.description)}</textarea><label class="f">適用條件</label><input id="pr_k" value="${esc(p.condition)}">
+ <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn sec" onclick="closeModal()">取消</button><button class="btn" onclick="savePrinciple('${id||''}')">儲存</button></div>`)}
+async function savePrinciple(id){const n=$('#pr_n').value.trim();if(!n){toast('請輸入名稱');return}const p=id?await DB.get('principles',id):{id:uid(),builtin:false};Object.assign(p,{category:$('#pr_c').value.trim()||'團隊規範',name:n,description:$('#pr_d').value,condition:$('#pr_k').value});await DB.put('principles',p);closeModal();vPrinciples()}
+async function delPrinciple(id){if(!confirm('刪除此原則？'))return;await DB.del('principles',id);vPrinciples()}
+async function exportPrinciples(){download('設計原則知識庫.json',JSON.stringify({type:'DDE-principles',items:await DB.all('principles')},null,2),'application/json')}
+
+/* ================= 設定 ================= */
+async function vSettings(){const counts={};for(const s of ['projects','artboards','elements','decisions'])counts[s]=(await DB.all(s)).length;
+ $('#app').innerHTML=`<h2>設定</h2><div class="card" style="max-width:640px">
+ <label class="f">外觀主題</label><select onchange="setSetting('theme',this.value)"><option value="light" ${S.settings.theme==='light'?'selected':''}>淺色（預設）</option><option value="dark" ${S.settings.theme==='dark'?'selected':''}>深色</option></select>
+ <label class="f">預設決策語氣</label><select onchange="setSetting('tone',this.value)">${Object.entries(TONES).map(([k,v])=>`<option value="${k}" ${S.settings.tone===k?'selected':''}>${v}</option>`).join('')}</select>
+ <h3>資料</h3><p class="muted">專案 ${counts.projects}｜設計稿 ${counts.artboards}｜元素 ${counts.elements}｜決策卡 ${counts.decisions}。所有資料僅儲存在本機瀏覽器（IndexedDB），不會上傳。</p>
+ <div class="row"><button class="btn sec" onclick="backupAll()">完整備份（JSON）</button><button class="btn sec" onclick="S._jsonMode='project';$('#jsonIn').click()">還原／匯入專案</button><button class="btn danger" onclick="clearAll()">清除所有資料</button></div>
+ <h3>關於</h3><p class="muted">設計決策解釋器 v1.4｜純前端單頁應用，可離線使用。決策內容由規則引擎與設計原則知識庫產生，請於提案前人工確認。</p></div>`}
+async function setSetting(k,v){S.settings[k]=v;await DB.put('settings',{key:k,value:v});applyTheme()}
+function applyTheme(){document.documentElement.dataset.theme=S.settings.theme}
+async function clearAll(){if(!confirm('確定清除所有專案與設定？此動作無法復原。'))return;for(const s of STORES)await DB.clear(s);location.reload()}
+
+/* ================= 備份 / 還原 ================= */
+async function exportProjectData(pid){const project=await DB.get('projects',pid);const abs=await DB.where('artboards','projectId',pid);const out={type:'DDE-project',version:'1.4',project,artboards:[],elements:[],analyses:[],decisions:[],risks:[],qa:[]};
+ for(const a of abs){out.artboards.push({...a,blob:await blobToDataURL(a.blob)});for(const s of ['elements','decisions','risks','qa'])out[s].push(...await DB.where(s,'artboardId',a.id));const an=await DB.get('analyses',a.id);if(an)out.analyses.push(an)}return out}
+async function importProjectData(d,newIds){const map={};const nid=o=>newIds?(map[o]=map[o]||uid()):o;const pid=nid(d.project.id);
+ await DB.put('projects',{...d.project,id:pid,updatedAt:Date.now()});
+ for(const a of d.artboards)await DB.put('artboards',{...a,id:nid(a.id),projectId:pid,blob:await dataURLToBlob(a.blob)});
+ for(const e of d.elements)await DB.put('elements',{...e,id:nid(e.id),artboardId:nid(e.artboardId)});
+ for(const an of d.analyses){const E={};Object.entries(an.elements).forEach(([k,v])=>E[nid(k)]=v);await DB.put('analyses',{...an,id:nid(an.id),artboardId:nid(an.artboardId),elements:E,misalign:an.misalign.map(m=>({id:nid(m.id),with:nid(m.with)})),groups:Object.fromEntries(Object.entries(an.groups).map(([k,v])=>[k,v.map(g=>g.map(nid))]))})}
+ for(const x of d.decisions)await DB.put('decisions',{...x,id:nid(x.elementId)+'|'+x.tone,elementId:nid(x.elementId),artboardId:nid(x.artboardId)});
+ for(const x of d.risks){const key=x.key.replace(/^(\w+-)(.+)$/,(m,a,b)=>map[b]||!newIds?a+nid(b):m);await DB.put('risks',{...x,key,elId:x.elId?nid(x.elId):x.elId,id:nid(x.artboardId)+'|'+key,artboardId:nid(x.artboardId)})}
+ for(const x of d.qa)await DB.put('qa',{...x,id:nid(x.id),artboardId:nid(x.artboardId)});return pid}
+async function backupAll(){const ps=await DB.all('projects');const out={type:'DDE-backup',version:'1.4',at:new Date().toISOString(),projects:[],principles:await DB.all('principles')};for(const p of ps)out.projects.push(await exportProjectData(p.id));download(`DDE_備份_${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(out),'application/json');toast('備份完成')}
+$('#jsonIn').onchange=async ev=>{const f=ev.target.files[0];ev.target.value='';if(!f)return;try{const d=JSON.parse(await f.text());
+ if(d.type==='DDE-principles'){for(const p of d.items)await DB.put('principles',p);toast(`已匯入 ${d.items.length} 條原則`)}
+ else if(d.type==='DDE-project'){await importProjectData(d,true);toast('專案已匯入')}
+ else if(d.type==='DDE-backup'){for(const p of d.projects)await importProjectData(p,false);for(const p of d.principles||[])await DB.put('principles',p);toast(`已還原 ${d.projects.length} 個專案`)}
+ else toast('無法辨識的檔案格式');render()}catch(e){console.error(e);toast('匯入失敗：'+e.message)}};
+
+/* ================= 匯出中心 ================= */
+const SECTIONS=[['cover','封面'],['bg','專案背景與設計目標'],['color','色彩策略'],['layout','版面策略'],['cards','元素決策卡'],['risks','風險與處理'],['qa','客戶 Q&A 預演'],['appendix','附錄：引用原則']];
+async function vExport(){const abs=(await DB.where('artboards','projectId',S.project.id)).sort((a,b)=>a.name.localeCompare(b.name)||a.version-b.version);S._exp=S._exp||{abs:abs.map(a=>a.id),sec:SECTIONS.map(s=>s[0]),tone:S.settings.tone,img:true};
+ $('#app').innerHTML=`<h2>匯出中心</h2><div class="row" style="align-items:flex-start"><div class="card" style="width:320px"><b>選擇設計稿</b>${abs.map(a=>`<label class="list-item"><input type="checkbox" ${S._exp.abs.includes(a.id)?'checked':''} onchange="togExp('abs','${a.id}',this.checked)">${esc(a.name)} v${a.version}</label>`).join('')}
+ <b>選擇章節</b>${SECTIONS.map(([k,t])=>`<label class="list-item"><input type="checkbox" ${S._exp.sec.includes(k)?'checked':''} onchange="togExp('sec','${k}',this.checked)">${t}</label>`).join('')}
+ <label class="f">決策卡語氣</label><select onchange="S._exp.tone=this.value;vExport()">${Object.entries(TONES).map(([k,v])=>`<option value="${k}" ${S._exp.tone===k?'selected':''}>${v}</option>`).join('')}</select>
+ <label class="list-item"><input type="checkbox" ${S._exp.img?'checked':''} onchange="S._exp.img=this.checked">DOCX／PDF 嵌入標註後的設計稿</label>
+ <div class="row" style="margin-top:10px"><button class="btn" onclick="exportDocx()">📄 DOCX 設計說明書</button><button class="btn" onclick="exportPDF()">🖨️ PDF 一頁摘要</button><button class="btn sec" onclick="exportMD()">Markdown</button><button class="btn sec" onclick="exportJSON()">JSON 備份</button></div></div>
+ <div class="card" style="flex:1;min-width:300px"><b>Markdown 預覽</b><pre class="md" id="mdPrev">產生中…</pre></div></div>`;$('#mdPrev').textContent=await buildMD()}
+function togExp(k,v,on){const a=S._exp[k];if(on&&!a.includes(v))a.push(v);if(!on)S._exp[k]=a.filter(x=>x!==v);vExport()}
+async function gatherDoc(){const P=S.project;const abs=(await DB.where('artboards','projectId',P.id)).filter(a=>S._exp.abs.includes(a.id)).sort((a,b)=>a.name.localeCompare(b.name)||a.version-b.version);const out=[];
+ for(const a of abs){const els=(await DB.where('elements','artboardId',a.id)).sort((x,y)=>x.z-y.z);const an=await DB.get('analyses',a.id);const ds=(await DB.where('decisions','artboardId',a.id)).filter(d=>d.tone===S._exp.tone);const rs=await DB.where('risks','artboardId',a.id);const qa=(await DB.where('qa','artboardId',a.id)).sort((x,y)=>x.order-y.order);
+  const sorted=[{id:'__page_'+a.id,label:'整體版面',type:'整體版面',x:0,y:0,w:0,h:0},...els.slice().sort((x,y)=>(an?.elements[x.id]?.rank||99)-(an?.elements[y.id]?.rank||99))];out.push({a,els:sorted,an,ds,rs,qa})}
+ const usedP=new Set(out.flatMap(o=>o.ds.flatMap(d=>d.principles)));const allP=await DB.all('principles');return{P,out,principles:allP.filter(p=>usedP.has(p.name))}}
+function colorText(an){const main=an.palette.filter(p=>p.hue!=='中性色');const m=main[0];return`畫面以 ${an.palette[0].hex}（${an.palette[0].hue}）為基底，佔 ${pct(an.palette[0].share)}。${m?`主要色彩為${m.hue}（${m.hex}），傳達「${HUES[m.hue].m}」的感受。`:'整體以中性色為主，呈現理性簡約的調性。'}有效色彩共 ${an.palette.filter(p=>p.share>.04).length} 種。`}
+function layoutText(an){return`版面採 ${an.flow} 閱讀動線，留白率 ${pct(an.whitespace)}，視覺重心位於${an.centroidQuad}區。對齊群組：靠左 ${an.groups.left.length}、置中 ${an.groups.center.length}、靠右 ${an.groups.right.length}${an.misalign.length?`，另有 ${an.misalign.length} 項元素建議調整對齊`:''}。`}
+async function buildMD(){const{P,out,principles}=await gatherDoc();const s=S._exp.sec;let md='';
+ if(s.includes('cover'))md+=`# ${P.name} 設計說明書\n\n客戶：${P.client||'—'}｜產業：${P.industry}｜產出日期：${new Date().toLocaleDateString('zh-TW')}\n\n`;
+ if(s.includes('bg'))md+=`## 專案背景與設計目標\n\n- 品牌調性：${P.tone||'—'}\n- 目標族群：${P.audience||'—'}\n- 設計目標：${P.goals||'—'}\n\n`;
+ for(const o of out){md+=`## 設計稿：${o.a.name} v${o.a.version}\n\n`;if(!o.an){md+='> 尚未分析。\n\n';continue}
+  if(s.includes('color'))md+=`### 色彩策略\n\n${colorText(o.an)}\n\n`+o.an.palette.map(p=>`- ${p.hex} ${p.hue} ${pct(p.share)}`).join('\n')+'\n\n';
+  if(s.includes('layout'))md+=`### 版面策略\n\n${layoutText(o.an)}\n\n`;
+  if(s.includes('cards')){md+=`### 元素決策卡（${TONES[S._exp.tone]}）\n\n`;o.els.forEach(e=>{const d=o.ds.find(x=>x.elementId===e.id);if(d)md+=d.content.replace(/^【(.+?)】/,'#### $1')+(d.confirmed?'\n\n_✔ 已人工確認_':'')+'\n\n'})}
+  if(s.includes('risks')){md+=`### 風險與處理\n\n`;md+=o.rs.length?'| 嚴重度 | 規則 | 說明 | 處理 |\n|---|---|---|---|\n'+o.rs.map(r=>`| ${r.level} | ${r.rule} | ${r.message} | ${r.intentional?'刻意設計：'+(r.reason||'—'):r.fix} |`).join('\n')+'\n\n':'未發現風險項目。\n\n'}
+  if(s.includes('qa')&&o.qa.length)md+=`### 客戶 Q&A 預演\n\n`+o.qa.map((x,i)=>`**Q${i+1}. ${x.q}**\n\n${x.a}\n`).join('\n')+'\n'}
+ if(s.includes('appendix')&&principles.length)md+=`## 附錄：引用原則\n\n`+principles.map(p=>`- **${p.name}**（${p.category}）：${p.description}`).join('\n')+'\n';
+ return md}
+async function exportMD(){download(`${S.project.name}_設計說明書.md`,await buildMD(),'text/markdown')}
+async function exportJSON(){download(`${S.project.name}_專案備份.json`,JSON.stringify(await exportProjectData(S.project.id)),'application/json')}
+async function annotatedPNG(o,maxW=1200){const bmp=await createImageBitmap(o.a.blob);const sc=Math.min(1,maxW/bmp.width);const w=Math.round(bmp.width*sc),h=Math.round(bmp.height*sc);const cv=document.createElement('canvas');cv.width=w;cv.height=h;const c=cv.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,w,h);c.drawImage(bmp,0,0,w,h);
+ o.els.filter(e=>e.w).forEach((e,i)=>{c.strokeStyle='#ff7a00';c.lineWidth=3;c.strokeRect(e.x*w,e.y*h,e.w*w,e.h*h);const t=`${i+1}. ${e.label||e.type}`;c.font='bold 15px sans-serif';const tw=c.measureText(t).width+10;c.fillStyle='#ff7a00';c.fillRect(e.x*w,Math.max(0,e.y*h-22),tw,22);c.fillStyle='#fff';c.fillText(t,e.x*w+5,Math.max(16,e.y*h-6))});
+ const blob=await new Promise(r=>cv.toBlob(r,'image/png'));return{blob,w,h}}
+
+/* ---------- 最小 ZIP / DOCX 產生器（無外部依賴） ---------- */
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+function crc32(b){let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=CRC[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0}
+function zip(files){const enc=new TextEncoder();const parts=[],central=[];let off=0;
+ for(const f of files){const name=enc.encode(f.name),data=typeof f.data==='string'?enc.encode(f.data):f.data;const crc=crc32(data);
+  const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x0800,true);h.setUint16(8,0,true);h.setUint32(14,crc,true);h.setUint32(18,data.length,true);h.setUint32(22,data.length,true);h.setUint16(26,name.length,true);
+  parts.push(new Uint8Array(h.buffer),name,data);
+  const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x0800,true);c.setUint32(16,crc,true);c.setUint32(20,data.length,true);c.setUint32(24,data.length,true);c.setUint16(28,name.length,true);c.setUint32(42,off,true);
+  central.push(new Uint8Array(c.buffer),name);off+=30+name.length+data.length}
+ const cs=central.reduce((s,a)=>s+a.length,0);const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+ return new Blob([...parts,...central,new Uint8Array(e.buffer)],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})}
+const X=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const FONT='<w:rFonts w:ascii="Microsoft JhengHei" w:hAnsi="Microsoft JhengHei" w:eastAsia="Microsoft JhengHei"/>';
+function wp(text,o={}){const lines=String(text??'').split('\n');const rpr=`<w:rPr>${FONT}${o.b?'<w:b/>':''}${o.color?`<w:color w:val="${o.color}"/>`:''}<w:sz w:val="${o.sz||22}"/></w:rPr>`;
+ return`<w:p><w:pPr>${o.center?'<w:jc w:val="center"/>':''}<w:spacing w:before="${o.before||0}" w:after="${o.after??120}"/>${o.shade?`<w:shd w:val="clear" w:color="auto" w:fill="${o.shade}"/>`:''}</w:pPr>${lines.map((l,i)=>`<w:r>${rpr}${i?'<w:br/>':''}<w:t xml:space="preserve">${X(l)}</w:t></w:r>`).join('')}</w:p>`}
+const wh=(t,l)=>wp(t,{b:true,sz:l===1?36:l===2?30:26,color:l===1?'1F3A8A':'2F6BFF',before:l===1?240:200,after:120});
+function wtable(head,rows,widths){const tw=9000;const ws=widths||head.map(()=>Math.floor(tw/head.length));const cell=(t,i,h)=>`<w:tc><w:tcPr><w:tcW w:w="${ws[i]}" w:type="dxa"/>${h?'<w:shd w:val="clear" w:color="auto" w:fill="E8EFFF"/>':''}</w:tcPr>${wp(t,{b:h,sz:20,after:40})}</w:tc>`;
+ const b='<w:tblBorders>'+['top','left','bottom','right','insideH','insideV'].map(k=>`<w:${k} w:val="single" w:sz="4" w:color="BFC5D2"/>`).join('')+'</w:tblBorders>';
+ return`<w:tbl><w:tblPr><w:tblW w:w="${tw}" w:type="dxa"/>${b}</w:tblPr><w:tblGrid>${ws.map(w=>`<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid><w:tr>${head.map((h,i)=>cell(h,i,true)).join('')}</w:tr>${rows.map(r=>`<w:tr>${r.map((c,i)=>cell(c,i)).join('')}</w:tr>`).join('')}</w:tbl>`+wp('',{after:60})}
+function wimg(rid,w,h,n){const maxW=5900000;const cx=maxW,cy=Math.round(maxW*h/w);return`<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="img${n}"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${n}" name="img${n}.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`}
+async function exportDocx(){toast('產生 DOCX 中…');const{P,out,principles}=await gatherDoc();const s=S._exp.sec;let b='';const media=[];let n=1;
+ if(s.includes('cover')){b+=wp('',{after:1600})+wp(P.name,{b:true,sz:52,center:true,color:'1F3A8A'})+wp('設計說明書',{sz:36,center:true,after:600})+wp(`客戶：${P.client||'—'}`,{center:true})+wp(`產業：${P.industry}`,{center:true})+wp(`產出日期：${new Date().toLocaleDateString('zh-TW')}`,{center:true})+'<w:p><w:r><w:br w:type="page"/></w:r></w:p>'}
+ if(s.includes('bg')){b+=wh('專案背景與設計目標',1)+wtable(['項目','內容'],[['品牌調性',P.tone||'—'],['目標族群',P.audience||'—'],['設計目標',P.goals||'—']],[2200,6800])}
+ for(const o of out){b+=wh(`設計稿：${o.a.name} v${o.a.version}`,1);
+  if(S._exp.img){const im=await annotatedPNG(o);const rid='rIdImg'+n;media.push({rid,name:`media/img${n}.png`,data:new Uint8Array(await im.blob.arrayBuffer())});b+=wimg(rid,im.w,im.h,n);n++}
+  if(!o.an){b+=wp('此設計稿尚未分析。');continue}
+  if(s.includes('color')){b+=wh('色彩策略',2)+wp(colorText(o.an))+wtable(['色碼','色相','佔比','色彩意涵'],o.an.palette.map(p=>[p.hex,p.hue,pct(p.share),HUES[p.hue].m]),[1800,1500,1500,4200])}
+  if(s.includes('layout')){b+=wh('版面策略',2)+wp(layoutText(o.an))}
+  if(s.includes('cards')){b+=wh(`元素決策卡（${TONES[S._exp.tone]}）`,2);let any=false;o.els.forEach(e=>{const d=o.ds.find(x=>x.elementId===e.id);if(!d)return;any=true;const[t,...rest]=d.content.split('\n');b+=wp(t.replace(/[【】]/g,''),{b:true,sz:24,shade:'F1F4FA',before:120})+wp(rest.join('\n'))+(d.confirmed?wp('✔ 已人工確認',{sz:18,color:'16A34A'}):'')});if(!any)b+=wp('尚未產生此語氣的決策卡。')}
+  if(s.includes('risks')){b+=wh('風險與處理',2);b+=o.rs.length?wtable(['嚴重度','規則','說明','處理方式'],o.rs.map(r=>[r.level,r.rule,r.message,r.intentional?'刻意設計：'+(r.reason||'—'):r.fix]),[1000,1800,3200,3000]):wp('未發現風險項目。')}
+  if(s.includes('qa')&&o.qa.length){b+=wh('客戶 Q&A 預演',2);o.qa.forEach((x,i)=>{b+=wp(`Q${i+1}. ${x.q}`,{b:true})+wp(x.a)})}}
+ if(s.includes('appendix')&&principles.length){b+=wh('附錄：引用原則',1)+wtable(['原則','分類','說明'],principles.map(p=>[p.name,p.category,p.description]),[2400,1600,5000])}
+ const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${b}<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1300" w:right="1300" w:bottom="1300" w:left="1300" w:header="600" w:footer="600" w:gutter="0"/></w:sectPr></w:body></w:document>`;
+ const files=[{name:'[Content_Types].xml',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`},
+  {name:'_rels/.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`},
+  {name:'word/_rels/document.xml.rels',data:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${media.map(m=>`<Relationship Id="${m.rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${m.name}"/>`).join('')}</Relationships>`},
+  {name:'word/document.xml',data:doc},...media.map(m=>({name:'word/'+m.name,data:m.data}))];
+ download(`${P.name}_設計說明書.docx`,zip(files));toast('DOCX 已下載')}
+async function exportPDF(){const{P,out}=await gatherDoc();const imgs=[];for(const o of out)imgs.push(S._exp.img?await blobToDataURL((await annotatedPNG(o,900)).blob):'');
+ const w=window.open('','_blank');if(!w){toast('請允許彈出視窗');return}
+ w.document.write(`<html><head><meta charset="utf-8"><title>${esc(P.name)} 設計理念摘要</title><style>body{font-family:"Microsoft JhengHei",sans-serif;padding:24px;color:#1f2430;font-size:12px}h1{font-size:22px;color:#1f3a8a;margin:0}h2{font-size:15px;color:#2f6bff;border-bottom:2px solid #e8efff;padding-bottom:4px}.g{display:flex;gap:16px}.g>div{flex:1}img{max-width:100%;max-height:330px;border:1px solid #ddd}.sw{display:inline-block;width:14px;height:14px;vertical-align:middle;border:1px solid #ccc;margin-right:4px}li{margin-bottom:3px}@page{size:A4;margin:12mm}.pg{page-break-after:always}</style></head><body>
+ ${out.map((o,i)=>`<div class="${i<out.length-1?'pg':''}"><h1>${esc(P.name)}｜設計理念摘要</h1><div style="color:#6b7280">${esc(P.client||'')}　${esc(P.industry)}　${esc(o.a.name)} v${o.a.version}　${new Date().toLocaleDateString('zh-TW')}</div>
+ <div class="g"><div>${imgs[i]?`<img src="${imgs[i]}">`:''}<h2>設計目標</h2><p>${esc(P.goals||'—')}</p></div><div>${o.an?`<h2>色彩策略</h2><p>${esc(colorText(o.an))}</p><p>${o.an.palette.slice(0,6).map(p=>`<span class="sw" style="background:${p.hex}"></span>${p.hex}`).join('　')}</p><h2>版面策略</h2><p>${esc(layoutText(o.an))}</p>
+ <h2>關鍵設計決策</h2><ul>${o.els.filter(e=>e.w).slice(0,5).map(e=>{const a=o.an.elements[e.id];if(!a)return'';return`<li><b>${esc(e.label||e.type)}</b>：${a.hue}、${a.quad}區、${a.onFlow?'位於閱讀動線上':'輔助位置'}${TEXT_TYPES.includes(e.type)?`、對比 ${a.contrast}:1`:''}</li>`}).join('')}</ul>
+ <h2>品質檢核</h2><p>高風險 ${o.rs.filter(r=>r.level==='高'&&!r.intentional).length} 項、中風險 ${o.rs.filter(r=>r.level==='中'&&!r.intentional).length} 項、刻意設計 ${o.rs.filter(r=>r.intentional).length} 項。</p>`:'<p>尚未分析</p>'}</div></div></div>`).join('')}
+ <script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`);w.document.close()}
+
+/* ================= Modal / 鍵盤 / 貼上 ================= */
+function modal(h){closeModal();const m=document.createElement('div');m.className='modal';m.id='modal';m.innerHTML=`<div class="card">${h}</div>`;m.onclick=e=>{if(e.target===m)closeModal()};document.body.appendChild(m);setTimeout(()=>{const i=m.querySelector('input');i&&i.focus()},50)}
+function closeModal(){const m=$('#modal');m&&m.remove()}
+document.addEventListener('keydown',e=>{const tag=(e.target.tagName||'').toLowerCase();if(['input','textarea','select'].includes(tag))return;if(e.key==='Escape')closeModal();if(S.view!=='workspace'||!S.artboard)return;
+ if(e.ctrlKey&&e.key.toLowerCase()==='z'){e.preventDefault();undo()}else if(e.ctrlKey&&e.key.toLowerCase()==='y'){e.preventDefault();redo()}
+ else if(e.key==='v'||e.key==='V')setMode('select');else if(e.key==='r'||e.key==='R')setMode('draw');else if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();delSelected()}});
+document.addEventListener('paste',e=>{if(!S.project)return;const fs=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));if(fs.length){e.preventDefault();importFiles(fs)}});
+$('#fileIn').onchange=async e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;
+ if(S._newVer&&S.artboard){S._newVer=false;const f=fs[0];Object.defineProperty(f,'_n',{value:1});const name=S.artboard.name;const exist=(await DB.where('artboards','projectId',S.project.id)).filter(a=>a.name===name);const ab={id:uid(),projectId:S.project.id,name,version:Math.max(...exist.map(a=>a.version))+1,blob:f,createdAt:Date.now()};
+  // 複製舊版標註以利比較
+  const oldEls=S.elements;await DB.put('artboards',ab);for(const el of oldEls)await DB.put('elements',{...el,id:uid(),artboardId:ab.id});await loadArtboard(ab.id);setURL();toast(`已建立 v${ab.version}，並沿用上一版標註`);render();return}
+ S._newVer=false;importFiles(fs)};
+$('#themeBtn').onclick=()=>setSetting('theme',S.settings.theme==='dark'?'light':'dark');
+
+/* ================= 範例專案 ================= */
+async function loadDemo(){const cv=document.createElement('canvas');cv.width=1440;cv.height=900;const c=cv.getContext('2d');c.fillStyle='#FFFFFF';c.fillRect(0,0,1440,900);
+ c.fillStyle='#0B3D91';c.fillRect(0,0,1440,72);c.fillStyle='#fff';c.font='bold 26px sans-serif';c.fillText('安心銀行',48,46);c.font='18px sans-serif';['存款','貸款','信用卡','理財'].forEach((t,i)=>c.fillText(t,880+i*110,44));
+ c.fillStyle='#0B3D91';c.font='bold 60px sans-serif';c.fillText('三分鐘，線上開戶',96,250);c.fillStyle='#4B5563';c.font='26px sans-serif';c.fillText('免臨櫃、免等待，數位帳戶享活存優惠利率',96,310);
+ c.fillStyle='#9CA3AF';c.font='18px sans-serif';c.fillText('本優惠活動期間至年底，詳細條款請參閱官網公告。',96,360);
+ c.fillStyle='#FF7A00';c.beginPath();c.roundRect(96,410,240,64,10);c.fill();c.fillStyle='#fff';c.font='bold 24px sans-serif';c.fillText('立即開戶',158,451);
+ c.strokeStyle='#0B3D91';c.lineWidth=2;c.beginPath();c.roundRect(356,410,200,64,10);c.stroke();c.fillStyle='#0B3D91';c.fillText('了解更多',408,451);
+ const g=c.createLinearGradient(820,140,1340,640);g.addColorStop(0,'#DCE8FF');g.addColorStop(1,'#A9C6FF');c.fillStyle=g;c.beginPath();c.roundRect(820,140,520,480,24);c.fill();c.fillStyle='#0B3D91';c.beginPath();c.roundRect(940,250,280,170,16);c.fill();c.fillStyle='#FFD166';c.fillRect(975,290,50,36);
+ ['📱 手機開戶','🔒 安全認證','💰 優惠利率'].forEach((t,i)=>{c.fillStyle='#F3F6FB';c.beginPath();c.roundRect(96+i*420,700,380,130,14);c.fill();c.fillStyle='#1F2430';c.font='bold 24px sans-serif';c.fillText(t,130+i*420,775)});
+ const blob=await new Promise(r=>cv.toBlob(r,'image/png'));const p={id:uid(),name:'安心銀行 數位開戶首頁',client:'安心銀行',industry:'金融銀行',tone:'專業、穩重、親切',audience:'25–45 歲上班族',goals:'提升線上開戶轉換率，讓使用者在首屏就理解優惠並完成開戶。',createdAt:Date.now(),updatedAt:Date.now()};await DB.put('projects',p);
+ const ab={id:uid(),projectId:p.id,name:'首頁',version:1,blob,width:1440,height:900,createdAt:Date.now()};await DB.put('artboards',ab);
+ const E=[['導覽列','主選單',0,0,1440,72],['主標題','三分鐘，線上開戶',90,190,560,80],['副標題','開戶利多說明',90,280,560,44],['內文','活動條款',90,342,500,28],['主要CTA','立即開戶',96,410,240,64],['次要CTA','了解更多',356,410,200,64],['圖片','主視覺',820,140,520,480],['卡片','特色：手機開戶',96,700,380,130],['卡片','特色：安全認證',516,700,380,130],['卡片','特色：優惠利率',936,700,380,130]];
+ let z=0;for(const[t,l,x,y,w,h]of E)await DB.put('elements',{id:uid(),artboardId:ab.id,type:t,label:l,x:x/1440,y:y/900,w:w/1440,h:h/900,z:z++,intent:t==='主要CTA'?'以品牌橘作為唯一強調色，引導使用者完成開戶。':'',fontSize:'',fontWeight:'',brandColor:''});
+ await openProject(p.id);setURL();await runAnalysis();await genDecisions('client');await genQAs();toast('範例專案已載入')}
+
+/* ================= 啟動 ================= */
+(async()=>{try{await DB.open()}catch(e){$('#app').innerHTML='<div class="card bad">無法開啟 IndexedDB，請確認瀏覽器未封鎖本機儲存。</div>';return}
+ for(const s of await DB.all('settings'))S.settings[s.key]=s.value;applyTheme();
+ if(!(await DB.all('principles')).length){let i=0;for(const[c,n,d,k]of BUILTIN_PRINCIPLES)await DB.put('principles',{id:'bi'+(i++),category:c,name:n,description:d,condition:k,builtin:true})}
+ S.tab='elements';render()})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

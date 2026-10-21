@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>設計債務分析器 Design Debt Analyzer v1.4</title>
+<style>
+:root{--bg:#f5f6f8;--panel:#fff;--text:#1d2129;--sub:#5c6370;--line:#e3e6eb;--pri:#4f46e5;--pri2:#eef2ff;--hover:#f0f1f4;
+--A:#22a06b;--B:#d4a106;--C:#f18d13;--D:#e5484d;--E:#3b3f46;--shadow:0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04)}
+[data-theme=dark]{--bg:#121418;--panel:#1b1e24;--text:#e6e8eb;--sub:#9aa1ac;--line:#2c3038;--pri:#818cf8;--pri2:#262a45;--hover:#242830;--E:#8b919c;--shadow:none}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+header{height:56px;display:flex;align-items:center;gap:10px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.logo{font-weight:800;font-size:16px;margin-right:8px;white-space:nowrap}.logo span{color:var(--pri)}
+select,input,textarea,button{font:inherit;color:inherit}
+select,input[type=text],input[type=number],input[type=password],textarea{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+button{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--hover)}button.pri{background:var(--pri);border-color:var(--pri);color:#fff}button.pri:hover{opacity:.9}
+.sp{flex:1}
+.layout{display:flex;min-height:calc(100vh - 56px)}
+nav{width:170px;background:var(--panel);border-right:1px solid var(--line);padding:10px 8px;flex-shrink:0}
+nav a{display:block;padding:9px 12px;border-radius:6px;cursor:pointer;margin-bottom:2px;color:var(--text);text-decoration:none}
+nav a:hover{background:var(--hover)}nav a.on{background:var(--pri2);color:var(--pri);font-weight:700}
+nav hr{border:0;border-top:1px solid var(--line);margin:8px 4px}
+main{flex:1;padding:20px;min-width:0}
+h2{margin:0 0 14px;font-size:20px}h3{margin:0 0 10px;font-size:15px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;box-shadow:var(--shadow);margin-bottom:16px}
+.grid{display:grid;gap:16px}.g2{grid-template-columns:1fr 1fr}.g7{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.dim{border-left:4px solid var(--pri)}.dim b{font-size:22px}.muted{color:var(--sub);font-size:12px}
+table{width:100%;border-collapse:collapse}th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{color:var(--sub);font-weight:600;font-size:12px;white-space:nowrap}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600}
+.high{background:#fde2e2;color:#c0262d}.med{background:#fff1d6;color:#a35d00}.low{background:#e3f1ff;color:#1b5fa8}
+[data-theme=dark] .high{background:#4a1e22;color:#ff9da1}[data-theme=dark] .med{background:#46340f;color:#ffcf73}[data-theme=dark] .low{background:#163250;color:#8cc3ff}
+.sw{width:38px;height:38px;border-radius:6px;border:1px solid var(--line);display:inline-block;vertical-align:middle}
+.swrow{display:flex;flex-wrap:wrap;gap:6px}.swbox{text-align:center;font-size:10px;width:62px}
+.cl{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px dashed var(--line);flex-wrap:wrap}.cl .ln{width:18px;height:2px;background:var(--sub)}
+.vwall{display:flex;flex-wrap:wrap;gap:14px}.vitem{border:1px solid var(--line);border-radius:8px;padding:12px;min-width:150px;text-align:center;position:relative}
+.vitem.red{border-color:var(--D);border-style:dashed}.vitem .stage{min-height:60px;display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(var(--hover) 0 25%,transparent 0 50%) 0 0/12px 12px;border-radius:6px;padding:8px;margin-bottom:6px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:34px;text-align:center;cursor:pointer}.drop.over{border-color:var(--pri);background:var(--pri2)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.prog{height:8px;background:var(--hover);border-radius:4px;overflow:hidden;margin:10px 0}.prog div{height:100%;background:var(--pri);width:0;transition:width .2s}
+#toast{position:fixed;bottom:20px;right:20px;background:#222;color:#fff;padding:10px 16px;border-radius:8px;opacity:0;transition:.3s;pointer-events:none;z-index:9}#toast.show{opacity:1}
+pre{background:var(--hover);padding:12px;border-radius:8px;overflow:auto;max-height:420px;font-size:12px}
+details summary{cursor:pointer;color:var(--pri);font-size:12px}
+.empty{text-align:center;padding:60px 20px;color:var(--sub)}
+.form{display:grid;grid-template-columns:220px 140px 1fr;gap:8px 12px;align-items:center}
+code{background:var(--hover);padding:1px 5px;border-radius:4px;font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">設計債務<span>分析器</span> <small class="muted">v1.4</small></div>
+  <select id="projSel" title="專案"></select>
+  <button id="btnNewProj" title="新增專案">＋</button>
+  <button id="btnRenProj" title="重新命名">✎</button>
+  <button id="btnDelProj" title="刪除專案">🗑</button>
+  <select id="snapSel" title="快照"></select>
+  <div class="sp"></div>
+  <button data-go="import">匯入</button>
+  <button data-go="export">匯出</button>
+  <button data-go="settings">設定</button>
+  <button id="btnTheme" title="切換深色模式">🌙</button>
+</header>
+<div class="layout">
+  <nav id="nav">
+    <a data-v="dashboard">📊 總覽</a><a data-v="issues">📋 債務清單</a><a data-v="colors">🎨 色彩地圖</a>
+    <a data-v="type">🔤 字型階梯</a><a data-v="variants">🧩 變體牆</a><a data-v="spacing">📏 間距分析</a>
+    <a data-v="trend">📈 趨勢比較</a><a data-v="suggest">💡 整併建議</a><hr>
+    <a data-v="import">📥 匯入</a><a data-v="export">📤 匯出與備份</a><a data-v="settings">⚙️ 設定</a>
+  </nav>
+  <main id="main"></main>
+</div>
+<div id="toast"></div>
+
+<!-- ===================== 核心分析引擎（主執行緒與 Web Worker 共用） ===================== -->
+<script type="text/plain" id="core">
+var CRE=/#([0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})\b|rgba?\(\s*(\d{1,3})[\s,]+(\d{1,3})[\s,]+(\d{1,3})[^)]*\)/g;
+var CATS=[['Button',/btn|button/i],['Input',/input|textfield|text-field|form-control|textbox/i],['Card',/card/i],['Tag',/\btag|badge|chip/i]];
+function progress(p,m){if(typeof __prog==='function')__prog(p,m)}
+function clamp(v){return Math.max(0,Math.min(100,Math.round(v)))}
+function normHex(h){h=h.toLowerCase();if(h.length===4||h.length===5)h='#'+h[1]+h[1]+h[2]+h[2]+h[3]+h[3];else if(h.length===9)h=h.slice(0,7);return /^#[0-9a-f]{6}$/.test(h)?h:null}
+function rgbToHex(r,g,b){return '#'+[r,g,b].map(function(v){return Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')}).join('')}
+function hexToRgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function rgbToLab(c){var r=c[0],g=c[1],b=c[2];function lin(v){v/=255;return v>0.04045?Math.pow((v+0.055)/1.055,2.4):v/12.92}r=lin(r);g=lin(g);b=lin(b);
+ var X=(r*0.4124+g*0.3576+b*0.1805)/0.95047,Y=r*0.2126+g*0.7152+b*0.0722,Z=(r*0.0193+g*0.1192+b*0.9505)/1.08883;
+ function f(t){return t>0.008856?Math.cbrt(t):7.787*t+16/116}X=f(X);Y=f(Y);Z=f(Z);return[116*Y-16,500*(X-Y),200*(Y-Z)]}
+function dE00(A,B){var L1=A[0],a1=A[1],b1=A[2],L2=B[0],a2=B[1],b2=B[2],rad=Math.PI/180;
+ var C1=Math.hypot(a1,b1),C2=Math.hypot(a2,b2),Cb=(C1+C2)/2,G=0.5*(1-Math.sqrt(Math.pow(Cb,7)/(Math.pow(Cb,7)+Math.pow(25,7))));
+ var a1p=(1+G)*a1,a2p=(1+G)*a2,C1p=Math.hypot(a1p,b1),C2p=Math.hypot(a2p,b2);
+ function hh(x,y){if(x===0&&y===0)return 0;var t=Math.atan2(y,x)/rad;return t<0?t+360:t}
+ var h1p=hh(a1p,b1),h2p=hh(a2p,b2),dLp=L2-L1,dCp=C2p-C1p,dhp=0;
+ if(C1p*C2p!==0){dhp=h2p-h1p;if(dhp>180)dhp-=360;else if(dhp<-180)dhp+=360}
+ var dHp=2*Math.sqrt(C1p*C2p)*Math.sin(dhp/2*rad),Lbp=(L1+L2)/2,Cbp=(C1p+C2p)/2,hbp=h1p+h2p;
+ if(C1p*C2p!==0){hbp=Math.abs(h1p-h2p)>180?(h1p+h2p+(h1p+h2p<360?360:-360))/2:(h1p+h2p)/2}
+ var T=1-0.17*Math.cos((hbp-30)*rad)+0.24*Math.cos(2*hbp*rad)+0.32*Math.cos((3*hbp+6)*rad)-0.2*Math.cos((4*hbp-63)*rad);
+ var dTh=30*Math.exp(-Math.pow((hbp-275)/25,2)),Rc=2*Math.sqrt(Math.pow(Cbp,7)/(Math.pow(Cbp,7)+Math.pow(25,7)));
+ var Sl=1+0.015*Math.pow(Lbp-50,2)/Math.sqrt(20+Math.pow(Lbp-50,2)),Sc=1+0.045*Cbp,Sh=1+0.015*Cbp*T,Rt=-Math.sin(2*dTh*rad)*Rc;
+ return Math.sqrt(Math.pow(dLp/Sl,2)+Math.pow(dCp/Sc,2)+Math.pow(dHp/Sh,2)+Rt*(dCp/Sc)*(dHp/Sh))}
+function newCol(){return{colors:{},fontSizes:{},fontWeights:{},fontFamilies:{},lineHeights:{},spacings:{},radii:{},shadows:{},components:[],inst:{total:0,detached:0,list:[]},tokenColors:[]}}
+function add(map,key,loc,n){var m=map[key]||(map[key]={count:0,locs:[]});m.count+=(n||1);if(m.locs.length<20&&m.locs.indexOf(loc)<0)m.locs.push(loc)}
+function px(v){var m=String(v).match(/(-?[\d.]+)(px|rem|em)?/);if(!m)return null;var n=parseFloat(m[1]);if(m[2]==='rem'||m[2]==='em')n*=16;return Math.round(n*100)/100}
+function catOf(s){for(var i=0;i<CATS.length;i++)if(CATS[i][1].test(s))return CATS[i][0];return null}
+function firstColor(v){if(!v)return null;CRE.lastIndex=0;var m=CRE.exec(v);CRE.lastIndex=0;if(!m)return null;return m[1]?normHex('#'+m[1]):rgbToHex(+m[2],+m[3],+m[4])}
+function collectDecl(p,v,loc,col){
+ var re=new RegExp(CRE.source,'g'),cm;while((cm=re.exec(v))){var hex=cm[1]?normHex('#'+cm[1]):rgbToHex(+cm[2],+cm[3],+cm[4]);if(hex)add(col.colors,hex,loc)}
+ if(p==='font-size'){var n=px(v);if(n)add(col.fontSizes,n,loc)}
+ else if(p==='font-weight'){var w={normal:400,bold:700,lighter:300,bolder:800}[v]||parseInt(v);if(w)add(col.fontWeights,w,loc)}
+ else if(p==='font-family'){add(col.fontFamilies,v.split(',')[0].replace(/['"]/g,'').trim(),loc)}
+ else if(p==='line-height'){add(col.lineHeights,v,loc)}
+ else if(/^(margin|padding|gap|row-gap|column-gap)(-(top|right|bottom|left|inline|block)(-start|-end)?)?$/.test(p)){(v.match(/-?[\d.]+(px|rem)/g)||[]).forEach(function(t){var n=Math.abs(px(t));if(n>0)add(col.spacings,n,loc)})}
+ else if(/^border(-[a-z]+)*-radius$/.test(p)){var r=px(v);if(r!=null&&r>0&&r<999)add(col.radii,r,loc)}
+ else if(p==='box-shadow'&&v!=='none'){add(col.shadows,v.replace(/\s+/g,' ').toLowerCase(),loc)}}
+function parseCSS(text,name,col){
+ var clean=text.replace(/\/\*[\s\S]*?\*\//g,function(m){return m.replace(/[^\n]/g,' ')}).replace(/\/\/[^\n]*/g,function(m){return /https?:$/.test(m)?m:m.replace(/./g,' ')});
+ var nl=[];for(var i=0;i<clean.length;i++)if(clean[i]==='\n')nl.push(i);
+ function lineAt(idx){var lo=0,hi=nl.length;while(lo<hi){var md=(lo+hi)>>1;if(nl[md]<idx)lo=md+1;else hi=md}return lo+1}
+ var vre=/^\s*\$([\w-]+)\s*:\s*([^;]+);/gm,vm;while((vm=vre.exec(clean)))collectDecl('$'+vm[1],vm[2].trim(),name+':'+lineAt(vm.index)+' $'+vm[1],col);
+ var re=/([^{}]+)\{([^{}]*)\}/g,m;
+ while((m=re.exec(clean))){var sel=m[1].replace(/\s+/g,' ').trim().replace(/^.*;\s*/,''),body=m[2],bs=m.index+m[0].indexOf('{')+1,props={},dre=/([\w-]+)\s*:\s*([^;]+)/g,d;
+  while((d=dre.exec(body))){var p=d[1].toLowerCase(),v=d[2].trim();props[p]=v;collectDecl(p,v,name+':'+lineAt(bs+d.index)+' '+sel.slice(0,40),col)}
+  var cat=catOf(sel);
+  if(cat&&!/:(hover|focus|active|disabled|visited|focus-visible|checked)|::/.test(sel)){
+   var pr={bg:firstColor(props['background-color']||props.background),color:firstColor(props.color),fontSize:props['font-size'],fontWeight:props['font-weight'],radius:props['border-radius'],padding:props.padding,border:props.border,shadow:props['box-shadow'],height:props.height},o={};
+   for(var k in pr)if(pr[k])o[k]=String(pr[k]);
+   if(Object.keys(o).length>=2)col.components.push({cat:cat,fp:JSON.stringify(o),props:o,loc:name+':'+lineAt(m.index)+' '+sel.slice(0,40)})}}}
+function fcol(c){return rgbToHex(c.r*255,c.g*255,c.b*255)}
+function firstText(n){if(n.type==='TEXT')return n;var ch=n.children||[];for(var i=0;i<ch.length;i++){var t=firstText(ch[i]);if(t)return t}return null}
+function isFigma(j){return j&&(j.document||j.nodes||(j.type==='DOCUMENT'))}
+function parseFigma(data,name,col){
+ var roots=[];if(data.document)roots.push(data.document);if(data.nodes)Object.keys(data.nodes).forEach(function(k){var n=data.nodes[k];if(n&&n.document)roots.push(n.document)});if(!roots.length)roots.push(data);
+ var cnt=0;
+ function walk(n,path,inComp){cnt++;if(cnt%2000===0)progress(null,'已掃描 '+cnt+' 個節點');
+  var p=path+'/'+(n.name||n.type),loc='Figma '+name+' '+(p.length>80?'…'+p.slice(-80):p);
+  (n.fills||[]).concat(n.strokes||[]).forEach(function(f){if(f&&f.type==='SOLID'&&f.visible!==false&&f.color)add(col.colors,fcol(f.color),loc)});
+  if(n.type==='TEXT'&&n.style){var s=n.style;if(s.fontSize)add(col.fontSizes,Math.round(s.fontSize*100)/100,loc);if(s.fontWeight)add(col.fontWeights,s.fontWeight,loc);if(s.fontFamily)add(col.fontFamilies,s.fontFamily,loc);if(s.lineHeightPx)add(col.lineHeights,Math.round(s.lineHeightPx)+'px',loc)}
+  if(n.cornerRadius>0)add(col.radii,n.cornerRadius,loc);
+  (n.effects||[]).forEach(function(e){if((e.type==='DROP_SHADOW'||e.type==='INNER_SHADOW')&&e.visible!==false){var o=e.offset||{x:0,y:0};add(col.shadows,(e.type==='INNER_SHADOW'?'inset ':'')+o.x+'px '+o.y+'px '+(e.radius||0)+'px '+(e.spread||0)+'px '+(e.color?fcol(e.color):''),loc)}});
+  ['itemSpacing','paddingLeft','paddingRight','paddingTop','paddingBottom'].forEach(function(k){if(n[k]>0)add(col.spacings,n[k],loc)});
+  if(n.type==='INSTANCE')col.inst.total++;
+  var cat=catOf(n.name||'');
+  if(cat&&!inComp&&['INSTANCE','FRAME','GROUP','COMPONENT'].indexOf(n.type)>=0){
+   if(n.type==='FRAME'||n.type==='GROUP'){col.inst.total++;col.inst.detached++;if(col.inst.list.length<100)col.inst.list.push(loc)}
+   var f=(n.fills||[]).filter(function(x){return x.type==='SOLID'&&x.visible!==false})[0],st=(n.strokes||[]).filter(function(x){return x.type==='SOLID'})[0],t=firstText(n),o={};
+   if(f)o.bg=fcol(f.color);if(n.cornerRadius)o.radius=n.cornerRadius+'px';
+   if(n.paddingTop!=null||n.paddingLeft!=null)o.padding=(n.paddingTop||0)+'px '+(n.paddingRight||0)+'px '+(n.paddingBottom||0)+'px '+(n.paddingLeft||0)+'px';
+   if(st)o.border=(n.strokeWeight||1)+'px solid '+fcol(st.color);
+   if(n.absoluteBoundingBox)o.height=Math.round(n.absoluteBoundingBox.height)+'px';
+   if(t&&t.style){if(t.style.fontSize)o.fontSize=t.style.fontSize+'px';if(t.style.fontWeight)o.fontWeight=String(t.style.fontWeight);var tf=(t.fills||[])[0];if(tf&&tf.color)o.color=fcol(tf.color)}
+   var eff=(n.effects||[]).filter(function(e){return e.type==='DROP_SHADOW'&&e.visible!==false})[0];if(eff){var of=eff.offset||{x:0,y:0};o.shadow=of.x+'px '+of.y+'px '+(eff.radius||0)+'px '+(eff.color?fcol(eff.color):'')}
+   if(Object.keys(o).length>=2)col.components.push({cat:cat,fp:JSON.stringify(o),props:o,loc:loc})}
+  var ci=inComp||!!cat||n.type==='INSTANCE'||n.type==='COMPONENT';
+  (n.children||[]).forEach(function(c){walk(c,p,ci)})}
+ roots.forEach(function(r){walk(r,'',false)})}
+function parseTokens(obj){var out=[];
+ function walk(o,path){if(!o||typeof o!=='object')return;var v=o.$value!==undefined?o.$value:o.value,t=o.$type||o.type;
+  if(v!==undefined&&typeof v!=='object'){if(typeof v==='string'&&(t==='color'||!t)){var h=firstColor(v);if(h)out.push({name:path,hex:h})}return}
+  for(var k in o)if(k[0]!=='$')walk(o[k],path?path+'.'+k:k)}
+ walk(obj,'');return out}
+function ents(map){return Object.keys(map).map(function(k){return{k:k,count:map[k].count,locs:map[k].locs}}).sort(function(a,b){return b.count-a.count})}
+function typeScale(S){var out=[];for(var i=-2;out.length<S.maxFontSizes;i++)out.push(Math.round(S.baseFont*Math.pow(S.scaleRatio,i)));return out.filter(function(v,i,a){return a.indexOf(v)===i})}
+function nearest(arr,v){return arr.reduce(function(b,x){return Math.abs(x-v)<Math.abs(b-v)?x:b},arr[0])}
+function propDiff(a,b){var ks={},d=[];for(var k in a)ks[k]=1;for(k in b)ks[k]=1;for(k in ks)if((a[k]||'')!==(b[k]||''))d.push(k);return d}
+function gradeOf(s){return s<=20?'A':s<=40?'B':s<=60?'C':s<=80?'D':'E'}
+function analyze(col,S){
+ var issues=[];function I(dim,sev,desc,count,locs,sug,key){issues.push({dim:dim,sev:sev,desc:desc,count:count,locs:(locs||[]).slice(0,10),sug:sug,key:key||dim+'|'+desc})}
+ var dims={};
+ /* D1 色彩 */
+ var colors=ents(col.colors).map(function(c){c.lab=rgbToLab(hexToRgb(c.k));return c});
+ var toks=(col.tokenColors||[]).map(function(t){return{name:t.name,hex:t.hex,lab:rgbToLab(hexToRgb(t.hex))}});
+ function nearTok(c){var b=null,bd=1e9;toks.forEach(function(t){var d=dE00(c.lab,t.lab);if(d<bd){bd=d;b=t}});return b?{t:b,d:bd}:null}
+ var clusters=[];colors.forEach(function(c){var best=null,bd=1e9;clusters.forEach(function(cl){var d=dE00(c.lab,cl.rep.lab);if(d<bd){bd=d;best=cl}});
+  if(best&&bd<S.deltaE)best.members.push({k:c.k,count:c.count,locs:c.locs,d:bd});else clusters.push({rep:c,members:[]})});
+ var merged=0;clusters.forEach(function(c){merged+=c.members.length});
+ var totalC=colors.length,untok=0;
+ if(toks.length){colors.forEach(function(c){var n=nearTok(c);c.tok=n&&n.d<1?n.t.name:null;if(!c.tok)untok++})}else untok=Math.max(0,totalC-S.maxColors);
+ var nc=clusters.filter(function(c){return c.members.length}).length;
+ dims.D1={score:clamp((totalC?merged/totalC:0)*50+(totalC?untok/totalC:0)*50),metric:totalC+' 色，'+nc+' 組近似色，可合併 '+merged+' 色'+(toks.length?'，'+untok+' 色未 Token 化':'')};
+ clusters.filter(function(c){return c.members.length}).forEach(function(cl){var n=toks.length?nearTok(cl.rep):null,target=n&&n.d<S.deltaE?n.t.name+'（'+n.t.hex+'）':cl.rep.k,cnt=0,locs=[];
+  cl.members.forEach(function(m){cnt+=m.count;locs=locs.concat(m.locs)});
+  I('D1',cl.members.length>=3||cnt>=10?'high':cl.members.length>=2||cnt>=4?'med':'low',cl.members.map(function(m){return m.k}).join('、')+' 與 '+cl.rep.k+' 為近似色（ΔE < '+S.deltaE+'）',cnt,locs,'合併至 '+target,'D1|near|'+cl.rep.k)});
+ if(toks.length)colors.filter(function(c){return !c.tok}).slice(0,60).forEach(function(c){var n=nearTok(c);I('D1',c.count>=10?'med':'low','寫死色碼 '+c.k+' 未對應任何 Token',c.count,c.locs,n?'改用 '+n.t.name+'（'+n.t.hex+'，ΔE '+n.d.toFixed(1)+'）':'新增 Token 或移除','D1|untok|'+c.k)});
+ else if(totalC>S.maxColors)I('D1','med','色碼總數 '+totalC+' 種，超過建議上限 '+S.maxColors+'（未匯入 Token，以總數估算）',totalC,[],'匯入 Design Tokens 以精準比對，或收斂色盤','D1|total');
+ /* D2 字型 */
+ var fs=ents(col.fontSizes).map(function(e){e.v=+e.k;return e}).sort(function(a,b){return a.v-b.v}),fam=ents(col.fontFamilies),fw=ents(col.fontWeights);
+ var s2=fs.length>S.maxFontSizes?(fs.length-S.maxFontSizes)/S.maxFontSizes*100:0;
+ if(fam.length>S.maxFamilies)s2+=(fam.length-S.maxFamilies)/S.maxFamilies*50;if(fw.length>S.maxWeights)s2+=(fw.length-S.maxWeights)/S.maxWeights*30;
+ var scale=typeScale(S);
+ dims.D2={score:clamp(s2),metric:fs.length+' 種字級、'+fam.length+' 種字族、'+fw.length+' 種字重'};
+ if(fs.length>S.maxFontSizes)I('D2','high','使用 '+fs.length+' 種字級（建議 ≤ '+S.maxFontSizes+'）',fs.length,[],'收斂至 Modular Scale：'+scale.join(' / '),'D2|sizes');
+ fs.filter(function(f){return scale.indexOf(f.v)<0}).forEach(function(f){I('D2',f.count<=2?'low':'med','字級 '+f.v+'px 不在字級階梯上',f.count,f.locs,'改為 '+nearest(scale,f.v)+'px','D2|fs|'+f.v)});
+ if(fam.length>S.maxFamilies)I('D2','high','使用 '+fam.length+' 種字族：'+fam.map(function(f){return f.k}).join('、'),fam.length,fam.slice(S.maxFamilies).flatMap?fam.slice(S.maxFamilies).reduce(function(a,f){return a.concat(f.locs)},[]):[],'保留 '+fam.slice(0,S.maxFamilies).map(function(f){return f.k}).join('、'),'D2|fam');
+ if(fw.length>S.maxWeights)I('D2','med','使用 '+fw.length+' 種字重：'+fw.map(function(f){return f.k}).join('、'),fw.length,[],'收斂為 '+S.maxWeights+' 種（如 400 / 500 / 700）','D2|fw');
+ /* D3 間距 */
+ var sp=ents(col.spacings).map(function(e){e.v=+e.k;e.off=e.v%S.grid!==0&&!(S.allowHalf&&e.v===S.grid/2);return e}).sort(function(a,b){return a.v-b.v});
+ var totSp=0,offCnt=0;sp.forEach(function(e){totSp+=e.count;if(e.off)offCnt+=e.count});
+ var offR=totSp?offCnt/totSp:0;
+ dims.D3={score:clamp(offR*100),metric:sp.length+' 種間距值，'+Math.round(offR*100)+'% 不符 '+S.grid+'pt 格線'};
+ sp.filter(function(e){return e.off}).forEach(function(e){I('D3',e.count>=10?'high':e.count>=3?'med':'low','間距 '+e.v+'px 不在 '+S.grid+'pt 格線上',e.count,e.locs,'改為 '+Math.max(S.grid,Math.round(e.v/S.grid)*S.grid)+'px','D3|'+e.v)});
+ /* D4 圓角 / D5 陰影 */
+ var rd=ents(col.radii).map(function(e){e.v=+e.k;return e}),sh=ents(col.shadows);
+ function excess(n,max){return n>max?(n-max)/max*100:0}
+ dims.D4={score:clamp(excess(rd.length,S.maxRadii)),metric:rd.length+' 種圓角：'+rd.map(function(e){return e.v}).sort(function(a,b){return a-b}).join('/')};
+ if(rd.length>S.maxRadii){var keepR=rd.slice(0,S.maxRadii).map(function(e){return e.v});I('D4','high','使用 '+rd.length+' 種圓角（建議 ≤ '+S.maxRadii+'）',rd.length,[],'保留 '+keepR.slice().sort(function(a,b){return a-b}).join(' / ')+' px','D4|count');
+  rd.slice(S.maxRadii).forEach(function(e){I('D4',e.count>=5?'med':'low','圓角 '+e.v+'px 為非常用值',e.count,e.locs,'改為 '+nearest(keepR,e.v)+'px','D4|'+e.v)})}
+ dims.D5={score:clamp(excess(sh.length,S.maxShadows)),metric:sh.length+' 種陰影'};
+ if(sh.length>S.maxShadows){I('D5','high','使用 '+sh.length+' 種陰影（建議 ≤ '+S.maxShadows+'）',sh.length,[],'建立 elevation 1–'+S.maxShadows+' 階陰影 Token','D5|count');
+  sh.slice(S.maxShadows).forEach(function(e){I('D5',e.count>=5?'med':'low','陰影「'+e.k+'」為非常用值',e.count,e.locs,'改用最接近的 elevation Token','D5|'+e.k)})}
+ /* D6 變體 */
+ var byCat={};col.components.forEach(function(c){var g=byCat[c.cat]||(byCat[c.cat]={}),f=g[c.fp]||(g[c.fp]={fp:c.fp,props:c.props,count:0,locs:[]});f.count++;if(f.locs.length<10)f.locs.push(c.loc)});
+ var totalV=0,red=0,variants={};
+ Object.keys(byCat).forEach(function(cat){var list=Object.keys(byCat[cat]).map(function(k){return byCat[cat][k]}).sort(function(a,b){return b.count-a.count});variants[cat]=list;totalV+=list.length;
+  list.forEach(function(v,i){for(var j=0;j<i;j++){var d=propDiff(v.props,list[j].props);if(d.length<=2){v.redundantOf=j+1;red++;
+   I('D6',v.count>=5?'high':'med',cat+' 變體 #'+(i+1)+' 與 #'+(j+1)+' 僅差 '+d.length+' 個屬性（'+d.join('、')+'）',v.count,v.locs,'併入變體 #'+(j+1),'D6|'+cat+'|'+v.fp);break}}});
+  if(list.length>S.maxVariants)I('D6','high',cat+' 有 '+list.length+' 種視覺變體（建議 ≤ '+S.maxVariants+'）',list.length,[],'盤點使用情境，收斂為 Primary / Secondary / Tertiary 等有限變體','D6|'+cat+'|count')});
+ dims.D6={score:clamp(totalV?red/totalV*100:0),metric:Object.keys(variants).map(function(c){return c+' '+variants[c].length+' 種'}).join('、')+(totalV?'，疑似多餘 '+red+' 種':'未偵測到元件')};
+ /* D7 脫鉤 */
+ var it=col.inst,dr=it.total?it.detached/it.total:0;
+ dims.D7={score:clamp(dr*100),metric:it.total?it.detached+' / '+it.total+' 個元件已 Detach（'+Math.round(dr*100)+'%）':'無 Figma 元件資料（N/A）',na:!it.total};
+ if(it.detached)I('D7',dr>=0.3?'high':dr>=0.1?'med':'low',it.detached+' 個元件已脫離 Library（Detach）',it.detached,it.list,'以 Library 元件實例取代，並建立缺少的變體','D7|detach');
+ var wsum=0,sum=0;['D1','D2','D3','D4','D5','D6','D7'].forEach(function(d){var w=+S.weights[d]||0;wsum+=w;sum+=w*dims[d].score});
+ var score=wsum?Math.round(sum/wsum):0;
+ return{score:score,grade:gradeOf(score),dims:dims,issues:issues,derived:{
+  colors:colors.map(function(c){return{k:c.k,count:c.count,tok:c.tok||null}}),
+  clusters:clusters.filter(function(c){return c.members.length}).map(function(c){return{rep:c.rep.k,count:c.rep.count,members:c.members.map(function(m){return{k:m.k,count:m.count,d:+m.d.toFixed(2)}})}}),
+  reps:clusters.map(function(c){return{k:c.rep.k,count:c.rep.count+c.members.reduce(function(s,m){return s+m.count},0)}}),
+  fs:fs.map(function(e){return{v:e.v,count:e.count}}),fam:fam.map(function(e){return{k:e.k,count:e.count}}),fw:fw.map(function(e){return{k:e.k,count:e.count}}),
+  sp:sp.map(function(e){return{v:e.v,count:e.count,off:e.off}}),rd:rd.map(function(e){return{v:e.v,count:e.count}}),sh:sh.map(function(e){return{k:e.k,count:e.count}}),
+  variants:Object.keys(variants).reduce(function(o,c){o[c]=variants[c].map(function(v){return{props:v.props,count:v.count,redundantOf:v.redundantOf||0}});return o},{}),
+  scale:scale,tokens:toks.map(function(t){return{name:t.name,hex:t.hex}})}}}
+function processAll(job){var col=newCol(),rawTokens=[],n=job.files.length;
+ job.files.forEach(function(f,i){progress((i/(n||1))*80,'解析 '+f.name);
+  if(/\.s?css$/i.test(f.name))parseCSS(f.text,f.name,col);
+  else{var j=JSON.parse(f.text);if(isFigma(j))parseFigma(j,f.name,col);else{var t=parseTokens(j);col.tokenColors=col.tokenColors.concat(t);rawTokens.push({name:f.name,data:j})}}});
+ (job.shots||[]).forEach(function(s){s.colors.forEach(function(c){add(col.colors,c.hex,'截圖 '+s.name,c.count)})});
+ if(!col.tokenColors.length&&job.tokens)col.tokenColors=job.tokens;
+ progress(85,'計算債務分數');var result=analyze(col,job.settings);progress(100,'完成');
+ return{col:col,result:result,rawTokens:rawTokens}}
+</script>
+
+<script>
+(0,eval)(document.getElementById('core').textContent);
+const $=s=>document.querySelector(s), main=$('#main');
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safe=v=>String(v??'').replace(/[";<>{}\\]/g,'');
+const DIMS={D1:'色彩失控',D2:'字型失控',D3:'間距失序',D4:'圓角混亂',D5:'陰影氾濫',D6:'元件變體爆炸',D7:'元件脫鉤'};
+const GRADE={A:['健康','🟢'],B:['輕度','🟡'],C:['中度','🟠'],D:['重度','🔴'],E:['破產','⚫']};
+const SEV={high:'高',med:'中',low:'低'},STATUS={todo:'待處理',doing:'處理中',done:'已解決',skip:'不處理'};
+const DEF={weights:{D1:20,D2:15,D3:15,D4:10,D5:10,D6:20,D7:10},deltaE:3,maxColors:16,maxFontSizes:8,maxFamilies:2,maxWeights:3,grid:8,allowHalf:true,maxRadii:4,maxShadows:4,maxVariants:6,baseFont:16,scaleRatio:1.25,theme:'light'};
+const st={projects:[],pid:null,snaps:[],sid:null,snap:null,issues:[],S:JSON.parse(JSON.stringify(DEF)),view:'dashboard',filters:{dim:'',sev:'',status:'',q:''}};
+const uid=p=>p+'_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400)}
+function cssv(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
+function dl(name,data,type){const a=document.createElement('a');a.href=URL.createObjectURL(data instanceof Blob?data:new Blob([data],{type:type||'text/plain'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
+const stamp=()=>new Date().toISOString().slice(0,16).replace(/[-:T]/g,'');
+
+/* ---------- IndexedDB ---------- */
+const DB={db:null,open(){return new Promise((res,rej)=>{const r=indexedDB.open('DesignDebtDB',1);r.onupgradeneeded=()=>{const d=r.result;[['projects','projectId'],['snapshots','snapshotId'],['issues','issueId'],['tokens','tokenSetId'],['settings','key']].forEach(([n,k])=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n,{keyPath:k})})};r.onsuccess=()=>{this.db=r.result;res()};r.onerror=()=>rej(r.error)})},
+ tx(s,mode,fn){return new Promise((res,rej)=>{const t=this.db.transaction(s,mode),req=fn(t.objectStore(s));t.oncomplete=()=>res(req&&req.result);t.onerror=()=>rej(t.error)})},
+ put(s,v){return this.tx(s,'readwrite',o=>o.put(v))},get(s,k){return this.tx(s,'readonly',o=>o.get(k))},all(s){return this.tx(s,'readonly',o=>o.getAll())},
+ del(s,k){return this.tx(s,'readwrite',o=>o.delete(k))},clear(s){return this.tx(s,'readwrite',o=>o.clear())},
+ putMany(s,arr){return this.tx(s,'readwrite',o=>{arr.forEach(v=>o.put(v))})}};
+
+/* ---------- Worker ---------- */
+function runCore(job,onProg){return new Promise((res,rej)=>{let w;
+ try{const src=document.getElementById('core').textContent+'\nvar __prog=function(p,m){postMessage({type:"p",p:p,m:m})};onmessage=function(e){try{postMessage({type:"done",r:processAll(e.data)})}catch(err){postMessage({type:"err",m:String(err&&err.message||err)})}}';
+  w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})))}catch(e){w=null}
+ if(!w){window.__prog=onProg;try{res(processAll(job))}catch(e){rej(e)}return}
+ w.onmessage=e=>{const d=e.data;if(d.type==='p')onProg(d.p,d.m);else{w.terminate();d.type==='done'?res(d.r):rej(new Error(d.m))}};
+ w.onerror=e=>{w.terminate();window.__prog=onProg;try{res(processAll(job))}catch(x){rej(x)}};w.postMessage(job)})}
+
+/* ---------- 截圖色彩萃取（K-Means） ---------- */
+function extractImageColors(file,k=8){return new Promise((res,rej)=>{const img=new Image();img.onload=()=>{const s=Math.min(1,120/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.max(1,img.width*s|0);c.height=Math.max(1,img.height*s|0);
+ const x=c.getContext('2d');x.drawImage(img,0,0,c.width,c.height);const d=x.getImageData(0,0,c.width,c.height).data,px=[];for(let i=0;i<d.length;i+=4)if(d[i+3]>200)px.push([d[i],d[i+1],d[i+2]]);
+ if(!px.length)return res([]);let cen=[];for(let i=0;i<k;i++)cen.push(px[Math.floor(i*px.length/k)].slice());let as=new Array(px.length).fill(0);
+ for(let it=0;it<12;it++){px.forEach((p,i)=>{let b=0,bd=1e9;cen.forEach((c,j)=>{const dd=(p[0]-c[0])**2+(p[1]-c[1])**2+(p[2]-c[2])**2;if(dd<bd){bd=dd;b=j}});as[i]=b});
+  const sum=cen.map(()=>[0,0,0,0]);px.forEach((p,i)=>{const s=sum[as[i]];s[0]+=p[0];s[1]+=p[1];s[2]+=p[2];s[3]++});cen=cen.map((c,j)=>sum[j][3]?[sum[j][0]/sum[j][3],sum[j][1]/sum[j][3],sum[j][2]/sum[j][3]]:c)}
+ const cnt=cen.map(()=>0);as.forEach(a=>cnt[a]++);const out={};cen.forEach((c,j)=>{if(cnt[j]/px.length>=0.01){const h=rgbToHex(...c);out[h]=(out[h]||0)+Math.max(1,Math.round(cnt[j]/px.length*20))}});
+ URL.revokeObjectURL(img.src);res(Object.entries(out).map(([hex,count])=>({hex,count})))};img.onerror=rej;img.src=URL.createObjectURL(file)})}
+
+/* ---------- 圖表（Canvas，無外部相依） ---------- */
+function cv(el,w,h){const d=devicePixelRatio||1;el.width=w*d;el.height=h*d;el.style.width=w+'px';el.style.height=h+'px';const x=el.getContext('2d');x.scale(d,d);return x}
+const gcol=g=>cssv('--'+g)||'#888';
+function drawGauge(x,cx,cy,r,score){x.lineWidth=r*0.2;x.lineCap='round';x.strokeStyle=cssv('--line');x.beginPath();x.arc(cx,cy,r,Math.PI,2*Math.PI);x.stroke();
+ x.strokeStyle=gcol(gradeOf(score));x.beginPath();x.arc(cx,cy,r,Math.PI,Math.PI+Math.PI*Math.max(0.005,score/100));x.stroke();
+ x.fillStyle=cssv('--text');x.textAlign='center';x.font=`800 ${r*0.5}px sans-serif`;x.fillText(score,cx,cy-r*0.08);
+ x.font=`600 ${r*0.16}px sans-serif`;x.fillStyle=gcol(gradeOf(score));const g=gradeOf(score);x.fillText(`${g} ${GRADE[g][0]} ${GRADE[g][1]}`,cx,cy+r*0.25)}
+function drawRadar(x,cx,cy,r,labels,vals){const n=labels.length,ang=i=>-Math.PI/2+i*2*Math.PI/n;x.strokeStyle=cssv('--line');x.lineWidth=1;
+ for(let l=1;l<=4;l++){x.beginPath();for(let i=0;i<=n;i++){const a=ang(i%n),rr=r*l/4;i?x.lineTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a)):x.moveTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a))}x.stroke()}
+ x.fillStyle=cssv('--sub');x.font='12px sans-serif';x.textAlign='center';x.textBaseline='middle';
+ labels.forEach((t,i)=>{const a=ang(i);x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));x.stroke();x.fillText(t,cx+(r+26)*Math.cos(a),cy+(r+16)*Math.sin(a))});
+ const pc=cssv('--pri');x.beginPath();vals.forEach((v,i)=>{const a=ang(i),rr=r*Math.max(2,v)/100;i?x.lineTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a)):x.moveTo(cx+rr*Math.cos(a),cy+rr*Math.sin(a))});x.closePath();
+ x.globalAlpha=.25;x.fillStyle=pc;x.fill();x.globalAlpha=1;x.strokeStyle=pc;x.lineWidth=2;x.stroke();x.textBaseline='alphabetic'}
+function drawBars(x,w,h,labels,vals,colors,limitLine){const pad=30,max=Math.max(1,...vals),bw=(w-pad*2)/Math.max(1,vals.length);x.font='11px sans-serif';x.textAlign='center';
+ vals.forEach((v,i)=>{const bh=(h-pad*2)*v/max,bx=pad+i*bw+bw*.15;x.fillStyle=colors[i]||cssv('--pri');x.fillRect(bx,h-pad-bh,bw*.7,bh);x.fillStyle=cssv('--text');x.fillText(v,bx+bw*.35,h-pad-bh-4);x.fillStyle=cssv('--sub');x.fillText(labels[i],bx+bw*.35,h-pad+14)});
+ x.strokeStyle=cssv('--line');x.beginPath();x.moveTo(pad,h-pad);x.lineTo(w-pad,h-pad);x.stroke()}
+function drawLine(x,w,h,labels,vals){const pad=36;x.strokeStyle=cssv('--line');x.fillStyle=cssv('--sub');x.font='11px sans-serif';x.textAlign='right';
+ [0,20,40,60,80,100].forEach(v=>{const y=h-pad-(h-pad*2)*v/100;x.beginPath();x.moveTo(pad,y);x.lineTo(w-10,y);x.stroke();x.fillText(v,pad-6,y+4)});
+ const sx=i=>pad+(vals.length<2?(w-pad-10)/2:i*(w-pad-10)/(vals.length-1)),sy=v=>h-pad-(h-pad*2)*v/100;
+ x.strokeStyle=cssv('--pri');x.lineWidth=2;x.beginPath();vals.forEach((v,i)=>i?x.lineTo(sx(i),sy(v)):x.moveTo(sx(i),sy(v)));x.stroke();x.lineWidth=1;x.textAlign='center';
+ vals.forEach((v,i)=>{x.fillStyle=gcol(gradeOf(v));x.beginPath();x.arc(sx(i),sy(v),5,0,7);x.fill();x.fillStyle=cssv('--text');x.fillText(v,sx(i),sy(v)-10);x.fillStyle=cssv('--sub');x.fillText(labels[i],sx(i),h-pad+16)})}
+
+/* ---------- 資料載入 ---------- */
+async function loadSettings(){const s=await DB.get('settings','app');if(s)st.S=Object.assign(JSON.parse(JSON.stringify(DEF)),s.value,{weights:Object.assign({},DEF.weights,s.value.weights||{})});applyTheme()}
+function saveSettings(){return DB.put('settings',{key:'app',value:st.S})}
+function applyTheme(){document.documentElement.dataset.theme=st.S.theme;$('#btnTheme').textContent=st.S.theme==='dark'?'☀️':'🌙'}
+async function loadProjects(){st.projects=(await DB.all('projects')).sort((a,b)=>a.createdAt-b.createdAt);
+ if(!st.projects.length){const p={projectId:uid('p'),name:'我的設計系統',createdAt:Date.now(),updatedAt:Date.now()};await DB.put('projects',p);st.projects=[p]}
+ const last=(await DB.get('settings','lastProject'))?.value;if(!st.pid||!st.projects.find(p=>p.projectId===st.pid))st.pid=st.projects.find(p=>p.projectId===last)?.projectId||st.projects[0].projectId;
+ $('#projSel').innerHTML=st.projects.map(p=>`<option value="${p.projectId}" ${p.projectId===st.pid?'selected':''}>${esc(p.name)}</option>`).join('');await loadSnaps()}
+async function loadSnaps(keepSid){st.snaps=(await DB.all('snapshots')).filter(s=>s.projectId===st.pid).sort((a,b)=>a.createdAt-b.createdAt);
+ if(!keepSid||!st.snaps.find(s=>s.snapshotId===st.sid))st.sid=st.snaps.length?st.snaps[st.snaps.length-1].snapshotId:null;
+ $('#snapSel').innerHTML=st.snaps.length?st.snaps.map((s,i)=>`<option value="${s.snapshotId}" ${s.snapshotId===st.sid?'selected':''}>#${i+1} ${new Date(s.createdAt).toLocaleString('zh-TW',{hour12:false})}｜${s.debtScore}分</option>`).reverse().join(''):'<option>尚無快照</option>';
+ await loadSnap()}
+async function loadSnap(){st.snap=st.sid?st.snaps.find(s=>s.snapshotId===st.sid):null;st.issues=st.snap?(await DB.all('issues')).filter(i=>i.snapshotId===st.sid).sort((a,b)=>a.no-b.no):[];render()}
+async function officialTokens(){const t=(await DB.all('tokens')).filter(t=>t.projectId===st.pid&&t.type==='official').sort((a,b)=>b.createdAt-a.createdAt)[0];return t?t.colors:null}
+
+/* ---------- 匯入與分析 ---------- */
+async function importFiles(files,extra=[]){const texts=[...extra],shots=[];const box=$('#progBox');if(box)box.style.display='block';const prog=(p,m)=>{const b=$('#progBar'),t=$('#progTxt');if(b&&p!=null)b.style.width=p+'%';if(t&&m)t.textContent=m};
+ try{for(const f of files){if(/\.(png|jpe?g|webp)$/i.test(f.name)){prog(null,'萃取截圖色彩 '+f.name);shots.push({name:f.name,colors:await extractImageColors(f)})}
+   else if(/\.(json|css|scss)$/i.test(f.name))texts.push({name:f.name,text:await f.text()});else toast('略過不支援的檔案：'+f.name)}
+  if(!texts.length&&!shots.length)return;
+  const r=await runCore({files:texts,shots,settings:st.S,tokens:await officialTokens()},prog);
+  for(const t of r.rawTokens)await DB.put('tokens',{tokenSetId:uid('t'),projectId:st.pid,type:'official',name:t.name,data:t.data,colors:r.col.tokenColors,createdAt:Date.now()});
+  await saveSnapshot(r.col,r.result,[...texts.map(t=>t.name),...shots.map(s=>s.name)]);toast(`分析完成：Debt Score ${r.result.score}`);go('dashboard')}
+ catch(e){console.error(e);toast('分析失敗：'+e.message);prog(0,'分析失敗：'+e.message)}}
+async function saveSnapshot(col,res,sources){const prev=st.snaps[st.snaps.length-1],prevStatus={};
+ if(prev)(await DB.all('issues')).filter(i=>i.snapshotId===prev.snapshotId).forEach(i=>prevStatus[i.key]=i.status);
+ const sid=uid('s'),snap={snapshotId:sid,projectId:st.pid,sourceFiles:sources,debtScore:res.score,grade:res.grade,dimensionScores:Object.fromEntries(Object.entries(res.dims).map(([k,v])=>[k,v.score])),dims:res.dims,derived:res.derived,col,createdAt:Date.now()};
+ await DB.put('snapshots',snap);await DB.putMany('issues',mkIssues(res.issues,sid,prevStatus));
+ const p=st.projects.find(p=>p.projectId===st.pid);p.updatedAt=Date.now();await DB.put('projects',p);st.sid=sid;await loadSnaps(true)}
+function mkIssues(list,sid,prevStatus){const rank={high:0,med:1,low:2};return list.slice().sort((a,b)=>rank[a.sev]-rank[b.sev]||b.count-a.count).map((x,i)=>({issueId:sid+'_'+i,snapshotId:sid,no:i+1,code:'DD-'+String(i+1).padStart(3,'0'),key:x.key,dimension:x.dim,severity:x.sev,description:x.desc,count:x.count,locations:x.locs,suggestion:x.sug,status:prevStatus[x.key]||'todo'}))}
+async function reanalyze(){if(!st.snap)return toast('目前沒有快照');const col=st.snap.col,res=analyze(col,st.S),prevStatus={};st.issues.forEach(i=>prevStatus[i.key]=i.status);
+ for(const i of st.issues)await DB.del('issues',i.issueId);
+ Object.assign(st.snap,{debtScore:res.score,grade:res.grade,dimensionScores:Object.fromEntries(Object.entries(res.dims).map(([k,v])=>[k,v.score])),dims:res.dims,derived:res.derived});
+ await DB.put('snapshots',st.snap);await DB.putMany('issues',mkIssues(res.issues,st.sid,prevStatus));await loadSnaps(true);toast('已依新設定重新分析')}
+
+/* ---------- 範例資料 ---------- */
+const SAMPLE_CSS=`:root{--primary:#1a73e8;--text:#202124}
+body{font-family:"Noto Sans TC",sans-serif;font-size:16px;color:#202124;margin:0}
+h1{font-size:32px;font-weight:700;margin-bottom:24px}
+h2{font-size:26px;font-weight:600;margin-bottom:18px}
+h3{font-size:21px;font-weight:600}
+.subtitle{font-size:15px;color:#5f6368;line-height:1.4}
+.caption{font-size:13px;color:#5f6367}
+.note{font-size:11px;color:#70757a;font-family:Arial}
+.btn{background:#1a73e8;color:#fff;padding:8px 16px;border-radius:4px;font-size:14px;font-weight:500}
+.btn-primary{background-color:#1b74e9;color:#ffffff;padding:10px 18px;border-radius:6px;font-size:14px;font-weight:600}
+.btn-main{background:#1a72e7;color:#fff;padding:8px 16px;border-radius:4px;font-size:14px;font-weight:500;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.btn-secondary{background:#ffffff;color:#1a73e8;border:1px solid #dadce0;padding:8px 16px;border-radius:4px;font-size:14px}
+.btn-outline{background:#fff;color:#1a73e8;border:1px solid #dadce1;padding:7px 15px;border-radius:5px;font-size:13px}
+.btn-danger{background:#d93025;color:#fff;padding:8px 16px;border-radius:4px;font-size:14px}
+.btn-warn{background:#d93026;color:#fff;padding:9px 16px;border-radius:4px;font-size:14px}
+.button-link{background:transparent;color:#1967d2;padding:6px 10px;border-radius:3px;font-size:14px}
+.btn-lg{background:#1a73e8;color:#fff;padding:12px 24px;border-radius:8px;font-size:16px;font-weight:600}
+.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 6px rgba(0,0,0,.15);margin-bottom:16px}
+.card-alt{background:#fafafa;border-radius:10px;padding:18px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.card-flat{background:#f8f9fa;border-radius:12px;padding:20px;border:1px solid #e8eaed}
+.panel{padding:15px;margin:10px 0;gap:6px;border-radius:2px;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+.input{border:1px solid #dadce0;border-radius:4px;padding:8px 12px;font-size:14px;height:36px}
+.form-control{border:1px solid #dadce0;border-radius:6px;padding:10px 12px;font-size:15px;height:40px}
+.text-field{border:1px solid #d9dce0;border-radius:4px;padding:7px 11px;font-size:14px;height:34px}
+.tag{background:#e8f0fe;color:#1967d2;padding:2px 8px;border-radius:10px;font-size:12px}
+.badge{background:#e8f0fd;color:#1a67d2;padding:3px 7px;border-radius:9px;font-size:12px}
+.alert{background:#fce8e6;color:#c5221f;padding:12px 14px;margin:20px 0;border-radius:4px}
+.alert-red{background:#fce8e7;color:#c5221e;padding:13px 14px}
+.toolbar{gap:10px;padding:6px 12px}
+.modal{box-shadow:0 8px 24px rgba(0,0,0,.25);border-radius:16px;padding:28px}
+.dropdown{box-shadow:0 2px 10px rgba(0,0,0,.2);border-radius:6px;padding:5px 0}
+.footer{color:#9aa0a6;font-size:12px;padding:30px 20px;margin-top:50px}`;
+function figBtn(type,name,hex,r,pad,fs){const c=h=>({r:parseInt(h.slice(1,3),16)/255,g:parseInt(h.slice(3,5),16)/255,b:parseInt(h.slice(5,7),16)/255,a:1});
+ return{type,name,fills:[{type:'SOLID',color:c(hex)}],cornerRadius:r,paddingTop:pad[0],paddingRight:pad[1],paddingBottom:pad[0],paddingLeft:pad[1],absoluteBoundingBox:{height:pad[0]*2+20},
+  children:[{type:'TEXT',name:'Label',characters:'Button',style:{fontFamily:'Inter',fontSize:fs,fontWeight:500,lineHeightPx:20},fills:[{type:'SOLID',color:c('#ffffff')}]}]}}
+const SAMPLE_FIGMA={name:'Sample',document:{type:'DOCUMENT',name:'Document',children:[{type:'CANVAS',name:'Page 1',children:[{type:'FRAME',name:'Checkout',itemSpacing:12,paddingLeft:20,paddingTop:24,fills:[{type:'SOLID',color:{r:1,g:1,b:1}}],
+ children:[figBtn('INSTANCE','Button/Primary','#1a73e8',4,[8,16],14),figBtn('INSTANCE','Button/Primary','#1a73e8',4,[8,16],14),figBtn('FRAME','Button copy','#1a74e8',6,[10,16],14),figBtn('FRAME','button-new','#1557b0',4,[8,18],15),
+  figBtn('INSTANCE','Icon','#5f6368',0,[0,0],12),{type:'TEXT',name:'Title',style:{fontFamily:'Inter',fontSize:22,fontWeight:700,lineHeightPx:28},fills:[{type:'SOLID',color:{r:0.125,g:0.129,b:0.141}}]},
+  {type:'RECTANGLE',name:'Card bg',cornerRadius:14,effects:[{type:'DROP_SHADOW',visible:true,offset:{x:0,y:3},radius:10,color:{r:0,g:0,b:0,a:.15}}],fills:[{type:'SOLID',color:{r:0.98,g:0.98,b:0.98}}]}]}]}]}};
+const SAMPLE_TOKENS={color:{primary:{500:{$type:'color',$value:'#1a73e8'},700:{$type:'color',$value:'#1967d2'}},text:{primary:{$type:'color',$value:'#202124'},secondary:{$type:'color',$value:'#5f6368'}},
+ danger:{$type:'color',$value:'#d93025'},white:{$type:'color',$value:'#ffffff'},border:{$type:'color',$value:'#dadce0'},surface:{$type:'color',$value:'#f8f9fa'},blue50:{$type:'color',$value:'#e8f0fe'}}};
+async function loadSample(){await importFiles([],[{name:'sample.css',text:SAMPLE_CSS},{name:'sample-figma.json',text:JSON.stringify(SAMPLE_FIGMA)},{name:'tokens.json',text:JSON.stringify(SAMPLE_TOKENS)}])}
+
+/* ---------- 視圖 ---------- */
+function go(v){st.view=v;render()}
+function needSnap(){return `<div class="empty"><div style="font-size:42px">📂</div><h3>目前專案還沒有掃描快照</h3><p>匯入 Figma JSON、CSS/SCSS、Design Tokens 或截圖後開始分析</p><button class="pri" onclick="go('import')">前往匯入</button> <button onclick="loadSample()">載入範例資料</button></div>`}
+function sevPill(s){return `<span class="pill ${s}">${SEV[s]}</span>`}
+function render(){document.querySelectorAll('#nav a').forEach(a=>a.classList.toggle('on',a.dataset.v===st.view));
+ const V={dashboard:vDash,issues:vIssues,colors:vColors,type:vType,variants:vVariants,spacing:vSpacing,trend:vTrend,suggest:vSuggest,import:vImport,export:vExport,settings:vSettings};
+ const noSnapOK=['import','export','settings','trend'];if(!st.snap&&!noSnapOK.includes(st.view)){main.innerHTML=needSnap();return}(V[st.view]||vDash)()}
+
+function vDash(){const s=st.snap,d=s.dims;
+ main.innerHTML=`<h2>債務總覽 <span class="muted">來源：${esc(s.sourceFiles.join('、'))}</span></h2>
+ <div class="grid g2"><div class="card" style="text-align:center"><h3>Design Debt Score</h3><canvas id="cG"></canvas><div class="muted">分數越高，債務越重</div></div>
+ <div class="card" style="text-align:center"><h3>7 維度雷達圖</h3><canvas id="cR"></canvas></div></div>
+ <div class="grid g7">${Object.keys(DIMS).map(k=>`<div class="card dim" style="border-left-color:${gcol(gradeOf(d[k].score))};cursor:pointer" onclick="st.filters={dim:'${k}',sev:'',status:'',q:''};go('issues')"><div class="muted">${k} ${DIMS[k]}｜權重 ${st.S.weights[k]}%</div><b>${d[k].na?'N/A':d[k].score}</b><div class="muted">${esc(d[k].metric)}</div></div>`).join('')}</div>
+ <div class="card"><h3>Top 10 最嚴重問題</h3>${issueTable(st.issues.filter(i=>i.status!=='done'&&i.status!=='skip').slice(0,10),false)}</div>`;
+ drawGauge(cv($('#cG'),300,180),150,150,110,s.debtScore);drawRadar(cv($('#cR'),360,260),180,135,95,Object.keys(DIMS).map(k=>DIMS[k]),Object.keys(DIMS).map(k=>d[k].score))}
+function issueTable(list,editable){if(!list.length)return '<div class="muted">沒有符合條件的債務項目 🎉</div>';
+ return `<table><tr><th>編號</th><th>維度</th><th>嚴重度</th><th>問題描述</th><th>次數</th><th>出現位置</th><th>建議處理</th><th>狀態</th></tr>${list.map(i=>`<tr><td>${i.code}</td><td>${i.dimension} ${DIMS[i.dimension]}</td><td>${sevPill(i.severity)}</td><td>${esc(i.description)}</td><td>${i.count}</td>
+ <td>${i.locations.length?`<details><summary>${i.locations.length} 處</summary><div class="muted">${i.locations.map(esc).join('<br>')}</div></details>`:'—'}</td><td>${esc(i.suggestion)}</td>
+ <td>${editable?`<select onchange="setStatus('${i.issueId}',this.value)">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${i.status===k?'selected':''}>${v}</option>`).join('')}</select>`:STATUS[i.status]}</td></tr>`).join('')}</table>`}
+async function setStatus(id,v){const i=st.issues.find(x=>x.issueId===id);i.status=v;await DB.put('issues',i);toast('狀態已更新：'+STATUS[v]);if(st.view==='issues')vIssues()}
+function vIssues(){const f=st.filters,q=f.q.toLowerCase(),list=st.issues.filter(i=>(!f.dim||i.dimension===f.dim)&&(!f.sev||i.severity===f.sev)&&(!f.status||i.status===f.status)&&(!q||(i.description+i.suggestion+i.code+i.locations.join(' ')).toLowerCase().includes(q)));
+ const cnt=Object.keys(STATUS).map(k=>`${STATUS[k]} ${st.issues.filter(i=>i.status===k).length}`).join('｜');
+ main.innerHTML=`<h2>債務明細清單 <span class="muted">共 ${st.issues.length} 項｜${cnt}</span></h2><div class="card"><div class="row">
+ <select id="fD"><option value="">全部維度</option>${Object.entries(DIMS).map(([k,v])=>`<option value="${k}" ${f.dim===k?'selected':''}>${k} ${v}</option>`).join('')}</select>
+ <select id="fS"><option value="">全部嚴重度</option>${Object.entries(SEV).map(([k,v])=>`<option value="${k}" ${f.sev===k?'selected':''}>${v}</option>`).join('')}</select>
+ <select id="fT"><option value="">全部狀態</option>${Object.entries(STATUS).map(([k,v])=>`<option value="${k}" ${f.status===k?'selected':''}>${v}</option>`).join('')}</select>
+ <input type="text" id="fQ" placeholder="關鍵字搜尋…" value="${esc(f.q)}" style="flex:1;min-width:180px"><span class="muted">顯示 ${list.length} 項</span></div>${issueTable(list,true)}</div>`;
+ const upd=()=>{st.filters={dim:$('#fD').value,sev:$('#fS').value,status:$('#fT').value,q:$('#fQ').value};vIssues();const e=$('#fQ');e.focus();e.setSelectionRange(e.value.length,e.value.length)};
+ ['#fD','#fS','#fT'].forEach(s=>$(s).onchange=upd);$('#fQ').oninput=upd}
+function hue(h){const[r,g,b]=hexToRgb(h).map(v=>v/255),mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;if(!d)return -1+(mx);let H=mx===r?((g-b)/d)%6:mx===g?(b-r)/d+2:(r-g)/d+4;return(H*60+360)%360}
+function vColors(){const D=st.snap.derived,sorted=D.colors.slice().sort((a,b)=>hue(a.k)-hue(b.k));
+ main.innerHTML=`<h2>色彩地圖 <span class="muted">${D.colors.length} 色，ΔE 門檻 ${st.S.deltaE}</span></h2>
+ <div class="card"><h3>全部色碼（依色相排列）</h3><div class="swrow">${sorted.map(c=>`<div class="swbox" title="${c.k}${c.tok?' → '+esc(c.tok):''}"><span class="sw" style="background:${c.k};${c.tok?'':'outline:2px dashed var(--D);outline-offset:1px'}"></span><div>${c.k}</div><div class="muted">×${c.count}</div></div>`).join('')}</div>
+ <p class="muted">${D.tokens.length?'紅色虛線框：未對應任何 Token 的寫死色碼':'尚未匯入 Design Tokens，無法判斷 Token 對應'}</p></div>
+ <div class="card"><h3>近似色群組（${D.clusters.length} 組）</h3>${D.clusters.length?D.clusters.map(c=>`<div class="cl"><div class="swbox"><span class="sw" style="background:${c.rep};border:2px solid var(--text)"></span><div><b>${c.rep}</b></div><div class="muted">×${c.count}</div></div>${c.members.map(m=>`<span class="ln"></span><div class="swbox"><span class="sw" style="background:${m.k}"></span><div>${m.k}</div><div class="muted">×${m.count}｜ΔE ${m.d}</div></div>`).join('')}</div>`).join(''):'<div class="muted">未發現近似色</div>'}</div>`}
+function vType(){const D=st.snap.derived,sc=D.scale;
+ main.innerHTML=`<h2>字型階梯 <span class="muted">建議階梯（${st.S.baseFont}px × ${st.S.scaleRatio}）：${sc.join(' / ')}</span></h2>
+ <div class="card"><h3>字級分布（紅色＝不在建議階梯上）</h3><canvas id="cT"></canvas></div>
+ <div class="grid g2"><div class="card"><h3>字族</h3><table><tr><th>字族</th><th>次數</th></tr>${D.fam.map((f,i)=>`<tr><td style="font-family:'${safe(f.k)}'">${esc(f.k)} ${i>=st.S.maxFamilies?sevPill('high'):''}</td><td>${f.count}</td></tr>`).join('')||'<tr><td colspan=2 class="muted">無資料</td></tr>'}</table></div>
+ <div class="card"><h3>字重</h3><table><tr><th>字重</th><th>次數</th></tr>${D.fw.map(f=>`<tr><td style="font-weight:${safe(f.k)}">${esc(f.k)} 字重範例 Aa</td><td>${f.count}</td></tr>`).join('')||'<tr><td colspan=2 class="muted">無資料</td></tr>'}</table></div></div>
+ <div class="card"><h3>字級實際樣貌</h3>${D.fs.slice().reverse().map(f=>`<div style="font-size:${f.v}px;line-height:1.3;color:${sc.includes(f.v)?'inherit':'var(--D)'}">${f.v}px 設計債務 Design Debt <span class="muted">×${f.count}</span></div>`).join('')}</div>`;
+ drawBars(cv($('#cT'),Math.min(900,main.clientWidth-60),240),D.fs.map(f=>f.v+''),D.fs.map(f=>f.count),D.fs.map(f=>sc.includes(f.v)?cssv('--pri'):cssv('--D')))}
+function vVariants(){const V=st.snap.derived.variants;
+ main.innerHTML=`<h2>變體牆 <span class="muted">紅色虛線＝疑似多餘變體（與其他變體差異 ≤ 2 個屬性）</span></h2>${Object.keys(V).length?Object.entries(V).map(([cat,list])=>`<div class="card"><h3>${cat}：${list.length} 種視覺變體 ${list.length>st.S.maxVariants?sevPill('high'):''}</h3><div class="vwall">${list.map((v,i)=>{const p=v.props;
+  return `<div class="vitem ${v.redundantOf?'red':''}"><div class="stage"><div style="background:${safe(p.bg||'transparent')};color:${safe(p.color||'inherit')};border-radius:${safe(p.radius||0)};padding:${safe(p.padding||'8px 16px')};font-size:${safe(p.fontSize||'14px')};font-weight:${safe(p.fontWeight||400)};border:${safe(p.border||'none')};box-shadow:${safe(p.shadow||'none')};${cat==='Input'?'min-width:120px;text-align:left':''}${cat==='Card'?'min-width:110px;min-height:50px':''}">${cat==='Input'?'輸入文字':cat==='Card'?'Card':cat}</div></div>
+  <b>#${i+1}</b> <span class="muted">使用 ${v.count} 次</span>${v.redundantOf?`<div class="muted" style="color:var(--D)">建議併入 #${v.redundantOf}</div>`:''}<details><summary>樣式屬性</summary><div class="muted" style="text-align:left">${Object.entries(p).map(([k,x])=>`${k}: ${esc(x)}`).join('<br>')}</div></details></div>`}).join('')}</div></div>`).join(''):'<div class="card muted">未偵測到 Button / Input / Card / Tag 類元件（依選擇器或圖層名稱判斷）</div>'}`}
+function vSpacing(){const D=st.snap.derived;
+ main.innerHTML=`<h2>間距分析 <span class="muted">${st.snap.dims.D3.metric}</span></h2><div class="card"><h3>間距直方圖（藍＝符合 ${st.S.grid}pt 格線，紅＝格線外）</h3><canvas id="cS"></canvas></div>
+ <div class="card"><h3>格線外間距修正建議</h3><table><tr><th>現值</th><th>次數</th><th>建議值</th></tr>${D.sp.filter(e=>e.off).map(e=>`<tr><td>${e.v}px</td><td>${e.count}</td><td>${Math.max(st.S.grid,Math.round(e.v/st.S.grid)*st.S.grid)}px</td></tr>`).join('')||'<tr><td colspan=3 class="muted">全部符合格線 🎉</td></tr>'}</table></div>
+ <div class="grid g2"><div class="card"><h3>圓角（${D.rd.length} 種）</h3><div class="swrow">${D.rd.map(r=>`<div class="swbox"><span class="sw" style="border-radius:${r.v}px;background:var(--pri2);border:2px solid var(--pri)"></span><div>${r.v}px</div><div class="muted">×${r.count}</div></div>`).join('')}</div></div>
+ <div class="card"><h3>陰影（${D.sh.length} 種）</h3><div class="swrow">${D.sh.map(s=>`<div class="swbox" style="width:90px"><span class="sw" style="box-shadow:${safe(s.k)};background:var(--panel);width:60px"></span><div class="muted">×${s.count}</div></div>`).join('')}</div></div></div>`;
+ drawBars(cv($('#cS'),Math.min(900,main.clientWidth-60),240),D.sp.map(e=>e.v+''),D.sp.map(e=>e.count),D.sp.map(e=>e.off?cssv('--D'):cssv('--pri')))}
+async function vTrend(){const S=st.snaps;if(!S.length){main.innerHTML=needSnap();return}
+ const opts=sel=>S.map((s,i)=>`<option value="${i}" ${i===sel?'selected':''}>#${i+1} ${new Date(s.createdAt).toLocaleString('zh-TW',{hour12:false})}（${s.debtScore}）</option>`).join('');
+ const a=Math.max(0,S.length-2),b=S.length-1;
+ main.innerHTML=`<h2>趨勢比較</h2><div class="card"><h3>Debt Score 趨勢</h3><canvas id="cL"></canvas></div><div class="card"><h3>快照比較</h3><div class="row">基準 <select id="tA">${opts(a)}</select> → 比較 <select id="tB">${opts(b)}</select></div><div id="cmp"></div></div>`;
+ drawLine(cv($('#cL'),Math.min(900,main.clientWidth-60),240),S.map((s,i)=>'#'+(i+1)),S.map(s=>s.debtScore));
+ const all=await DB.all('issues');
+ const cmp=()=>{const A=S[+$('#tA').value],B=S[+$('#tB').value],ia=all.filter(i=>i.snapshotId===A.snapshotId),ib=all.filter(i=>i.snapshotId===B.snapshotId),ka=new Set(ia.map(i=>i.key)),kb=new Set(ib.map(i=>i.key));
+  const nw=ib.filter(i=>!ka.has(i.key)),rs=ia.filter(i=>!kb.has(i.key)),dd=B.debtScore-A.debtScore;
+  $('#cmp').innerHTML=`<div class="grid g7"><div class="card dim"><div class="muted">分數變化</div><b style="color:${dd>0?'var(--D)':'var(--A)'}">${dd>0?'+':''}${dd}</b><div class="muted">${A.debtScore} → ${B.debtScore}</div></div><div class="card dim" style="border-left-color:var(--D)"><div class="muted">新增債務</div><b>${nw.length}</b></div><div class="card dim" style="border-left-color:var(--A)"><div class="muted">已解決債務</div><b>${rs.length}</b></div></div>
+  <table><tr><th>維度</th><th>基準</th><th>比較</th><th>變化</th></tr>${Object.keys(DIMS).map(k=>{const x=A.dimensionScores[k],y=B.dimensionScores[k];return `<tr><td>${k} ${DIMS[k]}</td><td>${x}</td><td>${y}</td><td style="color:${y>x?'var(--D)':y<x?'var(--A)':'inherit'}">${y>x?'▲':y<x?'▼':'－'} ${Math.abs(y-x)}</td></tr>`}).join('')}</table>
+  <h3 style="margin-top:14px">新增債務</h3>${issueTable(nw.slice(0,50),false)}<h3 style="margin-top:14px">已解決債務</h3>${issueTable(rs.slice(0,50),false)}`};
+ $('#tA').onchange=cmp;$('#tB').onchange=cmp;cmp()}
+function buildSuggested(){const D=st.snap.derived,S=st.S,tok={color:{},fontSize:{},spacing:{},radius:{},shadow:{}};
+ D.reps.slice(0,S.maxColors).forEach((c,i)=>{const t=D.colors.find(x=>x.k===c.k)?.tok;tok.color[t?t.replace(/^color\./,'').replace(/\./g,'-'):'c'+String(i+1).padStart(2,'0')]={$type:'color',$value:c.k}});
+ D.scale.forEach((v,i)=>tok.fontSize[['xs','sm','md','lg','xl','2xl','3xl','4xl','5xl','6xl','7xl','8xl'][i]||'s'+i]={$type:'dimension',$value:v+'px'});
+ [0.5,1,1.5,2,3,4,5,6,8].forEach(m=>{const v=S.grid*m;if(Number.isInteger(v))tok.spacing[String(v/S.grid).replace('.','_')]={$type:'dimension',$value:v+'px'}});
+ D.rd.slice(0,S.maxRadii).map(r=>r.v).sort((a,b)=>a-b).forEach((v,i)=>tok.radius[['sm','md','lg','xl','2xl','3xl'][i]||'r'+i]={$type:'dimension',$value:v+'px'});
+ D.sh.slice(0,S.maxShadows).forEach((s,i)=>tok.shadow['elevation-'+(i+1)]={$type:'shadow',$value:s.k});return tok}
+function vSuggest(){const D=st.snap.derived,tok=buildSuggested();
+ main.innerHTML=`<h2>整併建議</h2><div class="grid g2"><div class="card"><h3>🎨 色彩合併</h3><table><tr><th>合併來源</th><th>目標</th></tr>${D.clusters.map(c=>`<tr><td>${c.members.map(m=>`<span class="sw" style="width:16px;height:16px;background:${m.k}"></span> ${m.k}`).join('<br>')}</td><td><span class="sw" style="width:16px;height:16px;background:${c.rep}"></span> ${c.rep}</td></tr>`).join('')||'<tr><td colspan=2 class="muted">無</td></tr>'}</table></div>
+ <div class="card"><h3>🔤 字級收斂（${st.S.scaleRatio} Modular Scale）</h3><table><tr><th>現有字級</th><th>建議</th></tr>${D.fs.map(f=>{const n=nearest(D.scale,f.v);return `<tr><td>${f.v}px ×${f.count}</td><td>${n===f.v?'✓ 保留':n+'px'}</td></tr>`}).join('')}</table></div>
+ <div class="card"><h3>📏 間距對齊 ${st.S.grid}pt</h3><table><tr><th>現有</th><th>建議</th></tr>${D.sp.map(e=>`<tr><td>${e.v}px ×${e.count}</td><td>${e.off?Math.max(st.S.grid,Math.round(e.v/st.S.grid)*st.S.grid)+'px':'✓ 保留'}</td></tr>`).join('')}</table></div>
+ <div class="card"><h3>💾 建議版 Design Tokens（W3C DTCG）</h3><div class="row"><button class="pri" id="bTok">下載 JSON</button><button id="bTokSave">存入專案</button></div><pre>${esc(JSON.stringify(tok,null,2))}</pre></div></div>`;
+ $('#bTok').onclick=()=>dl('suggested-tokens-'+stamp()+'.json',JSON.stringify(tok,null,2),'application/json');
+ $('#bTokSave').onclick=async()=>{await DB.put('tokens',{tokenSetId:uid('t'),projectId:st.pid,type:'suggested',data:tok,createdAt:Date.now()});toast('建議 Tokens 已存入專案')}}
+function vImport(){main.innerHTML=`<h2>匯入與分析</h2><div class="card"><div class="drop" id="drop"><div style="font-size:36px">📥</div><b>拖拉檔案到這裡，或點擊選擇檔案（可多選）</b><div class="muted">支援：Figma JSON、CSS / SCSS、Design Tokens JSON（W3C DTCG / Tokens Studio）、截圖 PNG / JPG</div></div>
+ <input type="file" id="fIn" multiple accept=".json,.css,.scss,.png,.jpg,.jpeg,.webp" hidden><div id="progBox" style="display:none"><div class="prog"><div id="progBar"></div></div><div class="muted" id="progTxt">準備中…</div></div>
+ <div class="row" style="margin-top:12px"><button onclick="loadSample()">🧪 載入範例資料</button><span class="muted">同一次匯入的所有檔案會合併為一個快照</span></div></div>
+ <div class="card"><h3>🔗 Figma API 直連</h3><div class="row"><input type="password" id="fgT" placeholder="Personal Access Token" style="width:260px"><input type="text" id="fgK" placeholder="File Key 或檔案網址" style="width:300px" value="${esc(localStorage.getItem('dda_fk')||'')}"><button class="pri" id="fgGo">讀取並分析</button></div><div class="muted">Token 只用於本次請求，不會被儲存；此功能需要連網。</div></div>`;
+ const drop=$('#drop'),fi=$('#fIn');drop.onclick=()=>fi.click();fi.onchange=()=>importFiles([...fi.files]);
+ drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');importFiles([...e.dataTransfer.files])};
+ $('#fgGo').onclick=async()=>{const t=$('#fgT').value.trim();let k=$('#fgK').value.trim();const m=k.match(/(?:file|design)\/([A-Za-z0-9]+)/);if(m)k=m[1];if(!t||!k)return toast('請輸入 Token 與 File Key');localStorage.setItem('dda_fk',k);
+  $('#progBox').style.display='block';$('#progTxt').textContent='從 Figma 下載檔案中…';
+  try{const r=await fetch('https://api.figma.com/v1/files/'+encodeURIComponent(k),{headers:{'X-Figma-Token':t}});if(!r.ok)throw new Error('HTTP '+r.status);const txt=await r.text();await importFiles([],[{name:'figma-'+k+'.json',text:txt}])}catch(e){toast('Figma 讀取失敗：'+e.message);$('#progTxt').textContent='讀取失敗：'+e.message}}}
+function vExport(){main.innerHTML=`<h2>匯出與備份</h2><div class="grid g2"><div class="card"><h3>📤 分析報告（目前快照）</h3><div class="row"><button class="pri" id="eX">Excel (.xlsx)</button><button id="eM">Markdown</button><button id="eJ">JSON</button><button id="eT">建議 Tokens</button><button id="eP">儀表板 PNG</button></div><div class="muted">Excel 匯出需連網載入 SheetJS；離線時自動改匯出 CSV。</div></div>
+ <div class="card"><h3>🗄️ 資料庫備份與還原</h3><div class="row"><button class="pri" id="bB">備份全部資料（JSON）</button><button id="bR">從備份還原</button><input type="file" id="bF" accept=".json" hidden></div><div class="muted">還原會覆蓋目前所有專案、快照與設定。</div></div></div>`;
+ const need=f=>()=>st.snap?f():toast('目前沒有快照可匯出');
+ $('#eX').onclick=need(exportXlsx);$('#eM').onclick=need(()=>dl('design-debt-'+stamp()+'.md',toMd(),'text/markdown'));
+ $('#eJ').onclick=need(()=>dl('design-debt-'+stamp()+'.json',JSON.stringify({snapshot:{...st.snap,col:undefined},issues:st.issues},null,2),'application/json'));
+ $('#eT').onclick=need(()=>dl('suggested-tokens-'+stamp()+'.json',JSON.stringify(buildSuggested(),null,2),'application/json'));$('#eP').onclick=need(exportPng);
+ $('#bB').onclick=async()=>{const o={app:'DesignDebtDB',version:1,at:new Date().toISOString()};for(const s of ['projects','snapshots','issues','tokens','settings'])o[s]=await DB.all(s);dl('design-debt-backup-'+stamp()+'.json',JSON.stringify(o),'application/json');toast('備份完成')};
+ $('#bR').onclick=()=>$('#bF').click();$('#bF').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(o.app!=='DesignDebtDB')throw new Error('不是本工具的備份檔');if(!confirm('確定要以備份覆蓋目前所有資料？'))return;
+  for(const s of ['projects','snapshots','issues','tokens','settings']){await DB.clear(s);if(o[s]?.length)await DB.putMany(s,o[s])}st.pid=null;await loadSettings();await loadProjects();toast('還原完成')}catch(x){toast('還原失敗：'+x.message)}}}
+function rows(){const s=st.snap;return{summary:[['項目','值'],['專案',st.projects.find(p=>p.projectId===st.pid).name],['分析時間',new Date(s.createdAt).toLocaleString('zh-TW',{hour12:false})],['來源檔案',s.sourceFiles.join('、')],['Debt Score',s.debtScore],['等級',s.grade+' '+GRADE[s.grade][0]],[],['維度','名稱','權重%','子分數','說明'],...Object.keys(DIMS).map(k=>[k,DIMS[k],st.S.weights[k],s.dims[k].score,s.dims[k].metric])],
+ issues:[['編號','維度','嚴重度','問題描述','出現次數','出現位置','建議處理','狀態'],...st.issues.map(i=>[i.code,i.dimension+' '+DIMS[i.dimension],SEV[i.severity],i.description,i.count,i.locations.join('\n'),i.suggestion,STATUS[i.status]])],
+ colors:[['色碼','次數','對應 Token'],...s.derived.colors.map(c=>[c.k,c.count,c.tok||''])],fs:[['字級(px)','次數','在階梯上'],...s.derived.fs.map(f=>[f.v,f.count,s.derived.scale.includes(f.v)?'是':'否'])],sp:[['間距(px)','次數','符合格線'],...s.derived.sp.map(e=>[e.v,e.count,e.off?'否':'是'])]}}
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=rej;document.head.appendChild(s)})}
+async function exportXlsx(){const R=rows();try{if(!window.XLSX)await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');const wb=XLSX.utils.book_new();
+ [['總覽',R.summary,[14,16,8,8,50]],['債務明細',R.issues,[9,16,7,60,9,50,40,9]],['色彩',R.colors,[12,8,24]],['字級',R.fs,[10,8,10]],['間距',R.sp,[10,8,10]]].forEach(([n,d,w])=>{const ws=XLSX.utils.aoa_to_sheet(d);ws['!cols']=w.map(x=>({wch:x}));XLSX.utils.book_append_sheet(wb,ws,n)});
+ XLSX.writeFile(wb,'design-debt-'+stamp()+'.xlsx');toast('Excel 已匯出')}catch(e){const csv=R.issues.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');dl('design-debt-issues-'+stamp()+'.csv','\ufeff'+csv,'text/csv');toast('無法載入 SheetJS，已改匯出 CSV')}}
+function toMd(){const s=st.snap,p=st.projects.find(p=>p.projectId===st.pid);let m=`# 設計債務分析報告：${p.name}\n\n- 分析時間：${new Date(s.createdAt).toLocaleString('zh-TW',{hour12:false})}\n- 來源檔案：${s.sourceFiles.join('、')}\n- **Design Debt Score：${s.debtScore}（${s.grade} ${GRADE[s.grade][0]} ${GRADE[s.grade][1]}）**\n\n## 維度分數\n\n| 維度 | 名稱 | 權重 | 子分數 | 說明 |\n|---|---|---|---|---|\n`;
+ Object.keys(DIMS).forEach(k=>m+=`| ${k} | ${DIMS[k]} | ${st.S.weights[k]}% | ${s.dims[k].score} | ${s.dims[k].metric} |\n`);
+ m+=`\n## 債務明細（${st.issues.length} 項）\n\n| 編號 | 維度 | 嚴重度 | 問題描述 | 次數 | 建議處理 | 狀態 |\n|---|---|---|---|---|---|---|\n`;
+ st.issues.forEach(i=>m+=`| ${i.code} | ${i.dimension} | ${SEV[i.severity]} | ${i.description.replace(/\|/g,'\\|')} | ${i.count} | ${i.suggestion.replace(/\|/g,'\\|')} | ${STATUS[i.status]} |\n`);return m}
+function exportPng(){const c=document.createElement('canvas'),x=cv(c,1200,680),s=st.snap;x.fillStyle=cssv('--bg');x.fillRect(0,0,1200,680);x.fillStyle=cssv('--text');x.font='800 28px sans-serif';x.textAlign='left';
+ x.fillText('設計債務分析報告｜'+st.projects.find(p=>p.projectId===st.pid).name,40,56);x.font='14px sans-serif';x.fillStyle=cssv('--sub');x.fillText(new Date(s.createdAt).toLocaleString('zh-TW',{hour12:false})+'　來源：'+s.sourceFiles.join('、').slice(0,90),40,82);
+ drawGauge(x,220,330,150,s.debtScore);drawRadar(x,620,330,150,Object.values(DIMS),Object.keys(DIMS).map(k=>s.dims[k].score));
+ x.textAlign='left';Object.keys(DIMS).forEach((k,i)=>{const y=150+i*62,v=s.dims[k].score;x.fillStyle=cssv('--text');x.font='600 15px sans-serif';x.fillText(k+' '+DIMS[k],880,y);x.fillStyle=cssv('--line');x.fillRect(880,y+10,260,10);x.fillStyle=gcol(gradeOf(v));x.fillRect(880,y+10,260*v/100,10);x.fillStyle=cssv('--sub');x.font='13px sans-serif';x.fillText(String(v),1150,y+20)});
+ x.fillStyle=cssv('--sub');x.font='13px sans-serif';x.fillText('待處理債務 '+st.issues.filter(i=>i.status==='todo').length+' 項，共 '+st.issues.length+' 項｜Design Debt Analyzer v1.4',40,650);
+ c.toBlob(b=>{dl('design-debt-dashboard-'+stamp()+'.png',b);toast('PNG 已匯出')})}
+function vSettings(){const S=st.S,W=S.weights,sum=Object.values(W).reduce((a,b)=>a+ +b,0);const num=(id,v,step,label,desc)=>`<label>${label}</label><input type="number" id="${id}" value="${v}" step="${step||1}"><span class="muted">${desc||''}</span>`;
+ main.innerHTML=`<h2>設定</h2><div class="card"><h3>維度權重 <span class="muted" id="wsum">目前合計 ${sum}%（會自動依比例正規化）</span></h3><div class="form">${Object.keys(DIMS).map(k=>num('w'+k,W[k],1,k+' '+DIMS[k],'%')).join('')}</div></div>
+ <div class="card"><h3>建議閾值</h3><div class="form">${num('sDE',S.deltaE,0.5,'近似色 ΔE2000 門檻','小於此值視為近似色（建議 2–5）')}${num('sMC',S.maxColors,1,'色碼數上限','未匯入 Token 時用於估算')}${num('sMF',S.maxFontSizes,1,'字級數上限','')}${num('sFam',S.maxFamilies,1,'字族數上限','')}${num('sFw',S.maxWeights,1,'字重數上限','')}
+ <label>格線基準</label><select id="sG"><option value="4" ${S.grid==4?'selected':''}>4pt</option><option value="8" ${S.grid==8?'selected':''}>8pt</option></select><span class="muted"></span>
+ <label>允許半格（如 8pt 時允許 4px）</label><select id="sH"><option value="1" ${S.allowHalf?'selected':''}>允許</option><option value="0" ${!S.allowHalf?'selected':''}>不允許</option></select><span class="muted"></span>
+ ${num('sMR',S.maxRadii,1,'圓角種類上限','')}${num('sMS',S.maxShadows,1,'陰影種類上限','')}${num('sMV',S.maxVariants,1,'單一元件變體上限','')}${num('sBF',S.baseFont,1,'字級階梯基準 (px)','')}
+ <label>Modular Scale 比例</label><select id="sR">${[1.125,1.2,1.25,1.333].map(r=>`<option ${S.scaleRatio==r?'selected':''}>${r}</option>`).join('')}</select><span class="muted"></span>
+ <label>外觀</label><select id="sTh"><option value="light" ${S.theme==='light'?'selected':''}>淺色（預設）</option><option value="dark" ${S.theme==='dark'?'selected':''}>深色</option></select><span class="muted"></span></div>
+ <div class="row" style="margin-top:14px"><button class="pri" id="sSave">儲存設定</button><button id="sRe">儲存並重新分析目前快照</button><button id="sDef">還原預設值</button></div></div>`;
+ const read=()=>{Object.keys(DIMS).forEach(k=>S.weights[k]=Math.max(0,+$('#w'+k).value||0));Object.assign(S,{deltaE:+$('#sDE').value||3,maxColors:+$('#sMC').value||16,maxFontSizes:+$('#sMF').value||8,maxFamilies:+$('#sFam').value||2,maxWeights:+$('#sFw').value||3,grid:+$('#sG').value,allowHalf:$('#sH').value==='1',maxRadii:+$('#sMR').value||4,maxShadows:+$('#sMS').value||4,maxVariants:+$('#sMV').value||6,baseFont:+$('#sBF').value||16,scaleRatio:+$('#sR').value,theme:$('#sTh').value})};
+ $('#sSave').onclick=async()=>{read();await saveSettings();applyTheme();toast('設定已儲存');vSettings()};
+ $('#sRe').onclick=async()=>{read();await saveSettings();applyTheme();await reanalyze();go('dashboard')};
+ $('#sDef').onclick=async()=>{const th=S.theme;st.S=JSON.parse(JSON.stringify(DEF));st.S.theme=th;await saveSettings();toast('已還原預設值');vSettings()}}
+
+/* ---------- 事件 ---------- */
+document.querySelectorAll('#nav a').forEach(a=>a.onclick=()=>go(a.dataset.v));document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>go(b.dataset.go));
+$('#projSel').onchange=async e=>{st.pid=e.target.value;await DB.put('settings',{key:'lastProject',value:st.pid});await loadSnaps()};
+$('#snapSel').onchange=async e=>{st.sid=e.target.value;await loadSnap()};
+$('#btnNewProj').onclick=async()=>{const n=prompt('新專案名稱','新設計系統');if(!n)return;const p={projectId:uid('p'),name:n.trim(),createdAt:Date.now(),updatedAt:Date.now()};await DB.put('projects',p);st.pid=p.projectId;await DB.put('settings',{key:'lastProject',value:st.pid});await loadProjects();go('import')};
+$('#btnRenProj').onclick=async()=>{const p=st.projects.find(p=>p.projectId===st.pid),n=prompt('重新命名專案',p.name);if(!n)return;p.name=n.trim();p.updatedAt=Date.now();await DB.put('projects',p);await loadProjects()};
+$('#btnDelProj').onclick=async()=>{const p=st.projects.find(p=>p.projectId===st.pid);if(!confirm(`確定刪除專案「${p.name}」及其所有快照？`))return;
+ const sids=st.snaps.map(s=>s.snapshotId);for(const i of (await DB.all('issues')).filter(i=>sids.includes(i.snapshotId)))await DB.del('issues',i.issueId);for(const s of sids)await DB.del('snapshots',s);
+ for(const t of (await DB.all('tokens')).filter(t=>t.projectId===p.projectId))await DB.del('tokens',t.tokenSetId);await DB.del('projects',p.projectId);st.pid=null;await loadProjects();toast('專案已刪除')};
+$('#btnTheme').onclick=async()=>{st.S.theme=st.S.theme==='dark'?'light':'dark';applyTheme();await saveSettings();render()};
+window.addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(()=>{if(['dashboard','type','spacing','trend'].includes(st.view))render()},200)});
+(async()=>{try{await DB.open();await loadSettings();await loadProjects()}catch(e){main.innerHTML=`<div class="empty">無法開啟 IndexedDB：${esc(e.message)}</div>`}})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
