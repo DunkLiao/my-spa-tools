@@ -30,7 +30,10 @@ my-spa-tools/
 │  ├─ credit-report-parser/      聯徵與財報速讀解析器（風險訊號、DBR、循環使用率與財務比率）
 │  ├─ audit-finding-kb/          稽核缺失知識庫（全文檢索、儀表板、報表、批次匯入與備份）
 │  ├─ audit-sampling-studio/     稽核抽樣工作站（母體匯入、品質檢核、排除軌跡與可重現抽樣）
-│  └─ meeting-deck-condenser/    會議簡報濃縮器（授信案件匯入、欄位擷取、風險規則與會議摘要）
+│  ├─ meeting-deck-condenser/    會議簡報濃縮器（授信案件匯入、欄位擷取、風險規則與會議摘要）
+│  ├─ default-hotspot-map/       違約熱區地圖（縣市／產業違約熱區、RR／A-E／Gi* 與多格式匯出）
+│  ├─ ecl-movement-analyzer/     預期信用損失變動分析器（ECL 拆解、Stage 矩陣、IFRS 7 與情境權重）
+│  └─ pd-migration-explainer/    PD Migration 解釋器（評等遷移矩陣、PD 變動拆解與 SICR 篩選）
 ├─ sql/                          SQL 工具（每個工具一個子資料夾）
 │  ├─ sql-catalog/  sql-compare/  oracle-sql-formatter/
 │  ├─ sql-pii-cleaner/  sql-lineage-analyzer/
@@ -65,7 +68,9 @@ my-spa-tools/
 │  ├─ palette-lore/
 │  ├─ semantic-color-tokenizer/  Semantic Color Tokenizer 語意化色彩與 Token 產生器
 │  ├─ status-badge-workshop/     UI 狀態徽章與標籤合成器（形態／幾何／配色／動態、WCAG 與多格式程式碼）
-│  └─ infographic-builder/       Infographic Builder 資訊圖表產生器（文字拆分、版型主題與 PNG／JSON 匯出）
+│  ├─ infographic-builder/       Infographic Builder 資訊圖表產生器（文字拆分、版型主題與 PNG／JSON 匯出）
+│  ├─ svg-pattern-studio/        SVG Pattern Studio 向量背景紋理生成器（9 種圖樣、配色與 SVG／CSS／PNG 匯出）
+│  └─ card-workshop/             圖卡工房（30 款範本、三種畫布、即時預覽與 PNG／JSON 匯出）
 └─ diagram/                      流程與圖表建模
    ├─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器
    └─ vba-dependency-explorer/   VBA Dependency Explorer 依賴關係分析與視覺化
@@ -135,7 +140,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 55 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 60 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

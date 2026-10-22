@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>違約熱區地圖 Default Hotspot Map v1.4</title>
+<style>
+:root{--bg:#f3f5f8;--card:#ffffff;--ink:#1f2933;--sub:#616e7c;--mute:#7b8794;--line:#d9e0e8;--pri:#0f6cbd;--pri2:#0a4f8f;--red:#d13438;--ok:#107c10;
+--chip:#e4ebf3;--hover:#eef4fb;--hover2:#f1f7fe;--hoverline:#b6c7da;--track:#e7edf3;--th:#eef2f7;--rowline:#edf0f4;--soft:#f8fafc;--selrow:#fff3cd;
+--notice-bg:#fff8e1;--notice-line:#f0d77a;--notice-ink:#6b5400;--down:#0b7a4b;--warn:#c19c00;--inputbg:#ffffff;--tipbg:#1f2933;--barfill:#f27d3d;color-scheme:light}
+:root[data-theme="dark"]{--bg:#12181f;--card:#1b2430;--ink:#e6ebf1;--sub:#a3afbd;--mute:#8794a3;--line:#33404f;--pri:#2b88d8;--pri2:#4a9ee6;--red:#ff6b6e;--ok:#3fb950;
+--chip:#2a3646;--hover:#273445;--hover2:#243140;--hoverline:#4a5a6e;--track:#2c3846;--th:#243040;--rowline:#27323f;--soft:#161e28;--selrow:#4a4220;
+--notice-bg:#3a3217;--notice-line:#6b5a1e;--notice-ink:#f1dc8f;--down:#4cc38a;--warn:#e0b928;--inputbg:#141b24;--tipbg:#05080c;--barfill:#ff8a4c;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;font-size:14px}
+button,select,input,textarea{font-family:inherit;font-size:13px}
+#app{max-width:1640px;margin:0 auto;padding:12px}
+.topbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.topbar h1{font-size:19px;margin:0 12px 0 0;display:flex;align-items:center;gap:8px}
+.topbar h1 small{font-size:11px;font-weight:400;color:var(--sub);background:var(--chip);border-radius:10px;padding:2px 8px}
+.sp{flex:1}
+.btn{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:6px;padding:6px 12px;cursor:pointer}
+.btn:hover{background:var(--hover);border-color:var(--hoverline)}
+.btn.pri:hover{background:var(--pri2);border-color:var(--pri2)}
+.encsel{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--sub)}
+.encsel select{max-width:150px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:var(--inputbg);color:var(--ink)}
+.encinfo{font-size:11px;color:var(--mute);max-width:180px}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}
+.btn.pri:hover{background:var(--pri2)}
+.badge{display:inline-block;min-width:18px;padding:0 6px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;text-align:center;margin-left:4px}
+.badge.ok{background:var(--ok)}
+.badge.warn{background:var(--warn);color:#1b1b1b}
+.filters{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:10px}
+.filters label{display:flex;flex-direction:column;font-size:11px;color:var(--sub);gap:2px}
+.filters select{padding:4px 6px;border:1px solid var(--line);border-radius:5px;min-width:90px;background:var(--inputbg);color:var(--ink)}
+.filters .chk{flex-direction:row;align-items:center;gap:5px;font-size:13px;color:var(--ink);padding-bottom:5px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:10px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 14px}
+.kpi .t{font-size:12px;color:var(--sub)}
+.kpi .v{font-size:26px;font-weight:700;margin:2px 0}
+.kpi .s{font-size:12px;color:var(--sub)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:-1px}
+.up{color:var(--red);font-weight:600}.down{color:var(--down);font-weight:600}
+.main{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:10px;margin-bottom:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.card h3{margin:0 0 8px;font-size:15px}
+.card h4{margin:12px 0 6px;font-size:13px;color:var(--sub);border-top:1px solid var(--line);padding-top:8px}
+.tabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.tab{padding:5px 16px;border:1px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);cursor:pointer}
+.tab.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.tabs label{font-size:12px;color:var(--sub);display:flex;align-items:center;gap:4px}
+.tabs select{padding:3px 5px;border:1px solid var(--line);border-radius:5px;background:var(--inputbg);color:var(--ink)}
+#viewBox{position:relative;overflow:auto;text-align:center;min-height:300px}
+#viewBox svg{width:100%;height:auto;max-height:740px;display:block;margin:0 auto}
+#viewBox svg [data-k]{cursor:pointer}
+.notice{background:var(--notice-bg);border:1px solid var(--notice-line);border-radius:6px;padding:5px 10px;margin-bottom:6px;font-size:12px;color:var(--notice-ink)}
+table.kv{width:100%;border-collapse:collapse;font-size:13px}
+table.kv td{padding:3px 4px;border-bottom:1px dotted var(--line)}
+table.kv td:first-child{color:var(--sub);width:42%}
+table.kv td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+ul.rs{margin:0;padding-left:0;list-style:none;font-size:12.5px;line-height:1.7}
+.bar{display:grid;grid-template-columns:78px 1fr 92px;gap:6px;align-items:center;font-size:12px;margin:2px 0}
+.bar .b{height:10px;background:var(--track);border-radius:5px;overflow:hidden}
+.bar .b i{display:block;height:100%;background:var(--barfill)}
+.bar .n{text-align:right;color:var(--sub);font-variant-numeric:tabular-nums}
+.lvl{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;color:#fff}
+.tblwrap{overflow:auto;max-height:520px}
+table.lst{width:100%;border-collapse:collapse;font-size:13px}
+table.lst th{position:sticky;top:0;background:var(--th);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
+table.lst th:nth-child(2),table.lst th:nth-child(3){text-align:left}
+table.lst td{padding:5px 8px;border-bottom:1px solid var(--rowline);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.lst td:nth-child(2),table.lst td:nth-child(3){text-align:left}
+table.lst tr[data-k]{cursor:pointer}
+table.lst tr[data-k]:hover{background:var(--hover2)}
+table.lst tr.sel{background:var(--selrow)}
+.narr{white-space:pre-wrap;line-height:1.8;background:var(--soft);border:1px solid var(--line);border-radius:6px;padding:10px 12px}
+.empty{padding:60px 20px;text-align:center;color:var(--sub)}
+.empty .btns{margin-top:14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+#tip{position:fixed;display:none;z-index:50;background:var(--tipbg);border:1px solid #3a4656;color:#fff;font-size:12px;line-height:1.6;padding:7px 10px;border-radius:6px;pointer-events:none;max-width:280px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+dialog{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:16px 18px;width:min(720px,94vw);box-shadow:0 10px 40px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog h3{margin:0 0 10px}
+dialog textarea{width:100%;height:240px;font-family:Consolas,monospace;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:6px;background:var(--inputbg);color:var(--ink)}
+.drow{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px}
+.form label{display:flex;flex-direction:column;font-size:12px;color:var(--sub);gap:3px}
+.form input,.form select{padding:5px 7px;border:1px solid var(--line);border-radius:5px;background:var(--inputbg);color:var(--ink)}
+.menu{position:relative}
+.menu .pop{display:none;position:absolute;right:0;top:34px;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:20;min-width:170px;padding:4px}
+.menu.open .pop{display:block}
+.menu .pop div{padding:7px 12px;cursor:pointer;border-radius:5px}
+.menu .pop div:hover{background:var(--hover)}
+table.iss{width:100%;border-collapse:collapse;font-size:12px}
+table.iss td,table.iss th{border-bottom:1px solid var(--line);padding:3px 6px;text-align:left}
+.sum3{display:flex;gap:10px;margin-bottom:8px}
+.sum3 div{flex:1;border:1px solid var(--line);border-radius:6px;padding:6px 10px;text-align:center}
+.sum3 b{display:block;font-size:20px}
+.foot{font-size:11px;color:var(--sub);text-align:center;padding:6px}
+@media(max-width:1100px){.main{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <h1>違約熱區地圖 <small>v1.4｜信用風險</small></h1>
+    <button class="btn pri" id="btnUpload">上傳 CSV</button>
+    <button class="btn" id="btnPaste">貼上資料</button>
+    <button class="btn" id="btnSample">載入範例資料</button>
+    <button class="btn" id="btnTplTop">下載範例 CSV</button>
+    <label class="encsel">編碼<select id="encSel"></select></label><span class="encinfo" id="encInfo"></span>
+    <button class="btn" id="btnValid">資料驗證<span class="badge ok" id="vBadge">–</span></button>
+    <div class="sp"></div>
+    <button class="btn" id="btnTheme" title="切換淺色／暗色模式">暗色模式</button>
+    <button class="btn" id="btnSet">設定</button>
+    <div class="menu" id="expMenu">
+      <button class="btn" id="btnExp">匯出 ▾</button>
+      <div class="pop">
+        <div data-x="png">PNG 圖片（目前視圖）</div>
+        <div data-x="svg">SVG 向量圖（目前視圖）</div>
+        <div data-x="csv">CSV 熱區清單</div>
+        <div data-x="md">Markdown 報告</div>
+        <div data-x="json">JSON 設定參數</div>
+      </div>
+    </div>
+    <input type="file" id="file" accept=".csv,.tsv,.txt" hidden>
+  </div>
+
+  <div class="filters" id="filters">
+    <label>本期<select id="fCur"></select></label>
+    <label>比較期<select id="fBase"></select></label>
+    <label>業務別<select id="fSeg"></select></label>
+    <label>評等（自）<select id="fGFrom"></select></label>
+    <label>評等（至）<select id="fGTo"></select></label>
+    <label>產業<select id="fInd"></select></label>
+    <label>色階指標<select id="fMetric"></select></label>
+    <label class="chk"><input type="checkbox" id="fShrink">信度收縮</label>
+  </div>
+
+  <div id="body"></div>
+  <div class="foot">所有運算皆在瀏覽器本機完成，資料不會上傳或儲存（僅設定值存於 localStorage）。Gi* 與區間估計僅供輔助判讀，不取代專業判斷。</div>
+</div>
+<div id="tip"></div>
+
+<dialog id="dlgPaste">
+  <h3>貼上資料</h3>
+  <div style="font-size:12px;color:var(--sub);margin-bottom:6px">從 Excel 複製（含標題列）後貼上，或貼上 CSV 文字。必要欄位：期別、縣市、產業、期初戶數、違約戶數。</div>
+  <textarea id="pasteArea" placeholder="period	county	industry	segment	grade	obligors	defaults	ead	default_amt	pd"></textarea>
+  <div class="drow"><button class="btn" data-close>取消</button><button class="btn pri" id="btnPasteGo">解析並載入</button></div>
+</dialog>
+
+<dialog id="dlgValid">
+  <h3>資料驗證結果</h3>
+  <div id="validBody"></div>
+  <div class="drow"><button class="btn" id="btnErrCsv">下載錯誤／警告清單</button><button class="btn pri" data-close>關閉</button></div>
+</dialog>
+
+<dialog id="dlgSet">
+  <h3>設定</h3>
+  <div class="form">
+    <label>收縮強度 k（0–500）<input type="number" id="sK" min="0" max="500" step="1"></label>
+    <label>信賴水準<select id="sConf"><option value="90">90%</option><option value="95">95%</option><option value="99">99%</option></select></label>
+    <label>最小戶數（1–1000）<input type="number" id="sMinN" min="1" max="1000"></label>
+    <label>最小違約數（0–100）<input type="number" id="sMinD" min="0" max="100"></label>
+    <label>顯著熱區 RR 門檻（1.0–5.0）<input type="number" id="sRrSig" min="1" max="5" step="0.05"></label>
+    <label>觀察熱區 RR 門檻（1.0–5.0）<input type="number" id="sRrWatch" min="1" max="5" step="0.05"></label>
+  </div>
+  <label style="display:flex;flex-direction:column;font-size:12px;color:var(--sub);gap:3px;margin-top:10px">鄰接關係（JSON，鍵為縣市，值為相鄰縣市陣列；離島不納入）
+    <textarea id="sAdj" style="height:170px"></textarea></label>
+  <div class="drow"><button class="btn" id="btnReset">還原預設</button><button class="btn" data-close>取消</button><button class="btn pri" id="btnSetOk">套用</button></div>
+</dialog>
+
+<script>
+'use strict';
+/* ============ 基本工具 ============ */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+const isNum=v=>typeof v==='number'&&isFinite(v);
+const pct=(v,d=2)=>isNum(v)?(v*100).toFixed(d)+'%':'—';
+const pp=(v,d=2)=>isNum(v)?((v>=0?'+':'')+(v*100).toFixed(d)+'pp'):'—';
+const f2=(v,d=2)=>isNum(v)?v.toFixed(d):'—';
+const int=v=>isNum(v)?Math.round(v).toLocaleString('en-US'):'—';
+const FONT="'Microsoft JhengHei','PingFang TC','Noto Sans TC',sans-serif";
+
+/* ============ 主檔 ============ */
+const COUNTIES=[
+ {n:'基隆市',s:'基隆',r:0,c:4},{n:'臺北市',s:'臺北',r:1,c:3},{n:'新北市',s:'新北',r:1,c:4},{n:'桃園市',s:'桃園',r:1,c:2},
+ {n:'新竹市',s:'新竹市',r:2,c:2},{n:'新竹縣',s:'新竹縣',r:2,c:3},{n:'宜蘭縣',s:'宜蘭',r:2,c:4},
+ {n:'苗栗縣',s:'苗栗',r:3,c:2},{n:'臺中市',s:'臺中',r:4,c:2},{n:'彰化縣',s:'彰化',r:5,c:2},{n:'南投縣',s:'南投',r:5,c:3},{n:'雲林縣',s:'雲林',r:6,c:2},
+ {n:'嘉義縣',s:'嘉義縣',r:7,c:2},{n:'嘉義市',s:'嘉義市',r:7,c:3},{n:'臺南市',s:'臺南',r:8,c:2},{n:'高雄市',s:'高雄',r:9,c:2},{n:'屏東縣',s:'屏東',r:10,c:3},
+ {n:'花蓮縣',s:'花蓮',r:4,c:4},{n:'臺東縣',s:'臺東',r:7,c:4},
+ {n:'澎湖縣',s:'澎湖',r:7,c:0,island:true},{n:'金門縣',s:'金門',r:2,c:0,island:true},{n:'連江縣',s:'連江',r:0,c:0,island:true}
+];
+const CMAP=new Map(COUNTIES.map(c=>[c.n,c]));
+const IND=[
+ ['A','農林漁牧','農林漁牧業'],['B','礦業土石','礦業及土石採取業'],['C','製造業','製造業'],['D','電力燃氣','電力及燃氣供應業'],
+ ['E','用水污染','用水供應及污染整治業'],['F','營建工程','營建工程業'],['G','批發零售','批發及零售業'],['H','運輸倉儲','運輸及倉儲業'],
+ ['I','住宿餐飲','住宿及餐飲業'],['J','資通訊','出版影音及資通訊業'],['K','金融保險','金融及保險業'],['L','不動產','不動產業'],
+ ['M','專業科技','專業、科學及技術服務業'],['N','支援服務','支援服務業'],['O','公共行政','公共行政及國防'],['P','教育','教育業'],
+ ['Q','醫療社福','醫療保健及社會工作服務業'],['R','藝術娛樂','藝術、娛樂及休閒服務業'],['S','其他服務','其他服務業']
+].map(a=>({code:a[0],short:a[1],name:a[2]}));
+const IMAP=new Map(IND.map(i=>[i.code,i]));
+const DEF_ADJ={
+ '基隆市':['新北市'],'臺北市':['新北市'],'新北市':['臺北市','基隆市','桃園市','宜蘭縣'],'桃園市':['新北市','新竹縣','宜蘭縣'],
+ '新竹縣':['桃園市','新竹市','苗栗縣','宜蘭縣','臺中市'],'新竹市':['新竹縣','苗栗縣'],'苗栗縣':['新竹縣','新竹市','臺中市'],
+ '臺中市':['苗栗縣','新竹縣','宜蘭縣','花蓮縣','南投縣','彰化縣'],'彰化縣':['臺中市','南投縣','雲林縣'],
+ '南投縣':['臺中市','彰化縣','雲林縣','嘉義縣','高雄市','花蓮縣'],'雲林縣':['彰化縣','南投縣','嘉義縣'],
+ '嘉義縣':['雲林縣','南投縣','嘉義市','臺南市','高雄市'],'嘉義市':['嘉義縣'],'臺南市':['嘉義縣','高雄市'],
+ '高雄市':['臺南市','嘉義縣','南投縣','屏東縣','臺東縣','花蓮縣'],'屏東縣':['高雄市','臺東縣'],'臺東縣':['花蓮縣','高雄市','屏東縣'],
+ '花蓮縣':['宜蘭縣','臺中市','南投縣','高雄市','臺東縣'],'宜蘭縣':['新北市','桃園市','新竹縣','臺中市','花蓮縣']
+};
+const LEVELS={
+ sig:{name:'顯著熱區',color:'#d13438',icon:'<i class="dot" style="background:#d13438"></i>',order:0},
+ spatial:{name:'空間熱區',color:'#8764b8',icon:'<i class="dot" style="background:#8764b8"></i>',order:1},
+ watch:{name:'觀察熱區',color:'#f7630c',icon:'<i class="dot" style="background:#f7630c"></i>',order:2},
+ cold:{name:'冷區',color:'#0078d4',icon:'<i class="dot" style="background:#0078d4"></i>',order:3},
+ normal:{name:'正常',color:'#107c10',icon:'<i class="dot" style="background:#107c10"></i>',order:4},
+ insuf:{name:'樣本不足',color:'#8a8886',icon:'<i class="dot" style="background:#8a8886"></i>',order:5}
+};
+const METRICS={
+ odr:{label:'戶數違約率 ODR',kind:'seq'},adr:{label:'金額違約率 ADR',kind:'seq'},rr:{label:'相對風險 RR',kind:'seq'},
+ ae:{label:'實際／預期 A/E',kind:'seq'},delta:{label:'兩期變動 Δ（百分點）',kind:'div'},gi:{label:'空間熱點 Gi* z 值',kind:'div'}
+};
+const ZTAB={90:1.645,95:1.96,99:2.576};
+
+
+/* ============ 主題 ============ */
+let forceLight=false;
+const THEMES={
+ light:{bg:'#ffffff',ink:'#1f2933',sub:'#616e7c',sub2:'#52606d',key:'#3e4c59',mute:'#7b8794',head:'#eef2f7',headSel:'#ffe08a',
+  emptyTile:'#f1f3f4',emptyStroke:'#d5dae0',emptyTxt:'#9aa5b1',emptyCell:'#f6f7f9',noData:'#eceff1',tileStroke:'#ffffff',sel:'#111111',
+  island:'#607d8b',adj:'#334e68',wm:'#c4cbd3',hatch:'#ffffff',hatchOp:.7,outline:'#52606d',axis:'#9aa5b1',ptStroke:'#ffffff',
+  seq:['#fff7ec','#fee8c8','#fdd49e','#fdbb84','#fc8d59','#e34a33','#b30000','#67000d'],dNeg:'#2166ac',dMid:'#ffffff',dPos:'#b2182b',trend:'#d9442b'},
+ dark:{bg:'#1b2430',ink:'#e6ebf1',sub:'#a3afbd',sub2:'#b4becb',key:'#c8d1dc',mute:'#8794a3',head:'#2a3646',headSel:'#7a6a1e',
+  emptyTile:'#232d3a',emptyStroke:'#3a4656',emptyTxt:'#6f7d8d',emptyCell:'#212a36',noData:'#2a3340',tileStroke:'#1b2430',sel:'#ffffff',
+  island:'#8fa4b5',adj:'#9fb3c8',wm:'#4a5667',hatch:'#ffffff',hatchOp:.32,outline:'#8794a3',axis:'#5d6b7c',ptStroke:'#1b2430',
+  seq:['#26303d','#3d3440','#5b3a3e','#7e3f38','#a8442f','#d4492a','#f2622f','#ff8f4f'],dNeg:'#3b8fd9',dMid:'#2b3440',dPos:'#e5484d',trend:'#ff8a4c'}
+};
+const T=()=>THEMES[forceLight?'light':(state.settings.theme==='dark'?'dark':'light')];
+function applyTheme(){
+  const dk=state.settings.theme==='dark';
+  document.documentElement.setAttribute('data-theme',dk?'dark':'light');
+  const b=$('btnTheme');if(b) b.textContent=dk?'淺色模式':'暗色模式';
+}
+
+/* ============ 設定 ============ */
+const DEFAULTS={theme:'light',k:50,minN:30,minD:3,rrSig:1.5,rrWatch:1.2,conf:95,shrink:true,metric:'odr',view:'map',adj:null};
+function loadSettings(){
+  try{const s=JSON.parse(localStorage.getItem('dhm_settings_v1')||'null');return Object.assign({},DEFAULTS,s||{});}catch(e){return Object.assign({},DEFAULTS);}
+}
+function saveSettings(){try{localStorage.setItem('dhm_settings_v1',JSON.stringify(state.settings));}catch(e){}}
+function getAdj(){
+  const raw=state.settings.adj||DEF_ADJ; const m=new Map();
+  for(const c of COUNTIES) if(!c.island) m.set(c.n,new Set());
+  for(const k of Object.keys(raw)){
+    if(!m.has(k)) continue;
+    for(const v of (raw[k]||[])){ if(m.has(v)&&v!==k){m.get(k).add(v);m.get(v).add(k);} }
+  }
+  return m;
+}
+
+/* ============ 狀態 ============ */
+const state={
+  rows:[],valid:null,isSample:false,periods:[],cur:'',base:'',seg:'',ind:'',gradeList:[],gFrom:0,gTo:0,
+  lastBuf:null,lastName:'',selection:null,sortKey:'rank',sortDir:1,showAll:false,hideEmpty:true,rowSort:'region',showAdjLines:false,
+  settings:loadSettings(),model:null,segList:[]
+};
+
+/* ============ CSV 解析 ============ */
+function parseDelimited(text,delim){
+  const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(q){ if(ch==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=ch; }
+    else if(ch==='"'&&f===''){q=true;}
+    else if(ch===delim){row.push(f);f='';}
+    else if(ch==='\n'){row.push(f);rows.push(row);row=[];f='';}
+    else if(ch==='\r'){}
+    else f+=ch;
+  }
+  if(f!==''||row.length){row.push(f);rows.push(row);}
+  return rows.filter(r=>r.some(c=>String(c).trim()!==''));
+}
+const HDR={
+  period:['period','期別','期間','月份','年季'],county:['county','縣市','縣市別','地區'],
+  industry:['industry','產業','行業','產業別','行業別'],segment:['segment','業務別','業務','客群'],
+  grade:['grade','評等','評等等級','信用評等','等級'],obligors:['obligors','期初戶數','戶數','正常戶數'],
+  defaults:['defaults','違約戶數','違約數'],ead:['ead','期初暴險額','暴險額','暴險'],
+  default_amt:['default_amt','違約暴險額','違約金額'],pd:['pd','預估pd','pd預估']
+};
+function parseText(text){
+  text=text.replace(/^\uFEFF/,'');
+  const first=text.split('\n')[0]||'';
+  const delim=first.includes('\t')?'\t':(first.includes(',')?',':(first.includes(';')?';':','));
+  const tbl=parseDelimited(text,delim);
+  if(tbl.length<2) throw new Error('資料列數不足（需含標題列與至少一列資料）');
+  const head=tbl[0].map(h=>String(h).trim().toLowerCase().replace(/\s+/g,''));
+  const idx={};
+  for(const k of Object.keys(HDR)){ idx[k]=head.findIndex(h=>HDR[k].includes(h)); }
+  const miss=['period','county','industry','obligors','defaults'].filter(k=>idx[k]<0);
+  if(miss.length) throw new Error('缺少必要欄位：'+miss.join('、')+'。請確認標題列。');
+  const recs=[];
+  for(let i=1;i<tbl.length;i++){
+    const r=tbl[i]; const o={line:i+1,raw:r.join(',')};
+    for(const k of Object.keys(HDR)) o[k]=idx[k]>=0?String(r[idx[k]]==null?'':r[idx[k]]).trim():'';
+    recs.push(o);
+  }
+  return recs;
+}
+
+/* ============ 正規化與驗證 ============ */
+function normCounty(s){
+  s=String(s||'').trim().replace(/台/g,'臺'); if(!s) return null;
+  if(CMAP.has(s)) return s;
+  const cand=COUNTIES.filter(c=>c.n.startsWith(s)||c.s===s);
+  return cand.length===1?cand[0].n:null;
+}
+function normIndustry(s){
+  s=String(s||'').trim(); if(!s) return null;
+  if(/^[A-Sa-s]$/.test(s)) return s.toUpperCase();
+  let m=s.match(/^([A-Sa-s])[\s\-:：.、_]/); if(m) return m[1].toUpperCase();
+  for(const i of IND){ if(s===i.name||s===i.short) return i.code; }
+  for(const i of IND){ if(s.length>=2&&(i.name.startsWith(s)||s.includes(i.short))) return i.code; }
+  return null;
+}
+function normPeriod(s){
+  s=String(s||'').trim().toUpperCase().replace(/\//g,'-'); let m;
+  if((m=s.match(/^(\d{4})-?Q([1-4])$/))) return m[1]+'Q'+m[2];
+  if((m=s.match(/^(\d{4})-(\d{1,2})$/))&&+m[2]>=1&&+m[2]<=12) return m[1]+'-'+String(m[2]).padStart(2,'0');
+  if((m=s.match(/^(\d{4})(\d{2})$/))&&+m[2]>=1&&+m[2]<=12) return m[1]+'-'+m[2];
+  return null;
+}
+function toNum(s){
+  s=String(s==null?'':s).trim().replace(/[,，\s]/g,''); if(s==='') return {blank:true,v:NaN};
+  let p=false; if(s.endsWith('%')){p=true;s=s.slice(0,-1);}
+  const v=Number(s); return {blank:false,v:isNum(v)?(p?v/100:v):NaN};
+}
+function ingest(records,isSample){
+  const issues=[],map=new Map(),unmapped=new Set();
+  let ok=0,warn=0,err=0,dups=0;
+  for(const rec of records){
+    const line=rec.line; let bad=false;
+    const fail=m=>{err++;bad=true;issues.push({line,level:'錯誤',msg:m,raw:rec.raw||''});};
+    const wn=m=>{warn++;issues.push({line,level:'警告',msg:m,raw:rec.raw||''});};
+    if(!rec.period||!rec.county||!rec.industry||rec.obligors===''||rec.defaults===''){ fail('必填欄位缺漏'); continue; }
+    const period=normPeriod(rec.period); if(!period){fail('期別格式不符（應為 YYYY-MM 或 YYYYQn）：'+rec.period);continue;}
+    const county=normCounty(rec.county); if(!county){unmapped.add(rec.county);fail('縣市無法辨識：'+rec.county);continue;}
+    const ind=normIndustry(rec.industry); if(!ind){fail('產業無法辨識：'+rec.industry);continue;}
+    const n=toNum(rec.obligors),d=toNum(rec.defaults);
+    if(!isNum(n.v)||n.v<0){fail('期初戶數非有效數值：'+rec.obligors);continue;}
+    if(!isNum(d.v)||d.v<0){fail('違約戶數非有效數值：'+rec.defaults);continue;}
+    if(d.v>n.v){fail('違約戶數 > 期初戶數（'+d.v+' > '+n.v+'），該列不納入計算');continue;}
+    let ead=toNum(rec.ead),da=toNum(rec.default_amt),pd=toNum(rec.pd);
+    if(!ead.blank&&(!isNum(ead.v)||ead.v<0)){wn('期初暴險額無效，已忽略');ead={blank:true,v:NaN};}
+    if(!da.blank&&(!isNum(da.v)||da.v<0)){wn('違約暴險額無效，已忽略');da={blank:true,v:NaN};}
+    if(isNum(ead.v)&&isNum(da.v)&&da.v>ead.v) wn('違約暴險額 > 期初暴險額，仍納入計算');
+    let pdv=NaN;
+    if(!pd.blank){
+      if(isNum(pd.v)&&pd.v>=0&&pd.v<=1) pdv=pd.v;
+      else if(isNum(pd.v)&&pd.v>1&&pd.v<=100){pdv=pd.v/100;wn('PD 介於 1–100，已視為百分比（÷100）');}
+      else wn('PD 超出有效範圍，已忽略：'+rec.pd);
+    }
+    const seg=rec.segment||'(未分類)',grade=rec.grade||'';
+    const key=[period,county,ind,seg,grade].join('|');
+    const hasAmt=isNum(ead.v)&&isNum(da.v);
+    const row={period,county,industry:ind,segment:seg,grade,n:n.v,d:d.v,
+      ead:hasAmt?ead.v:0,da:hasAmt?da.v:0,exp:isNum(pdv)?n.v*pdv:0,dPd:isNum(pdv)?d.v:0};
+    if(map.has(key)){
+      const o=map.get(key);o.n+=row.n;o.d+=row.d;o.ead+=row.ead;o.da+=row.da;o.exp+=row.exp;o.dPd+=row.dPd;
+      dups++;
+    } else map.set(key,row);
+    ok++;
+  }
+  if(dups) {warn++;issues.push({line:'-',level:'警告',msg:'共 '+dups+' 列重複鍵（期別＋縣市＋產業＋業務別＋評等），已自動加總',raw:''});}
+  const rows=[...map.values()];
+  if(!rows.length){ state.valid={ok:0,warn,err,dups,issues,unmapped:[...unmapped]}; updateBadge(); showValid(); throw new Error('沒有可用的資料列，請檢查資料內容。'); }
+  state.rows=rows; state.isSample=!!isSample;
+  state.valid={ok,warn,err,dups,issues,unmapped:[...unmapped]};
+  state.periods=[...new Set(rows.map(r=>r.period))].sort();
+  state.cur=state.periods[state.periods.length-1];
+  state.base=state.periods.length>1?state.periods[state.periods.length-2]:'';
+  state.seg='';state.ind='';state.selection=null;
+  state.segList=[...new Set(rows.map(r=>r.segment))].sort();
+  const gs=[...new Set(rows.map(r=>r.grade).filter(g=>g!==''))];
+  gs.sort((a,b)=>(isNaN(a)||isNaN(b))?String(a).localeCompare(String(b)):Number(a)-Number(b));
+  state.gradeList=gs;state.gFrom=0;state.gTo=Math.max(0,gs.length-1);
+  buildFilters();updateBadge();render();
+  if(err||unmapped.size) showValid();
+}
+
+/* ============ 範例資料 ============ */
+function genSample(){
+  let seed=20260930;const rnd=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
+  const norm=()=>{let u=0;while(!u)u=rnd();const v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);};
+  const binom=(n,p)=>{const m=n*p;if(m<25){const L=Math.exp(-m);let k=0,pp=1;do{k++;pp*=rnd();}while(pp>L);return Math.min(n,k-1);}
+    const sd=Math.sqrt(m*(1-p));return Math.max(0,Math.min(n,Math.round(m+sd*norm())));};
+  const cw={'臺北市':1.5,'新北市':2.0,'桃園市':1.5,'臺中市':1.8,'高雄市':1.6,'臺南市':1.2,'彰化縣':0.9,'新竹縣':0.7,'新竹市':0.5,'苗栗縣':0.5,'南投縣':0.4,'雲林縣':0.45,'屏東縣':0.5,'宜蘭縣':0.4,'基隆市':0.35,'嘉義縣':0.3,'嘉義市':0.25,'花蓮縣':0.25,'臺東縣':0.15,'澎湖縣':0.06,'金門縣':0.06,'連江縣':0.02};
+  const iw={A:.2,B:.1,C:3,D:.15,E:.2,F:1.3,G:2.4,H:.8,I:1,J:.6,K:.5,L:1.1,M:.8,N:.5,O:.05,P:.15,Q:.4,R:.2,S:.5};
+  const ipd={A:.018,B:.015,C:.016,D:.008,E:.01,F:.024,G:.019,H:.017,I:.028,J:.012,K:.006,L:.012,M:.011,N:.016,O:.003,P:.01,Q:.008,R:.02,S:.015};
+  const segs=[['企金',.22,.8,38e6],['中小企業',.5,1.1,9e6],['小規模營業',.28,1.0,1.6e6]];
+  const grades=[[2,.40,.35],[5,.42,1.0],[8,.18,2.6]];
+  const central={'臺中市':2.2,'彰化縣':2.0,'南投縣':1.8,'苗栗縣':1.6};
+  const south=['高雄市','臺南市','屏東縣'];
+  const recs=[];let line=2;
+  for(const c of COUNTIES){
+    for(const i of IND){
+      for(const sg of segs){
+        const forced=(c.n==='臺中市'&&i.code==='C')||(c.n==='澎湖縣'&&i.code==='I'&&sg[0]==='中小企業');
+        if(!forced&&rnd()<(c.island?0.8:0.3)) continue;
+        let base=cw[c.n]*iw[i.code]*sg[1]*1000;
+        if(['臺中市','彰化縣'].includes(c.n)&&i.code==='C') base*=1.6;
+        if(['臺北市','新北市'].includes(c.n)&&['K','J','M'].includes(i.code)) base*=2;
+        for(const p of ['2026Q2','2026Q3']){
+          for(const g of grades){
+            let n=Math.round(base*g[1]*(p==='2026Q3'?1.02:1)*(0.85+0.3*rnd()));
+            if(n<=0) continue;
+            const pdBase=ipd[i.code]*sg[2]*g[2];
+            let mult=1;
+            if(central[c.n]){mult*=(p==='2026Q2'?1.25:1.15); if(i.code==='C') mult*=(p==='2026Q2'?1.3:central[c.n]);}
+            if(south.includes(c.n)&&i.code==='I') mult*=(p==='2026Q2'?1:2.3);
+            if(['臺北市','新北市'].includes(c.n)&&i.code==='K') mult*=0.3;
+            const pt=Math.min(0.5,pdBase*mult*(0.92+0.16*rnd()));
+            let d=binom(n,pt);
+            if(c.n==='澎湖縣'&&i.code==='I'&&sg[0]==='中小企業'&&g[0]===5){ if(p==='2026Q3'){n=12;d=2;} else {n=11;d=0;} }
+            const ead=Math.round(n*sg[3]*(0.8+0.4*rnd()));
+            const da=Math.round(d*sg[3]*(1.0+0.4*rnd()));
+            recs.push({line:line++,raw:'',period:p,county:c.n,industry:i.code,segment:sg[0],grade:String(g[0]),
+              obligors:String(n),defaults:String(d),ead:String(ead),default_amt:String(da),pd:pdBase.toFixed(5)});
+          }
+        }
+      }
+    }
+  }
+  return recs;
+}
+
+/* ============ 統計函式 ============ */
+function wilson(d,n,z){
+  if(!(n>0)) return [NaN,NaN];
+  const p=d/n,z2=z*z,den=1+z2/n,c=p+z2/(2*n),h=z*Math.sqrt(p*(1-p)/n+z2/(4*n*n));
+  return [Math.max(0,(c-h)/den),Math.min(1,(c+h)/den)];
+}
+function ztest(d1,n1,d0,n0){
+  if(!(n1>0&&n0>0)) return NaN;
+  const p1=d1/n1,p0=d0/n0,pb=(d1+d0)/(n1+n0),se=Math.sqrt(pb*(1-pb)*(1/n1+1/n0));
+  return se>0?(p1-p0)/se:NaN;
+}
+const mkAgg=()=>({n:0,d:0,ead:0,da:0,exp:0,dPd:0});
+function addAgg(a,r){a.n+=r.n;a.d+=r.d;a.ead+=r.ead;a.da+=r.da;a.exp+=r.exp;a.dPd+=r.dPd;}
+function accMap(m,k,r){let a=m.get(k);if(!a){a=mkAgg();m.set(k,a);}addAgg(a,r);}
+function pass(r,ignore){
+  const S=state;
+  if(ignore!=='seg'&&S.seg&&r.segment!==S.seg) return false;
+  if(ignore!=='ind'&&S.ind&&r.industry!==S.ind) return false;
+  if(S.gradeList.length&&(S.gFrom>0||S.gTo<S.gradeList.length-1)){
+    const i=S.gradeList.indexOf(r.grade); if(i<0||i<S.gFrom||i>S.gTo) return false;
+  }
+  return true;
+}
+function calcM(a,b,P,cfg,z){
+  const m={n:a.n,d:a.d};
+  m.odr=a.n>0?a.d/a.n:NaN;
+  [m.lo,m.hi]=wilson(a.d,a.n,z);
+  m.shrunk=(a.n+cfg.k)>0&&isNum(P.odr)?(a.d+cfg.k*P.odr)/(a.n+cfg.k):m.odr;
+  m.rrRaw=P.odr>0?m.odr/P.odr:NaN; m.rrAdj=P.odr>0?m.shrunk/P.odr:NaN;
+  m.adr=a.ead>0?a.da/a.ead:NaN; m.ae=a.exp>0?a.dPd/a.exp:NaN;
+  m.share=P.d>0?a.d/P.d:NaN;
+  m.delta=NaN;m.zD=NaN;m.baseOdr=NaN;
+  if(b&&b.n>0){m.baseOdr=b.d/b.n;m.delta=m.odr-m.baseOdr;m.zD=ztest(a.d,a.n,b.d,b.n);}
+  return m;
+}
+function giStar(vals,adj){
+  const keys=[...vals.keys()].filter(c=>adj.has(c));
+  const n=keys.length,out=new Map();
+  if(n<4) return out;
+  let s=0,s2=0;for(const k of keys){const x=vals.get(k);s+=x;s2+=x*x;}
+  const mean=s/n,S=Math.sqrt(Math.max(0,s2/n-mean*mean));
+  for(const k of keys){
+    const set=[k,...[...adj.get(k)].filter(x=>vals.has(x)&&adj.has(x))];
+    const W=set.length;let sum=0;for(const x of set) sum+=vals.get(x);
+    const den=S*Math.sqrt((n*W-W*W)/(n-1));
+    out.set(k,den>0?(sum-mean*W)/den:NaN);
+  }
+  return out;
+}
+function classify(m,gi,P,cfg,z,isCounty){
+  const R=[];const chk=(ok,t)=>R.push((ok?'✔ ':'✘ ')+t);
+  const insuf=m.n<cfg.minN||m.d<cfg.minD;
+  chk(!insuf,`樣本門檻：戶數 ${int(m.n)}（需 ≥ ${cfg.minN}）、違約 ${int(m.d)}（需 ≥ ${cfg.minD}）`);
+  if(insuf) return {level:'insuf',reasons:R};
+  const c1=m.lo>P.odr;chk(c1,`Wilson 下界 ${pct(m.lo)} ${c1?'>':'≤'} 組合 ODR ${pct(P.odr)}`);
+  const c2=m.rrRaw>=cfg.rrSig;chk(c2,`RR ${f2(m.rrRaw)} ${c2?'≥':'<'} 顯著門檻 ${cfg.rrSig}`);
+  let g1=false,w2=false;
+  if(isCounty&&isNum(gi)){g1=gi>=1.96;w2=gi>=1.65;chk(g1,`Gi* z ${f2(gi)} ${g1?'≥':'<'} 1.96（空間熱區）`);}
+  else if(isCounty) R.push('－ Gi* 不適用（離島或鄰接資料不足）');
+  const w1=m.rrRaw>=cfg.rrWatch;chk(w1,`RR ${f2(m.rrRaw)} ${w1?'≥':'<'} 觀察門檻 ${cfg.rrWatch}`);
+  let w3=false;
+  if(isNum(m.zD)){w3=m.zD>=z&&m.delta>0;chk(w3,`Δ ${pp(m.delta)}，z=${f2(m.zD)}${w3?'，顯著上升':(m.zD<=-z?'，顯著下降':'，變動不顯著')}`);}
+  const cold=m.hi<P.odr;chk(cold,`Wilson 上界 ${pct(m.hi)} ${cold?'<':'≥'} 組合 ODR（冷區判斷）`);
+  let level=(c1&&c2)?'sig':g1?'spatial':(w1||w2||w3)?'watch':cold?'cold':'normal';
+  return {level,reasons:R};
+}
+
+/* ============ 模型計算 ============ */
+function compute(){
+  const S=state,cfg=S.settings,z=ZTAB[cfg.conf]||1.96;
+  const hasBase=S.base&&S.base!==S.cur;
+  const P=mkAgg(),PB=mkAgg();
+  const cA=new Map(),cB=new Map(),xA=new Map(),xB=new Map(),iA=new Map(),iB=new Map();
+  for(const r of S.rows){
+    const isC=r.period===S.cur,isB=hasBase&&r.period===S.base;
+    if(!isC&&!isB) continue; if(!pass(r)) continue;
+    const xk=r.county+'|'+r.industry;
+    if(isC){addAgg(P,r);accMap(cA,r.county,r);accMap(xA,xk,r);accMap(iA,r.industry,r);}
+    else{addAgg(PB,r);accMap(cB,r.county,r);accMap(xB,xk,r);accMap(iB,r.industry,r);}
+  }
+  P.odr=P.n>0?P.d/P.n:NaN;PB.odr=PB.n>0?PB.d/PB.n:NaN;
+  const P_m=calcM(P,hasBase?PB:null,P,cfg,z);
+  const mk=(key,county,industry,a,b)=>({key,county,industry,m:calcM(a,b,P,cfg,z),gi:NaN,cls:null});
+  const countyUnits=[],cellUnits=[],indUnits=[];
+  for(const [c,a] of cA) countyUnits.push(mk('c|'+c,c,null,a,cB.get(c)));
+  for(const [k,a] of xA){const [c,i]=k.split('|');cellUnits.push(mk('x|'+k,c,i,a,xB.get(k)));}
+  for(const [i,a] of iA) indUnits.push(mk('col|'+i,null,i,a,iB.get(i)));
+  const vals=new Map();
+  for(const u of countyUnits) vals.set(u.county,cfg.shrink?u.m.shrunk:u.m.odr);
+  const gi=giStar(vals,getAdj());
+  for(const u of countyUnits){u.gi=gi.has(u.county)?gi.get(u.county):NaN;u.cls=classify(u.m,u.gi,P,cfg,z,true);}
+  for(const u of cellUnits) u.cls=classify(u.m,NaN,P,cfg,z,false);
+  for(const u of indUnits) u.cls=classify(u.m,NaN,P,cfg,z,false);
+  const mp=a=>new Map(a.map(u=>[u.key,u]));
+  return {P,PB,P_m,hasBase,z,countyUnits,cellUnits,indUnits,
+    countyMap:new Map(countyUnits.map(u=>[u.county,u])),
+    cellMap:mp(cellUnits),indMap:new Map(indUnits.map(u=>[u.industry,u]))};
+}
+
+/* ============ 指標值與色階 ============ */
+function effMetric(){const m=state.settings.metric;return (state.settings.view==='matrix'&&m==='gi')?'rr':m;}
+function mval(u,metric){
+  const m=u.m,sh=state.settings.shrink;
+  switch(metric){
+    case 'odr':return sh?m.shrunk:m.odr;
+    case 'adr':return m.adr;
+    case 'rr':return sh?m.rrAdj:m.rrRaw;
+    case 'ae':return m.ae;
+    case 'delta':return m.delta;
+    case 'gi':return u.gi;
+  }return NaN;
+}
+function fmtM(metric,v,short){
+  if(!isNum(v)) return '—';
+  switch(metric){
+    case 'odr':case 'adr':return pct(v,short?1:2);
+    case 'rr':return f2(v,short?1:2)+'x';
+    case 'ae':return f2(v,short?1:2);
+    case 'delta':if(short){const t=(v*100).toFixed(1);return t==='0.0'||t==='-0.0'?'0.0':(v>0?'+':'')+t;}return pp(v);
+    case 'gi':return f2(v,short?1:2);
+  }return String(v);
+}
+const hex=h=>[1,3,5].map(i=>parseInt(h.substr(i,2),16));
+function mix(a,b,t){const A=hex(a),B=hex(b);return '#'+A.map((x,i)=>Math.round(x+(B[i]-x)*t).toString(16).padStart(2,'0')).join('');}
+function seqColor(t){const SEQ=T().seq;t=clamp(t,0,1);const x=t*(SEQ.length-1),i=Math.min(SEQ.length-2,Math.floor(x));return mix(SEQ[i],SEQ[i+1],x-i);}
+function divColor(t){const k=T();t=clamp(t,-1,1);return t<0?mix(k.dMid,k.dNeg,-t):mix(k.dMid,k.dPos,t);}
+function domainFor(units,metric){
+  const kind=METRICS[metric].kind;
+  let vals=units.filter(u=>u.cls.level!=='insuf').map(u=>mval(u,metric)).filter(isNum);
+  if(!vals.length) vals=units.map(u=>mval(u,metric)).filter(isNum);
+  if(kind==='seq') return {kind,max:Math.max(1e-9,...vals,0)};
+  let mx=Math.max(...vals.map(Math.abs),metric==='gi'?2:1e-9);
+  return {kind,max:mx||1};
+}
+function colorFor(v,dom){
+  if(!isNum(v)) return T().noData;
+  return dom.kind==='seq'?seqColor(v/dom.max):divColor(v/dom.max);
+}
+function textOn(bg){
+  if(bg[0]!=='#') return '#222';
+  const [r,g,b]=hex(bg);return (0.299*r+0.587*g+0.114*b)<140?'#fff':'#1f2933';
+}
+
+/* ============ 摘要（KPI/清單/敘述）============ */
+function rankCmp(a,b){
+  const d=LEVELS[a.cls.level].order-LEVELS[b.cls.level].order; if(d) return d;
+  return (b.m.rrRaw||0)-(a.m.rrRaw||0);
+}
+function unitName(u){
+  if(u.county&&u.industry) return `${u.county}${IMAP.get(u.industry).short}`;
+  if(u.county) return u.county;
+  return IMAP.get(u.industry).name;
+}
+function summarize(model){
+  const view=state.settings.view;
+  const units=view==='map'?model.countyUnits:model.cellUnits;
+  const cnt={};for(const k of Object.keys(LEVELS)) cnt[k]=0;
+  for(const u of units) cnt[u.cls.level]++;
+  const hot=units.filter(u=>['sig','spatial','watch'].includes(u.cls.level)).sort(rankCmp);
+  const top3=hot.slice(0,3);
+  const top3Share=top3.length?top3.reduce((s,u)=>s+(u.m.share||0),0):NaN;
+  let hhi=0;for(const u of model.countyUnits) if(isNum(u.m.share)) hhi+=Math.pow(u.m.share*100,2);
+  const N=model.countyUnits.length;
+  const unitLabel=view==='map'?'縣市':'縣市×產業';
+  return {units,cnt,hot,top3,top3Share,hhi,hhiBase:N?10000/N:NaN,N,unitLabel,narr:narrative(model,units,cnt,hot,top3,top3Share,unitLabel,view)};
+}
+function narrative(model,units,cnt,hot,top3,top3Share,unitLabel,view){
+  const P=model.P_m,S=state,z=model.z,out=[];
+  let s=`本期（${S.cur}）組合戶數違約率為 ${pct(P.odr)}`;
+  if(model.hasBase&&isNum(P.delta)){
+    const sig=isNum(P.zD)&&Math.abs(P.zD)>=z;
+    s+=`，較${S.base}${P.delta>=0?'上升':'下降'} ${Math.abs(P.delta*100).toFixed(2)} 個百分點${sig?'（統計上顯著）':'（變動不顯著）'}`;
+  }
+  out.push(s+'。');
+  const sigList=units.filter(u=>u.cls.level==='sig'),spList=units.filter(u=>u.cls.level==='spatial');
+  const nHot=sigList.length+spList.length;
+  let s2=`以${unitLabel}為分析單位，顯著熱區（含空間熱區）共 ${nHot} 處`;
+  if(nHot>0){
+    const t=sigList.length?sigList.slice().sort((a,b)=>(b.m.rrRaw||0)-(a.m.rrRaw||0))[0]:spList.slice().sort((a,b)=>(b.gi||0)-(a.gi||0))[0];
+    const m=t.m;
+    s2+=sigList.length?`，以${unitName(t)}最為突出，違約率 ${pct(m.odr)}（${S.settings.conf}% CI：${pct(m.lo)}–${pct(m.hi)}），為組合平均之 ${f2(m.rrRaw)} 倍`:`，其中${unitName(t)}為空間熱區（Gi* z=${f2(t.gi)}），違約率 ${pct(m.odr)}，為組合平均之 ${f2(m.rrRaw)} 倍`;
+    if(isNum(m.zD)&&m.zD>=z&&m.delta>0) s2+='，且較上期顯著上升';
+  }
+  out.push(s2+'。');
+  if(view==='map'&&spList.length){
+    out.push(`空間統計顯示${spList.map(u=>u.county).join('、')}呈現違約聚集現象（Gi* z ≥ 1.96）。`);
+  }
+  if(model.hasBase){
+    const up=units.filter(u=>u.cls.level!=='insuf'&&isNum(u.m.zD)&&u.m.zD>=z&&u.m.delta>0).sort((a,b)=>b.m.delta-a.m.delta);
+    const dn=units.filter(u=>u.cls.level!=='insuf'&&isNum(u.m.zD)&&u.m.zD<=-z&&u.m.delta<0);
+    let s4=`與${S.base}相比，顯著惡化者 ${up.length} 處`;
+    if(up.length) s4+=`（${up.slice(0,3).map(u=>`${unitName(u)} ${pp(u.m.delta)}`).join('、')}${up.length>3?'等':''}）`;
+    s4+=`，顯著改善者 ${dn.length} 處`;
+    out.push(s4+'。');
+  }
+  if(top3.length) out.push(`前 ${top3.length} 大熱區（${top3.map(unitName).join('、')}）合計占全組合違約戶數 ${pct(top3Share,1)}。`);
+  if(cnt.insuf) out.push(`另有 ${cnt.insuf} 處因樣本不足未納入判定。`);
+  return out.join('\n');
+}
+function normCdf(x){ // Abramowitz-Stegun
+  const t=1/(1+0.2316419*Math.abs(x)),d=0.3989423*Math.exp(-x*x/2);
+  let p=d*t*(0.3193815+t*(-0.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));
+  return x>0?1-p:p;
+}
+
+/* ============ 渲染：整體 ============ */
+function render(){
+  const body=$('body');
+  if(!state.rows.length){
+    body.innerHTML=`<div class="card empty"><h2 style="margin:0 0 8px">尚未載入資料</h2>
+      <div>請上傳 CSV、貼上 Excel 資料，或先載入範例資料體驗。<br>必要欄位：期別、縣市、產業、期初戶數、違約戶數。</div>
+      <div class="btns"><button class="btn pri" onclick="$('btnUpload').click()">上傳 CSV</button><button class="btn" onclick="$('btnPaste').click()">貼上資料</button><button class="btn" onclick="$('btnSample').click()">載入範例資料</button></div>
+      <div style="margin-top:14px"><button class="btn" id="btnTpl">下載範例 CSV（僅欄位名稱）</button></div></div>`;
+    $('btnTpl').onclick=downloadTemplate;
+    return;
+  }
+  const model=compute();state.model=model;
+  const sm=summarize(model);state.sum=sm;
+  const view=state.settings.view;
+  const P=model.P_m;
+  const dTxt=model.hasBase&&isNum(P.delta)?`<span class="${P.delta>0?'up':'down'}">${P.delta>0?'▲':'▼'} ${pp(P.delta)}</span> vs ${esc(state.base)}`:'無比較期';
+  body.innerHTML=`
+  <div class="kpis">
+    <div class="kpi"><div class="t">組合戶數違約率（${esc(state.cur)}）</div><div class="v">${pct(P.odr)}</div><div class="s">${dTxt}｜${int(P.d)} / ${int(P.n)} 戶</div></div>
+    <div class="kpi"><div class="t">顯著熱區數（${LEVELS.sig.icon}＋${LEVELS.spatial.icon}，${sm.unitLabel}）</div><div class="v">${sm.cnt.sig+sm.cnt.spatial}</div><div class="s">${LEVELS.sig.icon}${sm.cnt.sig}　${LEVELS.spatial.icon}${sm.cnt.spatial}　${LEVELS.watch.icon}${sm.cnt.watch}　${LEVELS.insuf.icon}${sm.cnt.insuf}</div></div>
+    <div class="kpi"><div class="t">前 3 大熱區違約占比</div><div class="v">${pct(sm.top3Share,1)}</div><div class="s">${sm.top3.length?esc(sm.top3.map(unitName).join('、')):'目前無熱區'}</div></div>
+    <div class="kpi"><div class="t">縣市違約集中度 HHI</div><div class="v">${int(sm.hhi)}</div><div class="s">均勻分配基準 ${int(sm.hhiBase)}（${sm.N} 縣市）</div></div>
+  </div>
+  <div class="main">
+    <div class="card">
+      <div class="tabs">
+        <span class="tab ${view==='map'?'on':''}" data-view="map">地圖視圖</span>
+        <span class="tab ${view==='matrix'?'on':''}" data-view="matrix">矩陣視圖</span>
+        <span class="sp"></span>
+        ${view==='map'?`<label><input type="checkbox" id="tAdj" ${state.showAdjLines?'checked':''}>顯示鄰接線</label>`:
+        `<label><input type="checkbox" id="tHide" ${state.hideEmpty?'checked':''}>隱藏無資料產業</label>
+         <label>列排序<select id="tSort"><option value="region">北中南東</option><option value="odr">ODR 高→低</option><option value="d">違約戶數 多→少</option></select></label>`}
+      </div>
+      ${(view==='matrix'&&state.settings.metric==='gi')?'<div class="notice">矩陣視圖不支援 Gi*（僅縣市層級），已改以 RR 著色。</div>':''}
+      <div id="viewBox">${view==='map'?renderMap(model):renderMatrix(model)}</div>
+    </div>
+    <div class="card" id="detail"></div>
+  </div>
+  <div class="card" style="margin-bottom:10px">
+    <div class="tabs"><h3 style="margin:0">熱區清單（${sm.unitLabel}）</h3><span class="sp"></span>
+      <label><input type="checkbox" id="lAll" ${state.showAll?'checked':''}>顯示全部</label></div>
+    <div class="tblwrap" id="list"></div>
+  </div>
+  <div class="card">
+    <div class="tabs"><h3 style="margin:0">自動敘述</h3><span class="sp"></span><button class="btn" id="btnCopy">複製文字</button></div>
+    <div class="narr" id="narr">${esc(sm.narr)}</div>
+  </div>`;
+  renderList(model,sm);renderDetail(model);wireBody();
+  const ts=$('tSort');if(ts) ts.value=state.rowSort;
+}
+
+/* ============ 地圖 ============ */
+function legendSvg(x,y,w,dom,metric){
+  const id='lg'+Math.floor(x+y);
+  let stops;
+  const K=T(),SEQ=K.seq;
+  if(dom.kind==='seq') stops=SEQ.map((c,i)=>`<stop offset="${(i/(SEQ.length-1)*100).toFixed(0)}%" stop-color="${c}"/>`).join('');
+  else stops=`<stop offset="0%" stop-color="${K.dNeg}"/><stop offset="50%" stop-color="${K.dMid}"/><stop offset="100%" stop-color="${K.dPos}"/>`;
+  const lab=dom.kind==='seq'?[[0,fmtM(metric,0,true)],[w,fmtM(metric,dom.max,true)]]:[[0,fmtM(metric,-dom.max,true)],[w/2,fmtM(metric,0,true)],[w,fmtM(metric,dom.max,true)]];
+  return `<defs><linearGradient id="${id}" x1="0" x2="1" y1="0" y2="0">${stops}</linearGradient></defs>
+  <text x="${x}" y="${y-8}" font-size="11" fill="${K.sub2}" font-family="${FONT}">色階：${esc(METRICS[metric].label)}</text>
+  <rect x="${x}" y="${y}" width="${w}" height="12" fill="url(#${id})" stroke="${K.axis}" stroke-width=".5"/>
+  ${lab.map(([dx,t],i)=>`<text x="${x+dx}" y="${y+26}" font-size="10" fill="${K.sub2}" text-anchor="${i===0?'start':(i===lab.length-1?'end':'middle')}" font-family="${FONT}">${esc(t)}</text>`).join('')}`;
+}
+function levelKeySvg(x,y,keys){
+  const K=T();
+  return keys.map((k,i)=>`<circle cx="${x+6}" cy="${y+i*20}" r="5" fill="${LEVELS[k].color}"/><text x="${x+18}" y="${y+i*20+4}" font-size="11" fill="${K.key}" font-family="${FONT}">${LEVELS[k].name}</text>`).join('');
+}
+function titleSvg(model,metric,W){
+  const S=state,K=T();
+  const sub=[`業務別：${S.seg||'全部'}`,`評等：${S.gradeList.length?S.gradeList[S.gFrom]+'–'+S.gradeList[S.gTo]:'全部'}`,`產業：${S.ind?IMAP.get(S.ind).name:'全部'}`,`信度收縮：${S.settings.shrink?'開（k='+S.settings.k+'）':'關'}`].join('｜');
+  return `<text x="20" y="24" font-size="16" font-weight="700" fill="${K.ink}" font-family="${FONT}">違約熱區地圖｜${esc(S.cur)}${model.hasBase?' vs '+esc(S.base):''}</text>
+  <text x="20" y="42" font-size="11" fill="${K.sub}" font-family="${FONT}">${esc(sub)}</text>
+  ${S.isSample?`<text x="${W-16}" y="24" font-size="14" font-weight="700" fill="${K.wm}" text-anchor="end" font-family="${FONT}">模擬資料</text>`:''}`;
+}
+function hatchDefs(){const K=T();return `<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="${K.hatch}" stroke-opacity="${K.hatchOp}" stroke-width="2.6"/></pattern></defs>`;}
+function selMatch(u,sel){return sel&&((sel.county==null||u.county===sel.county)&&(sel.industry==null||u.industry===sel.industry));}
+function renderMap(model){
+  const S=state,K=T(),metric=effMetric(),dom=domainFor(model.countyUnits,metric);
+  const TW=88,TH=54,GX=94,GY=60,X0=20,Y0=62,W=520,H=Y0+11*GY+10;
+  const sel=S.selection;
+  let o=[`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" data-w="${W}" data-h="${H}">`,hatchDefs(),`<rect width="${W}" height="${H}" fill="${K.bg}"/>`,titleSvg(model,metric,W)];
+  const ctr=c=>[X0+c.c*GX+TW/2,Y0+c.r*GY+TH/2];
+  const tiles=[];
+  for(const c of COUNTIES){
+    const u=model.countyMap.get(c.n),x=X0+c.c*GX,y=Y0+c.r*GY;
+    const isSel=sel&&sel.county===c.n;
+    if(!u){
+      tiles.push(`<g data-k="c|${esc(c.n)}"><rect x="${x}" y="${y}" width="${TW}" height="${TH}" rx="6" fill="${K.emptyTile}" stroke="${isSel?K.sel:K.emptyStroke}" stroke-width="${isSel?3:1}" ${c.island&&!isSel?'stroke-dasharray="4 3"':''}/>
+      <text x="${x+TW/2}" y="${y+24}" font-size="14" font-weight="700" fill="${K.emptyTxt}" text-anchor="middle" font-family="${FONT}">${c.s}</text>
+      <text x="${x+TW/2}" y="${y+42}" font-size="11" fill="${K.emptyTxt}" text-anchor="middle" font-family="${FONT}">無資料</text></g>`);
+      continue;
+    }
+    const v=mval(u,metric),fill=colorFor(v,dom),tc=textOn(fill);
+    const lv=u.cls.level;
+    tiles.push(`<g data-k="c|${esc(c.n)}"><rect x="${x}" y="${y}" width="${TW}" height="${TH}" rx="6" fill="${fill}" stroke="${isSel?K.sel:(c.island?K.island:K.tileStroke)}" stroke-width="${isSel?3:(c.island?1.5:1)}" ${c.island&&!isSel?'stroke-dasharray="4 3"':''}/>
+      ${lv==='insuf'?`<rect x="${x}" y="${y}" width="${TW}" height="${TH}" rx="6" fill="url(#hatch)"/>`:''}
+      <text x="${x+TW/2}" y="${y+23}" font-size="14" font-weight="700" fill="${tc}" text-anchor="middle" font-family="${FONT}">${c.s}</text>
+      <text x="${x+TW/2}" y="${y+42}" font-size="13" fill="${tc}" text-anchor="middle" font-family="${FONT}">${esc(fmtM(metric,v))}</text>
+      ${lv!=='normal'?`<circle cx="${x+TW-9}" cy="${y+9}" r="5.5" fill="${LEVELS[lv].color}" stroke="${K.ptStroke}" stroke-width="1.2"/>`:''}</g>`);
+  }
+  o.push(tiles.join(''));
+  if(S.showAdjLines){
+    const adj=getAdj(),seen=new Set();
+    for(const [a,set] of adj) for(const b of set){const k=[a,b].sort().join('|');if(seen.has(k))continue;seen.add(k);
+      const ca=CMAP.get(a),cb=CMAP.get(b),[x1,y1]=ctr(ca),[x2,y2]=ctr(cb);
+      o.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${K.adj}" stroke-opacity=".45" stroke-width="1" stroke-dasharray="3 2" pointer-events="none"/>`);}
+  }
+  o.push(legendSvg(X0,Y0+3*GY+24,170,dom,metric));
+  o.push(`<text x="${X0}" y="${Y0+3*GY+78}" font-size="10" fill="${K.mute}" font-family="${FONT}">方格地圖：每縣市等大，不代表面積。</text>`);
+  o.push(`<text x="${X0}" y="${Y0+3*GY+92}" font-size="10" fill="${K.mute}" font-family="${FONT}">斜線底紋＝樣本不足；虛線框＝離島。</text>`);
+  o.push(levelKeySvg(X0,Y0+8*GY+8,['sig','spatial','watch','cold','insuf']));
+  o.push('</svg>');
+  return o.join('');
+}
+
+/* ============ 矩陣 ============ */
+function renderMatrix(model){
+  const S=state,K=T(),metric=effMetric();
+  const allU=model.cellUnits.concat(model.countyUnits,model.indUnits);
+  const dom=domainFor(model.cellUnits,metric);
+  const inds=IND.filter(i=>!S.hideEmpty||model.indMap.has(i.code));
+  let rows=COUNTIES.map(c=>c.n);
+  const cv=n=>{const u=model.countyMap.get(n);return u?(S.rowSort==='odr'?u.m.odr:u.m.d):-Infinity;};
+  if(S.rowSort!=='region') rows.sort((a,b)=>(cv(b)-cv(a)));
+  const LW=84,CW=48,RH=24,TOP=84,TW=58,X0=16;
+  const nc=inds.length,W=Math.max(620,X0+LW+nc*CW+TW+16);
+  const legendY=TOP+(rows.length+1)*RH+30;
+  const perLine=Math.max(3,Math.floor((W-32)/118));
+  const codeLines=Math.ceil(inds.length/perLine);
+  const H=legendY+50+codeLines*16+10;
+  const sel=S.selection;
+  let o=[`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" data-w="${W}" data-h="${H}">`,hatchDefs(),`<rect width="${W}" height="${H}" fill="${K.bg}"/>`,titleSvg(model,metric,W)];
+  // column headers
+  inds.forEach((i,j)=>{
+    const x=X0+LW+j*CW,isSel=sel&&sel.county==null&&sel.industry===i.code;
+    o.push(`<g data-k="col|${i.code}"><rect x="${x}" y="${TOP-28}" width="${CW-2}" height="26" rx="4" fill="${isSel?K.headSel:K.head}"/>
+      <text x="${x+CW/2-1}" y="${TOP-10}" font-size="13" font-weight="700" fill="${K.ink}" text-anchor="middle" font-family="${FONT}">${i.code}</text><title>${esc(i.name)}</title></g>`);
+  });
+  o.push(`<text x="${X0+LW+nc*CW+TW/2}" y="${TOP-10}" font-size="12" font-weight="700" fill="${K.sub2}" text-anchor="middle" font-family="${FONT}">縣市合計</text>`);
+  rows.forEach((cn,r)=>{
+    const y=TOP+r*RH,c=CMAP.get(cn),cu=model.countyMap.get(cn);
+    const rs=sel&&sel.industry==null&&sel.county===cn;
+    o.push(`<g data-k="r|${esc(cn)}"><rect x="${X0}" y="${y}" width="${LW-4}" height="${RH-2}" rx="4" fill="${rs?K.headSel:K.head}"/>
+      <text x="${X0+6}" y="${y+16}" font-size="12" fill="${cu?K.ink:K.emptyTxt}" font-family="${FONT}">${c.n}</text></g>`);
+    inds.forEach((i,j)=>{
+      const x=X0+LW+j*CW,u=model.cellMap.get('x|'+cn+'|'+i.code);
+      if(!u){o.push(`<rect x="${x}" y="${y}" width="${CW-2}" height="${RH-2}" rx="3" fill="${K.emptyCell}"/>`);return;}
+      const v=mval(u,metric),fill=colorFor(v,dom),tc=textOn(fill),lv=u.cls.level;
+      o.push(`<g data-k="x|${esc(cn)}|${i.code}"><rect x="${x}" y="${y}" width="${CW-2}" height="${RH-2}" rx="3" fill="${fill}"/>
+        ${lv==='insuf'?`<rect x="${x}" y="${y}" width="${CW-2}" height="${RH-2}" rx="3" fill="url(#hatch)"/>`:''}
+        <text x="${x+(CW-2)/2}" y="${y+16}" font-size="10.5" fill="${tc}" text-anchor="middle" font-family="${FONT}">${esc(fmtM(metric,v,true))}</text>
+        ${['sig','spatial','watch'].includes(lv)?`<circle cx="${x+CW-8}" cy="${y+5}" r="3.2" fill="${LEVELS[lv].color}" stroke="${K.ptStroke}" stroke-width=".8"/>`:''}</g>`);
+    });
+    const tx=X0+LW+nc*CW;
+    if(cu){const v=mval(cu,metric),fill=colorFor(v,dom),tc=textOn(fill);
+      o.push(`<g data-k="r|${esc(cn)}"><rect x="${tx+4}" y="${y}" width="${TW-6}" height="${RH-2}" rx="3" fill="${fill}" stroke="${K.outline}" stroke-width=".6"/>
+        <text x="${tx+4+(TW-6)/2}" y="${y+16}" font-size="10.5" font-weight="700" fill="${tc}" text-anchor="middle" font-family="${FONT}">${esc(fmtM(metric,v,true))}</text></g>`);}
+  });
+  // 合計列
+  const ty=TOP+rows.length*RH+4;
+  o.push(`<text x="${X0+6}" y="${ty+16}" font-size="12" font-weight="700" fill="${K.sub2}" font-family="${FONT}">產業合計</text>`);
+  inds.forEach((i,j)=>{
+    const x=X0+LW+j*CW,u=model.indMap.get(i.code);
+    if(!u) return;
+    const v=mval(u,metric),fill=colorFor(v,dom),tc=textOn(fill);
+    o.push(`<g data-k="col|${i.code}"><rect x="${x}" y="${ty}" width="${CW-2}" height="${RH-2}" rx="3" fill="${fill}" stroke="${K.outline}" stroke-width=".6"/>
+      <text x="${x+(CW-2)/2}" y="${ty+16}" font-size="10.5" font-weight="700" fill="${tc}" text-anchor="middle" font-family="${FONT}">${esc(fmtM(metric,v,true))}</text></g>`);
+  });
+  const tx=X0+LW+nc*CW;
+  { const u={m:model.P_m,gi:NaN};const v=mval(u,metric),fill=colorFor(v,dom),tc=textOn(fill);
+    o.push(`<rect x="${tx+4}" y="${ty}" width="${TW-6}" height="${RH-2}" rx="3" fill="${fill}" stroke="${K.outline}" stroke-width=".6"/><text x="${tx+4+(TW-6)/2}" y="${ty+16}" font-size="10.5" font-weight="700" fill="${tc}" text-anchor="middle" font-family="${FONT}">${esc(fmtM(metric,v,true))}</text>`);}
+  // 選取框
+  if(sel){
+    const ri=sel.county?rows.indexOf(sel.county):-1,ci=sel.industry?inds.findIndex(i=>i.code===sel.industry):-1;
+    if(ri>=0&&ci>=0) o.push(`<rect x="${X0+LW+ci*CW-1}" y="${TOP+ri*RH-1}" width="${CW}" height="${RH}" rx="3" fill="none" stroke="${K.sel}" stroke-width="2.5" pointer-events="none"/>`);
+    else if(ri>=0) o.push(`<rect x="${X0-1}" y="${TOP+ri*RH-1}" width="${LW+nc*CW+TW}" height="${RH}" rx="3" fill="none" stroke="${K.sel}" stroke-width="2" pointer-events="none"/>`);
+    else if(ci>=0) o.push(`<rect x="${X0+LW+ci*CW-1}" y="${TOP-30}" width="${CW}" height="${(rows.length+1)*RH+36}" rx="3" fill="none" stroke="${K.sel}" stroke-width="2" pointer-events="none"/>`);
+  }
+  o.push(legendSvg(X0,legendY,170,dom,metric));
+  o.push(levelKeySvg(X0+250,legendY-2,['sig','watch']));
+  o.push(`<text x="${X0+330}" y="${legendY+2}" font-size="11" fill="${K.key}" font-family="${FONT}">斜線底紋＝樣本不足｜右上圓點＝熱區等級</text>`);
+  const ly=legendY+48;
+  inds.forEach((i,k)=>{
+    const col=k%perLine,line=Math.floor(k/perLine);
+    o.push(`<text x="${X0+col*118}" y="${ly+line*16}" font-size="10.5" fill="${K.sub2}" font-family="${FONT}">${i.code} ${esc(i.name.length>7?i.short:i.name)}</text>`);
+  });
+  o.push('</svg>');
+  return o.join('');
+}
+
+/* ============ 清單 ============ */
+function unitKey(u){return u.key;}
+function renderList(model,sm){
+  let list=state.showAll?sm.units.slice():sm.hot.slice();
+  const dir=state.sortDir,sk=state.sortKey;
+  if(sk==='rank') list.sort(rankCmp);
+  else{
+    const g={name:u=>unitName(u),level:u=>LEVELS[u.cls.level].order,odr:u=>u.m.odr,rr:u=>u.m.rrRaw,delta:u=>u.m.delta,share:u=>u.m.share,shrunk:u=>u.m.shrunk}[sk];
+    list.sort((a,b)=>{const x=g(a),y=g(b);
+      if(typeof x==='string') return dir*x.localeCompare(y,'zh-Hant');
+      const xa=isNum(x)?x:-Infinity,ya=isNum(y)?y:-Infinity;return dir*(ya-xa);});
+  }
+  const sel=state.selection,view=state.settings.view;
+  const isSelRow=u=>sel&&(view==='map'?sel.county===u.county:selMatch(u,sel));
+  const arrow=k=>state.sortKey===k?(state.sortDir>0?' ▼':' ▲'):'';
+  const rows=list.map((u,i)=>{
+    const m=u.m,L=LEVELS[u.cls.level];
+    let dl='—';
+    if(isNum(m.delta)){const sig=isNum(m.zD)&&Math.abs(m.zD)>=model.z;dl=`<span class="${sig?(m.delta>0?'up':'down'):''}">${sig?(m.delta>0?'▲ ':'▼ '):''}${pp(m.delta)}</span>`;}
+    return `<tr data-k="${esc(u.key)}" class="${isSelRow(u)?'sel':''}"><td>${i+1}</td><td>${esc(unitName(u))}</td><td>${L.icon} ${L.name}</td>
+      <td>${pct(m.odr)}</td><td>${pct(m.shrunk)}</td><td>${pct(m.lo)}–${pct(m.hi)}</td><td>${f2(m.rrRaw)}</td><td>${dl}</td><td>${pct(m.share)}</td></tr>`;
+  }).join('');
+  $('list').innerHTML=`<table class="lst"><thead><tr><th data-s="rank">排名${arrow('rank')}</th><th data-s="name">熱區${arrow('name')}</th><th data-s="level">等級${arrow('level')}</th>
+    <th data-s="odr">ODR${arrow('odr')}</th><th data-s="shrunk">收縮 ODR${arrow('shrunk')}</th><th>${state.settings.conf}% CI</th><th data-s="rr">RR${arrow('rr')}</th><th data-s="delta">Δ${arrow('delta')}</th><th data-s="share">違約占比${arrow('share')}</th></tr></thead>
+    <tbody>${rows||`<tr><td colspan="9" style="text-align:center;color:var(--mute);padding:20px">目前沒有符合條件的熱區（可勾選「顯示全部」）</td></tr>`}</tbody></table>`;
+}
+
+/* ============ 明細面板 ============ */
+function selUnit(model){
+  const s=state.selection;if(!s) return null;
+  if(s.county&&s.industry) return model.cellMap.get('x|'+s.county+'|'+s.industry)||null;
+  if(s.county) return model.countyMap.get(s.county)||null;
+  if(s.industry) return model.indMap.get(s.industry)||null;
+  return null;
+}
+function selTitle(s){return s.county&&s.industry?`${s.county} × ${IMAP.get(s.industry).name}`:(s.county||IMAP.get(s.industry).name);}
+function breakdown(model){
+  const s=state.selection,out=[];
+  if(s.county&&!s.industry){
+    for(const u of model.cellUnits) if(u.county===s.county) out.push({name:IMAP.get(u.industry).short,m:u.m,lv:u.cls.level});
+    return {title:'產業拆解（依違約戶數）',items:out.sort((a,b)=>b.m.d-a.m.d).slice(0,10)};
+  }
+  if(s.industry&&!s.county){
+    for(const u of model.cellUnits) if(u.industry===s.industry) out.push({name:u.county,m:u.m,lv:u.cls.level});
+    return {title:'縣市拆解（依違約戶數）',items:out.sort((a,b)=>b.m.d-a.m.d).slice(0,10)};
+  }
+  const mp=new Map();
+  for(const r of state.rows){ if(r.period!==state.cur||!pass(r,'seg')||r.county!==s.county||r.industry!==s.industry) continue; accMap(mp,r.segment,r); }
+  for(const [k,a] of mp) out.push({name:k,m:{odr:a.d/a.n,n:a.n,d:a.d},lv:null});
+  return {title:'業務別拆解',items:out.sort((a,b)=>b.m.d-a.m.d)};
+}
+function trendSvg(){
+  const s=state.selection,ps=state.periods,K=T();
+  if(ps.length<3) return '<div style="color:var(--mute);font-size:12px">資料不足 3 期，未繪製趨勢（目前 '+ps.length+' 期）。</div>';
+  const a=ps.map(()=>mkAgg()),b=ps.map(()=>mkAgg());
+  for(const r of state.rows){
+    if(!pass(r)) continue; const i=ps.indexOf(r.period);
+    addAgg(b[i],r);
+    if((!s.county||r.county===s.county)&&(!s.industry||r.industry===s.industry)) addAgg(a[i],r);
+  }
+  const ya=a.map(x=>x.n>0?x.d/x.n:NaN),yb=b.map(x=>x.n>0?x.d/x.n:NaN);
+  const all=ya.concat(yb).filter(isNum);if(!all.length) return '';
+  const mx=Math.max(...all)*1.15||1,W=310,H=120,L=34,R=8,T0=10,B=22;
+  const X=i=>L+(W-L-R)*(ps.length===1?0:i/(ps.length-1)),Y=v=>T0+(H-T0-B)*(1-v/mx);
+  const line=(arr,c,dash)=>{const pts=arr.map((v,i)=>isNum(v)?`${X(i).toFixed(1)},${Y(v).toFixed(1)}`:null).filter(Boolean);
+    return `<polyline points="${pts.join(' ')}" fill="none" stroke="${c}" stroke-width="2" ${dash?'stroke-dasharray="4 3"':''}/>`+
+      arr.map((v,i)=>isNum(v)?`<circle cx="${X(i).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="2.6" fill="${c}"><title>${ps[i]}：${pct(v)}</title></circle>`:'').join('');};
+  const step=Math.ceil(ps.length/6);
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto"><line x1="${L}" y1="${H-B}" x2="${W-R}" y2="${H-B}" stroke="${K.axis}"/>
+   <text x="${L-4}" y="${T0+4}" font-size="9" text-anchor="end" fill="${K.sub}">${pct(mx,1)}</text><text x="${L-4}" y="${H-B}" font-size="9" text-anchor="end" fill="${K.sub}">0</text>
+   ${line(yb,K.axis,true)}${line(ya,K.trend,false)}
+   ${ps.map((p,i)=>i%step===0||i===ps.length-1?`<text x="${X(i)}" y="${H-8}" font-size="9" text-anchor="middle" fill="${K.sub}">${p}</text>`:'').join('')}</svg>
+   <div style="font-size:11px;color:var(--sub)"><span style="color:${K.trend}">━</span> 所選對象　<span style="color:${K.axis}">┅</span> 全組合（皆套用目前篩選）</div>`;
+}
+function renderDetail(model){
+  const el=$('detail'),s=state.selection;
+  if(!s){el.innerHTML=`<h3>明細面板</h3><div style="color:var(--mute);line-height:1.8">點選地圖縣市、矩陣格子（或列／欄標題）、或熱區清單的任一列，這裡會顯示指標、判定依據、拆解與趨勢。</div>`;return;}
+  const u=selUnit(model);
+  if(!u){el.innerHTML=`<h3>${esc(selTitle(s))}</h3><div style="color:var(--mute)">所選對象在目前期別與篩選條件下沒有資料。</div>`;return;}
+  const m=u.m,L=LEVELS[u.cls.level],sh=state.settings.shrink;
+  const bd=breakdown(model);
+  const mxo=Math.max(1e-9,...bd.items.map(x=>x.m.odr||0));
+  el.innerHTML=`<h3>${esc(selTitle(s))} <span class="lvl" style="background:${L.color}">${L.icon} ${L.name}</span></h3>
+  <table class="kv">
+   <tr><td>期初戶數</td><td>${int(m.n)}</td></tr><tr><td>違約戶數</td><td>${int(m.d)}</td></tr>
+   <tr><td>ODR（原始）</td><td>${pct(m.odr)}</td></tr><tr><td>ODR（收縮 k=${state.settings.k}）</td><td>${pct(m.shrunk)}${sh?' ◀ 用於著色':''}</td></tr>
+   <tr><td>${state.settings.conf}% Wilson 區間</td><td>${pct(m.lo)} – ${pct(m.hi)}</td></tr>
+   <tr><td>RR（原始／收縮）</td><td>${f2(m.rrRaw)}x ／ ${f2(m.rrAdj)}x</td></tr>
+   <tr><td>A/E</td><td>${f2(m.ae)}</td></tr><tr><td>ADR</td><td>${pct(m.adr)}</td></tr>
+   <tr><td>Δ（vs ${esc(state.base||'—')}）</td><td>${pp(m.delta)}${isNum(m.zD)?`（z=${f2(m.zD)}）`:''}</td></tr>
+   <tr><td>Gi* z</td><td>${s.county&&!s.industry?f2(u.gi):'—'}</td></tr>
+   <tr><td>占全組合違約</td><td>${pct(m.share)}</td></tr></table>
+  <h4>判定依據</h4><ul class="rs">${u.cls.reasons.map(r=>`<li>${esc(r)}</li>`).join('')}</ul>
+  <h4>${bd.title}</h4>${bd.items.length?bd.items.map(x=>`<div class="bar"><span>${esc(x.name)}${x.lv&&x.lv!=='normal'?' '+LEVELS[x.lv].icon:''}</span><div class="b"><i style="width:${(x.m.odr/mxo*100).toFixed(0)}%"></i></div><span class="n">${pct(x.m.odr,1)}｜${int(x.m.d)}/${int(x.m.n)}</span></div>`).join(''):'<div style="color:var(--mute);font-size:12px">無拆解資料</div>'}
+  <h4>期別趨勢</h4>${trendSvg()}`;
+}
+
+/* ============ 互動 ============ */
+function keyToSel(k){
+  const p=k.split('|');
+  if(p[0]==='c'||p[0]==='r') return {county:p[1],industry:null};
+  if(p[0]==='x') return {county:p[1],industry:p[2]};
+  if(p[0]==='col') return {county:null,industry:p[1]};
+  return null;
+}
+function sameSel(a,b){return a&&b&&a.county===b.county&&a.industry===b.industry;}
+function selectKey(k){
+  const s=keyToSel(k);if(!s) return;
+  state.selection=sameSel(state.selection,s)?null:s;render();
+}
+function tipFor(k){
+  const model=state.model;if(!model) return '';
+  const s=keyToSel(k);if(!s) return '';
+  let u;
+  if(s.county&&s.industry) u=model.cellMap.get('x|'+s.county+'|'+s.industry);
+  else if(s.county) u=model.countyMap.get(s.county);
+  else u=model.indMap.get(s.industry);
+  const t=`<b>${esc(selTitle(s))}</b>`;
+  if(!u) return t+'<br>無資料';
+  const m=u.m,L=LEVELS[u.cls.level];
+  return `${t}　${L.icon} ${L.name}<br>戶數 ${int(m.n)}／違約 ${int(m.d)}<br>ODR ${pct(m.odr)}（收縮 ${pct(m.shrunk)}）<br>${state.settings.conf}% CI ${pct(m.lo)}–${pct(m.hi)}<br>RR ${f2(m.rrRaw)}x　A/E ${f2(m.ae)}<br>Δ ${pp(m.delta)}${s.county&&!s.industry?'　Gi* '+f2(u.gi):''}`;
+}
+function wireBody(){
+  const vb=$('viewBox'),tip=$('tip');
+  document.querySelectorAll('.tab[data-view]').forEach(t=>t.onclick=()=>{state.settings.view=t.dataset.view;saveSettings();render();});
+  const ta=$('tAdj');if(ta)ta.onchange=()=>{state.showAdjLines=ta.checked;render();};
+  const th=$('tHide');if(th)th.onchange=()=>{state.hideEmpty=th.checked;render();};
+  const ts=$('tSort');if(ts)ts.onchange=()=>{state.rowSort=ts.value;render();};
+  const la=$('lAll');if(la)la.onchange=()=>{state.showAll=la.checked;render();};
+  $('btnCopy').onclick=()=>copyText(state.sum.narr);
+  vb.onclick=e=>{const g=e.target.closest('[data-k]');if(g) selectKey(g.dataset.k);};
+  vb.onmousemove=e=>{const g=e.target.closest('[data-k]');
+    if(!g){tip.style.display='none';return;}
+    tip.innerHTML=tipFor(g.dataset.k);tip.style.display='block';
+    const w=tip.offsetWidth,h=tip.offsetHeight;
+    let x=e.clientX+14,y=e.clientY+14;if(x+w>innerWidth-8)x=e.clientX-w-14;if(y+h>innerHeight-8)y=e.clientY-h-14;
+    tip.style.left=x+'px';tip.style.top=y+'px';};
+  vb.onmouseleave=()=>{tip.style.display='none';};
+  $('list').onclick=e=>{
+    const th=e.target.closest('th[data-s]');
+    if(th){const k=th.dataset.s;if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=1;}renderList(state.model,state.sum);return;}
+    const tr=e.target.closest('tr[data-k]');if(tr) selectKey(tr.dataset.k);
+  };
+}
+function copyText(t){
+  const done=()=>toast('已複製敘述文字');
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done,()=>fallbackCopy(t,done));
+  else fallbackCopy(t,done);
+}
+function fallbackCopy(t,cb){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');cb();}catch(e){}a.remove();}
+function toast(msg){
+  const d=document.createElement('div');d.textContent=msg;
+  d.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1f2933;color:#fff;padding:8px 18px;border-radius:20px;z-index:99;font-size:13px';
+  document.body.appendChild(d);setTimeout(()=>d.remove(),1800);
+}
+
+/* ============ 篩選列 ============ */
+function opt(v,t,sel){return `<option value="${esc(v)}" ${sel?'selected':''}>${esc(t)}</option>`;}
+function buildFilters(){
+  $('fCur').innerHTML=state.periods.map(p=>opt(p,p,p===state.cur)).join('');
+  buildBase();
+  $('fSeg').innerHTML=opt('','全部',!state.seg)+state.segList.map(s=>opt(s,s,s===state.seg)).join('');
+  const gl=state.gradeList;
+  $('fGFrom').innerHTML=gl.length?gl.map((g,i)=>opt(i,g,i===state.gFrom)).join(''):opt(0,'—',true);
+  $('fGTo').innerHTML=gl.length?gl.map((g,i)=>opt(i,g,i===state.gTo)).join(''):opt(0,'—',true);
+  const used=new Set(state.rows.map(r=>r.industry));
+  $('fInd').innerHTML=opt('','全部',!state.ind)+IND.filter(i=>used.has(i.code)).map(i=>opt(i.code,i.code+' '+i.name,i.code===state.ind)).join('');
+  $('fMetric').innerHTML=Object.keys(METRICS).map(k=>opt(k,METRICS[k].label,k===state.settings.metric)).join('');
+  $('fShrink').checked=state.settings.shrink;
+}
+function buildBase(){
+  $('fBase').innerHTML=opt('','（無）',!state.base)+state.periods.filter(p=>p!==state.cur).map(p=>opt(p,p,p===state.base)).join('');
+}
+function wireFilters(){
+  $('fCur').onchange=e=>{state.cur=e.target.value;if(state.base===state.cur)state.base='';buildBase();render();};
+  $('fBase').onchange=e=>{state.base=e.target.value;render();};
+  $('fSeg').onchange=e=>{state.seg=e.target.value;render();};
+  $('fGFrom').onchange=e=>{state.gFrom=+e.target.value;if(state.gTo<state.gFrom){state.gTo=state.gFrom;$('fGTo').value=state.gTo;}render();};
+  $('fGTo').onchange=e=>{state.gTo=+e.target.value;if(state.gFrom>state.gTo){state.gFrom=state.gTo;$('fGFrom').value=state.gFrom;}render();};
+  $('fInd').onchange=e=>{state.ind=e.target.value;render();};
+  $('fMetric').onchange=e=>{state.settings.metric=e.target.value;saveSettings();render();};
+  $('fShrink').onchange=e=>{state.settings.shrink=e.target.checked;saveSettings();render();};
+}
+
+/* ============ 驗證面板 ============ */
+function updateBadge(){
+  const b=$('vBadge'),v=state.valid;
+  if(!v){b.textContent='–';b.className='badge ok';return;}
+  b.textContent=v.err?v.err:(v.warn?v.warn:'✓');
+  b.className='badge '+(v.err?'':(v.warn?'warn':'ok'));
+}
+function showValid(){
+  const v=state.valid;
+  if(!v){$('validBody').innerHTML='<div style="color:var(--mute)">尚未載入資料。</div>';}
+  else{
+    $('validBody').innerHTML=`<div class="sum3"><div><b style="color:var(--ok)">${int(v.ok)}</b>成功列數</div><div><b style="color:var(--warn)">${int(v.warn)}</b>警告</div><div><b style="color:var(--red)">${int(v.err)}</b>錯誤（已略過）</div></div>
+    ${v.unmapped.length?`<div class="notice">未對應縣市：${esc(v.unmapped.join('、'))}</div>`:''}
+    ${v.issues.length?`<div class="tblwrap" style="max-height:280px"><table class="iss"><tr><th>列</th><th>等級</th><th>說明</th></tr>${v.issues.slice(0,200).map(i=>`<tr><td>${esc(i.line)}</td><td style="color:${i.level==='錯誤'?'#d13438':'#c19c00'}">${i.level}</td><td>${esc(i.msg)}</td></tr>`).join('')}</table></div>${v.issues.length>200?`<div style="font-size:12px;color:var(--mute)">僅顯示前 200 筆，完整內容請下載清單。</div>`:''}`:'<div style="color:var(--ok)">全部資料列通過驗證。</div>'}`;
+  }
+  $('dlgValid').showModal();
+}
+
+/* ============ 匯出 ============ */
+function ts(){const d=new Date(),p=n=>String(n).padStart(2,'0');return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate())+p(d.getHours())+p(d.getMinutes());}
+function fname(ext){return `違約熱區地圖_${state.cur}_${state.settings.view==='map'?'地圖':'矩陣'}_${ts()}.${ext}`;}
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);}
+const csvCell=v=>{v=String(v==null?'':v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+function toCsv(rows){return '\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n');}
+function svgString(){
+  // 匯出一律以淺色版型重新繪製，適合放入報告與列印
+  forceLight=true;let html;
+  try{html=state.settings.view==='map'?renderMap(state.model):renderMatrix(state.model);}finally{forceLight=false;}
+  const box=document.createElement('div');box.innerHTML=html;
+  const svg=box.querySelector('svg');if(!svg) return null;
+  svg.setAttribute('width',svg.dataset.w);svg.setAttribute('height',svg.dataset.h);
+  svg.removeAttribute('data-w');svg.removeAttribute('data-h');
+  svg.querySelectorAll('[data-k]').forEach(n=>n.removeAttribute('data-k'));
+  return '<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(svg);
+}
+function exportAs(kind){
+  if(!state.rows.length){toast('請先載入資料');return;}
+  const model=state.model,sm=state.sum;
+  if(kind==='svg'){download(new Blob([svgString()],{type:'image/svg+xml'}),fname('svg'));}
+  else if(kind==='png'){
+    const svg=document.querySelector('#viewBox svg'),w=+svg.dataset.w,h=+svg.dataset.h,s=svgString();
+    const img=new Image();
+    img.onload=()=>{const cv=document.createElement('canvas');cv.width=w*2;cv.height=h*2;const x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,cv.width,cv.height);x.scale(2,2);x.drawImage(img,0,0,w,h);cv.toBlob(b=>download(b,fname('png')),'image/png');};
+    img.onerror=()=>toast('PNG 轉換失敗，請改用 SVG 匯出');
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(s);
+  }
+  else if(kind==='csv'){
+    const head=['熱區','等級','期初戶數','違約戶數','ODR','收縮ODR','CI下界','CI上界','RR','A/E','ADR','Δ(百分點)','Δ_z','Gi*_z','違約占比'];
+    const rows=sm.units.slice().sort(rankCmp).map(u=>{const m=u.m;return [unitName(u),LEVELS[u.cls.level].name,m.n,m.d,m.odr,m.shrunk,m.lo,m.hi,m.rrRaw,m.ae,m.adr,isNum(m.delta)?m.delta*100:'',m.zD,u.gi,m.share].map(v=>isNum(v)?+v.toFixed(6):(v!==v?'':v));});
+    download(new Blob([toCsv([head].concat(rows))],{type:'text/csv;charset=utf-8'}),fname('csv'));
+  }
+  else if(kind==='md'){
+    const P=model.P_m;
+    let md=`# 違約熱區地圖報告（${state.cur}${model.hasBase?' vs '+state.base:''}）\n\n`;
+    md+=`> 分析單位：${sm.unitLabel}｜業務別：${state.seg||'全部'}｜產業：${state.ind?IMAP.get(state.ind).name:'全部'}｜信度收縮：${state.settings.shrink?'開 (k='+state.settings.k+')':'關'}\n\n`;
+    md+=`## KPI\n\n| 指標 | 數值 |\n|---|---|\n| 組合 ODR | ${pct(P.odr)} |\n| 顯著熱區數（顯著＋空間） | ${sm.cnt.sig+sm.cnt.spatial} |\n| 前 3 大熱區違約占比 | ${pct(sm.top3Share,1)} |\n| 縣市 HHI | ${int(sm.hhi)}（均勻基準 ${int(sm.hhiBase)}） |\n\n`;
+    md+=`## 自動敘述\n\n${sm.narr.replace(/\n/g,'\n\n')}\n\n## 前 10 大熱區\n\n| # | 熱區 | 等級 | ODR | ${state.settings.conf}% CI | RR | Δ | 違約占比 |\n|---|---|---|---|---|---|---|---|\n`;
+    sm.hot.slice(0,10).forEach((u,i)=>{const m=u.m;md+=`| ${i+1} | ${unitName(u)} | ${LEVELS[u.cls.level].name} | ${pct(m.odr)} | ${pct(m.lo)}–${pct(m.hi)} | ${f2(m.rrRaw)} | ${pp(m.delta)} | ${pct(m.share)} |\n`;});
+    if(!sm.hot.length) md+='| – | 無 | – | – | – | – | – | – |\n';
+    md+=`\n---\n*${state.isSample?'本報告使用模擬資料。':''}Gi* 與區間估計僅供輔助判讀。*\n`;
+    download(new Blob([md],{type:'text/markdown;charset=utf-8'}),fname('md'));
+  }
+  else if(kind==='json'){
+    const o={version:'1.4',period:state.cur,basePeriod:state.base,segment:state.seg,industry:state.ind,
+      gradeRange:state.gradeList.length?[state.gradeList[state.gFrom],state.gradeList[state.gTo]]:null,view:state.settings.view,settings:state.settings};
+    download(new Blob([JSON.stringify(o,null,2)],{type:'application/json'}),fname('json'));
+  }
+}
+function downloadTemplate(){
+  // 僅含欄位名稱（標題列），不含任何資料；UTF-8 BOM 讓 Excel 直接開啟
+  const t='period,county,industry,segment,grade,obligors,defaults,ead,default_amt,pd\r\n';
+  download(new Blob(['\uFEFF'+t],{type:'text/csv;charset=utf-8'}),'違約熱區地圖_匯入範本.csv');
+  toast('已下載範本（僅含欄位名稱）');
+}
+
+/* ============ 載入 ============ */
+const ENCODINGS=[
+ ['auto','自動偵測（建議）'],['utf-8','UTF-8（含／不含 BOM）'],['big5','Big5／CP950／HKSCS（繁體 Windows、港澳）'],
+ ['utf-16le','UTF-16 LE（Excel「Unicode 文字」）'],['utf-16be','UTF-16 BE'],['utf-32le','UTF-32 LE'],['utf-32be','UTF-32 BE'],
+ ['gb18030','GB18030／GBK（簡體，備援）']
+];
+const ENC_NAME=Object.fromEntries(ENCODINGS.map(a=>[a[0],a[1].split('（')[0]]));
+function decodeUtf32(u8,le,skip){
+  let out=[];const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);
+  for(let i=skip;i+3<u8.length;i+=4){
+    const cp=dv.getUint32(i,le);
+    if(cp>0x10FFFF){out.push('\uFFFD');continue;}
+    out.push(String.fromCodePoint(cp));
+  }
+  return out.join('');
+}
+function decodeWith(u8,enc){
+  if(enc==='utf-32le'||enc==='utf-32be'){
+    const bom=enc==='utf-32le'?(u8[0]===0xFF&&u8[1]===0xFE&&u8[2]===0&&u8[3]===0):(u8[0]===0&&u8[1]===0&&u8[2]===0xFE&&u8[3]===0xFF);
+    return decodeUtf32(u8,enc==='utf-32le',bom?4:0);
+  }
+  return new TextDecoder(enc).decode(u8);   // utf-8 / utf-16 會自動略過 BOM
+}
+const badRatio=t=>{if(!t.length) return 0;let n=0;for(let i=0;i<t.length;i++) if(t.charCodeAt(i)===0xFFFD) n++;return n/t.length;};
+function candidateList(u8){
+  const n=u8.length;
+  // 1) BOM
+  if(n>=4&&u8[0]===0xFF&&u8[1]===0xFE&&u8[2]===0&&u8[3]===0) return ['utf-32le'];
+  if(n>=4&&u8[0]===0&&u8[1]===0&&u8[2]===0xFE&&u8[3]===0xFF) return ['utf-32be'];
+  if(n>=3&&u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF) return ['utf-8'];
+  if(n>=2&&u8[0]===0xFF&&u8[1]===0xFE) return ['utf-16le'];
+  if(n>=2&&u8[0]===0xFE&&u8[1]===0xFF) return ['utf-16be'];
+  // 2) 無 BOM 的 UTF-16／UTF-32：以 0x00 位元組的位置判斷
+  const m=Math.min(n,4000);let ev=0,od=0,z=0;
+  for(let i=0;i<m;i++) if(u8[i]===0){z++;if(i%2===0)ev++;else od++;}
+  if(z>m*0.25){
+    if(n>=8&&u8[0]!==0&&u8[1]===0&&u8[2]===0&&u8[3]===0) return ['utf-32le','utf-16le'];
+    if(n>=8&&u8[0]===0&&u8[1]===0&&u8[2]===0&&u8[3]!==0) return ['utf-32be','utf-16be'];
+    return od>=ev?['utf-16le','utf-16be']:['utf-16be','utf-16le'];
+  }
+  // 3) UTF-8（嚴格檢查）→ Big5 → GB18030 → UTF-16
+  return ['utf-8','big5','gb18030','utf-16le','utf-16be'];
+}
+function decodeAuto(buf){
+  const u8=new Uint8Array(buf),list=candidateList(u8);
+  const attempts=[];
+  for(const enc of list){
+    try{
+      const text=enc==='utf-8'?new TextDecoder('utf-8',{fatal:true}).decode(u8):decodeWith(u8,enc);
+      attempts.push({enc,text,bad:badRatio(text)});
+    }catch(e){}
+  }
+  if(!attempts.length) attempts.push({enc:'utf-8',text:new TextDecoder('utf-8').decode(u8),bad:1});
+  // 以「內容可辨識程度」評分：標題欄位可解析＋縣市／產業／期別能對應者越多越好，其次才看亂碼比例
+  const scored=attempts.map((a,i)=>Object.assign(a,{score:contentScore(a.text),i}));
+  scored.sort((a,b)=>(b.score-a.score)||(a.bad-b.bad)||(a.i-b.i));
+  return scored[0];
+}
+function contentScore(text){
+  try{
+    const recs=parseText(text);let sc=1000;
+    for(const r of recs.slice(0,500)){
+      if(normCounty(r.county)) sc++;
+      if(normIndustry(r.industry)) sc++;
+      if(normPeriod(r.period)) sc++;
+    }
+    return sc;
+  }catch(e){return /資料列數不足/.test(e.message)?1:0;}
+}
+function decodeBuf(buf,forced){
+  if(forced&&forced!=='auto'){
+    const u8=new Uint8Array(buf);
+    return {enc:forced,text:decodeWith(u8,forced),forced:true};
+  }
+  return decodeAuto(buf);
+}
+function loadFile(f){
+  const r=new FileReader();
+  r.onload=()=>{state.lastBuf=r.result;state.lastName=f.name;loadBuffer();};
+  r.readAsArrayBuffer(f);
+}
+function loadBuffer(){
+  if(!state.lastBuf) return;
+  const forced=$('encSel').value;
+  try{
+    const d=decodeBuf(state.lastBuf,forced);
+    const recs=parseText(d.text);
+    ingest(recs,false);
+    const bad=badRatio(d.text);
+    $('encInfo').textContent=(d.forced?'指定：':'偵測：')+(ENC_NAME[d.enc]||d.enc);
+    toast('已載入：'+state.lastName+'（編碼：'+(ENC_NAME[d.enc]||d.enc)+'）');
+    if(bad>0.002) setTimeout(()=>toast('提示：有部分字元無法解碼，若中文呈現亂碼請改用「編碼」下拉選單指定'),1900);
+  }catch(e){
+    $('encInfo').textContent='';
+    alert(e.message+(forced==='auto'?'':'\n\n目前已指定編碼，可改回「自動偵測」再試一次。'));
+  }
+}
+function loadSample(){ingest(genSample(),true);}
+
+/* ============ 設定面板 ============ */
+function openSettings(){
+  const s=state.settings;
+  $('sK').value=s.k;$('sConf').value=String(s.conf);$('sMinN').value=s.minN;$('sMinD').value=s.minD;
+  $('sRrSig').value=s.rrSig;$('sRrWatch').value=s.rrWatch;$('sAdj').value=JSON.stringify(s.adj||DEF_ADJ,null,1);
+  $('dlgSet').showModal();
+}
+function applySettings(){
+  let adj;
+  try{adj=JSON.parse($('sAdj').value);if(typeof adj!=='object'||Array.isArray(adj)||!adj) throw 0;}catch(e){alert('鄰接關係 JSON 格式錯誤');return;}
+  const n=(id,a,b,def)=>{const v=parseFloat($(id).value);return isNum(v)?clamp(v,a,b):def;};
+  const s=state.settings;
+  s.k=Math.round(n('sK',0,500,s.k));s.conf=+$('sConf').value;s.minN=Math.round(n('sMinN',1,1000,s.minN));s.minD=Math.round(n('sMinD',0,100,s.minD));
+  s.rrSig=n('sRrSig',1,5,s.rrSig);s.rrWatch=n('sRrWatch',1,5,s.rrWatch);
+  if(s.rrWatch>s.rrSig) s.rrWatch=s.rrSig;
+  const same=JSON.stringify(adj)===JSON.stringify(DEF_ADJ);s.adj=same?null:adj;
+  saveSettings();$('dlgSet').close();render();
+}
+
+/* ============ 初始化 ============ */
+function init(){
+  applyTheme();
+  $('encSel').innerHTML=ENCODINGS.map(a=>`<option value="${a[0]}">${a[1]}</option>`).join('');
+  $('encSel').onchange=()=>{if(state.lastBuf) loadBuffer();};
+  $('btnTplTop').onclick=downloadTemplate;
+  $('btnTheme').onclick=()=>{state.settings.theme=state.settings.theme==='dark'?'light':'dark';saveSettings();applyTheme();render();};
+  wireFilters();
+  $('btnUpload').onclick=()=>$('file').click();
+  $('file').onchange=e=>{const f=e.target.files[0];if(f)loadFile(f);e.target.value='';};
+  $('btnPaste').onclick=()=>$('dlgPaste').showModal();
+  $('btnPasteGo').onclick=()=>{const t=$('pasteArea').value;if(!t.trim()){alert('請先貼上資料');return;}
+    try{ingest(parseText(t),false);$('dlgPaste').close();}catch(e){alert(e.message);}};
+  $('btnSample').onclick=loadSample;
+  $('btnValid').onclick=showValid;
+  $('btnErrCsv').onclick=()=>{const v=state.valid;if(!v||!v.issues.length){toast('沒有錯誤或警告');return;}
+    download(new Blob([toCsv([['列號','等級','說明','原始內容']].concat(v.issues.map(i=>[i.line,i.level,i.msg,i.raw])))],{type:'text/csv;charset=utf-8'}),'違約熱區地圖_驗證清單.csv');};
+  $('btnSet').onclick=openSettings;
+  $('btnSetOk').onclick=applySettings;
+  $('btnReset').onclick=()=>{state.settings=Object.assign({},DEFAULTS,{metric:state.settings.metric,view:state.settings.view,theme:state.settings.theme});saveSettings();$('dlgSet').close();buildFilters();render();};
+  document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
+  const mn=$('expMenu');
+  $('btnExp').onclick=e=>{e.stopPropagation();mn.classList.toggle('open');};
+  document.addEventListener('click',()=>mn.classList.remove('open'));
+  mn.querySelectorAll('[data-x]').forEach(d=>d.onclick=()=>{mn.classList.remove('open');exportAs(d.dataset.x);});
+  addEventListener('dragover',e=>e.preventDefault());
+  addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f)loadFile(f);});
+  buildFilters();updateBadge();render();
+}
+init();
+</script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

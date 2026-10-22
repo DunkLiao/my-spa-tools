@@ -1,0 +1,2502 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SVG Pattern Studio - 向量背景紋理生成器</title>
+  <style>
+    :root {
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --bg: #090d16;
+      --bg-surface: #111827;
+      --bg-surface-elevated: #1f2937;
+      --bg-surface-hover: #283548;
+      --border: #374151;
+      --border-light: #4b5563;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-light: rgba(59, 130, 246, 0.15);
+      --accent: #ec4899;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.2), 0 2px 4px -2px rgba(0, 0, 0, 0.15);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
+      --header-height: 56px;
+      --sidebar-width: 320px;
+      --controls-width: 360px;
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-surface-elevated: #f1f5f9;
+      --bg-surface-hover: #e2e8f0;
+      --border: #e2e8f0;
+      --border-light: #cbd5e1;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --text-dim: #94a3b8;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: rgba(37, 99, 235, 0.1);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Common Button & Form Styles */
+    button, input, select {
+      font-family: inherit;
+      font-size: 0.875rem;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      padding: 0.45rem 0.85rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      transition: var(--transition);
+      user-select: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface-elevated);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    .btn-secondary:hover {
+      background: var(--bg-surface-hover);
+      border-color: var(--border-light);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+    }
+    .btn-ghost:hover {
+      background: var(--bg-surface-elevated);
+      color: var(--text);
+    }
+
+    .btn-icon {
+      padding: 0.45rem;
+      border-radius: var(--radius-sm);
+    }
+
+    .btn-sm {
+      padding: 0.3rem 0.55rem;
+      font-size: 0.775rem;
+    }
+
+    input[type="text"], input[type="number"], select {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.45rem 0.7rem;
+      color: var(--text);
+      outline: none;
+      transition: var(--transition);
+    }
+
+    input[type="text"]:focus, input[type="number"]:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-light);
+    }
+
+    /* Header */
+    header {
+      height: var(--header-height);
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.25rem;
+      z-index: 20;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-icon {
+      width: 30px;
+      height: 30px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .logo-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      background: var(--primary-light);
+      color: var(--primary);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 999px;
+      padding: 0.1rem 0.5rem;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    /* Workspace Layout */
+    .workspace {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - var(--header-height));
+      overflow: hidden;
+    }
+
+    /* Left Sidebar: Library & Saved Patterns */
+    .sidebar-left {
+      width: var(--sidebar-width);
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 10;
+    }
+
+    .sidebar-header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .sidebar-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .sidebar-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .search-input {
+      width: 100%;
+    }
+
+    .tabs-nav {
+      display: flex;
+      background: var(--bg-surface-elevated);
+      padding: 2px;
+      border-radius: var(--radius-sm);
+      gap: 2px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.775rem;
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      border-radius: 4px;
+    }
+
+    .tab-btn.active {
+      background: var(--bg-surface);
+      color: var(--text);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .patterns-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .pattern-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .pattern-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .pattern-card.active {
+      border-color: var(--primary);
+      background: var(--bg-surface-hover);
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+
+    .pattern-card-preview {
+      width: 48px;
+      height: 48px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      background-size: 24px 24px;
+      background-repeat: repeat;
+      background-position: center;
+    }
+
+    .pattern-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .pattern-card-title {
+      font-size: 0.825rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--text);
+    }
+
+    .pattern-card-meta {
+      font-size: 0.725rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 0.2rem;
+    }
+
+    .pattern-card-actions {
+      opacity: 0;
+      transition: var(--transition);
+    }
+
+    .pattern-card:hover .pattern-card-actions {
+      opacity: 1;
+    }
+
+    /* Main Viewport & Preview Canvas */
+    .viewport {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .viewport-toolbar {
+      height: 48px;
+      padding: 0 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      z-index: 10;
+    }
+
+    .toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .canvas-container {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 2rem;
+    }
+
+    /* Preview Canvas Area */
+    .pattern-stage {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s ease;
+      background-repeat: repeat;
+    }
+
+    /* Hero Mockup View */
+    .mockup-hero {
+      max-width: 860px;
+      width: 100%;
+      height: 420px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .mockup-hero-bg {
+      position: absolute;
+      inset: 0;
+      background-repeat: repeat;
+      z-index: 1;
+    }
+
+    .mockup-hero-overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.4) 0%, rgba(15, 23, 42, 0.85) 100%);
+      z-index: 2;
+    }
+
+    .mockup-hero-content {
+      position: relative;
+      z-index: 3;
+      margin: auto;
+      text-align: center;
+      padding: 2.5rem;
+      max-width: 580px;
+      color: #ffffff;
+    }
+
+    .mockup-hero-content h2 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.75rem;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+    }
+
+    .mockup-hero-content p {
+      color: #cbd5e1;
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    }
+
+    /* Card Mockup View */
+    .mockup-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+      max-width: 900px;
+      width: 100%;
+      z-index: 2;
+    }
+
+    .mockup-card-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .mockup-card-header {
+      height: 120px;
+      background-repeat: repeat;
+      position: relative;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mockup-card-body {
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .mockup-card-body h4 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .mockup-card-body p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* Right Sidebar: Controls */
+    .sidebar-right {
+      width: var(--controls-width);
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 10;
+    }
+
+    .control-section {
+      padding: 1.1rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-size: 0.775rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .form-group {
+      margin-bottom: 0.9rem;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.35rem;
+      font-size: 0.8rem;
+      color: var(--text);
+    }
+
+    .label-val {
+      font-family: monospace;
+      color: var(--text-muted);
+      font-size: 0.775rem;
+    }
+
+    .range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      accent-color: var(--primary);
+      height: 4px;
+      background: var(--bg-surface-elevated);
+      border-radius: 2px;
+      outline: none;
+    }
+
+    /* Palette Swatches */
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.6rem;
+    }
+
+    .color-picker-box {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.4rem 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .color-swatch-input {
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      width: 26px;
+      height: 26px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: none;
+      padding: 0;
+    }
+
+    .color-swatch-input::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+    .color-swatch-input::-webkit-color-swatch {
+      border: 1px solid var(--border-light);
+      border-radius: 4px;
+    }
+
+    .color-text-input {
+      flex: 1;
+      font-family: monospace;
+      font-size: 0.775rem;
+      padding: 0.2rem 0.3rem;
+      text-transform: uppercase;
+      background: transparent;
+      border: none;
+      color: var(--text);
+    }
+
+    .preset-palettes {
+      display: flex;
+      gap: 0.4rem;
+      margin-top: 0.75rem;
+      overflow-x: auto;
+      padding-bottom: 0.3rem;
+    }
+
+    .preset-pill {
+      display: flex;
+      height: 24px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.15s ease;
+    }
+
+    .preset-pill:hover {
+      transform: scale(1.06);
+    }
+
+    .preset-pill-color {
+      width: 14px;
+      height: 100%;
+    }
+
+    /* Export Buttons Box */
+    .export-box {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+    }
+
+    /* Modal Dialog */
+    dialog {
+      background: var(--bg-surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      padding: 1.5rem;
+      max-width: 600px;
+      width: 90vw;
+      margin: auto;
+      outline: none;
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(3px);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .modal-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+    }
+
+    .code-preview-area {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem;
+      font-family: monospace;
+      font-size: 0.8rem;
+      color: #93c5fd;
+      max-height: 280px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-bottom: 1.25rem;
+      user-select: all;
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--bg-surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-sm);
+      padding: 0.65rem 1rem;
+      font-size: 0.85rem;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      pointer-events: auto;
+      animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      max-width: 320px;
+    }
+
+    @keyframes toastIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .toast.hide {
+      opacity: 0;
+      transform: translateY(-8px);
+      transition: all 0.2s ease;
+    }
+
+    .toast-icon {
+      flex-shrink: 0;
+      color: var(--success);
+    }
+
+    /* Inline SVGs & Icon Helpers */
+    .icon {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    /* Empty State */
+    .empty-state {
+      padding: 2.5rem 1rem;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .empty-state p {
+      font-size: 0.85rem;
+      margin-top: 0.5rem;
+    }
+
+    @media (max-width: 1080px) {
+      .sidebar-left {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- App Header -->
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">
+        <svg class="icon" style="width:18px;height:18px;color:#fff;" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      </div>
+      <div class="logo-title">
+        SVG Pattern Studio
+        <span class="badge">v1.0 SPA</span>
+      </div>
+    </div>
+
+    <div class="header-actions">
+      <!-- Update Current Pattern (U) -->
+      <button class="btn-primary btn-sm" id="btn-update-pattern" title="儲存修改至目前樣式 (Ctrl+S)">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        儲存修改
+      </button>
+
+      <!-- Save As New Pattern (C) -->
+      <button class="btn-secondary btn-sm" id="btn-save-pattern" title="另存為全新樣式">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        另存新樣式
+      </button>
+
+      <!-- Reset Factory Defaults -->
+      <button class="btn-ghost btn-sm" id="btn-reset-factory" title="還原初始環境（恢復官方精選預設集）" style="color:var(--text-muted);">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><polyline points="3 3 3 8 8 8"/></svg>
+        還原初始
+      </button>
+
+      <!-- Import JSON -->
+      <button class="btn-ghost btn-sm" id="btn-import-json" title="匯入專案備份 JSON">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        匯入備份
+      </button>
+      <input type="file" id="input-file-import" accept=".json" style="display:none;">
+
+      <!-- Export JSON -->
+      <button class="btn-ghost btn-sm" id="btn-export-json" title="匯出完整圖庫 JSON">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        匯出備份
+      </button>
+
+      <!-- Theme Switcher -->
+      <button class="btn-ghost btn-icon" id="btn-toggle-theme" title="切換深淺模式">
+        <svg class="icon theme-icon-dark" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace Body -->
+  <div class="workspace">
+
+    <!-- Left Sidebar: Saved Library -->
+    <aside class="sidebar-left">
+      <div class="sidebar-header">
+        <div class="sidebar-title-row">
+          <div style="display:flex;align-items:center;gap:0.45rem;">
+            <span class="sidebar-title">圖樣庫</span>
+            <span id="saved-count-badge" class="badge">0</span>
+          </div>
+          <button class="btn-secondary btn-sm" id="btn-new-pattern" title="新增空白樣式草稿" style="padding:0.25rem 0.55rem;font-size:0.75rem;">
+            <svg class="icon" style="width:13px;height:13px;" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            新增
+          </button>
+        </div>
+        <input type="text" id="library-search" class="search-input" placeholder="搜尋紋理名稱或標籤...">
+        <div class="tabs-nav">
+          <button class="tab-btn active" data-filter="all">全部</button>
+          <button class="tab-btn" data-filter="grid">網格</button>
+          <button class="tab-btn" data-filter="wave">波浪</button>
+          <button class="tab-btn" data-filter="memphis">幾何</button>
+          <button class="tab-btn" data-filter="stripes">條紋</button>
+        </div>
+      </div>
+
+      <div class="patterns-list" id="library-list">
+        <!-- Rendered via JS -->
+      </div>
+    </aside>
+
+    <!-- Center Viewport -->
+    <main class="viewport">
+      <!-- Toolbar -->
+      <div class="viewport-toolbar">
+        <div class="toolbar-group">
+          <!-- View Modes -->
+          <div class="tabs-nav">
+            <button class="tab-btn active" id="view-mode-tile">
+              <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              平鋪預覽
+            </button>
+            <button class="tab-btn" id="view-mode-hero">
+              <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              Hero 橫幅
+            </button>
+            <button class="tab-btn" id="view-mode-card">
+              <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+              卡片元件
+            </button>
+          </div>
+        </div>
+
+        <div class="toolbar-group">
+          <!-- Randomize Seed Button -->
+          <button class="btn-secondary btn-sm" id="btn-random-seed" title="隨機生成種子 (亂數圖樣)">
+            🎲 隨機變換
+          </button>
+          <!-- Invert Colors -->
+          <button class="btn-ghost btn-sm" id="btn-invert-colors" title="互換背景色與前景色">
+            🔄 反轉色彩
+          </button>
+          <!-- Fullscreen or Fit scale -->
+          <select id="select-tile-scale" style="padding:0.25rem 0.5rem;font-size:0.775rem;">
+            <option value="0.5">縮放: 50%</option>
+            <option value="1" selected>縮放: 100%</option>
+            <option value="1.5">縮放: 150%</option>
+            <option value="2">縮放: 200%</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Preview Stage -->
+      <div class="canvas-container" id="canvas-container">
+        <!-- Tile Container -->
+        <div id="tile-stage" class="pattern-stage"></div>
+
+        <!-- Hero Container (Hidden by default) -->
+        <div id="hero-stage" class="mockup-hero" style="display:none;">
+          <div class="mockup-hero-bg" id="hero-stage-bg"></div>
+          <div class="mockup-hero-overlay"></div>
+          <div class="mockup-hero-content">
+            <span class="badge" style="margin-bottom:0.75rem;display:inline-block;">NEW RELEASE</span>
+            <h2>打造驚豔的數位體驗</h2>
+            <p>透過 SVG Pattern Studio 生成精確、可無限縮放的高性能向量背景紋理，無縫融入您的現代網站。</p>
+            <div style="display:flex;gap:0.75rem;justify-content:center;">
+              <button class="btn-primary" style="padding:0.6rem 1.25rem;font-size:0.9rem;">立即探索</button>
+              <button class="btn-secondary" style="padding:0.6rem 1.25rem;font-size:0.9rem;">查看文件</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cards Container (Hidden by default) -->
+        <div id="cards-stage" class="mockup-cards" style="display:none;">
+          <div class="mockup-card-item">
+            <div class="mockup-card-header card-preview-bg"></div>
+            <div class="mockup-card-body">
+              <h4>幾何視覺系統</h4>
+              <p>採用基於數學的嚴謹網格與等角點陣排版。</p>
+            </div>
+          </div>
+          <div class="mockup-card-item">
+            <div class="mockup-card-header card-preview-bg"></div>
+            <div class="mockup-card-body">
+              <h4>平滑曲線動態</h4>
+              <p>多層正弦波浪模擬大自然的有機流動感。</p>
+            </div>
+          </div>
+          <div class="mockup-card-item">
+            <div class="mockup-card-header card-preview-bg"></div>
+            <div class="mockup-card-body">
+              <h4>普普風幾何散落</h4>
+              <p>孟菲斯隨機因子為介面注入無限活力。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Right Sidebar: Interactive Controls -->
+    <aside class="sidebar-right">
+      <!-- Section 1: Type & Base -->
+      <div class="control-section">
+        <div class="section-title">
+          <span>紋理生成器</span>
+          <span id="pattern-type-badge" class="badge">Grid</span>
+        </div>
+
+        <div class="form-group">
+          <label class="label-row" for="control-category">
+            <span>圖樣類型</span>
+          </label>
+          <select id="control-category" style="width:100%;">
+            <optgroup label="幾何網格 (Grid & Dots)">
+              <option value="dots">點陣 (Dot Matrix)</option>
+              <option value="grid">方格線 (Line Grid)</option>
+              <option value="hexagon">六角蜂巢 (Hexagon)</option>
+              <option value="crosses">瑞士十字 (Crosses)</option>
+            </optgroup>
+            <optgroup label="波浪與有機線條 (Waves)">
+              <option value="sine">多層正弦波 (Sine Waves)</option>
+              <option value="concentric">同心圓弧 (Concentric Arcs)</option>
+            </optgroup>
+            <optgroup label="孟菲斯與幾何散落 (Memphis)">
+              <option value="memphis">現代孟菲斯散落 (Memphis Scatter)</option>
+            </optgroup>
+            <optgroup label="條紋與編織 (Stripes & Chevrons)">
+              <option value="stripes">斜紋條帶 (Diagonal Stripes)</option>
+              <option value="chevrons">人字斜紋 (Chevrons)</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="label-row" for="control-pattern-name">
+            <span>樣式名稱</span>
+          </label>
+          <input type="text" id="control-pattern-name" value="Modern Pattern" style="width:100%;">
+        </div>
+      </div>
+
+      <!-- Section 2: Dimensions & Geometry Controls -->
+      <div class="control-section">
+        <div class="section-title">
+          <span>尺寸與幾何參數</span>
+        </div>
+
+        <!-- Size / Dimensions -->
+        <div class="form-group">
+          <div class="label-row">
+            <span>平鋪單元大小 (Tile Size)</span>
+            <span class="label-val" id="val-tile-size">60px</span>
+          </div>
+          <div class="range-wrap">
+            <input type="range" id="param-tile-size" min="20" max="240" step="4" value="60">
+          </div>
+        </div>
+
+        <!-- Element Size -->
+        <div class="form-group">
+          <div class="label-row">
+            <span>元素尺寸 (Element Size)</span>
+            <span class="label-val" id="val-elem-size">6px</span>
+          </div>
+          <div class="range-wrap">
+            <input type="range" id="param-elem-size" min="1" max="80" step="1" value="6">
+          </div>
+        </div>
+
+        <!-- Stroke Width -->
+        <div class="form-group">
+          <div class="label-row">
+            <span>筆觸寬度 (Stroke Width)</span>
+            <span class="label-val" id="val-stroke-width">1.5px</span>
+          </div>
+          <div class="range-wrap">
+            <input type="range" id="param-stroke-width" min="0" max="10" step="0.5" value="1.5">
+          </div>
+        </div>
+
+        <!-- Rotation Angle -->
+        <div class="form-group">
+          <div class="label-row">
+            <span>旋轉角度 (Rotation)</span>
+            <span class="label-val" id="val-angle">0°</span>
+          </div>
+          <div class="range-wrap">
+            <input type="range" id="param-angle" min="0" max="360" step="5" value="0">
+          </div>
+        </div>
+
+        <!-- Opacity -->
+        <div class="form-group">
+          <div class="label-row">
+            <span>不透明度 (Opacity)</span>
+            <span class="label-val" id="val-opacity">1.0</span>
+          </div>
+          <div class="range-wrap">
+            <input type="range" id="param-opacity" min="0.1" max="1" step="0.05" value="1">
+          </div>
+        </div>
+
+        <!-- Frequency / Wave Density (Dynamic) -->
+        <div class="form-group" id="group-wave-freq">
+          <div class="label-row">
+            <span>密度 / 波頻 (Density / Freq)</span>
+            <span class="label-val" id="val-density">3</span>
+          </div>
+          <div class="range-wrap">
+            <input type="range" id="param-density" min="1" max="8" step="1" value="3">
+          </div>
+        </div>
+
+        <!-- Random Seed -->
+        <div class="form-group">
+          <div class="label-row">
+            <span>亂數種子 (Seed)</span>
+            <span class="label-val" id="val-seed">42</span>
+          </div>
+          <div class="range-wrap">
+            <input type="range" id="param-seed" min="1" max="999" step="1" value="42">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Colors & Palettes -->
+      <div class="control-section">
+        <div class="section-title">
+          <span>色彩設定</span>
+        </div>
+
+        <div class="palette-grid">
+          <!-- Background Color -->
+          <div class="color-picker-box">
+            <input type="color" class="color-swatch-input" id="color-bg" value="#0f172a">
+            <input type="text" class="color-text-input" id="text-color-bg" value="#0F172A">
+          </div>
+          <!-- Primary Color -->
+          <div class="color-picker-box">
+            <input type="color" class="color-swatch-input" id="color-primary" value="#38bdf8">
+            <input type="text" class="color-text-input" id="text-color-primary" value="#38BDF8">
+          </div>
+          <!-- Secondary Color -->
+          <div class="color-picker-box">
+            <input type="color" class="color-swatch-input" id="color-secondary" value="#818cf8">
+            <input type="text" class="color-text-input" id="text-color-secondary" value="#818CF8">
+          </div>
+          <!-- Accent Color -->
+          <div class="color-picker-box">
+            <input type="color" class="color-swatch-input" id="color-accent" value="#f43f5e">
+            <input type="text" class="color-text-input" id="text-color-accent" value="#F43F5E">
+          </div>
+        </div>
+
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem;">精選配色預設集：</div>
+        <div class="preset-palettes" id="preset-palettes-container">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Section 4: Export Suite -->
+      <div class="control-section" style="border-bottom:none;">
+        <div class="section-title">
+          <span>導出與生成</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0.75rem;">
+          <label class="label-row" for="select-svg-format">
+            <span>SVG 格式模式</span>
+          </label>
+          <select id="select-svg-format" style="width:100%;">
+            <option value="tiled" selected>平鋪畫布 (Tiled Canvas, 1200×800) - 推薦</option>
+            <option value="tile">單一圖塊 (Single Tile Unit, 含 viewBox)</option>
+          </select>
+        </div>
+
+        <div class="export-box">
+          <button class="btn-primary btn-sm" id="btn-copy-svg">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            複製 SVG
+          </button>
+          <button class="btn-secondary btn-sm" id="btn-copy-css">
+            <svg class="icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            複製 CSS URI
+          </button>
+          <button class="btn-secondary btn-sm" id="btn-download-svg">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            下載 .SVG
+          </button>
+          <button class="btn-secondary btn-sm" id="btn-download-png">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            下載 .PNG
+          </button>
+        </div>
+
+        <button class="btn-ghost btn-sm" id="btn-inspect-code" style="width:100%;margin-top:0.6rem;">
+          <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          檢視 SVG 原始代碼
+        </button>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- SVG Code Inspector Dialog -->
+  <dialog id="dialog-code">
+    <div class="modal-header">
+      <div class="modal-title">SVG 原始代碼</div>
+      <div class="tabs-nav" style="margin-left:auto;margin-right:1rem;">
+        <button class="tab-btn active" id="modal-tab-tiled">平鋪畫布 (Tiled)</button>
+        <button class="tab-btn" id="modal-tab-tile">單一圖塊 (Tile)</button>
+      </div>
+      <button class="btn-ghost btn-icon" id="btn-close-dialog">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="code-preview-area" id="dialog-code-content"></div>
+    <div style="display:flex;justify-content:flex-end;gap:0.6rem;">
+      <button class="btn-secondary" id="dialog-copy-btn">複製代碼</button>
+      <button class="btn-primary" id="dialog-close-btn">關閉</button>
+    </div>
+  </dialog>
+
+  <!-- Save Pattern Confirmation Dialog -->
+  <dialog id="dialog-save">
+    <div class="modal-header">
+      <div class="modal-title">另存紋理至圖庫</div>
+      <button class="btn-ghost btn-icon" id="btn-close-save-dialog">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="form-group">
+      <label class="label-row" for="save-input-name"><span>紋理名稱</span></label>
+      <input type="text" id="save-input-name" style="width:100%;" placeholder="例如：Cyberpunk Grid">
+    </div>
+    <div class="form-group" style="margin-bottom:1.5rem;">
+      <label class="label-row" for="save-input-tag"><span>分類標籤 (以逗號分隔)</span></label>
+      <input type="text" id="save-input-tag" style="width:100%;" placeholder="例如：Dark, Tech, Minimal">
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:0.6rem;">
+      <button class="btn-secondary" id="btn-cancel-save">取消</button>
+      <button class="btn-primary" id="btn-confirm-save">確認儲存</button>
+    </div>
+  </dialog>
+
+  <!-- Edit Pattern Meta Dialog (Update Name/Tags) -->
+  <dialog id="dialog-edit-meta">
+    <div class="modal-header">
+      <div class="modal-title">編輯圖樣資訊</div>
+      <button class="btn-ghost btn-icon" id="btn-close-edit-dialog">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <input type="hidden" id="edit-meta-id">
+    <div class="form-group">
+      <label class="label-row" for="edit-input-name"><span>紋理名稱</span></label>
+      <input type="text" id="edit-input-name" style="width:100%;">
+    </div>
+    <div class="form-group" style="margin-bottom:1.5rem;">
+      <label class="label-row" for="edit-input-tag"><span>分類標籤 (以逗號分隔)</span></label>
+      <input type="text" id="edit-input-tag" style="width:100%;">
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:0.6rem;">
+      <button class="btn-secondary" id="btn-cancel-edit-meta">取消</button>
+      <button class="btn-primary" id="btn-confirm-edit-meta">儲存修改</button>
+    </div>
+  </dialog>
+
+  <!-- Reset Factory Defaults Dialog -->
+  <dialog id="dialog-confirm-reset">
+    <div class="modal-header">
+      <div class="modal-title" style="color:var(--danger);display:flex;align-items:center;gap:0.4rem;">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        還原初始環境
+      </div>
+      <button class="btn-ghost btn-icon" id="btn-close-reset-dialog">
+        <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="font-size:0.875rem;color:var(--text-muted);margin-bottom:1.25rem;line-height:1.6;">
+      確定要還原為系統初始環境嗎？<br>
+      這將會<strong>清空本地 IndexedDB 中的所有自訂紋理</strong>，並重新載入 6 款官方精選設計預設。此操作無法復原。
+    </p>
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <button class="btn-ghost btn-sm" id="btn-reset-backup-first" style="font-size:0.8rem;">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        先匯出備份 JSON
+      </button>
+      <div style="display:flex;gap:0.6rem;">
+        <button class="btn-secondary" id="btn-cancel-reset">取消</button>
+        <button class="btn-primary" id="btn-confirm-reset" style="background:var(--danger);border-color:var(--danger);">確定還原</button>
+      </div>
+    </div>
+  </dialog>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- JavaScript: IndexedDB, Pattern Engine & UI Logic -->
+  <script>
+    /* ==========================================================================
+       1. IndexedDB Helper Class (Promise-based)
+       ========================================================================== */
+    class MiniDB {
+      constructor(dbName = 'SVGPatternStudioDB', version = 1, stores = ['patterns']) {
+        this.dbName = dbName;
+        this.version = version;
+        this.stores = stores;
+        this.db = null;
+      }
+
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(this.dbName, this.version);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            this.stores.forEach(storeName => {
+              if (!db.objectStoreNames.contains(storeName)) {
+                const store = db.createObjectStore(storeName, { keyPath: 'id' });
+                store.createIndex('category', 'category', { unique: false });
+                store.createIndex('updatedAt', 'updatedAt', { unique: false });
+              }
+            });
+          };
+          req.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve(this.db);
+          };
+          req.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      getStore(storeName, mode = 'readonly') {
+        const tx = this.db.transaction(storeName, mode);
+        return tx.objectStore(storeName);
+      }
+
+      async getAll(storeName = 'patterns') {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readonly');
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async put(storeName, item) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readwrite');
+          const req = store.put(item);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async delete(storeName, key) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readwrite');
+          const req = store.delete(key);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async clear(storeName = 'patterns') {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readwrite');
+          const req = store.clear();
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async exportAll() {
+        await this.init();
+        const backup = {};
+        for (const name of this.db.objectStoreNames) {
+          backup[name] = await this.getAll(name);
+        }
+        return backup;
+      }
+
+      async importAll(data) {
+        await this.init();
+        for (const storeName of Object.keys(data)) {
+          if (!this.db.objectStoreNames.contains(storeName)) continue;
+          const items = data[storeName] || [];
+          for (const item of items) {
+            await this.put(storeName, item);
+          }
+        }
+      }
+    }
+
+    const db = new MiniDB();
+
+    /* ==========================================================================
+       2. Default Presets & Harmonic Palettes
+       ========================================================================== */
+    const PRESET_PALETTES = [
+      { name: "Cyberpunk", colors: ["#0f172a", "#38bdf8", "#818cf8", "#f43f5e"] },
+      { name: "Emerald Tech", colors: ["#064e3b", "#34d399", "#10b981", "#a7f3d0"] },
+      { name: "Sunset Orange", colors: ["#1c1917", "#f97316", "#fbbf24", "#fda4af"] },
+      { name: "Nordic Frost", colors: ["#f8fafc", "#0284c7", "#64748b", "#38bdf8"] },
+      { name: "Amethyst Violet", colors: ["#1e1b4b", "#c084fc", "#a855f7", "#ec4899"] },
+      { name: "Minimal Mono", colors: ["#18181b", "#71717a", "#a1a1aa", "#ffffff"] }
+    ];
+
+    const DEFAULT_PRESETS = [
+      {
+        id: "preset_cyber_grid",
+        name: "Cyberpunk Neon Grid",
+        category: "grid",
+        tileSize: 64,
+        elemSize: 2,
+        strokeWidth: 1.5,
+        angle: 0,
+        opacity: 0.9,
+        density: 2,
+        seed: 42,
+        colors: { background: "#090d16", primary: "#38bdf8", secondary: "#818cf8", accent: "#f43f5e" },
+        tags: ["Grid", "Tech", "Dark"],
+        updatedAt: Date.now() - 50000
+      },
+      {
+        id: "preset_dot_matrix",
+        name: "Minimalist Dot Matrix",
+        category: "dots",
+        tileSize: 36,
+        elemSize: 5,
+        strokeWidth: 1,
+        angle: 45,
+        opacity: 0.75,
+        density: 1,
+        seed: 128,
+        colors: { background: "#0f172a", primary: "#60a5fa", secondary: "#3b82f6", accent: "#93c5fd" },
+        tags: ["Dots", "Minimal", "Clean"],
+        updatedAt: Date.now() - 40000
+      },
+      {
+        id: "preset_wave_contour",
+        name: "Liquid Flow Waves",
+        category: "sine",
+        tileSize: 80,
+        elemSize: 12,
+        strokeWidth: 2,
+        angle: 0,
+        opacity: 0.85,
+        density: 4,
+        seed: 256,
+        colors: { background: "#030712", primary: "#2dd4bf", secondary: "#06b6d4", accent: "#67e8f9" },
+        tags: ["Wave", "Flow", "Modern"],
+        updatedAt: Date.now() - 30000
+      },
+      {
+        id: "preset_memphis_pop",
+        name: "Memphis Geometric Pop",
+        category: "memphis",
+        tileSize: 100,
+        elemSize: 14,
+        strokeWidth: 2.5,
+        angle: 15,
+        opacity: 0.95,
+        density: 5,
+        seed: 777,
+        colors: { background: "#18181b", primary: "#f43f5e", secondary: "#fbbf24", accent: "#38bdf8" },
+        tags: ["Memphis", "Retro", "Fun"],
+        updatedAt: Date.now() - 20000
+      },
+      {
+        id: "preset_hex_carbon",
+        name: "Hexagonal Carbon Lattice",
+        category: "hexagon",
+        tileSize: 56,
+        elemSize: 10,
+        strokeWidth: 1.5,
+        angle: 0,
+        opacity: 0.7,
+        density: 1,
+        seed: 88,
+        colors: { background: "#020617", primary: "#38bdf8", secondary: "#1e293b", accent: "#0ea5e9" },
+        tags: ["Hexagon", "Sci-Fi", "Carbon"],
+        updatedAt: Date.now() - 10000
+      },
+      {
+        id: "preset_swiss_crosses",
+        name: "Swiss Architecture Crosses",
+        category: "crosses",
+        tileSize: 48,
+        elemSize: 12,
+        strokeWidth: 2,
+        angle: 0,
+        opacity: 0.8,
+        density: 1,
+        seed: 11,
+        colors: { background: "#111827", primary: "#ef4444", secondary: "#6b7280", accent: "#ffffff" },
+        tags: ["Swiss", "Minimal", "Cross"],
+        updatedAt: Date.now()
+      }
+    ];
+
+    /* ==========================================================================
+       3. Deterministic Pseudo-Random Number Generator (PRNG)
+       ========================================================================== */
+    function createPRNG(seed = 42) {
+      let s = Math.abs(seed) || 1;
+      return function next() {
+        s = (s * 16807) % 2147483647;
+        return (s - 1) / 2147483646;
+      };
+    }
+
+    /* ==========================================================================
+       4. Pattern Generators Engine (Pure SVG)
+       ========================================================================== */
+    const PatternEngine = {
+      // Generate Dots Pattern
+      dots(params) {
+        const { tileSize, elemSize, strokeWidth, colors, opacity, angle } = params;
+        const r = Math.max(0.5, elemSize / 2);
+        const w = tileSize;
+        const h = tileSize;
+
+        let content = `
+          <g transform="rotate(${angle} ${w/2} ${h/2})" opacity="${opacity}">
+            <circle cx="${w/2}" cy="${h/2}" r="${r}" fill="${colors.primary}" />
+            <circle cx="0" cy="0" r="${r}" fill="${colors.secondary}" />
+            <circle cx="${w}" cy="0" r="${r}" fill="${colors.secondary}" />
+            <circle cx="0" cy="${h}" r="${r}" fill="${colors.secondary}" />
+            <circle cx="${w}" cy="${h}" r="${r}" fill="${colors.secondary}" />
+          </g>
+        `;
+        return { w, h, content };
+      },
+
+      // Generate Line Grid Pattern
+      grid(params) {
+        const { tileSize, strokeWidth, colors, opacity, angle } = params;
+        const w = tileSize;
+        const h = tileSize;
+
+        let content = `
+          <g transform="rotate(${angle} ${w/2} ${h/2})" opacity="${opacity}">
+            <path d="M ${w} 0 L 0 0 0 ${h}" fill="none" stroke="${colors.primary}" stroke-width="${strokeWidth}" />
+            <circle cx="${w}" cy="${h}" r="${Math.max(1, strokeWidth * 1.2)}" fill="${colors.accent}" />
+          </g>
+        `;
+        return { w, h, content };
+      },
+
+      // Generate Hexagon Pattern
+      hexagon(params) {
+        const { tileSize, strokeWidth, colors, opacity, angle } = params;
+        const w = tileSize;
+        const h = Math.round(tileSize * 1.73205 / 2); // sqrt(3)/2 ratio
+        const r = tileSize / 3;
+
+        // Regular hexagon point calculations
+        const hexPoints = (cx, cy, radius) => {
+          const pts = [];
+          for (let i = 0; i < 6; i++) {
+            const rad = (Math.PI / 3) * i;
+            pts.push(`${(cx + radius * Math.cos(rad)).toFixed(2)},${(cy + radius * Math.sin(rad)).toFixed(2)}`);
+          }
+          return pts.join(" ");
+        };
+
+        let content = `
+          <g transform="rotate(${angle} ${w/2} ${h/2})" opacity="${opacity}">
+            <polygon points="${hexPoints(w/2, h/2, r)}" fill="none" stroke="${colors.primary}" stroke-width="${strokeWidth}" />
+            <polygon points="${hexPoints(0, 0, r)}" fill="none" stroke="${colors.secondary}" stroke-width="${strokeWidth}" />
+            <polygon points="${hexPoints(w, 0, r)}" fill="none" stroke="${colors.secondary}" stroke-width="${strokeWidth}" />
+            <polygon points="${hexPoints(0, h, r)}" fill="none" stroke="${colors.secondary}" stroke-width="${strokeWidth}" />
+            <polygon points="${hexPoints(w, h, r)}" fill="none" stroke="${colors.secondary}" stroke-width="${strokeWidth}" />
+          </g>
+        `;
+        return { w, h, content };
+      },
+
+      // Generate Swiss Crosses
+      crosses(params) {
+        const { tileSize, elemSize, strokeWidth, colors, opacity, angle } = params;
+        const w = tileSize;
+        const h = tileSize;
+        const arm = elemSize;
+        const cx = w / 2;
+        const cy = h / 2;
+
+        let content = `
+          <g transform="rotate(${angle} ${cx} ${cy})" opacity="${opacity}">
+            <!-- Center Cross -->
+            <path d="M ${cx - arm/2} ${cy} h ${arm} M ${cx} ${cy - arm/2} v ${arm}" stroke="${colors.primary}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+            <!-- Corner Crosses -->
+            <path d="M ${-arm/2} 0 h ${arm} M 0 ${-arm/2} v ${arm}" stroke="${colors.secondary}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+            <path d="M ${w-arm/2} 0 h ${arm} M ${w} ${-arm/2} v ${arm}" stroke="${colors.secondary}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+            <path d="M ${-arm/2} ${h} h ${arm} M 0 ${h-arm/2} v ${arm}" stroke="${colors.secondary}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+            <path d="M ${w-arm/2} ${h} h ${arm} M ${w} ${h-arm/2} v ${arm}" stroke="${colors.secondary}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+          </g>
+        `;
+        return { w, h, content };
+      },
+
+      // Generate Sine Waves
+      sine(params) {
+        const { tileSize, elemSize, strokeWidth, density, colors, opacity, angle } = params;
+        const w = tileSize;
+        const h = tileSize;
+        const layers = Math.max(1, density);
+        const amp = elemSize;
+
+        let paths = '';
+        for (let i = 0; i < layers; i++) {
+          const y = (h / layers) * (i + 0.5);
+          const color = i % 2 === 0 ? colors.primary : colors.secondary;
+          paths += `
+            <path d="M 0 ${y} Q ${w/4} ${y - amp}, ${w/2} ${y} T ${w} ${y}" 
+                  fill="none" stroke="${color}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+          `;
+        }
+
+        let content = `
+          <g transform="rotate(${angle} ${w/2} ${h/2})" opacity="${opacity}">
+            ${paths}
+          </g>
+        `;
+        return { w, h, content };
+      },
+
+      // Concentric Arcs
+      concentric(params) {
+        const { tileSize, strokeWidth, density, colors, opacity, angle } = params;
+        const w = tileSize;
+        const h = tileSize;
+        const rings = Math.max(2, density + 1);
+        let paths = '';
+
+        for (let i = 1; i <= rings; i++) {
+          const r = (w / rings) * i * 0.5;
+          const stroke = i % 2 === 0 ? colors.primary : colors.secondary;
+          paths += `<circle cx="0" cy="0" r="${r}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+          paths += `<circle cx="${w}" cy="${h}" r="${r}" fill="none" stroke="${stroke}" stroke-width="${strokeWidth}" />`;
+        }
+
+        let content = `
+          <g transform="rotate(${angle} ${w/2} ${h/2})" opacity="${opacity}">
+            ${paths}
+          </g>
+        `;
+        return { w, h, content };
+      },
+
+      // Memphis Pop Scatter
+      memphis(params) {
+        const { tileSize, elemSize, strokeWidth, colors, opacity, density, seed } = params;
+        const w = tileSize;
+        const h = tileSize;
+        const rng = createPRNG(seed);
+        const count = Math.max(3, density * 2);
+
+        let elements = '';
+        const colorPalette = [colors.primary, colors.secondary, colors.accent];
+
+        for (let i = 0; i < count; i++) {
+          const cx = Math.floor(rng() * w);
+          const cy = Math.floor(rng() * h);
+          const rot = Math.floor(rng() * 360);
+          const s = elemSize * (0.6 + rng() * 0.8);
+          const col = colorPalette[Math.floor(rng() * colorPalette.length)];
+          const shapeType = Math.floor(rng() * 4); // 0: Ring, 1: Plus, 2: Triangle, 3: Zigzag
+
+          if (shapeType === 0) {
+            elements += `<circle cx="${cx}" cy="${cy}" r="${s/2}" fill="none" stroke="${col}" stroke-width="${strokeWidth}" />`;
+          } else if (shapeType === 1) {
+            elements += `
+              <g transform="translate(${cx}, ${cy}) rotate(${rot})">
+                <line x1="${-s/2}" y1="0" x2="${s/2}" y2="0" stroke="${col}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+                <line x1="0" y1="${-s/2}" x2="0" y2="${s/2}" stroke="${col}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+              </g>`;
+          } else if (shapeType === 2) {
+            const hTriangle = s * 0.866;
+            elements += `
+              <polygon points="${cx},${cy - hTriangle/2} ${cx - s/2},${cy + hTriangle/2} ${cx + s/2},${cy + hTriangle/2}" 
+                       fill="none" stroke="${col}" stroke-width="${strokeWidth}" transform="rotate(${rot} ${cx} ${cy})" />`;
+          } else {
+            elements += `
+              <g transform="translate(${cx}, ${cy}) rotate(${rot})">
+                <path d="M ${-s/2} 0 L ${-s/4} ${-s/4} L 0 0 L ${s/4} ${-s/4} L ${s/2} 0" 
+                      fill="none" stroke="${col}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+              </g>`;
+          }
+        }
+
+        let content = `<g opacity="${opacity}">${elements}</g>`;
+        return { w, h, content };
+      },
+
+      // Diagonal Stripes
+      stripes(params) {
+        const { tileSize, strokeWidth, elemSize, colors, opacity, angle } = params;
+        const w = tileSize;
+        const h = tileSize;
+        const gap = Math.max(4, elemSize);
+
+        let paths = '';
+        for (let x = -w; x < w * 2; x += gap) {
+          paths += `<line x1="${x}" y1="0" x2="${x + w}" y2="${h}" stroke="${colors.primary}" stroke-width="${strokeWidth}" />`;
+        }
+
+        let content = `
+          <g transform="rotate(${angle} ${w/2} ${h/2})" opacity="${opacity}">
+            ${paths}
+          </g>
+        `;
+        return { w, h, content };
+      },
+
+      // Chevrons (Herringbone Zigzag)
+      chevrons(params) {
+        const { tileSize, elemSize, strokeWidth, colors, opacity, angle } = params;
+        const w = tileSize;
+        const h = tileSize;
+        const step = Math.max(8, elemSize);
+
+        let paths = '';
+        for (let y = 0; y <= h; y += step) {
+          paths += `
+            <polyline points="0,${y} ${w/2},${y + step/2} ${w},${y}" fill="none" stroke="${colors.primary}" stroke-width="${strokeWidth}" stroke-linecap="round" />
+          `;
+        }
+
+        let content = `
+          <g transform="rotate(${angle} ${w/2} ${h/2})" opacity="${opacity}">
+            ${paths}
+          </g>
+        `;
+        return { w, h, content };
+      }
+    };
+
+    /* Build Single Tile SVG XML (Used for CSS Data URI and Single Tile export) */
+    function buildTileSVGXml(state) {
+      const generator = PatternEngine[state.category] || PatternEngine.dots;
+      const { w, h, content } = generator(state);
+      const bg = state.colors.background;
+
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <rect width="100%" height="100%" fill="${bg}"/>
+  ${content.trim()}
+</svg>`;
+    }
+
+    /* Build Tiled Artboard SVG XML (Embeds <defs><pattern> - renders repeating pattern seamlessly) */
+    function buildTiledSVGXml(state, width = 1200, height = 800) {
+      const generator = PatternEngine[state.category] || PatternEngine.dots;
+      const { w, h, content } = generator(state);
+      const bg = state.colors.background;
+      const patternId = `studio-pat-${state.category}-${state.seed || 1}`;
+
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 ${width} ${height}">
+  <defs>
+    <pattern id="${patternId}" width="${w}" height="${h}" patternUnits="userSpaceOnUse">
+      ${content.trim()}
+    </pattern>
+  </defs>
+  <!-- 背景底色 -->
+  <rect width="100%" height="100%" fill="${bg}"/>
+  <!-- 向量無縫平鋪 -->
+  <rect width="100%" height="100%" fill="url(#${patternId})"/>
+</svg>`;
+    }
+
+    /* Backwards compatibility helper */
+    function buildSVGXml(state, mode = 'tile') {
+      return mode === 'tiled' ? buildTiledSVGXml(state) : buildTileSVGXml(state);
+    }
+
+    /* Build SVG as CSS Data URI */
+    function buildCSSDataUri(svgXml) {
+      const encoded = encodeURIComponent(svgXml)
+        .replace(/'/g, "%27")
+        .replace(/"/g, "%22");
+      return `data:image/svg+xml,${encoded}`;
+    }
+
+    /* ==========================================================================
+       5. Application State & Controller
+       ========================================================================== */
+    const appState = {
+      id: "active_pattern",
+      name: "Cyberpunk Neon Grid",
+      category: "grid",
+      tileSize: 64,
+      elemSize: 2,
+      strokeWidth: 1.5,
+      angle: 0,
+      opacity: 0.9,
+      density: 2,
+      seed: 42,
+      colors: {
+        background: "#090d16",
+        primary: "#38bdf8",
+        secondary: "#818cf8",
+        accent: "#f43f5e"
+      },
+      tags: ["Grid", "Tech"],
+      viewMode: "tile", // 'tile' | 'hero' | 'card'
+      scale: 1,
+      theme: "dark"
+    };
+
+    let savedPatterns = [];
+    let currentFilter = "all";
+
+    /* ==========================================================================
+       6. UI Notifications (Toast)
+       ========================================================================== */
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      
+      const iconSvg = type === 'success' 
+        ? `<svg class="icon toast-icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`
+        : `<svg class="icon toast-icon" style="color:var(--danger)" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+
+      toast.innerHTML = `${iconSvg}<span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 250);
+      }, 2600);
+    }
+
+    /* ==========================================================================
+       7. Render & Sync View
+       ========================================================================== */
+    function renderPreview() {
+      const svgXml = buildSVGXml(appState);
+      const dataUri = buildCSSDataUri(svgXml);
+      const bgSize = `${appState.tileSize * appState.scale}px`;
+
+      // Update Tile Stage
+      const tileStage = document.getElementById('tile-stage');
+      tileStage.style.backgroundImage = `url("${dataUri}")`;
+      tileStage.style.backgroundColor = appState.colors.background;
+      tileStage.style.backgroundSize = bgSize;
+
+      // Update Hero Mockup Stage
+      const heroBg = document.getElementById('hero-stage-bg');
+      heroBg.style.backgroundImage = `url("${dataUri}")`;
+      heroBg.style.backgroundColor = appState.colors.background;
+      heroBg.style.backgroundSize = bgSize;
+
+      // Update Card Mockup Stage
+      const cardHeaders = document.querySelectorAll('.card-preview-bg');
+      cardHeaders.forEach(el => {
+        el.style.backgroundImage = `url("${dataUri}")`;
+        el.style.backgroundColor = appState.colors.background;
+        el.style.backgroundSize = bgSize;
+      });
+
+      // Update Category Badge
+      document.getElementById('pattern-type-badge').textContent = appState.category.toUpperCase();
+
+      // Update Value Displays
+      document.getElementById('val-tile-size').textContent = `${appState.tileSize}px`;
+      document.getElementById('val-elem-size').textContent = `${appState.elemSize}px`;
+      document.getElementById('val-stroke-width').textContent = `${appState.strokeWidth}px`;
+      document.getElementById('val-angle').textContent = `${appState.angle}°`;
+      document.getElementById('val-opacity').textContent = appState.opacity.toFixed(2);
+      document.getElementById('val-density').textContent = appState.density;
+      document.getElementById('val-seed').textContent = appState.seed;
+
+      // Show/Hide Density Control based on category
+      const densityGroup = document.getElementById('group-wave-freq');
+      if (['sine', 'concentric', 'memphis'].includes(appState.category)) {
+        densityGroup.style.display = 'block';
+      } else {
+        densityGroup.style.display = 'none';
+      }
+    }
+
+    /* Sync Controls with State */
+    function syncControlsFromState() {
+      document.getElementById('control-category').value = appState.category;
+      document.getElementById('control-pattern-name').value = appState.name;
+      document.getElementById('param-tile-size').value = appState.tileSize;
+      document.getElementById('param-elem-size').value = appState.elemSize;
+      document.getElementById('param-stroke-width').value = appState.strokeWidth;
+      document.getElementById('param-angle').value = appState.angle;
+      document.getElementById('param-opacity').value = appState.opacity;
+      document.getElementById('param-density').value = appState.density;
+      document.getElementById('param-seed').value = appState.seed;
+
+      // Colors
+      document.getElementById('color-bg').value = appState.colors.background;
+      document.getElementById('text-color-bg').value = appState.colors.background.toUpperCase();
+      document.getElementById('color-primary').value = appState.colors.primary;
+      document.getElementById('text-color-primary').value = appState.colors.primary.toUpperCase();
+      document.getElementById('color-secondary').value = appState.colors.secondary;
+      document.getElementById('text-color-secondary').value = appState.colors.secondary.toUpperCase();
+      document.getElementById('color-accent').value = appState.colors.accent;
+      document.getElementById('text-color-accent').value = appState.colors.accent.toUpperCase();
+
+      renderPreview();
+    }
+
+    /* Render Sidebar Saved List */
+    function renderLibraryList() {
+      const listEl = document.getElementById('library-list');
+      const searchVal = document.getElementById('library-search').value.toLowerCase().trim();
+
+      const filtered = savedPatterns.filter(p => {
+        const matchesCategory = currentFilter === 'all' || p.category.includes(currentFilter);
+        const matchesSearch = !searchVal || 
+          p.name.toLowerCase().includes(searchVal) || 
+          (p.tags && p.tags.some(t => t.toLowerCase().includes(searchVal)));
+        return matchesCategory && matchesSearch;
+      });
+
+      document.getElementById('saved-count-badge').textContent = savedPatterns.length;
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="empty-state">
+            <svg class="icon" style="width:36px;height:36px;opacity:0.4;" viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+            <p>無符合的紋理樣式</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(item => {
+        const svgXml = buildSVGXml(item);
+        const dataUri = buildCSSDataUri(svgXml);
+        const isActive = item.id === appState.id ? 'active' : '';
+
+        return `
+          <div class="pattern-card ${isActive}" data-id="${item.id}">
+            <div class="pattern-card-preview" style="background-image:url('${dataUri}');background-color:${item.colors.background};"></div>
+            <div class="pattern-card-info">
+              <div class="pattern-card-title">${escapeHtml(item.name)}</div>
+              <div class="pattern-card-meta">
+                <span>${item.category.toUpperCase()}</span>
+                <span>•</span>
+                <span>${item.tileSize}px</span>
+              </div>
+            </div>
+            <div class="pattern-card-actions" style="display:flex;align-items:center;gap:2px;">
+              <button class="btn-ghost btn-icon btn-edit-pattern" data-id="${item.id}" title="重新命名與標籤">
+                <svg class="icon" style="width:13px;height:13px;color:var(--text-muted);" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+              </button>
+              <button class="btn-ghost btn-icon btn-delete-pattern" data-id="${item.id}" title="刪除樣式">
+                <svg class="icon" style="width:13px;height:13px;color:var(--danger);" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Bind card clicks (Read)
+      listEl.querySelectorAll('.pattern-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.pattern-card-actions')) return;
+          const id = card.dataset.id;
+          const targetPattern = savedPatterns.find(p => p.id === id);
+          if (targetPattern) {
+            Object.assign(appState, JSON.parse(JSON.stringify(targetPattern)));
+            syncControlsFromState();
+            renderLibraryList();
+            showToast(`已載入「${targetPattern.name}」`);
+          }
+        });
+      });
+
+      // Bind edit button (Update Name & Tags)
+      listEl.querySelectorAll('.btn-edit-pattern').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const target = savedPatterns.find(p => p.id === id);
+          if (!target) return;
+          document.getElementById('edit-meta-id').value = target.id;
+          document.getElementById('edit-input-name').value = target.name;
+          document.getElementById('edit-input-tag').value = (target.tags || []).join(', ');
+          document.getElementById('dialog-edit-meta').showModal();
+        });
+      });
+
+      // Bind delete button (Delete)
+      listEl.querySelectorAll('.btn-delete-pattern').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const target = savedPatterns.find(p => p.id === id);
+          const name = target ? target.name : '此樣式';
+          if (confirm(`確定要刪除「${name}」嗎？此操作無法復原。`)) {
+            await db.delete('patterns', id);
+            savedPatterns = savedPatterns.filter(p => p.id !== id);
+            if (appState.id === id) {
+              if (savedPatterns.length > 0) {
+                Object.assign(appState, JSON.parse(JSON.stringify(savedPatterns[0])));
+                syncControlsFromState();
+              } else {
+                handleNewPattern();
+              }
+            }
+            renderLibraryList();
+            showToast(`已刪除「${name}」`);
+          }
+        });
+      });
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[s]));
+    }
+
+    /* Render Preset Harmonic Palettes */
+    function renderPalettePresets() {
+      const container = document.getElementById('preset-palettes-container');
+      container.innerHTML = PRESET_PALETTES.map(p => `
+        <div class="preset-pill" title="${p.name}" data-palette='${JSON.stringify(p.colors)}'>
+          ${p.colors.map(c => `<div class="preset-pill-color" style="background:${c};"></div>`).join('')}
+        </div>
+      `).join('');
+
+      container.querySelectorAll('.preset-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          const colors = JSON.parse(pill.dataset.palette);
+          appState.colors.background = colors[0];
+          appState.colors.primary = colors[1];
+          appState.colors.secondary = colors[2];
+          appState.colors.accent = colors[3];
+          syncControlsFromState();
+          showToast(`已套用「${pill.title}」調色盤`);
+        });
+      });
+    }
+
+    /* ==========================================================================
+       8. Export Suite Actions
+       ========================================================================== */
+    // 1. Copy SVG XML
+    document.getElementById('btn-copy-svg').addEventListener('click', async () => {
+      const mode = document.getElementById('select-svg-format')?.value || 'tiled';
+      const svgXml = mode === 'tiled' ? buildTiledSVGXml(appState, 1200, 800) : buildTileSVGXml(appState);
+      try {
+        await navigator.clipboard.writeText(svgXml);
+        showToast(`已複製 ${mode === 'tiled' ? '平鋪畫布' : '單元圖塊'} SVG 代碼！`);
+      } catch (err) {
+        showToast('複製失敗，請使用「檢視原始碼」手動複製', 'error');
+      }
+    });
+
+    // 2. Copy CSS Background Data URI
+    document.getElementById('btn-copy-css').addEventListener('click', async () => {
+      const svgXml = buildTileSVGXml(appState);
+      const dataUri = buildCSSDataUri(svgXml);
+      const cssSnippet = `background-color: ${appState.colors.background};\nbackground-image: url("${dataUri}");\nbackground-size: ${appState.tileSize}px ${appState.tileSize}px;\nbackground-repeat: repeat;`;
+      try {
+        await navigator.clipboard.writeText(cssSnippet);
+        showToast('CSS 背景代碼已複製至剪貼簿！');
+      } catch (err) {
+        showToast('複製失敗', 'error');
+      }
+    });
+
+    // 3. Download SVG File
+    document.getElementById('btn-download-svg').addEventListener('click', () => {
+      const mode = document.getElementById('select-svg-format')?.value || 'tiled';
+      const svgXml = mode === 'tiled' ? buildTiledSVGXml(appState, 1200, 800) : buildTileSVGXml(appState);
+      const blob = new Blob([svgXml], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const suffix = mode === 'tiled' ? '-tiled' : '-tile';
+      const filename = `${appState.name.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'pattern'}${suffix}.svg`;
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast(`已下載 ${filename}（${mode === 'tiled' ? '平鋪畫布向量圖' : '單元圖塊'}）`);
+    });
+
+    // 4. Download High-Res PNG File via Canvas
+    document.getElementById('btn-download-png').addEventListener('click', () => {
+      const svgXml = buildTileSVGXml(appState);
+      const dataUri = buildCSSDataUri(svgXml);
+      const img = new Image();
+      
+      img.onload = () => {
+        const exportScale = 2; // 2x Retina
+        const canvas = document.createElement('canvas');
+        canvas.width = appState.tileSize * 4 * exportScale;
+        canvas.height = appState.tileSize * 4 * exportScale;
+        const ctx = canvas.getContext('2d');
+
+        // Tile pattern on canvas
+        const ptrn = ctx.createPattern(img, 'repeat');
+        ctx.fillStyle = ptrn;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        canvas.toBlob(blob => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const filename = `${appState.name.toLowerCase().replace(/[^a-z0-9]/g, '-') || 'pattern'}.png`;
+          a.href = url;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast(`已導出高畫質 ${filename}`);
+        }, 'image/png');
+      };
+
+      img.src = dataUri;
+    });
+
+    // 5. Inspect Code Dialog
+    const codeDialog = document.getElementById('dialog-code');
+    let codeDialogMode = 'tiled';
+
+    function updateCodeDialogContent() {
+      const code = codeDialogMode === 'tiled' 
+        ? buildTiledSVGXml(appState, 1200, 800) 
+        : buildTileSVGXml(appState);
+      document.getElementById('dialog-code-content').textContent = code;
+      document.getElementById('modal-tab-tiled').classList.toggle('active', codeDialogMode === 'tiled');
+      document.getElementById('modal-tab-tile').classList.toggle('active', codeDialogMode === 'tile');
+    }
+
+    document.getElementById('modal-tab-tiled')?.addEventListener('click', () => {
+      codeDialogMode = 'tiled';
+      updateCodeDialogContent();
+    });
+
+    document.getElementById('modal-tab-tile')?.addEventListener('click', () => {
+      codeDialogMode = 'tile';
+      updateCodeDialogContent();
+    });
+
+    document.getElementById('btn-inspect-code').addEventListener('click', () => {
+      codeDialogMode = document.getElementById('select-svg-format')?.value || 'tiled';
+      updateCodeDialogContent();
+      codeDialog.showModal();
+    });
+    document.getElementById('btn-close-dialog').addEventListener('click', () => codeDialog.close());
+    document.getElementById('dialog-close-btn').addEventListener('click', () => codeDialog.close());
+    document.getElementById('dialog-copy-btn').addEventListener('click', async () => {
+      const content = document.getElementById('dialog-code-content').textContent;
+      await navigator.clipboard.writeText(content);
+      showToast('SVG 代碼已複製！');
+      codeDialog.close();
+    });
+
+    /* ==========================================================================
+       9. CRUD & IndexedDB Management (Create, Read, Update, Delete)
+       ========================================================================== */
+    // [Create] Handle New Blank Pattern Draft
+    function handleNewPattern() {
+      const newId = `pat_${Date.now()}`;
+      const newPattern = {
+        id: newId,
+        name: `新幾何樣式 ${savedPatterns.length + 1}`,
+        category: 'dots',
+        tileSize: 48,
+        elemSize: 6,
+        strokeWidth: 1.5,
+        angle: 0,
+        opacity: 0.9,
+        density: 2,
+        seed: Math.floor(Math.random() * 999) + 1,
+        colors: {
+          background: '#0b132b',
+          primary: '#48cae4',
+          secondary: '#0077b6',
+          accent: '#ff006e'
+        },
+        tags: ['Custom'],
+        isNewDraft: true
+      };
+      Object.assign(appState, newPattern);
+      syncControlsFromState();
+      renderLibraryList();
+      showToast(`已建立「${appState.name}」草稿，微調後點擊「儲存修改」存檔！`);
+    }
+
+    document.getElementById('btn-new-pattern')?.addEventListener('click', handleNewPattern);
+
+    // [Update] Handle Update Current Pattern
+    async function handleUpdatePattern() {
+      const exists = savedPatterns.some(p => p.id === appState.id);
+      if (!exists || appState.isNewDraft) {
+        // If not in library yet, prompt save dialog
+        document.getElementById('save-input-name').value = appState.name;
+        document.getElementById('save-input-tag').value = (appState.tags || []).join(', ');
+        saveDialog.showModal();
+        return;
+      }
+
+      const record = {
+        ...JSON.parse(JSON.stringify(appState)),
+        updatedAt: Date.now()
+      };
+      delete record.isNewDraft;
+      await db.put('patterns', record);
+
+      const idx = savedPatterns.findIndex(p => p.id === appState.id);
+      if (idx !== -1) {
+        savedPatterns[idx] = record;
+      }
+      renderLibraryList();
+      renderPreview();
+      showToast(`已成功儲存修改「${record.name}」！`);
+    }
+
+    document.getElementById('btn-update-pattern')?.addEventListener('click', handleUpdatePattern);
+
+    // [Create - Save As New] Dialog & Handlers
+    const saveDialog = document.getElementById('dialog-save');
+    document.getElementById('btn-save-pattern').addEventListener('click', () => {
+      document.getElementById('save-input-name').value = `${appState.name} (副本)`;
+      document.getElementById('save-input-tag').value = (appState.tags || []).join(', ');
+      saveDialog.showModal();
+    });
+
+    document.getElementById('btn-close-save-dialog').addEventListener('click', () => saveDialog.close());
+    document.getElementById('btn-cancel-save').addEventListener('click', () => saveDialog.close());
+
+    document.getElementById('btn-confirm-save').addEventListener('click', async () => {
+      const name = document.getElementById('save-input-name').value.trim() || 'Untitled Pattern';
+      const tags = document.getElementById('save-input-tag').value
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+
+      const record = {
+        ...JSON.parse(JSON.stringify(appState)),
+        id: `pat_${Date.now()}`,
+        name,
+        tags,
+        updatedAt: Date.now()
+      };
+      delete record.isNewDraft;
+
+      await db.put('patterns', record);
+      savedPatterns.unshift(record);
+      appState.id = record.id;
+      appState.name = record.name;
+      appState.tags = record.tags;
+      delete appState.isNewDraft;
+
+      syncControlsFromState();
+      renderLibraryList();
+      saveDialog.close();
+      showToast(`已成功另存「${name}」至圖庫！`);
+    });
+
+    // [Update - Edit Meta] Dialog & Handlers
+    const editMetaDialog = document.getElementById('dialog-edit-meta');
+    document.getElementById('btn-close-edit-dialog')?.addEventListener('click', () => editMetaDialog.close());
+    document.getElementById('btn-cancel-edit-meta')?.addEventListener('click', () => editMetaDialog.close());
+
+    document.getElementById('btn-confirm-edit-meta')?.addEventListener('click', async () => {
+      const id = document.getElementById('edit-meta-id').value;
+      const target = savedPatterns.find(p => p.id === id);
+      if (!target) return;
+
+      target.name = document.getElementById('edit-input-name').value.trim() || 'Untitled Pattern';
+      target.tags = document.getElementById('edit-input-tag').value
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+      target.updatedAt = Date.now();
+
+      await db.put('patterns', target);
+      if (appState.id === id) {
+        appState.name = target.name;
+        appState.tags = target.tags;
+        document.getElementById('control-pattern-name').value = target.name;
+      }
+      renderLibraryList();
+      editMetaDialog.close();
+      showToast(`已更新「${target.name}」資訊！`);
+    });
+
+    // [Reset to Factory Defaults] 還原初始環境
+    const resetDialog = document.getElementById('dialog-confirm-reset');
+    document.getElementById('btn-reset-factory')?.addEventListener('click', () => {
+      resetDialog.showModal();
+    });
+
+    document.getElementById('btn-close-reset-dialog')?.addEventListener('click', () => resetDialog.close());
+    document.getElementById('btn-cancel-reset')?.addEventListener('click', () => resetDialog.close());
+
+    // Export backup before resetting
+    document.getElementById('btn-reset-backup-first')?.addEventListener('click', async () => {
+      const data = await db.exportAll();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `svg-patterns-backup-before-reset-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('已完成重設前資料備份！');
+    });
+
+    // Confirm Factory Reset
+    document.getElementById('btn-confirm-reset')?.addEventListener('click', async () => {
+      try {
+        await db.clear('patterns');
+        for (const item of DEFAULT_PRESETS) {
+          await db.put('patterns', JSON.parse(JSON.stringify(item)));
+        }
+        const records = await db.getAll('patterns');
+        savedPatterns = records.sort((a, b) => b.updatedAt - a.updatedAt);
+        if (savedPatterns.length > 0) {
+          Object.assign(appState, JSON.parse(JSON.stringify(savedPatterns[0])));
+        }
+        syncControlsFromState();
+        renderLibraryList();
+        resetDialog.close();
+        showToast('已成功還原為初始原廠環境（重新載入 6 款官方精選預設）！');
+      } catch (err) {
+        console.error(err);
+        showToast('還原失敗，請檢查瀏覽器儲存權限', 'error');
+      }
+    });
+
+    // Keyboard Shortcut (Ctrl+S / Cmd+S to Save/Update)
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        handleUpdatePattern();
+      }
+    });
+
+    // JSON Export
+    document.getElementById('btn-export-json').addEventListener('click', async () => {
+      const data = await db.exportAll();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `svg-patterns-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('備份 JSON 檔案已匯出！');
+    });
+
+    // JSON Import
+    document.getElementById('btn-import-json').addEventListener('click', () => {
+      document.getElementById('input-file-import').click();
+    });
+
+    document.getElementById('input-file-import').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        try {
+          const json = JSON.parse(evt.target.result);
+          await db.importAll(json);
+          savedPatterns = await db.getAll('patterns');
+          renderLibraryList();
+          showToast('已成功還原備份資料！');
+        } catch (err) {
+          showToast('JSON 格式錯誤，還原失敗', 'error');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    });
+
+    /* ==========================================================================
+       10. Interactive Event Bindings
+       ========================================================================== */
+    // Category Select
+    document.getElementById('control-category').addEventListener('change', (e) => {
+      appState.category = e.target.value;
+      renderPreview();
+    });
+
+    // Pattern Name Input
+    document.getElementById('control-pattern-name').addEventListener('input', (e) => {
+      appState.name = e.target.value;
+    });
+
+    // Sliders
+    const bindRange = (id, prop, isFloat = false) => {
+      document.getElementById(id).addEventListener('input', (e) => {
+        appState[prop] = isFloat ? parseFloat(e.target.value) : parseInt(e.target.value, 10);
+        renderPreview();
+      });
+    };
+
+    bindRange('param-tile-size', 'tileSize');
+    bindRange('param-elem-size', 'elemSize');
+    bindRange('param-stroke-width', 'strokeWidth', true);
+    bindRange('param-angle', 'angle');
+    bindRange('param-opacity', 'opacity', true);
+    bindRange('param-density', 'density');
+    bindRange('param-seed', 'seed');
+
+    // Colors
+    const bindColor = (pickerId, textId, prop) => {
+      const picker = document.getElementById(pickerId);
+      const text = document.getElementById(textId);
+
+      picker.addEventListener('input', (e) => {
+        appState.colors[prop] = e.target.value;
+        text.value = e.target.value.toUpperCase();
+        renderPreview();
+      });
+
+      text.addEventListener('change', (e) => {
+        let val = e.target.value.trim();
+        if (!val.startsWith('#')) val = '#' + val;
+        if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+          appState.colors[prop] = val;
+          picker.value = val;
+          renderPreview();
+        }
+      });
+    };
+
+    bindColor('color-bg', 'text-color-bg', 'background');
+    bindColor('color-primary', 'text-color-primary', 'primary');
+    bindColor('color-secondary', 'text-color-secondary', 'secondary');
+    bindColor('color-accent', 'text-color-accent', 'accent');
+
+    // Random Seed Button
+    document.getElementById('btn-random-seed').addEventListener('click', () => {
+      appState.seed = Math.floor(Math.random() * 999) + 1;
+      document.getElementById('param-seed').value = appState.seed;
+      renderPreview();
+      showToast(`已生成新亂數種子: ${appState.seed}`);
+    });
+
+    // Invert Colors Button
+    document.getElementById('btn-invert-colors').addEventListener('click', () => {
+      const temp = appState.colors.background;
+      appState.colors.background = appState.colors.primary;
+      appState.colors.primary = temp;
+      syncControlsFromState();
+      showToast('已反轉背景與主要前景色');
+    });
+
+    // Scale Select
+    document.getElementById('select-tile-scale').addEventListener('change', (e) => {
+      appState.scale = parseFloat(e.target.value);
+      renderPreview();
+    });
+
+    // View Modes
+    const setViewMode = (mode) => {
+      appState.viewMode = mode;
+      document.getElementById('tile-stage').style.display = mode === 'tile' ? 'block' : 'none';
+      document.getElementById('hero-stage').style.display = mode === 'hero' ? 'flex' : 'none';
+      document.getElementById('cards-stage').style.display = mode === 'card' ? 'grid' : 'none';
+
+      document.getElementById('view-mode-tile').classList.toggle('active', mode === 'tile');
+      document.getElementById('view-mode-hero').classList.toggle('active', mode === 'hero');
+      document.getElementById('view-mode-card').classList.toggle('active', mode === 'card');
+    };
+
+    document.getElementById('view-mode-tile').addEventListener('click', () => setViewMode('tile'));
+    document.getElementById('view-mode-hero').addEventListener('click', () => setViewMode('hero'));
+    document.getElementById('view-mode-card').addEventListener('click', () => setViewMode('card'));
+
+    // Sidebar Category Filter Tabs
+    document.querySelectorAll('.tabs-nav .tab-btn[data-filter]').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tabs-nav .tab-btn[data-filter]').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.dataset.filter;
+        renderLibraryList();
+      });
+    });
+
+    // Search Filter Input
+    document.getElementById('library-search').addEventListener('input', () => {
+      renderLibraryList();
+    });
+
+    // Dark/Light Theme Switch
+    document.getElementById('btn-toggle-theme').addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme') || 'dark';
+      const nextTheme = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', nextTheme);
+      showToast(`已切換為${nextTheme === 'dark' ? '深色' : '淺色'}模式`);
+    });
+
+    /* ==========================================================================
+       11. Initialization
+       ========================================================================== */
+    async function initApp() {
+      renderPalettePresets();
+
+      try {
+        await db.init();
+        let records = await db.getAll('patterns');
+
+        // First launch: Seed with high quality presets
+        if (!records || records.length === 0) {
+          for (const item of DEFAULT_PRESETS) {
+            await db.put('patterns', item);
+          }
+          records = await db.getAll('patterns');
+        }
+
+        savedPatterns = records.sort((a, b) => b.updatedAt - a.updatedAt);
+        if (savedPatterns.length > 0) {
+          Object.assign(appState, JSON.parse(JSON.stringify(savedPatterns[0])));
+        }
+
+        syncControlsFromState();
+        renderLibraryList();
+      } catch (err) {
+        console.error('Failed to init IndexedDB', err);
+        // Fallback
+        Object.assign(appState, DEFAULT_PRESETS[0]);
+        syncControlsFromState();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+
+  <!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+  <a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+  <style>
+    #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+      font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+      background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+      padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+      box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+    #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+    #hf-home-entry:active{transform:translateY(0)}
+    @media print{#hf-home-entry{display:none}}
+  </style>
+</body>
+</html>
