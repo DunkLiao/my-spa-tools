@@ -1,0 +1,3229 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>信用風險標準法分析工具</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231d4ed8'/%3E%3Cpath d='M16 7l7 3v6c0 4.2-2.9 7.6-7 9-4.1-1.4-7-4.8-7-9v-6z' fill='none' stroke='%23fff' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script>
+  try {
+    var t = localStorage.getItem('credit-risk-theme') || 'auto';
+    if (t === 'auto') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) {}
+</script>
+<style>
+/* 1. tokens ─────────────────────────────────────────────── */
+:root {
+  --bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-2: #eef1f5;
+  --surface-3: #e2e7ee;
+  --text: #111826;
+  --muted: #596576;
+  --border: #dce2ea;
+  --accent: #1d4ed8;
+  --accent-weak: #e8efff;
+  --on-accent: #ffffff;
+  --danger: #b42318;
+  --danger-weak: #fee4e2;
+  --warn: #b54708;
+  --warn-weak: #fef0c7;
+  --ok: #067647;
+  --ok-weak: #d3f8df;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --rowh: 38px;
+  --maxw: 1200px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 8px 24px rgba(16, 24, 40, .05);
+  --c1: #1d4ed8; --c2: #0e9384; --c3: #7a5af8; --c4: #dc6803; --c5: #c11574;
+  --c6: #0ba5ec; --c7: #4f9a12; --c8: #98a2b3; --c9: #b42318; --c10: #475467;
+}
+[data-theme="dark"] {
+  --bg: #0c1017;
+  --surface: #141a23;
+  --surface-2: #1b222d;
+  --surface-3: #242d3a;
+  --text: #e8eef7;
+  --muted: #98a5b8;
+  --border: #2a3341;
+  --accent: #6ea8fe;
+  --accent-weak: #16233a;
+  --on-accent: #0a1020;
+  --danger: #ff8a7a;
+  --danger-weak: #3a1a1a;
+  --warn: #fdb022;
+  --warn-weak: #3a2a10;
+  --ok: #58d68d;
+  --ok-weak: #123024;
+  --shadow: 0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.35);
+  --c1: #6ea8fe; --c2: #2dd4bf; --c3: #a78bfa; --c4: #fdb022; --c5: #f472b6;
+  --c6: #38bdf8; --c7: #86efac; --c8: #94a3b8; --c9: #ff8a7a; --c10: #cbd5e1;
+}
+
+/* 2. base ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, p, ul { margin: 0; }
+h1 { font-size: 16px; font-weight: 650; letter-spacing: .01em; }
+h2 { font-size: 16px; font-weight: 650; }
+h3 { font-size: 13px; font-weight: 650; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+button, input, textarea, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+::placeholder { color: var(--muted); opacity: .9; }
+.skip { position: absolute; left: -9999px; }
+.skip:focus { left: 12px; top: 12px; z-index: 99; background: var(--surface); padding: 8px 12px; border-radius: 8px; }
+
+/* 3. layout ─────────────────────────────────────────────── */
+.appbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: 16px;
+  padding: 10px max(14px, calc((100% - var(--maxw)) / 2 + 14px));
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand__logo { width: 30px; height: 30px; flex: none; border-radius: 8px; background: var(--accent); display: grid; place-items: center; }
+.brand__logo svg { width: 18px; height: 18px; }
+.brand__txt { min-width: 0; }
+.brand__txt p { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tabs { display: flex; gap: 2px; background: var(--surface-2); padding: 3px; border-radius: 11px; }
+.tab {
+  border: 0; background: transparent; color: var(--muted); cursor: pointer;
+  padding: 7px 13px; border-radius: 8px; font-size: 14px; min-height: 34px; white-space: nowrap;
+}
+.tab[aria-selected="true"] { background: var(--surface); color: var(--text); font-weight: 650; box-shadow: 0 1px 2px rgba(16,24,40,.1); }
+.appbar__actions { margin-left: auto; display: flex; gap: 8px; flex: none; }
+
+main { max-width: var(--maxw); margin: 0 auto; padding: 16px 14px 40px; display: grid; gap: 14px; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; min-height: 34px; }
+.toolbar__left, .toolbar__right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.view { display: grid; gap: 14px; }
+.view > * { min-width: 0; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.grid2 > * { min-width: 0; }
+.foot {
+  max-width: var(--maxw); margin: 0 auto; padding: 0 14px 36px;
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  color: var(--muted); font-size: 12px;
+}
+
+/* 4. components ─────────────────────────────────────────── */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); min-width: 0; }
+.card--flush { padding: 0; overflow: hidden; }
+.card__head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.card__head h2 { margin-right: auto; }
+.muted { color: var(--muted); font-size: 12.5px; }
+.note { color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+.pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.pill--warn { background: var(--warn-weak); color: var(--warn); }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 38px; padding: 7px 13px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: 14px; cursor: pointer; white-space: nowrap;
+  transition: background .15s, border-color .15s, transform .05s;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--accent); color: var(--on-accent); border-color: transparent; font-weight: 600; }
+.btn--primary:hover { background: var(--accent); filter: brightness(1.06); }
+.btn--ghost { background: transparent; }
+.btn--danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
+.btn--danger:hover { background: var(--danger-weak); }
+.btn--icon { width: 38px; padding: 0; font-size: 15px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.linkbtn {
+  border: 0; background: none; color: var(--accent); font-size: 13px; cursor: pointer;
+  padding: 2px 2px; min-height: 30px; text-decoration: underline; text-underline-offset: 3px;
+}
+.linkbtn:hover { filter: brightness(1.12); }
+
+input[type="text"], input[type="search"], input[type="number"], input[type="date"], textarea, select {
+  width: 100%; min-height: 38px; padding: 7px 10px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); font-size: 14px;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-weak); }
+textarea { resize: vertical; min-height: 60px; }
+.inline { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+.check input { width: 16px; height: 16px; accent-color: var(--accent); }
+.inline select, .inline input { width: auto; min-width: 96px; }
+
+.filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.filters input[type="search"] { flex: 1 1 220px; min-width: 160px; }
+.filters select { width: auto; min-width: 120px; }
+
+/* virtual table */
+.vhead, .vrow {
+  display: grid;
+  grid-template-columns: 96px minmax(90px, 1.4fr) 92px 58px 96px 96px 64px 96px 52px;
+  gap: 8px; align-items: center; padding: 0 14px;
+}
+.vhead { height: 36px; border-bottom: 1px solid var(--border); background: var(--surface-2); font-size: 11.5px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+.vhead button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 3px; padding: 2px 0; }
+.vhead button:hover { color: var(--text); }
+.vhead .num, .vrow .num { justify-content: flex-end; text-align: right; }
+.vhead .num { display: flex; }
+.vbody { position: relative; overflow-y: auto; overflow-x: hidden; height: min(58vh, 600px); min-height: 140px; overscroll-behavior: contain; }
+.vspacer { position: relative; width: 100%; }
+.vrows { position: absolute; left: 0; right: 0; top: 0; will-change: transform; }
+.vrow {
+  height: var(--rowh); border-bottom: 1px solid var(--border);
+  font-size: 13px; cursor: pointer;
+}
+.vrow:hover { background: var(--surface-2); }
+.vrow:focus-visible { outline-offset: -2px; }
+.vrow .num { display: flex; font-variant-numeric: tabular-nums; }
+.vrow span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb { display: none; }
+.vempty { padding: 40px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+
+.chip { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; background: var(--surface-3); color: var(--text); font-size: 11.5px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.chip--warn { background: var(--warn-weak); color: var(--warn); }
+.chip--danger { background: var(--danger-weak); color: var(--danger); }
+.chip--ok { background: var(--ok-weak); color: var(--ok); }
+.dpdflag { display: none; font-style: normal; font-size: 11px; color: var(--danger); }
+
+/* KPI */
+.kpigrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 14px; box-shadow: var(--shadow); }
+.kpi__label { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+.kpi__value { font-size: 23px; font-weight: 650; letter-spacing: -.01em; font-variant-numeric: tabular-nums; margin-top: 3px; line-height: 1.25; }
+.kpi__value small { font-size: 12px; font-weight: 500; color: var(--muted); margin-left: 3px; }
+.kpi--warn .kpi__value { color: var(--warn); }
+
+/* charts */
+.donutwrap { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.donut { width: 168px; height: 168px; flex: none; }
+.legend { flex: 1 1 210px; display: grid; gap: 5px; align-content: start; }
+.legendrow { display: grid; grid-template-columns: 9px 1fr auto auto; gap: 8px; align-items: center; font-size: 12.5px; }
+.legendrow i { width: 9px; height: 9px; border-radius: 3px; display: block; }
+.legendrow b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.legendrow span.muted { font-variant-numeric: tabular-nums; }
+.bars { display: grid; gap: 9px; }
+.barrow { display: grid; grid-template-columns: 78px minmax(40px, 1fr) 122px; gap: 9px; align-items: center; font-size: 12.5px; }
+.bartrack { height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.barfill { height: 100%; border-radius: 999px; background: var(--c1); transition: width .25s ease; }
+.barfill--warn { background: var(--c4); }
+.bar__val { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.bar__val b { color: var(--text); font-weight: 600; }
+
+/* concentration */
+.statrow { display: flex; gap: 22px; flex-wrap: wrap; margin-bottom: 12px; }
+.stat { display: grid; gap: 1px; }
+.stat span { font-size: 11.5px; color: var(--muted); }
+.stat b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.tablewrap { overflow-x: auto; max-width: 100%; }
+table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.grid th, table.grid td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; white-space: nowrap; }
+table.grid th { font-size: 11.5px; color: var(--muted); font-weight: 600; background: var(--surface-2); position: sticky; top: 0; }
+table.grid td.num, table.grid th.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.grid tbody tr:hover { background: var(--surface-2); }
+table.grid td input { min-height: 30px; padding: 2px 6px; text-align: right; }
+.rank { display: inline-flex; width: 22px; height: 22px; align-items: center; justify-content: center; border-radius: 6px; background: var(--surface-2); font-size: 11.5px; color: var(--muted); }
+.rank--top { background: var(--accent-weak); color: var(--accent); font-weight: 700; }
+
+/* data quality */
+.dqlist { display: grid; gap: 8px; }
+.dqrow { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+.dqrow__txt { flex: 1; min-width: 0; font-size: 13px; }
+.dqrow__txt small { display: block; color: var(--muted); font-size: 11.5px; }
+.dqrow b { font-variant-numeric: tabular-nums; }
+.dqempty { display: flex; align-items: center; gap: 8px; color: var(--ok); font-size: 13px; }
+
+/* empty */
+.empty { text-align: center; padding: 48px 20px; background: var(--surface); border: 1px dashed var(--border); border-radius: var(--radius); }
+.empty h2 { margin-bottom: 6px; }
+.empty p { color: var(--muted); font-size: 13.5px; max-width: 46ch; margin: 0 auto 18px; }
+.empty .btnrow { justify-content: center; }
+
+/* rules */
+.paramrow { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; }
+.matrix th:first-child, .matrix td:first-child { position: sticky; left: 0; background: var(--surface); z-index: 1; }
+.matrix th:first-child { background: var(--surface-2); }
+.matrix td:first-child { font-weight: 600; font-size: 12.5px; }
+.grid.matrix td input { width: 64px; }
+.code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11.5px; color: var(--muted); }
+.hint { font-size: 11.5px; color: var(--muted); }
+
+/* dialogs */
+dialog {
+  border: 0; border-radius: 16px; padding: 0; color: var(--text);
+  background: var(--surface); width: min(560px, calc(100vw - 24px)); max-height: 88vh;
+  box-shadow: 0 24px 60px rgba(8, 12, 20, .28);
+}
+dialog::backdrop { background: rgba(8, 12, 20, .5); backdrop-filter: blur(2px); }
+dialog[open] { display: flex; flex-direction: column; }
+.dlg--wide { width: min(1000px, calc(100vw - 20px)); }
+.dlg__head { display: flex; align-items: flex-start; gap: 12px; padding: 16px 18px 12px; border-bottom: 1px solid var(--border); }
+.dlg__head > div { min-width: 0; }
+.dlg__head h2 { font-size: 17px; }
+.dlg__head p { color: var(--muted); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dlg__head .btn--icon { margin-left: auto; }
+.dlg__body { padding: 16px 18px; overflow: auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.dlg__body > * { min-width: 0; }
+.dlg__foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border); background: var(--surface); }
+
+.form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field { display: grid; gap: 4px; }
+.field > span { font-size: 12px; color: var(--muted); }
+.field > span em { color: var(--danger); font-style: normal; }
+.field--full { grid-column: 1 / -1; }
+.field input, .field select { width: 100%; }
+.formerr { color: var(--danger); font-size: 12.5px; grid-column: 1 / -1; }
+
+/* import */
+.impbar { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; background: var(--surface-2); padding: 10px 12px; border-radius: 10px; }
+.mapgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 8px 16px; }
+.maprow { display: grid; grid-template-columns: 108px 1fr; gap: 8px; align-items: center; min-width: 0; }
+.maprow > span { font-size: 12.5px; color: var(--muted); }
+.maprow > span em { color: var(--danger); font-style: normal; }
+.maprow .hint { grid-column: 2; margin-top: -4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preview summary { cursor: pointer; font-size: 12.5px; color: var(--muted); margin-bottom: 8px; }
+.preview table { font-size: 12px; }
+.impmsg { font-size: 12.5px; color: var(--muted); min-height: 20px; }
+.impmsg b { color: var(--text); }
+.impmsg .bad { color: var(--danger); }
+.progress { height: 8px; background: var(--surface-3); border-radius: 999px; overflow: hidden; }
+.progress__bar { height: 100%; width: 0; background: var(--accent); transition: width .12s linear; }
+
+/* drawer */
+.scrim { position: fixed; inset: 0; background: rgba(8,12,20,.4); z-index: 40; }
+.drawer {
+  position: fixed; top: 0; right: 0; bottom: 0; z-index: 41;
+  width: min(430px, 100vw); background: var(--surface); border-left: 1px solid var(--border);
+  transform: translateX(102%); transition: transform .22s ease; display: flex; flex-direction: column;
+  box-shadow: -12px 0 40px rgba(8,12,20,.18);
+}
+.drawer.open { transform: translateX(0); }
+.drawer__head { display: flex; align-items: flex-start; gap: 10px; padding: 16px 18px 12px; border-bottom: 1px solid var(--border); }
+.drawer__head h2 { font-size: 17px; word-break: break-all; }
+.drawer__body { overflow: auto; padding: 14px 18px; display: grid; gap: 18px; }
+.drawer__foot { margin-top: auto; display: flex; gap: 8px; padding: 12px 18px; border-top: 1px solid var(--border); }
+.drawer__foot .btn { flex: 1; }
+.kv { display: grid; grid-template-columns: 96px 1fr; gap: 5px 10px; font-size: 13px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; word-break: break-word; }
+.calc { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.calcline { display: flex; justify-content: space-between; gap: 10px; padding: 7px 10px; font-size: 12.5px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.calcline:last-child { border-bottom: 0; }
+.calcline span { color: var(--muted); }
+.calcline b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.calcline--total { background: var(--surface-2); font-weight: 600; }
+.calcline--total span { color: var(--text); }
+.taglist { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* toast */
+.toasts { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 60; display: grid; gap: 8px; width: min(440px, calc(100vw - 24px)); }
+.toast {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: var(--text); color: var(--bg); border-radius: 11px; font-size: 13.5px;
+  box-shadow: 0 10px 30px rgba(8,12,20,.3); animation: toastin .18s ease;
+}
+.toast button { all: unset; margin-left: auto; cursor: pointer; font-weight: 650; color: var(--accent); padding: 2px 4px; }
+[data-theme="dark"] .toast button { color: var(--accent); }
+@keyframes toastin { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.banner { padding: 9px 16px; background: var(--warn-weak); color: var(--warn); font-size: 12.5px; text-align: center; }
+
+/* 5. utilities / media ──────────────────────────────────── */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 9px; padding: 2px; }
+.seg button { border: 0; background: transparent; padding: 5px 10px; border-radius: 7px; font-size: 12.5px; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); font-weight: 600; box-shadow: 0 1px 2px rgba(16,24,40,.1); }
+.rowgap { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.mt8 { margin-top: 8px; }
+
+@media (max-width: 980px) {
+  .grid2 { grid-template-columns: 1fr; }
+  .brand__txt p { display: none; }
+}
+@media (max-width: 719px) {
+  body { font-size: 14px; }
+  .appbar { flex-wrap: wrap; gap: 10px; padding: 10px 12px; }
+  .brand { flex: 1 1 auto; }
+  .appbar__actions { order: 3; width: 100%; }
+  .appbar__actions .btn { flex: 1; min-height: 44px; }
+  .tabs { order: 2; width: 100%; overflow-x: auto; }
+  .tab { flex: 1; min-height: 40px; }
+  main { padding: 12px 10px 32px; }
+  .card { padding: 14px; }
+  .vhead { display: none; }
+  .vbody { height: calc(100vh - 330px); min-height: 180px; }
+  .vrow {
+    height: var(--rowh);
+    grid-template-columns: 1.1fr 1fr 1fr;
+    grid-template-areas: "ref ref cls" "ob ob rat" "m1 m2 m3";
+    gap: 2px 8px; padding: 8px 12px; align-content: start; align-items: start;
+  }
+  .vrow .num { display: grid; justify-content: start; text-align: left; }
+  .vrow .lb { display: block; font-size: 10px; color: var(--muted); font-weight: 400; line-height: 1.35; }
+  .c-ref { grid-area: ref; font-weight: 650; font-size: 12px; }
+  .c-cls { grid-area: cls; justify-self: end; }
+  .c-ob { grid-area: ob; font-size: 13px; }
+  .c-rat { grid-area: rat; justify-self: end; font-size: 11.5px; color: var(--muted); }
+  .c-drawn { grid-area: m1; }
+  .c-ead { grid-area: m2; }
+  .c-rwa { grid-area: m3; }
+  .c-rw, .c-dpd { display: none !important; }
+  .dpdflag { display: inline; margin-left: 6px; }
+  .form { grid-template-columns: 1fr; }
+  .drawer { width: 100vw; border-left: 0; }
+  .filters { padding: 10px; }
+  .filters input[type="search"] { flex: 1 1 100%; }
+  .filters select { flex: 1 1 30%; min-width: 0; }
+  .btn { min-height: 44px; }
+  .dlg__body { padding: 14px; }
+  .mapgrid { grid-template-columns: 1fr; }
+  .rowgap .btn { flex: 1; }
+  .kpi__value { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳至主要內容</a>
+
+<header class="appbar">
+  <div class="brand">
+    <span class="brand__logo" aria-hidden="true">
+      <svg viewBox="0 0 32 32" fill="none"><path d="M16 5l8 3.4v7.2c0 4.8-3.3 8.7-8 10.4-4.7-1.7-8-5.6-8-10.4V8.4z" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/><path d="M16 11v6M16 19.5v.5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+    </span>
+    <div class="brand__txt">
+      <h1>信用風險標準法分析</h1>
+      <p>Standardised Approach · 投組曝險與資本分析</p>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="主要頁籤">
+    <button class="tab" role="tab" data-view="dashboard" aria-selected="true">儀表板</button>
+    <button class="tab" role="tab" data-view="data" aria-selected="false">明細</button>
+    <button class="tab" role="tab" data-view="rules" aria-selected="false">規則</button>
+    <button class="tab" role="tab" data-view="backup" aria-selected="false">備份</button>
+  </nav>
+  <div class="appbar__actions">
+    <button class="btn btn--primary" id="btnImport">匯入 CSV</button>
+    <button class="btn" id="btnAdd">新增</button>
+    <button class="btn btn--icon" id="btnTheme" title="切換深/淺色" aria-label="切換深/淺色">◐</button>
+  </div>
+</header>
+
+<div class="banner" id="banner" hidden></div>
+
+<main id="main">
+  <div class="toolbar" id="toolbar">
+    <div class="toolbar__left">
+      <label class="inline" for="asOfDate"><span>資料基準日</span><select id="asOfDate"></select></label>
+      <span class="pill" id="dataCount">0 筆</span>
+    </div>
+    <div class="toolbar__right">
+      <button class="btn btn--ghost" id="btnSeed">載入示範資料</button>
+    </div>
+  </div>
+
+  <!-- 儀表板 -->
+  <section id="view-dashboard" class="view" aria-label="儀表板">
+    <div id="dashEmpty" class="empty">
+      <h2>還沒有資料</h2>
+      <p>匯入一份暴險明細 CSV，或先載入 20 筆示範資料看看儀表板長什麼樣子。所有資料只存在這台電腦的瀏覽器裡。</p>
+      <div class="btnrow">
+        <button class="btn btn--primary" id="btnEmptyImport">匯入 CSV</button>
+        <button class="btn" id="btnEmptyAdd">手動新增</button>
+        <button class="btn btn--ghost" id="btnEmptySeed">載入示範資料</button>
+      </div>
+      <p class="note" style="margin-top:14px">
+        <button class="linkbtn" id="btnEmptySample" type="button">下載範例 CSV</button>
+        可看到完整 15 個欄位與 10 種暴險類別，改好內容後直接匯入。
+      </p>
+    </div>
+    <div id="dashBody" hidden>
+      <div class="kpigrid" id="kpis"></div>
+      <div class="grid2" style="margin-top:14px">
+        <div class="card">
+          <div class="card__head"><h2>暴險類別分佈</h2><span class="muted">依 EAD</span></div>
+          <div id="chartClass"></div>
+        </div>
+        <div class="card">
+          <div class="card__head"><h2>評等分佈</h2><span class="muted">依 EAD · 未評等高亮</span></div>
+          <div id="chartRating"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card__head">
+          <h2>集中度 Top N</h2>
+          <div class="seg" id="groupSeg" role="group" aria-label="集中度單位">
+            <button data-group="obligor" aria-pressed="true">借戶</button>
+            <button data-group="group" aria-pressed="false">集團</button>
+          </div>
+          <select id="topN" aria-label="Top N 筆數" style="width:auto">
+            <option value="10">Top 10</option>
+            <option value="20">Top 20</option>
+            <option value="50">Top 50</option>
+          </select>
+        </div>
+        <div class="statrow" id="concStats"></div>
+        <div class="tablewrap" id="concTable"></div>
+      </div>
+      <div class="card" style="margin-top:14px">
+        <div class="card__head"><h2>資料檢核</h2><span class="muted">僅提示，不影響既有計算</span></div>
+        <div id="dq"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 明細 -->
+  <section id="view-data" class="view" aria-label="明細" hidden>
+    <div class="card card--flush">
+      <div class="filters">
+        <input type="search" id="q" placeholder="搜尋案件編號、借戶、產品…（按 / 聚焦）" aria-label="搜尋">
+        <select id="fClass" aria-label="篩選暴險類別"><option value="">全部類別</option></select>
+        <select id="fRating" aria-label="篩選評等"><option value="">全部評等</option></select>
+        <select id="fIssue" aria-label="篩選檢核狀態"><option value="">全部檢核狀態</option></select>
+        <button class="btn btn--ghost" id="btnClearFilters">清除</button>
+      </div>
+      <div class="vhead" id="vhead" role="row">
+        <button data-sort="refNo">案件編號</button>
+        <button data-sort="obligor">借戶</button>
+        <button data-sort="exposureClass">類別</button>
+        <button data-sort="rating" class="num">評等</button>
+        <button data-sort="drawn" class="num">已動用</button>
+        <button data-sort="ead" class="num">EAD</button>
+        <button data-sort="effBp" class="num">有效RW</button>
+        <button data-sort="rwa" class="num">RWA</button>
+        <button data-sort="dpdDays" class="num">逾期</button>
+      </div>
+      <div class="vbody" id="vbody" tabindex="0">
+        <div class="vspacer" id="vspacer"><div class="vrows" id="vrows"></div></div>
+      </div>
+      <div class="vempty" id="vempty" hidden>沒有符合條件的資料</div>
+      <div class="filters" style="border-bottom:0;border-top:1px solid var(--border)">
+        <span class="muted" id="vcount">0 / 0 筆</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 規則 -->
+  <section id="view-rules" class="view" aria-label="規則" hidden>
+    <div class="card">
+      <div class="card__head"><h2>計算參數</h2><span class="muted">變更後立即套用到儀表板與明細</span></div>
+      <div class="paramrow">
+        <label class="inline"><span>資本要求比率</span>
+          <input type="number" id="rateBasis" min="0" max="100" step="0.01" value="8" style="width:84px"> %
+        </label>
+        <div class="btnrow">
+          <button class="btn" id="btnPreset2">套用 Basel II 預設</button>
+          <button class="btn" id="btnPreset3">套用 Basel III 修訂版</button>
+          <button class="btn btn--ghost" id="btnResetRules">還原出廠預設</button>
+        </div>
+      </div>
+      <p class="note mt8">預設值為標準法常用對照的<strong>簡化示意</strong>，用於投組分析與情境比較，不是申報依據。實際適用權重請依主管機關規定、ECAI 對應表與行內規範調整。擔保品／保證採「覆蓋部位以較低權重計算、未覆蓋部位用原權重」的簡化法。</p>
+    </div>
+    <div class="card">
+      <div class="card__head"><h2>風險權重對照表</h2><span class="muted">單位 %，空白＝未適用（會退回「通用」）</span></div>
+      <div class="tablewrap" id="rwTable"></div>
+    </div>
+    <div class="card">
+      <div class="card__head"><h2>表外信用轉換係數（CCF）</h2><span class="muted">套用於未動用額度</span></div>
+      <div class="tablewrap" id="ccfTable"></div>
+      <div class="rowgap mt8">
+        <input type="text" id="newCcfKey" placeholder="代碼，如 UNDRAWN_NC" style="max-width:220px" aria-label="新 CCF 代碼">
+        <input type="text" id="newCcfLabel" placeholder="名稱" style="max-width:240px" aria-label="新 CCF 名稱">
+        <input type="number" id="newCcfVal" placeholder="%" style="max-width:90px" min="0" max="100" aria-label="新 CCF 百分比">
+        <button class="btn" id="btnAddCcf">新增 CCF</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card__head"><h2>擔保品與保證（CRM）</h2><span class="muted">權重 % / 折扣 %；保證不套折扣</span></div>
+      <div class="tablewrap" id="crmTable"></div>
+      <div class="rowgap mt8">
+        <input type="text" id="newCrmKey" placeholder="代碼，如 GUAR_BANK" style="max-width:220px" aria-label="新 CRM 代碼">
+        <input type="text" id="newCrmLabel" placeholder="名稱" style="max-width:240px" aria-label="新 CRM 名稱">
+        <select id="newCrmKind" style="width:auto" aria-label="新 CRM 類型"><option value="collateral">擔保品</option><option value="guarantee">保證</option></select>
+        <input type="number" id="newCrmW" placeholder="權重 %" style="max-width:100px" min="0" aria-label="新 CRM 權重">
+        <input type="number" id="newCrmH" placeholder="折扣 %" style="max-width:100px" min="0" max="100" aria-label="新 CRM 折扣">
+        <button class="btn" id="btnAddCrm">新增 CRM</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 備份 -->
+  <section id="view-backup" class="view" aria-label="備份" hidden>
+    <div class="grid2">
+      <div class="card">
+        <div class="card__head"><h2>完整備份（JSON）</h2></div>
+        <p class="note">包含所有明細、規則表與參數。換電腦或重裝瀏覽器前請先匯出。</p>
+        <div class="btnrow mt8">
+          <button class="btn btn--primary" id="btnExportJson">匯出 JSON</button>
+          <button class="btn" id="btnImportJson">匯入 JSON</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card__head"><h2>計算結果（CSV）</h2></div>
+        <p class="note">每筆明細加上 CCF、EAD、基準權重、有效權重、RWA、資本與檢核旗標，可直接進 Excel 做樞紐。</p>
+        <div class="btnrow mt8">
+          <button class="btn" id="btnExportCsv">匯出結果 CSV</button>
+          <button class="btn btn--ghost" id="btnExportErrors" disabled>匯出上次錯誤列</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card__head"><h2>儲存狀態</h2></div>
+      <div class="statrow" id="storeStats"></div>
+      <p class="note mt8" id="storeNote"></p>
+    </div>
+    <div class="card">
+      <div class="card__head"><h2>危險區</h2></div>
+      <p class="note">清除後無法復原，請先匯出備份。建議先按一次「匯出 JSON」。</p>
+      <div class="btnrow mt8">
+        <button class="btn btn--danger" id="btnClearAll">清除所有資料</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <span>本機執行 · 無網路連線 · 資料存在瀏覽器 IndexedDB</span>
+  <span id="footInfo">—</span>
+</footer>
+
+<!-- 編輯／新增 -->
+<dialog id="dlgForm" aria-labelledby="dlgFormTitle">
+  <div class="dlg__head">
+    <div><h2 id="dlgFormTitle">新增暴險</h2><p class="muted">金額單位：新台幣元（可含千分位）</p></div>
+    <button class="btn btn--icon" type="button" data-close="dlgForm" aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg__body">
+    <div class="form" id="formBody"></div>
+    <div class="formerr" id="formErr" hidden></div>
+  </div>
+  <div class="dlg__foot">
+    <button class="btn" type="button" data-close="dlgForm">取消</button>
+    <button class="btn btn--primary" type="button" id="btnSaveForm">儲存</button>
+  </div>
+</dialog>
+
+<!-- 確認 -->
+<dialog id="dlgConfirm" aria-labelledby="dlgConfirmTitle">
+  <div class="dlg__head">
+    <div><h2 id="dlgConfirmTitle">確認</h2><p class="muted" id="dlgConfirmSub"></p></div>
+  </div>
+  <div class="dlg__body"><p id="dlgConfirmBody" style="font-size:13.5px"></p></div>
+  <div class="dlg__foot">
+    <button class="btn" type="button" id="btnConfirmNo">取消</button>
+    <button class="btn btn--primary" type="button" id="btnConfirmYes">確定</button>
+  </div>
+</dialog>
+
+<!-- 匯入 -->
+<dialog id="dlgImport" class="dlg--wide" aria-labelledby="dlgImportTitle">
+  <div class="dlg__head">
+    <div><h2 id="dlgImportTitle">匯入 CSV</h2><p class="muted" id="impFile">—</p></div>
+    <button class="btn btn--icon" type="button" data-close="dlgImport" aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg__body">
+    <div class="impbar">
+      <label class="check"><input type="checkbox" id="impHasHeader" checked> 第一列為標題</label>
+      <label class="inline"><span>編碼</span>
+        <select id="impEnc"><option value="auto">自動偵測</option><option value="utf-8">UTF-8</option><option value="big5">Big5</option></select>
+      </label>
+      <label class="inline"><span>分隔符</span>
+        <select id="impDelim"><option value="auto">自動</option><option value=",">逗號</option><option value=";">分號</option><option value="tab">Tab</option></select>
+      </label>
+      <label class="inline"><span>匯入策略</span>
+        <select id="impStrategy"><option value="merge">合併（同案件編號覆蓋）</option><option value="replace">取代（先清空）</option></select>
+      </label>
+      <span class="pill" id="impCount">—</span>
+      <button class="btn btn--ghost" type="button" id="btnSampleCsv" style="margin-left:auto">下載範例 CSV</button>
+    </div>
+    <div>
+      <h3 style="margin-bottom:8px">欄位對應</h3>
+      <div class="mapgrid" id="impMap"></div>
+    </div>
+    <details class="preview" open>
+      <summary>預覽前 3 列（依目前對應）</summary>
+      <div class="tablewrap" id="impPreview"></div>
+    </details>
+    <div class="impmsg" id="impMsg"></div>
+    <div class="progress" id="impProgress" hidden><div class="progress__bar" id="impBar"></div></div>
+  </div>
+  <div class="dlg__foot">
+    <button class="btn" type="button" data-close="dlgImport">取消</button>
+    <button class="btn btn--primary" type="button" id="btnDoImport">確認匯入</button>
+  </div>
+</dialog>
+
+<aside class="drawer" id="drawer" aria-label="明細詳情" aria-hidden="true"></aside>
+<div class="scrim" id="scrim" hidden></div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<input type="file" id="fileCSV" accept=".csv,text/csv" hidden>
+<input type="file" id="fileJSON" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+/* ============================================================
+   1. CONFIG 與領域常數
+   ============================================================ */
+const CONFIG = {
+  appId: 'credit-risk-analyse',
+  schemaVersion: 1,
+  dbName: 'credit-risk-analyse',
+  dbVersion: 1,
+  themeKey: 'credit-risk-theme',
+  rowLimitWarn: 50000,
+};
+
+const CLASSES = [
+  { key: 'SOVEREIGN',     label: '主權／中央政府' },
+  { key: 'PSE',           label: '公營事業' },
+  { key: 'BANK',          label: '銀行／金融機構' },
+  { key: 'CORPORATE',     label: '企業' },
+  { key: 'RETAIL',        label: '零售' },
+  { key: 'RESI_MORTGAGE', label: '住宅抵押' },
+  { key: 'CRE',           label: '商用不動產' },
+  { key: 'EQUITY',        label: '股權' },
+  { key: 'PAST_DUE',      label: '逾期放款' },
+  { key: 'OTHER',         label: '其他資產' },
+];
+
+const RATINGS = [
+  { key: 'AAA',     label: 'AAA ~ AA-' },
+  { key: 'A',       label: 'A+ ~ A-' },
+  { key: 'BBB',     label: 'BBB+ ~ BBB-' },
+  { key: 'BB',      label: 'BB+ ~ BB-' },
+  { key: 'B',       label: 'B+ ~ B-' },
+  { key: 'CCC',     label: 'CCC 以下' },
+  { key: 'UNRATED', label: '未評等' },
+];
+
+const GRADES = ['AAA', 'AA+', 'AA', 'AA-', 'A+', 'A', 'A-', 'BBB+', 'BBB', 'BBB-', 'BB+', 'BB', 'BB-', 'B+', 'B', 'B-', 'CCC+', 'CCC', 'CCC-', 'CC', 'C', 'D'];
+const GRADE_GROUP = {
+  'AAA': 'AAA', 'AA+': 'AAA', 'AA': 'AAA', 'AA-': 'AAA',
+  'A+': 'A', 'A': 'A', 'A-': 'A',
+  'BBB+': 'BBB', 'BBB': 'BBB', 'BBB-': 'BBB',
+  'BB+': 'BB', 'BB': 'BB', 'BB-': 'BB',
+  'B+': 'B', 'B': 'B', 'B-': 'B',
+  'CCC+': 'CCC', 'CCC': 'CCC', 'CCC-': 'CCC', 'CC': 'CCC', 'C': 'CCC', 'D': 'CCC',
+};
+
+const ISSUES = {
+  CLASS_UNKNOWN:     { label: '類別未對照', desc: '暴險類別不在規則表中，無法取得權重', tone: 'danger' },
+  RW_MISSING:        { label: '權重缺漏', desc: '該類別的這個評等與通用權重都是空白，暫以 0% 計算', tone: 'danger' },
+  NEG_AMOUNT:        { label: '負數金額', desc: '已動用餘額為負值，EAD 以 0 計算', tone: 'danger' },
+  CCF_UNKNOWN:       { label: 'CCF 代碼未對照', desc: '表外科目代碼不存在，CCF 暫以 0% 計算', tone: 'warn' },
+  CRM_UNKNOWN:       { label: '擔保或保證類型未對照', desc: 'CRM 類型不在規則表中，該部位不調整權重', tone: 'warn' },
+  ZERO_EAD:          { label: 'EAD 為 0', desc: '計算後 EAD 為零，可能是資料缺漏', tone: 'warn' },
+  DPD_MISMATCH:      { label: '逾期天數與類別不一致', desc: '逾期 ≥ 90 天但未歸類為逾期放款', tone: 'warn' },
+  RATING_UNKNOWN:    { label: '評等無法辨識', desc: '評等字串無法對應，暫以未評等處理', tone: 'warn' },
+};
+const ISSUE_KEYS = Object.keys(ISSUES);
+
+/* ============================================================
+   2. 預設規則
+   ============================================================ */
+const PRESET_RW = {
+  basel2: {
+    SOVEREIGN:     { AAA: 0, A: 2000, BBB: 5000, BB: 10000, B: 10000, CCC: 15000, UNRATED: 10000 },
+    PSE:           { AAA: 2000, A: 5000, BBB: 5000, BB: 10000, B: 10000, CCC: 15000, UNRATED: 5000 },
+    BANK:          { AAA: 2000, A: 5000, BBB: 5000, BB: 10000, B: 10000, CCC: 15000, UNRATED: 5000 },
+    CORPORATE:     { AAA: 2000, A: 5000, BBB: 10000, BB: 10000, B: 15000, CCC: 15000, UNRATED: 10000 },
+    RETAIL:        { ANY: 7500 },
+    RESI_MORTGAGE: { ANY: 3500 },
+    CRE:           { ANY: 10000 },
+    EQUITY:        { ANY: 40000 },
+    PAST_DUE:      { ANY: 15000 },
+    OTHER:         { ANY: 10000 },
+  },
+  basel3: {
+    SOVEREIGN:     { AAA: 0, A: 2000, BBB: 5000, BB: 10000, B: 15000, CCC: 15000, UNRATED: 10000 },
+    PSE:           { AAA: 2000, A: 5000, BBB: 7500, BB: 10000, B: 15000, CCC: 15000, UNRATED: 5000 },
+    BANK:          { AAA: 2000, A: 3000, BBB: 4000, BB: 5000, B: 7500, CCC: 15000, UNRATED: 5000 },
+    CORPORATE:     { AAA: 2000, A: 3000, BBB: 7500, BB: 10000, B: 15000, CCC: 15000, UNRATED: 10000 },
+    RETAIL:        { ANY: 7500 },
+    RESI_MORTGAGE: { ANY: 3500 },
+    CRE:           { ANY: 10000 },
+    EQUITY:        { ANY: 40000 },
+    PAST_DUE:      { ANY: 15000 },
+    OTHER:         { ANY: 10000 },
+  },
+};
+
+const PRESET_CCF = [
+  { key: 'NONE',            label: '表內科目（不轉換）',       ccf: 0 },
+  { key: 'UNDRAWN_COMMIT',  label: '未動用額度（可取消）',     ccf: 0 },
+  { key: 'UNDRAWN_NC',      label: '未動用額度（不可取消）',   ccf: 5000 },
+  { key: 'LC_PERF',         label: '履約信用狀',               ccf: 5000 },
+  { key: 'LC_TRADE',        label: '貿易信用狀',               ccf: 2000 },
+  { key: 'GUARANTEE',       label: '保證／擔保信用狀',         ccf: 10000 },
+  { key: 'DERIVATIVE',      label: '衍生性商品',               ccf: 10000 },
+];
+
+const PRESET_CRM = [
+  { key: 'CASH',      label: '現金／存款',     kind: 'collateral', weight: 0,     haircut: 0 },
+  { key: 'GOV_BOND',  label: '政府債券',       kind: 'collateral', weight: 0,     haircut: 0 },
+  { key: 'CORP_BOND', label: '投資級公司債',   kind: 'collateral', weight: 10000, haircut: 20 },
+  { key: 'RESI_RE',   label: '住宅不動產',     kind: 'collateral', weight: 3500,  haircut: 20 },
+  { key: 'COMM_RE',   label: '商用不動產',     kind: 'collateral', weight: 10000, haircut: 30 },
+  { key: 'EQUITY_COLL', label: '上市股權',     kind: 'collateral', weight: 15000, haircut: 30 },
+  { key: 'GUAR_GOV',  label: '政府保證',       kind: 'guarantee',  weight: 0,     haircut: 0 },
+  { key: 'GUAR_BANK', label: '銀行保證',       kind: 'guarantee',  weight: 2000,  haircut: 0 },
+  { key: 'GUAR_CORP', label: '企業保證',       kind: 'guarantee',  weight: 10000, haircut: 0 },
+];
+
+function clone(v) { return JSON.parse(JSON.stringify(v)); }
+
+function makeRules(preset) {
+  const src = PRESET_RW[preset] || PRESET_RW.basel2;
+  return {
+    riskWeights: clone(src),
+    ccf: clone(PRESET_CCF),
+    crm: clone(PRESET_CRM),
+  };
+}
+
+/* ============================================================
+   3. utils
+   ============================================================ */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+function el(tag, attrs, ...kids) {
+  const node = document.createElement(tag);
+  if (attrs) {
+    for (const key of Object.keys(attrs)) {
+      const val = attrs[key];
+      if (val === null || val === undefined || val === false) continue;
+      if (key === 'class') node.className = val;
+      else if (key === 'text') node.textContent = val;
+      else if (key === 'style') node.style.cssText = val;
+      else if (key === 'dataset') Object.assign(node.dataset, val);
+      else if (key.startsWith('on') && typeof val === 'function') node.addEventListener(key.slice(2).toLowerCase(), val);
+      else node.setAttribute(key, val === true ? '' : String(val));
+    }
+  }
+  for (const kid of kids.flat(4)) {
+    if (kid === null || kid === undefined || kid === false) continue;
+    node.append(kid instanceof Node ? kid : document.createTextNode(String(kid)));
+  }
+  return node;
+}
+
+function svgEl(tag, attrs) {
+  const node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  if (attrs) for (const key of Object.keys(attrs)) node.setAttribute(key, attrs[key]);
+  return node;
+}
+
+const uid = () => (self.crypto && crypto.randomUUID)
+  ? crypto.randomUUID()
+  : 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+const nowISO = () => new Date().toISOString();
+const pad2 = (n) => String(n).padStart(2, '0');
+const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`; };
+
+const nfInt = new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 0 });
+const fmtInt = (v) => nfInt.format(Math.round(Number(v) || 0));
+
+function fmtCompact(v) {
+  const n = Number(v) || 0;
+  const a = Math.abs(n);
+  if (a >= 1e8) return (n / 1e8).toFixed(a >= 1e9 ? 1 : 2) + ' 億';
+  if (a >= 1e4) return (n / 1e4).toFixed(a >= 1e6 ? 0 : 1) + ' 萬';
+  return fmtInt(n);
+}
+
+function fmtPct(bp) {
+  const p = (Number(bp) || 0) / 100;
+  const s = Math.abs(p % 1) < 1e-9 ? p.toFixed(0) : p.toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
+  return s + '%';
+}
+
+function num(v) { const n = Number(v); return Number.isFinite(n) ? n : 0; }
+
+function debounce(fn, ms) {
+  let t = 0;
+  const wrapped = (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+  wrapped.cancel = () => clearTimeout(t);
+  wrapped.flush = (...args) => { clearTimeout(t); fn(...args); };
+  return wrapped;
+}
+
+function parseMoney(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? Math.round(v) : NaN;
+  let s = String(v === null || v === undefined ? '' : v).trim();
+  if (!s) return NaN;
+  s = s.replace(/[\s,，、]/g, '')
+       .replace(/^[（(]/, '-').replace(/[）)]$/, '')
+       .replace(/[－—–]/g, '-')
+       .replace(/NTD?|\$|元|仟|千/gi, '');
+  if (s === '-' || s === '') return NaN;
+  const n = Number(s);
+  return Number.isFinite(n) ? Math.round(n) : NaN;
+}
+
+function parseDate(v) {
+  const s = String(v === null || v === undefined ? '' : v).trim();
+  if (!s) return null;
+  let m = s.match(/^(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/);
+  if (m) {
+    const y = +m[1], mo = +m[2], d = +m[3];
+    if (mo >= 1 && mo <= 12 && d >= 1 && d <= 31) return `${y}-${pad2(mo)}-${pad2(d)}`;
+  }
+  m = s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{4})[-\/.](\d{1,2})$/);
+  if (m) return `${m[1]}-${pad2(+m[2])}-01`;
+  const d = new Date(s);
+  if (!Number.isNaN(d.getTime())) {
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  }
+  return null;
+}
+
+function normalizeRating(v) {
+  let s = String(v === null || v === undefined ? '' : v).trim().toUpperCase();
+  s = s.replace(/\s+/g, '').replace(/[()（）]/g, '').replace(/^TW(N)?/, '');
+  if (!s || s === '-' || s === 'NR' || s === 'N/A' || s === 'NA' || s === '無' || s === '未評等' || s === 'UNRATED') return 'UNRATED';
+  return s;
+}
+
+function ratingGroup(raw) {
+  const s = normalizeRating(raw);
+  return GRADE_GROUP[s] || 'UNRATED';
+}
+
+function ratingLabel(key) {
+  const r = RATINGS.find((x) => x.key === key);
+  return r ? r.label : '未評等';
+}
+
+function classLabel(key) {
+  const c = CLASSES.find((x) => x.key === key);
+  return c ? c.label : (key || '（未分類）');
+}
+
+const CLASS_ALIASES = {
+  SOVEREIGN: ['SOVEREIGN', 'SOV', '主權', '中央政府', '政府', '國家', '公債'],
+  PSE: ['PSE', '公營', '公營事業', '公共部門', '公共事業', 'PUBLIC'],
+  BANK: ['BANK', '銀行', '金融機構', '存款機構', 'FI', '信用合作社', '票券'],
+  CORPORATE: ['CORPORATE', 'CORP', '企業', '公司', '法人', '一般企業', '批發', '中小企業'],
+  RETAIL: ['RETAIL', '零售', '個人', '消費', '個人金融', '信用卡', '小額'],
+  RESI_MORTGAGE: ['RESI_MORTGAGE', 'RESI', 'MORTGAGE', '住宅', '房貸', '住宅抵押', '住宅貸款', '自用住宅', '購屋'],
+  CRE: ['CRE', '商用不動產', '商辦', '不動產', '廠辦'],
+  EQUITY: ['EQUITY', '股權', '權益', '股票', '投資'],
+  PAST_DUE: ['PAST_DUE', 'PASTDUE', '逾期', '不良', '催收', '呆帳'],
+  OTHER: ['OTHER', '其他', '其他資產', 'OTHER_ASSETS', 'OTHERASSET'],
+};
+
+// 完全相符對不上時，用關鍵字判斷（順序有義：逾期與住宅優先）
+const CLASS_CONTAINS = [
+  ['PAST_DUE', ['逾期', '催收', '不良', '呆帳']],
+  ['RESI_MORTGAGE', ['住宅', '房貸', '房屋貸款', '購屋']],
+  ['CRE', ['商用不動產', '商業不動產', '商辦', '廠辦']],
+  ['SOVEREIGN', ['主權', '中央政府']],
+  ['PSE', ['公營', '公共部門', '公共事業']],
+  ['EQUITY', ['股權', '權益', '股票']],
+  ['BANK', ['銀行', '金融機構', '信用合作社', '票券']],
+  ['RETAIL', ['零售', '個人', '消費金融', '信用卡']],
+  ['CORPORATE', ['企業', '公司', '法人']],
+  ['OTHER', ['其他']],
+];
+
+function normKey(s) {
+  return String(s === null || s === undefined ? '' : s).toUpperCase().replace(/[\s_\-/（）()]/g, '');
+}
+
+const CLASS_LOOKUP = (() => {
+  const m = new Map();
+  for (const key of Object.keys(CLASS_ALIASES)) {
+    m.set(normKey(key), key);
+    for (const a of CLASS_ALIASES[key]) m.set(normKey(a), key);
+  }
+  return m;
+})();
+
+function normalizeClass(v) {
+  const raw = String(v === null || v === undefined ? '' : v).trim();
+  if (!raw) return '';
+  const key = normKey(raw);
+  const exact = CLASS_LOOKUP.get(key);
+  if (exact) return exact;
+  for (const [cls, words] of CLASS_CONTAINS) {
+    if (words.some((w) => key.includes(normKey(w)))) return cls;
+  }
+  return raw.toUpperCase().replace(/\s+/g, '_');
+}
+
+function download(filename, text, mime) {
+  const blob = new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: filename });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function csvCell(v) {
+  const s = v === null || v === undefined ? '' : String(v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function toCSV(rows) {
+  return '\uFEFF' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n');
+}
+
+function dateStamp() {
+  const d = new Date();
+  return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+}
+
+/* ============================================================
+   4. 儲存層（所有 IndexedDB 存取集中在這裡）
+   ============================================================ */
+const STORE_EXPOSURES = 'exposures';
+const STORE_META = 'meta';
+let db = null;
+let memoryMode = false;
+const memExposures = new Map();
+const memMeta = new Map();
+
+function openDB() {
+  return new Promise((resolve) => {
+    if (!('indexedDB' in window)) { memoryMode = true; resolve(null); return; }
+    let req;
+    try { req = indexedDB.open(CONFIG.dbName, CONFIG.dbVersion); }
+    catch (err) { memoryMode = true; resolve(null); return; }
+    req.onupgradeneeded = () => {
+      const d = req.result;
+      if (!d.objectStoreNames.contains(STORE_EXPOSURES)) {
+        const s = d.createObjectStore(STORE_EXPOSURES, { keyPath: 'id' });
+        ['exposureClass', 'obligor', 'rating', 'asOfDate', 'updatedAt'].forEach((k) => s.createIndex(k, k, { unique: false }));
+      }
+      if (!d.objectStoreNames.contains(STORE_META)) d.createObjectStore(STORE_META, { keyPath: 'key' });
+    };
+    req.onsuccess = () => {
+      db = req.result;
+      db.onversionchange = () => { try { db.close(); } catch (e) {} showBanner('資料庫已由其他分頁更新，請重新載入這個頁面。'); };
+      resolve(db);
+    };
+    req.onerror = () => { memoryMode = true; resolve(null); };
+    req.onblocked = () => showBanner('資料庫被其他分頁占用，請關閉其他分頁後重新載入。');
+  });
+}
+
+function txDone(tx) {
+  return new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('交易失敗'));
+    tx.onabort = () => reject(tx.error || new Error('交易中止'));
+  });
+}
+
+async function idbAll(store) {
+  if (memoryMode) {
+    return store === STORE_EXPOSURES ? Array.from(memExposures.values()) : Array.from(memMeta.values());
+  }
+  const tx = db.transaction(store, 'readonly');
+  const req = tx.objectStore(store).getAll();
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbGet(store, key) {
+  if (memoryMode) {
+    return store === STORE_EXPOSURES ? memExposures.get(key) : memMeta.get(key);
+  }
+  const tx = db.transaction(store, 'readonly');
+  const req = tx.objectStore(store).get(key);
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function idbPut(store, value) {
+  if (memoryMode) {
+    if (store === STORE_EXPOSURES) memExposures.set(value.id, value);
+    else memMeta.set(value.key, value);
+    return;
+  }
+  const tx = db.transaction(store, 'readwrite');
+  tx.objectStore(store).put(value);
+  await txDone(tx);
+}
+
+async function idbPutMany(store, values) {
+  if (!values.length) return;
+  if (memoryMode) {
+    for (const v of values) {
+      if (store === STORE_EXPOSURES) memExposures.set(v.id, v);
+      else memMeta.set(v.key, v);
+    }
+    return;
+  }
+  const tx = db.transaction(store, 'readwrite');
+  const s = tx.objectStore(store);
+  for (const v of values) s.put(v);
+  await txDone(tx);
+}
+
+async function idbDel(store, key) {
+  if (memoryMode) {
+    if (store === STORE_EXPOSURES) memExposures.delete(key);
+    else memMeta.delete(key);
+    return;
+  }
+  const tx = db.transaction(store, 'readwrite');
+  tx.objectStore(store).delete(key);
+  await txDone(tx);
+}
+
+async function idbClear(store) {
+  if (memoryMode) {
+    if (store === STORE_EXPOSURES) memExposures.clear();
+    else memMeta.clear();
+    return;
+  }
+  const tx = db.transaction(store, 'readwrite');
+  tx.objectStore(store).clear();
+  await txDone(tx);
+}
+
+async function metaSet(key, value) {
+  await idbPut(STORE_META, { key, value });
+}
+
+async function requestPersist() {
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      const already = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+      if (!already) await navigator.storage.persist();
+    }
+  } catch (e) { /* 忽略：不影響功能 */ }
+}
+
+function showBanner(msg) {
+  const b = $('#banner');
+  b.textContent = msg;
+  b.hidden = false;
+}
+
+/* ============================================================
+   5. 應用狀態
+   ============================================================ */
+const state = {
+  exposures: [],
+  rules: makeRules('basel2'),
+  rateBasisBp: 800,
+  rulesRev: 0,
+  dataRev: 0,
+  asOfDate: 'ALL',
+  view: 'dashboard',
+  filters: { q: '', cls: '', rating: '', issue: '', sortKey: 'refNo', sortDir: 'asc' },
+  topN: 10,
+  groupMode: false,
+  computed: new Map(),
+};
+
+/* ============================================================
+   6. 計算引擎
+   ============================================================ */
+function buildCtx() {
+  return {
+    rules: state.rules,
+    rateBasisBp: state.rateBasisBp,
+    ccfMap: new Map((state.rules.ccf || []).map((x) => [x.key, x])),
+    crmMap: new Map((state.rules.crm || []).map((x) => [x.key, x])),
+  };
+}
+
+function lookupRW(cls, group, table) {
+  const byClass = table[cls];
+  if (!byClass) return null;
+  if (byClass[group] !== undefined && byClass[group] !== null) {
+    return { bp: byClass[group], src: `${classLabel(cls)} · ${ratingLabel(group)}` };
+  }
+  if (byClass.ANY !== undefined && byClass.ANY !== null) {
+    return { bp: byClass.ANY, src: `${classLabel(cls)} · 通用權重` };
+  }
+  return null;
+}
+
+function computeExposure(row, ctx) {
+  const issues = [];
+
+  // --- EAD ---
+  const undrawn = Math.max(0, num(row.undrawn));
+  const drawn = num(row.drawn);
+  if (drawn < 0) issues.push('NEG_AMOUNT');
+
+  let ccfKey = row.ccfKey && String(row.ccfKey).trim();
+  if (!ccfKey) ccfKey = undrawn > 0 ? 'UNDRAWN_COMMIT' : 'NONE';
+  const ccfRule = ctx.ccfMap.get(ccfKey);
+  if (!ccfRule) issues.push('CCF_UNKNOWN');
+  const ccf = ccfRule ? num(ccfRule.ccf) : 0;
+  const ccfLabel = ccfRule ? ccfRule.label : `${ccfKey}（未對照）`;
+
+  const converted = Math.round(undrawn * ccf / 10000);
+  const ead = Math.max(0, Math.round(drawn + converted));
+  if (ead === 0) issues.push('ZERO_EAD');
+
+  // --- 基準權重 ---
+  const group = ratingGroup(row.rating);
+  if (group === 'UNRATED' && normalizeRating(row.rating) !== 'UNRATED') issues.push('RATING_UNKNOWN');
+  const base = lookupRW(row.exposureClass, group, ctx.rules.riskWeights);
+  if (!base) {
+    if (!ctx.rules.riskWeights[row.exposureClass]) issues.push('CLASS_UNKNOWN');
+    else issues.push('RW_MISSING');
+  }
+  const baseBp = base ? num(base.bp) : 0;
+
+  // --- CRM：擔保品 ---
+  const parts = [];
+  let covered = 0;
+  let weighted = 0;
+
+  if (row.collateralType && num(row.collateralValue) > 0) {
+    const rule = ctx.crmMap.get(row.collateralType);
+    if (!rule) {
+      issues.push('CRM_UNKNOWN');
+    } else {
+      const eligible = Math.max(0, Math.round(num(row.collateralValue) * (1 - num(rule.haircut) / 100)));
+      const cov = Math.max(0, Math.min(eligible, ead - covered));
+      const w = Math.min(num(rule.weight), baseBp);
+      if (cov > 0) {
+        covered += cov;
+        weighted += cov * w;
+        parts.push({ kind: 'collateral', key: rule.key, label: rule.label, cov, weight: w, haircut: num(rule.haircut) });
+      }
+    }
+  }
+
+  // --- CRM：保證 ---
+  if (row.guaranteeType && num(row.guaranteeAmount) > 0) {
+    const rule = ctx.crmMap.get(row.guaranteeType);
+    if (!rule) {
+      issues.push('CRM_UNKNOWN');
+    } else {
+      const cov = Math.max(0, Math.min(num(row.guaranteeAmount), ead - covered));
+      const w = Math.min(num(rule.weight), baseBp);
+      if (cov > 0) {
+        covered += cov;
+        weighted += cov * w;
+        parts.push({ kind: 'guarantee', key: rule.key, label: rule.label, cov, weight: w, haircut: 0 });
+      }
+    }
+  }
+
+  const uncovered = Math.max(0, ead - covered);
+  const effBp = ead > 0 ? Math.round((weighted + uncovered * baseBp) / ead) : 0;
+  const rwa = Math.round(ead * effBp / 10000);
+  const capital = Math.round(rwa * state.rateBasisBp / 10000);
+
+  if (num(row.dpdDays) >= 90 && row.exposureClass !== 'PAST_DUE') issues.push('DPD_MISMATCH');
+
+  return {
+    ccf, ccfLabel, ccfKey, converted,
+    ead, baseBp, baseSrc: base ? base.src : '無對應權重',
+    covered, uncovered, parts, effBp, rwa, capital, issues,
+  };
+}
+
+function recompute() {
+  const ctx = buildCtx();
+  const map = new Map();
+  for (const row of state.exposures) map.set(row.id, computeExposure(row, ctx));
+  state.computed = map;
+}
+
+function inScope(row) {
+  return state.asOfDate === 'ALL' || row.asOfDate === state.asOfDate;
+}
+
+let aggCacheKey = '';
+let aggCacheVal = null;
+
+function bump(map, key, calc) {
+  const o = map.get(key) || { n: 0, ead: 0, rwa: 0 };
+  o.n += 1; o.ead += calc.ead; o.rwa += calc.rwa;
+  map.set(key, o);
+}
+
+function getAgg() {
+  const key = [state.rulesRev, state.dataRev, state.asOfDate, state.groupMode, state.rateBasisBp].join('|');
+  if (key === aggCacheKey && aggCacheVal) return aggCacheVal;
+
+  const byClass = new Map();
+  const byRating = new Map();
+  const byParty = new Map();
+  const issues = new Map();
+  let n = 0, ead = 0, rwa = 0, capital = 0;
+
+  for (const row of state.exposures) {
+    if (!inScope(row)) continue;
+    const calc = state.computed.get(row.id);
+    if (!calc) continue;
+    n += 1; ead += calc.ead; rwa += calc.rwa; capital += calc.capital;
+    bump(byClass, row.exposureClass || '（未分類）', calc);
+    bump(byRating, ratingGroup(row.rating), calc);
+    bump(byParty, state.groupMode ? (row.group || row.obligor || '（未填）') : (row.obligor || '（未填）'), calc);
+    for (const k of calc.issues) issues.set(k, (issues.get(k) || 0) + 1);
+  }
+
+  const parties = Array.from(byParty.entries())
+    .map(([name, v]) => ({ name, ...v }))
+    .sort((a, b) => b.ead - a.ead);
+
+  let hhi = 0;
+  if (ead > 0) for (const p of parties) { const s = p.ead / ead; hhi += s * s * 10000; }
+  const top10 = parties.slice(0, 10).reduce((s, p) => s + p.ead, 0);
+
+  const val = {
+    n, ead, rwa, capital,
+    wavgBp: ead > 0 ? Math.round(rwa / ead * 10000) : 0,
+    byClass: Array.from(byClass.entries())
+      .map(([k, v]) => ({ key: k, label: classLabel(k), ...v }))
+      .sort((a, b) => b.ead - a.ead),
+    byRating: RATINGS.map((r) => ({ key: r.key, label: r.label, ...(byRating.get(r.key) || { n: 0, ead: 0, rwa: 0 }) })),
+    parties,
+    hhi: Math.round(hhi),
+    top10Share: ead > 0 ? top10 / ead : 0,
+    totalIssues: Array.from(issues.values()).reduce((s, v) => s + v, 0),
+    issues,
+  };
+  aggCacheKey = key;
+  aggCacheVal = val;
+  return val;
+}
+
+/* ============================================================
+   7. CSV：解析、欄位對應、轉換
+   ============================================================ */
+const FIELD_DEFS = [
+  { key: 'refNo', label: '案件編號', required: false, syn: ['案件編號', '案號', '借據號碼', '帳號', '帳戶號碼', '交易編號', '編號', 'REFNO', 'REF', 'ACCTNO', 'ACCOUNTNO', 'ID'] },
+  { key: 'obligor', label: '借戶名稱', required: true, syn: ['借戶', '借戶名稱', '客戶', '客戶名稱', '借款人', '授信戶', '戶名', 'OBLIGOR', 'CUSTOMER', 'CUSTOMERNAME', 'BORROWER', 'NAME'] },
+  { key: 'group', label: '集團', required: false, syn: ['集團', '集團名稱', '歸戶', '關係人', 'GROUP', 'GROUPNAME'] },
+  { key: 'exposureClass', label: '暴險類別', required: true, syn: ['暴險類別', '暴險種類', '資產類別', '風險類別', '類別', 'EXPOSURECLASS', 'ASSETCLASS', 'CLASS'] },
+  { key: 'product', label: '產品', required: false, syn: ['產品', '產品別', '商品', '業務別', '承作項目', '科目', 'PRODUCT', 'PRODUCTTYPE'] },
+  { key: 'rating', label: '外部評等', required: false, syn: ['外部評等', '信用評等', '評等', '信評', '評等代碼', 'RATING', 'GRADE', 'RATINGGRADE'] },
+  { key: 'drawn', label: '已動用餘額', required: true, syn: ['已動用', '已動用餘額', '放款餘額', '帳面餘額', '本金餘額', '授信餘額', '餘額', 'DRAWN', 'BALANCE', 'OUTSTANDING', 'AMOUNT'] },
+  { key: 'undrawn', label: '未動用額度', required: false, syn: ['未動用', '未動用額度', '未撥款', '可動用額度', '核准額度', 'UNDRAWN', 'COMMITMENT', 'LIMIT'] },
+  { key: 'ccfKey', label: '表外科目（CCF）', required: false, syn: ['CCF', 'CCFKEY', '信用轉換係數', '轉換係數', '表外科目', '承作科目'] },
+  { key: 'collateralType', label: '擔保品類型', required: false, syn: ['擔保品', '擔保品類型', '抵押品', '擔保種類', 'COLLATERAL', 'COLLATERALTYPE'] },
+  { key: 'collateralValue', label: '擔保品市值', required: false, syn: ['擔保品價值', '擔保品市值', '擔保價值', '抵押品價值', 'COLLATERALVALUE', 'COLLATERALAMOUNT'] },
+  { key: 'guaranteeType', label: '保證類型', required: false, syn: ['保證', '保證人', '保證類型', '保證種類', 'GUARANTEE', 'GUARANTEETYPE'] },
+  { key: 'guaranteeAmount', label: '保證金額', required: false, syn: ['保證金額', '保證餘額', '保證覆蓋', 'GUARANTEEAMOUNT'] },
+  { key: 'dpdDays', label: '逾期天數', required: false, syn: ['逾期天數', '延滯天數', '逾期', 'DPD', 'DAYSPASTDUE', 'PASTDUE'] },
+  { key: 'asOfDate', label: '資料基準日', required: false, syn: ['資料基準日', '基準日', '資料日期', '日期', '年月', 'ASOFDATE', 'DATE', 'ASOF'] },
+  { key: 'note', label: '備註', required: false, syn: ['備註', '說明', 'NOTE', 'REMARK', 'MEMO'] },
+];
+
+function detectDelim(text) {
+  const sample = text.slice(0, 4000);
+  const counts = { ',': 0, ';': 0, '\t': 0 };
+  let inQ = false;
+  for (let i = 0; i < sample.length; i++) {
+    const ch = sample[i];
+    if (ch === '"') { inQ = !inQ; continue; }
+    if (inQ) continue;
+    if (ch === '\n') break;
+    if (counts[ch] !== undefined) counts[ch] += 1;
+  }
+  let best = ',', bestN = -1;
+  for (const k of Object.keys(counts)) if (counts[k] > bestN) { bestN = counts[k]; best = k; }
+  return bestN > 0 ? best : ',';
+}
+
+function parseCSV(text, delim) {
+  const rows = [];
+  let row = [];
+  let field = '';
+  let inQ = false;
+  const d = delim || ',';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { field += '"'; i += 1; }
+        else inQ = false;
+      } else field += ch;
+      continue;
+    }
+    if (ch === '"') { inQ = true; continue; }
+    if (ch === d) { row.push(field); field = ''; continue; }
+    if (ch === '\r') continue;
+    if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; continue; }
+    field += ch;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter((r) => r.some((c) => String(c).trim() !== ''));
+}
+
+function guessMapping(headers) {
+  const norm = headers.map(normKey);
+  const map = {};
+  const used = new Set();
+  for (const f of FIELD_DEFS) {
+    let idx = -1;
+    const targets = [normKey(f.label), ...f.syn.map(normKey)].filter((s) => s.length >= 2);
+    // 1) 完全相符
+    for (let i = 0; i < norm.length; i++) {
+      if (used.has(i) || !norm[i]) continue;
+      if (targets.includes(norm[i])) { idx = i; break; }
+    }
+    // 2) 包含關係（限制長度避免誤配）
+    if (idx < 0) {
+      for (let i = 0; i < norm.length; i++) {
+        if (used.has(i) || norm[i].length < 3) continue;
+        if (targets.some((t) => t.length >= 3 && (norm[i].includes(t) || t.includes(norm[i])))) { idx = i; break; }
+      }
+    }
+    if (idx >= 0) { map[f.key] = idx; used.add(idx); }
+  }
+  return map;
+}
+
+function resolveCcfKey(v) {
+  const raw = String(v === null || v === undefined ? '' : v).trim();
+  if (!raw) return '';
+  const hit = (state.rules.ccf || []).find((x) => normKey(x.key) === normKey(raw) || normKey(x.label) === normKey(raw));
+  return hit ? hit.key : raw;
+}
+
+function resolveCrmKey(v, kind) {
+  const raw = String(v === null || v === undefined ? '' : v).trim();
+  if (!raw) return '';
+  const list = (state.rules.crm || []).filter((x) => !kind || x.kind === kind);
+  const hit = list.find((x) => normKey(x.key) === normKey(raw) || normKey(x.label) === normKey(raw));
+  return hit ? hit.key : raw;
+}
+
+function convertRow(raw, map, opts) {
+  const get = (k) => {
+    const i = map[k];
+    if (i === undefined || i === null) return '';
+    const v = raw[i];
+    return v === null || v === undefined ? '' : String(v).trim();
+  };
+  const errors = [];
+  const obligor = get('obligor');
+  if (!obligor) errors.push('借戶名稱空白');
+
+  const clsRaw = get('exposureClass');
+  const exposureClass = normalizeClass(clsRaw);
+  if (!clsRaw) errors.push('暴險類別空白');
+
+  const drawn = parseMoney(get('drawn'));
+  if (!Number.isFinite(drawn)) errors.push('已動用餘額無法解析');
+
+  if (errors.length) return { ok: false, errors };
+
+  const undrawn = parseMoney(get('undrawn'));
+  const collateralValue = parseMoney(get('collateralValue'));
+  const guaranteeAmount = parseMoney(get('guaranteeAmount'));
+  const dpd = parseMoney(get('dpdDays'));
+
+  const asOf = parseDate(get('asOfDate')) || opts.defaultDate;
+  const rating = normalizeRating(get('rating'));
+
+  return {
+    ok: true,
+    errors: [],
+    row: {
+      refNo: get('refNo') || '',
+      obligor,
+      group: get('group') || '',
+      exposureClass,
+      product: get('product') || '',
+      rating,
+      drawn,
+      undrawn: Number.isFinite(undrawn) ? Math.max(0, undrawn) : 0,
+      ccfKey: resolveCcfKey(get('ccfKey')),
+      collateralType: resolveCrmKey(get('collateralType'), 'collateral'),
+      collateralValue: Number.isFinite(collateralValue) ? Math.max(0, collateralValue) : 0,
+      guaranteeType: resolveCrmKey(get('guaranteeType'), 'guarantee'),
+      guaranteeAmount: Number.isFinite(guaranteeAmount) ? Math.max(0, guaranteeAmount) : 0,
+      dpdDays: Number.isFinite(dpd) ? Math.max(0, Math.round(dpd)) : 0,
+      asOfDate: asOf,
+      note: get('note') || '',
+    },
+  };
+}
+
+/* ============================================================
+   8. 匯入暫存
+   ============================================================ */
+const imp = {
+  buffer: null,
+  rawText: '',
+  encoding: 'auto',
+  delim: '',
+  hasHeader: true,
+  rows: [],
+  headers: [],
+  map: {},
+  strategy: 'merge',
+  lastErrors: [],
+};
+
+function decodeBuffer(buf, enc) {
+  if (enc === 'utf-8') return new TextDecoder('utf-8').decode(buf);
+  if (enc === 'big5') { try { return new TextDecoder('big5').decode(buf); } catch (e) { return new TextDecoder('utf-8').decode(buf); } }
+  const bytes = new Uint8Array(buf);
+  if (bytes.length >= 3 && bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF) {
+    return new TextDecoder('utf-8').decode(buf);
+  }
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+  catch (e) {
+    try { return new TextDecoder('big5').decode(buf); }
+    catch (e2) { return new TextDecoder('utf-8').decode(buf); }
+  }
+}
+
+function loadImportFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    imp.buffer = reader.result;
+    imp.map = {};
+    imp.delim = '';
+    imp.encoding = 'auto';
+    imp.rawText = decodeBuffer(reader.result, 'auto');
+    $('#impFile').textContent = `${file.name} · ${file.size < 1024 ? file.size + ' B' : (file.size / 1024).toFixed(1) + ' KB'}`;
+    parseImportText();
+    $('#dlgImport').showModal();
+  };
+  reader.onerror = () => toast('讀取檔案失敗，請再試一次');
+  reader.readAsArrayBuffer(file);
+}
+
+function parseImportText() {
+  const text = imp.rawText.replace(/^\uFEFF/, '');
+  const delim = imp.delim || detectDelim(text);
+  let rows = parseCSV(text, delim);
+  if (imp.hasHeader !== false) {
+    if (rows.length && rows[0].filter((c) => String(c).trim() !== '').length < 2) rows = rows.slice(1);
+    imp.headers = rows.length ? rows[0].map((h) => String(h).trim()) : [];
+    imp.rows = rows.slice(1);
+  } else {
+    imp.headers = rows.length ? rows[0].map((_, i) => '欄 ' + (i + 1)) : [];
+    imp.rows = rows;
+  }
+  if (!imp.headers.length) {
+    imp.rows = [];
+    imp.map = {};
+    renderImport();
+    return;
+  }
+  imp.map = imp.map && Object.keys(imp.map).length ? imp.map : (imp.hasHeader !== false ? guessMapping(imp.headers) : {});
+  renderImport();
+}
+
+function renderImport() {  const mapHost = $('#impMap');
+  mapHost.replaceChildren();
+  const options = imp.headers.map((h, i) => ({ i, h }));
+
+  for (const f of FIELD_DEFS) {
+    const sel = el('select', { 'data-field': f.key, 'aria-label': f.label });
+    sel.append(el('option', { value: '' }, '（不匯入）'));
+    for (const o of options) {
+      sel.append(el('option', { value: String(o.i) }, `${o.h || '（空白欄）'} · 欄 ${o.i + 1}`));
+    }
+    const cur = imp.map[f.key];
+    sel.value = cur === undefined || cur === null ? '' : String(cur);
+    sel.addEventListener('change', () => {
+      const v = sel.value;
+      if (v === '') delete imp.map[f.key];
+      else imp.map[f.key] = Number(v);
+      refreshImportStats();
+    });
+    const sample = cur === undefined || cur === null
+      ? ''
+      : imp.rows.slice(0, 2).map((r) => (r[cur] || '').trim()).filter(Boolean).join(' / ');
+    mapHost.append(el('div', { class: 'maprow' },
+      el('span', null, f.label, f.required ? el('em', null, ' *') : null),
+      sel,
+      sample ? el('span', { class: 'hint' }, '樣本：' + sample) : null
+    ));
+  }
+
+  $('#impEnc').value = imp.encoding;
+  $('#impHasHeader').checked = imp.hasHeader !== false;
+  $('#impDelim').value = imp.delim === '\t' ? 'tab' : (imp.delim || 'auto');
+  $('#impStrategy').value = imp.strategy;
+  $('#impMsg').replaceChildren();
+  $('#impProgress').hidden = true;
+  $('#impBar').style.width = '0%';
+  refreshImportStats();
+}
+
+function refreshImportStats() {
+  const defaultDate = state.asOfDate === 'ALL' ? todayISO() : state.asOfDate;
+  let ok = 0;
+  const bad = [];
+  for (let i = 0; i < imp.rows.length; i++) {
+    const res = convertRow(imp.rows[i], imp.map, { defaultDate });
+    if (res.ok) ok += 1;
+    else if (bad.length < 20) bad.push({ line: i + 2, errors: res.errors, raw: imp.rows[i] });
+  }
+  const missing = FIELD_DEFS.filter((f) => f.required && (imp.map[f.key] === undefined || imp.map[f.key] === null));
+
+  $('#impCount').textContent = `${fmtInt(imp.rows.length)} 列 · 可匯入 ${fmtInt(ok)}`;
+  const msg = $('#impMsg');
+  msg.replaceChildren();
+  if (missing.length) {
+    msg.append(el('span', { class: 'bad' }, '尚未對應必填欄位：' + missing.map((f) => f.label).join('、')));
+  } else {
+    msg.append(el('span', null, '可匯入 ', el('b', null, fmtInt(ok)), ' 列'));
+    const badCount = imp.rows.length - ok;
+    if (badCount > 0) {
+      msg.append(el('span', null, ' · '), el('span', { class: 'bad' }, `${fmtInt(badCount)} 列有問題（匯入時會跳過）`));
+      if (bad.length) {
+        msg.append(el('div', { class: 'hint', style: 'margin-top:4px' },
+          '例：第 ' + bad[0].line + ' 列 — ' + bad[0].errors.join('、')));
+      }
+    }
+  }
+  $('#btnDoImport').disabled = missing.length > 0 || ok === 0;
+
+  // 預覽
+  const preview = $('#impPreview');
+  preview.replaceChildren();
+  const cols = FIELD_DEFS.filter((f) => imp.map[f.key] !== undefined && imp.map[f.key] !== null);
+  if (!cols.length) return;
+  const table = el('table', { class: 'grid' });
+  table.append(el('thead', null, el('tr', null, cols.map((c) => el('th', null, c.label)))));
+  const body = el('tbody');
+  for (const raw of imp.rows.slice(0, 3)) {
+    const res = convertRow(raw, imp.map, { defaultDate });
+    if (!res.ok) continue;
+    const r = res.row;
+    const cells = cols.map((c) => {
+      let v = r[c.key];
+      if (c.key === 'exposureClass') v = classLabel(v);
+      else if (c.key === 'rating') v = (v && v !== 'UNRATED') ? v : '未評等';
+      else if (c.key === 'collateralType' || c.key === 'guaranteeType' || c.key === 'ccfKey') {
+        const list = state.rules.crm || [];
+        const cc = (state.rules.ccf || []).find((x) => x.key === v);
+        const cr = list.find((x) => x.key === v);
+        v = cc ? cc.label : (cr ? cr.label : v || '—');
+      } else if (typeof v === 'number') v = fmtInt(v);
+      return el('td', { class: typeof r[c.key] === 'number' ? 'num' : '' }, v === '' ? '—' : String(v));
+    });
+    body.append(el('tr', null, cells));
+  }
+  table.append(body);
+  preview.append(table);
+}
+
+function mostCommonDate(rows) {
+  const m = new Map();
+  for (const r of rows) m.set(r.asOfDate, (m.get(r.asOfDate) || 0) + 1);
+  let best = '';
+  let n = -1;
+  for (const [d, c] of m) if (c > n) { n = c; best = d; }
+  return best;
+}
+
+async function runImport() {
+  const btn = $('#btnDoImport');
+  btn.disabled = true;
+  const defaultDate = state.asOfDate === 'ALL' ? todayISO() : state.asOfDate;
+  const errors = [];
+  const rows = [];
+  const mergeTargets = imp.strategy === 'merge';
+  const existingByRef = new Map();
+  if (mergeTargets) for (const r of state.exposures) if (r.refNo) existingByRef.set(r.refNo, r);
+
+  let generated = 0;
+  for (let i = 0; i < imp.rows.length; i++) {
+    const res = convertRow(imp.rows[i], imp.map, { defaultDate });
+    if (!res.ok) {
+      errors.push({ line: i + 2, reason: res.errors.join('／'), raw: imp.rows[i] });
+      continue;
+    }
+    const row = res.row;
+    if (!row.refNo) { row.refNo = 'AUTO-' + uid().slice(0, 8).toUpperCase(); generated += 1; }
+    const prev = existingByRef.get(row.refNo);
+    row.id = prev ? prev.id : uid();
+    row.createdAt = prev ? prev.createdAt : nowISO();
+    row.updatedAt = nowISO();
+    row.source = 'csv';
+    rows.push(row);
+  }
+
+  // 檔內重複：同案件編號保留最後一筆
+  const byRef = new Map();
+  for (const r of rows) byRef.set(r.refNo, r);
+  const finalRows = Array.from(byRef.values());
+  const dupCount = rows.length - finalRows.length;
+
+  if (imp.strategy === 'replace') await idbClear(STORE_EXPOSURES);
+
+  $('#impProgress').hidden = false;
+  const chunk = 800;
+  for (let i = 0; i < finalRows.length; i += chunk) {
+    await idbPutMany(STORE_EXPOSURES, finalRows.slice(i, i + chunk));
+    $('#impBar').style.width = Math.round(Math.min(1, (i + chunk) / finalRows.length) * 100) + '%';
+    await new Promise((r) => setTimeout(r, 0));
+  }
+
+  imp.lastErrors = errors;
+  $('#dlgImport').close();
+  await reloadExposures();
+  recompute();
+  state.dataRev += 1;
+  if (finalRows.length && state.asOfDate !== 'ALL') {
+    const importDates = new Set(finalRows.map((r) => r.asOfDate));
+    if (!importDates.has(state.asOfDate)) state.asOfDate = mostCommonDate(finalRows);
+  }
+  renderAll();
+
+  const parts = [`匯入 ${fmtInt(finalRows.length)} 筆`];
+  if (generated) parts.push(`自動編號 ${fmtInt(generated)} 筆`);
+  if (errors.length) parts.push(`跳過 ${fmtInt(errors.length)} 筆`);
+  if (dupCount) parts.push(`檔內重複覆蓋 ${fmtInt(dupCount)} 筆`);
+  toast(parts.join('・'), {
+    action: errors.length ? '下載錯誤列' : null,
+    onAction: errors.length ? exportImportErrors : null,
+    timeout: errors.length ? 12000 : 5000,
+  });
+  $('#btnExportErrors').disabled = errors.length === 0;
+  btn.disabled = false;
+}
+
+function exportImportErrors() {
+  const errs = imp.lastErrors || [];
+  if (!errs.length) { toast('沒有錯誤列'); return; }
+  const width = Math.max(...errs.map((e) => e.raw.length));
+  const header = ['原始行號', '錯誤原因'];
+  for (let i = 0; i < width; i++) header.push('欄' + (i + 1));
+  const out = [header];
+  for (const e of errs) {
+    const line = [e.line, e.reason];
+    for (let i = 0; i < width; i++) line.push(e.raw[i] === undefined ? '' : e.raw[i]);
+    out.push(line);
+  }
+  download(`匯入錯誤_${dateStamp()}.csv`, toCSV(out), 'text/csv;charset=utf-8');
+}
+
+/* ============================================================
+   9. 共用 UI：toast / 確認框 / 主題 / 頁籤
+   ============================================================ */
+function toast(msg, opts = {}) {
+  const host = $('#toasts');
+  while (host.children.length >= 3) host.firstElementChild.remove();
+  const node = el('div', { class: 'toast', role: 'status' }, el('span', null, msg));
+  if (opts.action && opts.onAction) {
+    const b = el('button', { type: 'button' }, opts.action);
+    b.addEventListener('click', () => { opts.onAction(); node.remove(); });
+    node.append(b);
+  }
+  host.append(node);
+  setTimeout(() => node.remove(), opts.timeout || 4200);
+}
+
+let confirmResolver = null;
+function confirmDlg(opts) {
+  return new Promise((resolve) => {
+    $('#dlgConfirmTitle').textContent = opts.title || '確認';
+    $('#dlgConfirmSub').textContent = opts.subtitle || '';
+    $('#dlgConfirmBody').textContent = opts.body || '';
+    const yes = $('#btnConfirmYes');
+    yes.textContent = opts.okText || '確定';
+    yes.className = 'btn ' + (opts.danger ? 'btn--danger' : 'btn--primary');
+    confirmResolver = resolve;
+    $('#dlgConfirm').showModal();
+  });
+}
+function settleConfirm(val) {
+  const fn = confirmResolver;
+  confirmResolver = null;
+  const dlg = $('#dlgConfirm');
+  if (dlg.open) dlg.close();
+  if (fn) fn(val);
+}
+
+function applyTheme(mode) {
+  const raw = mode === 'auto' || mode === 'light' || mode === 'dark' ? mode : 'auto';
+  const resolved = raw === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : raw;
+  document.documentElement.dataset.theme = resolved;
+  const btn = $('#btnTheme');
+  if (btn) btn.textContent = resolved === 'dark' ? '☀' : '☾';
+  try { localStorage.setItem(CONFIG.themeKey, raw); } catch (e) {}
+}
+
+function setView(view) {
+  state.view = view;
+  $$('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === view)));
+  $$('.view').forEach((s) => { s.hidden = s.id !== 'view-' + view; });
+  $('#toolbar').hidden = view === 'rules' || view === 'backup';
+  if (location.hash !== '#/' + view) {
+    try { history.replaceState(null, '', '#/' + view); } catch (e) {}
+  }
+  renderAll();
+}
+
+/* ============================================================
+   10. 工具列與儀表板
+   ============================================================ */
+function distinctDates() {
+  return Array.from(new Set(state.exposures.map((r) => r.asOfDate).filter(Boolean))).sort().reverse();
+}
+
+function renderToolbar() {
+  const sel = $('#asOfDate');
+  const dates = distinctDates();
+  sel.replaceChildren(
+    el('option', { value: 'ALL' }, '全部日期'),
+    ...dates.map((d) => el('option', { value: d }, d))
+  );
+  if (!dates.length) state.asOfDate = 'ALL';
+  else if (state.asOfDate !== 'ALL' && !dates.includes(state.asOfDate)) state.asOfDate = dates[0];
+  sel.value = state.asOfDate;
+  sel.disabled = dates.length === 0;
+  const scoped = state.exposures.filter(inScope).length;
+  $('#dataCount').textContent = state.asOfDate === 'ALL' || scoped === state.exposures.length
+    ? fmtInt(state.exposures.length) + ' 筆'
+    : `${fmtInt(scoped)} / ${fmtInt(state.exposures.length)} 筆`;
+  $('#footInfo').textContent = `v1.0 · ${fmtInt(state.exposures.length)} 筆 · 資本比率 ${fmtPct(state.rateBasisBp)}`;
+}
+
+function renderAll() {
+  renderToolbar();
+  if (state.view === 'dashboard') renderDashboard();
+  else if (state.view === 'data') renderData();
+  else if (state.view === 'rules') renderRules();
+  else renderBackup();
+}
+
+function kpiCard(label, value, opts = {}) {
+  return el('div', { class: 'kpi' + (opts.warn ? ' kpi--warn' : '') },
+    el('div', { class: 'kpi__label' }, label),
+    el('div', { class: 'kpi__value', title: opts.title || '' }, value,
+      opts.unit ? el('small', null, opts.unit) : null)
+  );
+}
+
+function renderKPIs(agg) {
+  $('#kpis').replaceChildren(
+    kpiCard('明細件數', fmtInt(agg.n), { unit: '筆' }),
+    kpiCard('EAD 合計', fmtCompact(agg.ead), { title: fmtInt(agg.ead) + ' 元' }),
+    kpiCard('RWA 合計', fmtCompact(agg.rwa), { title: fmtInt(agg.rwa) + ' 元' }),
+    kpiCard(`資本需求 · ${fmtPct(state.rateBasisBp)}`, fmtCompact(agg.capital), { title: fmtInt(agg.capital) + ' 元' }),
+    kpiCard('加權平均風險權重', fmtPct(agg.wavgBp), { title: 'RWA ÷ EAD' }),
+    kpiCard('檢核提示', fmtInt(agg.totalIssues), { unit: '項', warn: agg.totalIssues > 0 })
+  );
+}
+
+function classColor(key) {
+  const i = CLASSES.findIndex((c) => c.key === key);
+  return `var(--c${((i < 0 ? 9 : i) % 10) + 1})`;
+}
+
+function donutChart(items, total) {
+  const size = 168, cx = 84, cy = 84, r = 58, sw = 22;
+  const C = 2 * Math.PI * r;
+  const node = svgEl('svg', { viewBox: `0 0 ${size} ${size}`, class: 'donut', role: 'img', 'aria-label': '暴險類別分佈（EAD）' });
+  node.append(svgEl('circle', { cx, cy, r, fill: 'none', stroke: 'var(--surface-2)', 'stroke-width': sw }));
+  let off = 0;
+  for (const it of items) {
+    const frac = total > 0 ? it.ead / total : 0;
+    if (frac <= 0) continue;
+    const len = C * frac;
+    const arc = svgEl('circle', {
+      cx, cy, r, fill: 'none',
+      stroke: classColor(it.key),
+      'stroke-width': sw,
+      'stroke-dasharray': `${len} ${C - len}`,
+      'stroke-dashoffset': String(-off),
+      transform: `rotate(-90 ${cx} ${cy})`,
+    });
+    const t = svgEl('title', {});
+    t.textContent = `${it.label}：${fmtInt(it.ead)} 元（${(frac * 100).toFixed(1)}%）`;
+    arc.append(t);
+    node.append(arc);
+    off += len;
+  }
+  const v = svgEl('text', { x: cx, y: cy - 1, 'text-anchor': 'middle', 'font-size': '17', 'font-weight': '650', fill: 'var(--text)' });
+  v.textContent = fmtCompact(total);
+  const l = svgEl('text', { x: cx, y: cy + 17, 'text-anchor': 'middle', 'font-size': '10.5', fill: 'var(--muted)' });
+  l.textContent = 'EAD 合計';
+  node.append(v, l);
+  return node;
+}
+
+function renderClassChart(agg) {
+  const host = $('#chartClass');
+  host.replaceChildren();
+  if (!agg.ead) { host.append(el('p', { class: 'muted' }, '目前範圍的 EAD 合計為 0，無法繪製。')); return; }
+  const items = agg.byClass.filter((x) => x.ead > 0);
+  const legend = el('div', { class: 'legend' });
+  for (const it of items) {
+    legend.append(el('div', { class: 'legendrow' },
+      el('i', { style: `background:${classColor(it.key)}` }),
+      el('span', { title: it.label }, it.label),
+      el('b', null, fmtCompact(it.ead)),
+      el('span', { class: 'muted' }, (it.ead / agg.ead * 100).toFixed(1) + '%')
+    ));
+  }
+  host.append(el('div', { class: 'donutwrap' }, donutChart(items, agg.ead), legend));
+}
+
+function renderRatingChart(agg) {
+  const host = $('#chartRating');
+  host.replaceChildren();
+  const max = Math.max(...agg.byRating.map((r) => r.ead), 1);
+  const wrap = el('div', { class: 'bars' });
+  for (const r of agg.byRating) {
+    const pct = agg.ead > 0 ? r.ead / agg.ead * 100 : 0;
+    const fill = el('div', {
+      class: 'barfill' + (r.key === 'UNRATED' ? ' barfill--warn' : ''),
+      style: `width:${Math.max(r.ead > 0 ? 1.5 : 0, r.ead / max * 100)}%`,
+      title: `${r.label}：${fmtInt(r.ead)} 元`,
+    });
+    wrap.append(el('div', { class: 'barrow' },
+      el('span', { title: r.label }, r.label),
+      el('div', { class: 'bartrack' }, fill),
+      el('span', { class: 'bar__val' }, el('b', null, fmtCompact(r.ead)), ' · ' + pct.toFixed(1) + '%')
+    ));
+  }
+  host.append(wrap);
+}
+
+function renderConc(agg) {
+  const stats = $('#concStats');
+  stats.replaceChildren(
+    el('div', { class: 'stat' }, el('span', null, '集中度 HHI'), el('b', null, fmtInt(agg.hhi))),
+    el('div', { class: 'stat' }, el('span', null, 'Top 10 佔比'), el('b', null, (agg.top10Share * 100).toFixed(1) + '%')),
+    el('div', { class: 'stat' }, el('span', null, '戶數'), el('b', null, fmtInt(agg.parties.length))),
+    el('div', { class: 'stat' }, el('span', null, '平均每戶 EAD'), el('b', null, agg.parties.length ? fmtCompact(agg.ead / agg.parties.length) : '0'))
+  );
+
+  const top = agg.parties.slice(0, state.topN);
+  const table = el('table', { class: 'grid' });
+  table.append(el('thead', null, el('tr', null,
+    el('th', null, '#'),
+    el('th', null, state.groupMode ? '集團' : '借戶'),
+    el('th', { class: 'num' }, '筆數'),
+    el('th', { class: 'num' }, 'EAD'),
+    el('th', { class: 'num' }, '佔比'),
+    el('th', { class: 'num' }, '累計')
+  )));
+  const body = el('tbody');
+  let cum = 0;
+  top.forEach((p, i) => {
+    cum += agg.ead > 0 ? p.ead / agg.ead : 0;
+    body.append(el('tr', null,
+      el('td', null, el('span', { class: 'rank' + (i < 3 ? ' rank--top' : '') }, String(i + 1))),
+      el('td', { title: p.name }, p.name),
+      el('td', { class: 'num' }, fmtInt(p.n)),
+      el('td', { class: 'num' }, fmtInt(p.ead)),
+      el('td', { class: 'num' }, (agg.ead > 0 ? (p.ead / agg.ead * 100).toFixed(2) : '0.00') + '%'),
+      el('td', { class: 'num' }, (cum * 100).toFixed(1) + '%')
+    ));
+  });
+  table.append(body);
+  $('#concTable').replaceChildren(table);
+}
+
+function renderDQ(agg) {
+  const host = $('#dq');
+  host.replaceChildren();
+  const rows = [];
+  for (const key of ISSUE_KEYS) {
+    const count = agg.issues.get(key) || 0;
+    if (!count) continue;
+    rows.push({ key, count });
+  }
+  rows.sort((a, b) => b.count - a.count);
+  if (!rows.length) {
+    host.append(el('div', { class: 'dqempty' }, '✓ 目前沒有偵測到資料品質問題。'));
+    return;
+  }
+  const list = el('div', { class: 'dqlist' });
+  for (const r of rows) {
+    const def = ISSUES[r.key];
+    list.append(el('div', { class: 'dqrow' },
+      el('span', { class: 'chip ' + (def.tone === 'danger' ? 'chip--danger' : 'chip--warn') }, String(r.count)),
+      el('div', { class: 'dqrow__txt' }, def.label, el('small', null, def.desc)),
+      el('button', { class: 'btn btn--ghost', type: 'button', onclick: () => { state.filters.issue = r.key; setView('data'); } }, '查看')
+    ));
+  }
+  host.append(list);
+}
+
+function renderDashboard() {
+  const has = state.exposures.length > 0;
+  $('#dashEmpty').hidden = has;
+  $('#dashBody').hidden = !has;
+  if (!has) return;
+  const agg = getAgg();
+  renderKPIs(agg);
+  renderClassChart(agg);
+  renderRatingChart(agg);
+  renderConc(agg);
+  renderDQ(agg);
+}
+
+/* ============================================================
+   11. 明細：虛擬滾動列表
+   ============================================================ */
+const vstate = { items: [], rowH: 38, start: -1, end: -1 };
+const isMobile = () => window.matchMedia('(max-width: 719px)').matches;
+
+function getFiltered() {
+  const f = state.filters;
+  const q = f.q.trim().toLowerCase();
+  const rows = [];
+  for (const r of state.exposures) {
+    if (!inScope(r)) continue;
+    if (f.cls && r.exposureClass !== f.cls) continue;
+    if (f.rating && ratingGroup(r.rating) !== f.rating) continue;
+    if (f.issue) {
+      const c = state.computed.get(r.id);
+      if (!c || !c.issues.includes(f.issue)) continue;
+    }
+    if (q) {
+      const hay = `${r.refNo || ''} ${r.obligor || ''} ${r.group || ''} ${r.product || ''} ${r.note || ''}`.toLowerCase();
+      if (!hay.includes(q)) continue;
+    }
+    rows.push(r);
+  }
+
+  const numKeys = ['drawn', 'ead', 'effBp', 'rwa', 'dpdDays'];
+  const key = f.sortKey;
+  const dir = f.sortDir === 'asc' ? 1 : -1;
+  const val = (r) => {
+    if (key === 'ead' || key === 'effBp' || key === 'rwa') {
+      const c = state.computed.get(r.id);
+      return c ? c[key] : 0;
+    }
+    if (key === 'drawn' || key === 'dpdDays') return num(r[key]);
+    return r[key] || '';
+  };
+  rows.sort((a, b) => {
+    const va = val(a), vb = val(b);
+    if (numKeys.includes(key)) return (va - vb) * dir;
+    return String(va).localeCompare(String(vb), 'zh-Hant') * dir;
+  });
+  return rows;
+}
+
+function rowEl(row, idx) {
+  const c = state.computed.get(row.id) || {};
+  const issues = (c.issues || []).map((k) => ISSUES[k] ? ISSUES[k].label : k).join('、');
+  const dpd = num(row.dpdDays);
+  return el('div', {
+    class: 'vrow', role: 'row', tabindex: '0',
+    dataset: { id: row.id, idx: String(idx) },
+    title: issues ? '檢核：' + issues : '',
+  },
+    el('span', { class: 'c-ref' }, row.refNo || '—'),
+    el('span', { class: 'c-ob' }, row.obligor || '—',
+      dpd > 0 ? el('em', { class: 'dpdflag' }, `逾期 ${fmtInt(dpd)} 天`) : null),
+    el('span', { class: 'c-cls' }, el('span', { class: 'chip' }, classLabel(row.exposureClass))),
+    el('span', { class: 'c-rat' }, normalizeRating(row.rating) === 'UNRATED' ? '未評等' : normalizeRating(row.rating)),
+    el('span', { class: 'num c-drawn' }, el('i', { class: 'lb' }, '已動用'), fmtInt(row.drawn)),
+    el('span', { class: 'num c-ead' }, el('i', { class: 'lb' }, 'EAD'), fmtInt(c.ead)),
+    el('span', { class: 'num c-rw' }, fmtPct(c.effBp)),
+    el('span', { class: 'num c-rwa' }, el('i', { class: 'lb' }, 'RWA'), fmtInt(c.rwa)),
+    el('span', { class: 'num c-dpd' }, dpd > 0 ? fmtInt(dpd) : '—')
+  );
+}
+
+function paintRows(force) {
+  const body = $('#vbody');
+  const wrap = $('#vrows');
+  const items = vstate.items;
+  if (!items.length) {
+    wrap.replaceChildren();
+    vstate.start = -1; vstate.end = -1;
+    return;
+  }
+  const rh = vstate.rowH;
+  const h = body.clientHeight || 400;
+  const overscan = 8;
+  const start = Math.max(0, Math.floor(body.scrollTop / rh) - overscan);
+  const end = Math.min(items.length, Math.ceil((body.scrollTop + h) / rh) + overscan);
+  if (!force && start === vstate.start && end === vstate.end) return;
+  vstate.start = start;
+  vstate.end = end;
+  wrap.style.transform = `translateY(${start * rh}px)`;
+  wrap.style.setProperty('--rowh', rh + 'px');
+  const frag = document.createDocumentFragment();
+  for (let i = start; i < end; i++) frag.append(rowEl(items[i], i));
+  wrap.replaceChildren(frag);
+}
+
+function renderList() {
+  const items = getFiltered();
+  vstate.items = items;
+  vstate.rowH = isMobile() ? 96 : 38;
+  const wrap = $('#vrows');
+  wrap.style.setProperty('--rowh', vstate.rowH + 'px');
+  $('#vspacer').style.height = (items.length * vstate.rowH) + 'px';
+  const body = $('#vbody');
+  const maxH = isMobile() ? Math.max(260, window.innerHeight - 330) : Math.max(300, Math.min(window.innerHeight * 0.58, 600));
+  if (items.length && items.length * vstate.rowH < maxH) body.style.height = Math.max(130, items.length * vstate.rowH) + 'px';
+  else body.style.height = '';
+  const scopeTotal = state.exposures.filter(inScope).length;
+  $('#vcount').textContent = `${fmtInt(items.length)} / ${fmtInt(scopeTotal)} 筆`;
+  $('#vempty').hidden = items.length > 0;
+  $('#vbody').scrollTop = 0;
+  vstate.start = -1;
+  vstate.end = -1;
+  paintRows(true);
+}
+
+function renderData() {
+  const f = state.filters;
+  const clsSel = $('#fClass');
+  const rSel = $('#fRating');
+  const iSel = $('#fIssue');
+
+  const clsSet = new Set(state.exposures.map((r) => r.exposureClass).filter(Boolean));
+  clsSel.replaceChildren(
+    el('option', { value: '' }, '全部類別'),
+    ...CLASSES.filter((c) => clsSet.has(c.key)).map((c) => el('option', { value: c.key }, c.label)),
+    ...Array.from(clsSet).filter((k) => !CLASSES.some((c) => c.key === k)).map((k) => el('option', { value: k }, k + '（未對照）'))
+  );
+  clsSel.value = f.cls;
+
+  rSel.replaceChildren(
+    el('option', { value: '' }, '全部評等'),
+    ...RATINGS.map((r) => el('option', { value: r.key }, r.label))
+  );
+  rSel.value = f.rating;
+
+  iSel.replaceChildren(
+    el('option', { value: '' }, '全部檢核狀態'),
+    ...ISSUE_KEYS.map((k) => el('option', { value: k }, ISSUES[k].label))
+  );
+  iSel.value = f.issue;
+
+  $('#q').value = f.q;
+  $$('#vhead button').forEach((b) => {
+    const on = b.dataset.sort === f.sortKey;
+    b.textContent = b.dataset.sort === 'refNo' ? '案件編號' : b.textContent.replace(/[▲▼]\s*$/, '').trim();
+    if (on) b.append(f.sortDir === 'asc' ? ' ▲' : ' ▼');
+  });
+  renderList();
+}
+
+/* ============================================================
+   12. 詳情抽屜
+   ============================================================ */
+function findExposure(id) { return state.exposures.find((r) => r.id === id); }
+
+function closeDrawer() {
+  $('#drawer').classList.remove('open');
+  $('#drawer').setAttribute('aria-hidden', 'true');
+  $('#scrim').hidden = true;
+}
+
+function closeAllOverlays() {
+  closeDrawer();
+  $$('dialog[open]').forEach((d) => d.close());
+}
+
+function openDrawer(id) {
+  const row = findExposure(id);
+  const c = state.computed.get(id);
+  if (!row || !c) return;
+
+  const kv = el('dl', { class: 'kv' },
+    el('dt', null, '借戶'), el('dd', null, row.obligor || '—'),
+    el('dt', null, '集團'), el('dd', null, row.group || '—'),
+    el('dt', null, '暴險類別'), el('dd', null, el('span', { class: 'chip' }, classLabel(row.exposureClass))),
+    el('dt', null, '產品'), el('dd', null, row.product || '—'),
+    el('dt', null, '外部評等'), el('dd', null, normalizeRating(row.rating) === 'UNRATED' ? '未評等' : normalizeRating(row.rating) + `（${ratingLabel(ratingGroup(row.rating))}）`),
+    el('dt', null, '資料基準日'), el('dd', null, row.asOfDate || '—'),
+    el('dt', null, '逾期天數'), el('dd', null, fmtInt(row.dpdDays) + ' 天')
+  );
+
+  const eadCalc = el('div', { class: 'calc' },
+    el('div', { class: 'calcline' }, el('span', null, '已動用餘額'), el('b', null, fmtInt(row.drawn))),
+    el('div', { class: 'calcline' },
+      el('span', null, `未動用 ${fmtInt(row.undrawn)} × CCF ${fmtPct(c.ccf)} · ${c.ccfLabel}`),
+      el('b', null, '+' + fmtInt(c.converted))),
+    el('div', { class: 'calcline calcline--total' }, el('span', null, 'EAD'), el('b', null, fmtInt(c.ead)))
+  );
+
+  const rwCalc = el('div', { class: 'calc' },
+    el('div', { class: 'calcline' }, el('span', null, '基準權重（' + c.baseSrc + '）'), el('b', null, fmtPct(c.baseBp))),
+    ...c.parts.map((p) => el('div', { class: 'calcline' },
+      el('span', null, `${p.kind === 'collateral' ? '擔保品' : '保證'} ${p.label}${p.haircut ? `（折扣 ${fmtPct(p.haircut * 100)}）` : ''}：覆蓋 ${fmtInt(p.cov)}`),
+      el('b', null, fmtPct(p.weight)))),
+    el('div', { class: 'calcline' }, el('span', null, '未覆蓋部位'), el('b', null, fmtInt(c.uncovered) + ' @ ' + fmtPct(c.baseBp))),
+    el('div', { class: 'calcline calcline--total' }, el('span', null, '有效權重'), el('b', null, fmtPct(c.effBp)))
+  );
+
+  const rwaCalc = el('div', { class: 'calc' },
+    el('div', { class: 'calcline' }, el('span', null, 'RWA = EAD × 有效權重'), el('b', null, fmtInt(c.rwa))),
+    el('div', { class: 'calcline' }, el('span', null, `資本 = RWA × ${fmtPct(state.rateBasisBp)}`), el('b', null, fmtInt(c.capital)))
+  );
+
+  const issueTags = c.issues.length
+    ? el('div', { class: 'taglist' }, ...c.issues.map((k) => el('span', {
+        class: 'chip ' + (ISSUES[k] && ISSUES[k].tone === 'danger' ? 'chip--danger' : 'chip--warn'),
+        title: ISSUES[k] ? ISSUES[k].desc : '',
+      }, ISSUES[k] ? ISSUES[k].label : k)))
+    : el('span', { class: 'chip chip--ok' }, '無檢核提示');
+
+  const drawerBody = el('div', { class: 'drawer__body' },
+    kv,
+    el('section', null, el('h3', null, 'EAD 計算'), el('div', { class: 'mt8' }, eadCalc)),
+    el('section', null, el('h3', null, '權重與 CRM 調整'), el('div', { class: 'mt8' }, rwCalc)),
+    el('section', null, el('h3', null, '資本'), el('div', { class: 'mt8' }, rwaCalc)),
+    el('section', null, el('h3', null, '資料檢核'), el('div', { class: 'mt8' }, issueTags))
+  );
+  if (row.note) drawerBody.append(el('section', null, el('h3', null, '備註'), el('p', { class: 'note mt8' }, row.note)));
+
+  $('#drawer').replaceChildren(
+    el('div', { class: 'drawer__head' },
+      el('div', null,
+        el('div', { class: 'muted' }, '案件編號'),
+        el('h2', null, row.refNo || '—')),
+      el('button', { class: 'btn btn--icon', type: 'button', 'aria-label': '關閉', onclick: closeDrawer, style: 'margin-left:auto' }, '✕')
+    ),
+    drawerBody,
+    el('div', { class: 'drawer__foot' },
+      el('button', { class: 'btn', type: 'button', onclick: () => openEditor(row.id) }, '編輯'),
+      el('button', { class: 'btn btn--danger', type: 'button', onclick: () => deleteExposure(row.id) }, '刪除'),
+      el('button', { class: 'btn btn--primary', type: 'button', onclick: closeDrawer }, '關閉')
+    )
+  );
+
+  $('#drawer').classList.add('open');
+  $('#drawer').setAttribute('aria-hidden', 'false');
+  $('#scrim').hidden = false;
+}
+
+/* ============================================================
+   13. 新增／編輯
+   ============================================================ */
+let editingId = null;
+
+function field(label, input, required, full) {
+  return el('label', { class: 'field' + (full ? ' field--full' : '') },
+    el('span', null, label, required ? el('em', null, '*') : null), input);
+}
+
+function buildSelect(id, entries, value) {
+  const s = el('select', { id });
+  for (const e of entries) s.append(el('option', { value: e.value }, e.label));
+  const has = entries.some((e) => e.value === String(value));
+  if (!has && value !== '' && value !== null && value !== undefined) s.append(el('option', { value: String(value) }, String(value) + '（未對照）'));
+  s.value = value === null || value === undefined ? '' : String(value);
+  return s;
+}
+
+function openEditor(id) {
+  editingId = id || null;
+  const row = id ? findExposure(id) : null;
+  $('#dlgFormTitle').textContent = row ? '編輯暴險' : '新增暴險';
+  const errBox = $('#formErr');
+  errBox.hidden = true;
+  errBox.textContent = '';
+  const body = $('#formBody');
+  body.replaceChildren();
+
+  const val = (k, d) => (row && row[k] !== undefined && row[k] !== null ? row[k] : (d === undefined ? '' : d));
+  const txt = (k, ph, type) => el('input', { type: type || 'text', id: 'f-' + k, value: String(val(k)), placeholder: ph || '' });
+
+  const clsEntries = CLASSES.map((c) => ({ value: c.key, label: c.label }));
+  const ratingEntries = [{ value: 'UNRATED', label: '未評等' }, ...GRADES.map((g) => ({ value: g, label: g }))];
+  const ccfEntries = [{ value: '', label: '自動（依未動用額度判斷）' }, ...(state.rules.ccf || []).map((x) => ({ value: x.key, label: x.label }))];
+  const collEntries = [{ value: '', label: '（無）' }, ...(state.rules.crm || []).filter((x) => x.kind === 'collateral').map((x) => ({ value: x.key, label: `${x.label}（權重 ${fmtPct(x.weight)}）` }))];
+  const guarEntries = [{ value: '', label: '（無）' }, ...(state.rules.crm || []).filter((x) => x.kind === 'guarantee').map((x) => ({ value: x.key, label: `${x.label}（權重 ${fmtPct(x.weight)}）` }))];
+
+  const nodes = {
+    refNo: txt('refNo', '未填將自動產生'),
+    obligor: txt('obligor', '借戶或客戶名稱'),
+    group: txt('group', '集團／歸戶名稱'),
+    exposureClass: buildSelect('f-exposureClass', clsEntries, val('exposureClass', CLASSES[0].key)),
+    product: txt('product', '產品或業務別'),
+    rating: buildSelect('f-rating', ratingEntries, normalizeRating(val('rating'))),
+    drawn: txt('drawn', '0', 'text'),
+    undrawn: txt('undrawn', '0', 'text'),
+    ccfKey: buildSelect('f-ccfKey', ccfEntries, val('ccfKey')),
+    dpdDays: txt('dpdDays', '0', 'number'),
+    collateralType: buildSelect('f-collateralType', collEntries, val('collateralType')),
+    collateralValue: txt('collateralValue', '0', 'text'),
+    guaranteeType: buildSelect('f-guaranteeType', guarEntries, val('guaranteeType')),
+    guaranteeAmount: txt('guaranteeAmount', '0', 'text'),
+    asOfDate: el('input', { type: 'date', id: 'f-asOfDate', value: val('asOfDate', todayISO()) }),
+    note: txt('note', '補充說明'),
+  };
+  nodes.drawn.setAttribute('inputmode', 'numeric');
+  nodes.undrawn.setAttribute('inputmode', 'numeric');
+  nodes.collateralValue.setAttribute('inputmode', 'numeric');
+  nodes.guaranteeAmount.setAttribute('inputmode', 'numeric');
+
+  body.append(
+    field('案件編號', nodes.refNo),
+    field('借戶名稱', nodes.obligor, true),
+    field('集團／歸戶', nodes.group),
+    field('暴險類別', nodes.exposureClass, true),
+    field('產品', nodes.product),
+    field('外部評等', nodes.rating),
+    field('已動用餘額（元）', nodes.drawn, true),
+    field('未動用額度（元）', nodes.undrawn),
+    field('表外科目 CCF', nodes.ccfKey),
+    field('逾期天數', nodes.dpdDays),
+    field('擔保品類型', nodes.collateralType),
+    field('擔保品市值（元）', nodes.collateralValue),
+    field('保證類型', nodes.guaranteeType),
+    field('保證金額（元）', nodes.guaranteeAmount),
+    field('資料基準日', nodes.asOfDate),
+    field('備註', nodes.note, false, true)
+  );
+
+  $('#dlgForm').showModal();
+  setTimeout(() => nodes.obligor.focus(), 30);
+}
+
+function formError(msg) {
+  const box = $('#formErr');
+  box.textContent = msg;
+  box.hidden = false;
+}
+
+async function saveForm() {
+  const get = (k) => {
+    const n = $('#f-' + k);
+    return n ? String(n.value).trim() : '';
+  };
+  const obligor = get('obligor');
+  const drawn = parseMoney(get('drawn'));
+  const asOf = parseDate(get('asOfDate'));
+
+  if (!obligor) return formError('請填寫借戶名稱。');
+  if (!Number.isFinite(drawn)) return formError('已動用餘額請填數字（可含千分位，允許 0）。');
+  if (!asOf) return formError('資料基準日格式不正確。');
+
+  const refRaw = get('refNo');
+  const refNo = refRaw || 'MAN-' + uid().slice(0, 8).toUpperCase();
+  const dup = state.exposures.some((r) => r.refNo === refNo && r.id !== editingId);
+  if (dup) return formError(`案件編號「${refNo}」已存在，請改用其他編號。`);
+
+  const undrawn = parseMoney(get('undrawn'));
+  const collVal = parseMoney(get('collateralValue'));
+  const guarAmt = parseMoney(get('guaranteeAmount'));
+  const dpd = parseMoney(get('dpdDays'));
+
+  const prev = editingId ? findExposure(editingId) : null;
+  const row = {
+    id: prev ? prev.id : uid(),
+    refNo,
+    obligor,
+    group: get('group'),
+    exposureClass: get('exposureClass') || CLASSES[0].key,
+    product: get('product'),
+    rating: normalizeRating(get('rating')),
+    drawn: Math.round(drawn),
+    undrawn: Number.isFinite(undrawn) ? Math.max(0, Math.round(undrawn)) : 0,
+    ccfKey: get('ccfKey'),
+    collateralType: get('collateralType'),
+    collateralValue: Number.isFinite(collVal) ? Math.max(0, Math.round(collVal)) : 0,
+    guaranteeType: get('guaranteeType'),
+    guaranteeAmount: Number.isFinite(guarAmt) ? Math.max(0, Math.round(guarAmt)) : 0,
+    dpdDays: Number.isFinite(dpd) ? Math.max(0, Math.round(dpd)) : 0,
+    asOfDate: asOf,
+    note: get('note'),
+    source: prev ? prev.source : 'manual',
+    createdAt: prev ? prev.createdAt : nowISO(),
+    updatedAt: nowISO(),
+  };
+
+  try {
+    await idbPut(STORE_EXPOSURES, row);
+  } catch (err) {
+    if (err && err.name === 'QuotaExceededError') toast('瀏覽器儲存空間不足，請先到備份頁匯出 JSON。');
+    else toast('寫入失敗，請稍後再試。');
+    return;
+  }
+
+  const idx = state.exposures.findIndex((r) => r.id === row.id);
+  if (idx >= 0) state.exposures[idx] = row; else state.exposures.push(row);
+
+  recompute();
+  state.dataRev += 1;
+  if (state.asOfDate === 'ALL') state.asOfDate = row.asOfDate;
+  $('#dlgForm').close();
+  renderAll();
+  toast(prev ? '已更新 ' + row.refNo : '已新增 ' + row.refNo);
+  if ($('#drawer').classList.contains('open')) openDrawer(row.id);
+}
+
+async function deleteExposure(id) {
+  const row = findExposure(id);
+  if (!row) return;
+  const ok = await confirmDlg({
+    title: '刪除這筆暴險？',
+    subtitle: `${row.refNo || '（無編號）'} · ${row.obligor}`,
+    body: '刪除後會在提示訊息提供「復原」，約 12 秒內有效。',
+    okText: '刪除',
+    danger: true,
+  });
+  if (!ok) return;
+
+  await idbDel(STORE_EXPOSURES, id);
+  state.exposures = state.exposures.filter((r) => r.id !== id);
+  recompute();
+  state.dataRev += 1;
+  closeDrawer();
+  renderAll();
+  toast('已刪除 ' + (row.refNo || row.obligor), {
+    action: '復原',
+    timeout: 12000,
+    onAction: async () => {
+      try { await idbPut(STORE_EXPOSURES, row); }
+      catch (e) { toast('復原失敗，請重新新增'); return; }
+      state.exposures.push(row);
+      recompute();
+      state.dataRev += 1;
+      renderAll();
+      toast('已復原 ' + row.refNo);
+    },
+  });
+}
+
+/* ============================================================
+   14. 規則頁
+   ============================================================ */
+function rulesChanged() {
+  state.rulesRev += 1;
+  state.dataRev += 1;
+  recompute();
+  saveRules();
+  const pill = $('#ruleStatus');
+  if (pill) pill.textContent = `已套用 · 重算 ${fmtInt(state.exposures.length)} 筆`;
+}
+
+function saveRules() {
+  metaSet('rules', state.rules).catch(() => toast('規則儲存失敗'));
+  metaSet('rateBasisBp', state.rateBasisBp).catch(() => {});
+}
+
+function renderRules() {
+  $('#rateBasis').value = String(state.rateBasisBp / 100);
+  renderRwTable();
+  renderCcfTable();
+  renderCrmTable();
+  if (!$('#ruleStatus')) {
+    $('.paramrow').append(el('span', { class: 'pill', id: 'ruleStatus' }, '已套用'));
+  }
+}
+
+function renderRwTable() {
+  const table = el('table', { class: 'grid matrix' });
+  table.append(el('thead', null, el('tr', null,
+    el('th', null, '暴險類別'),
+    ...RATINGS.map((r) => el('th', { class: 'num' }, r.label)),
+    el('th', { class: 'num' }, '通用')
+  )));
+  const tbody = el('tbody');
+  for (const c of CLASSES) {
+    const byClass = state.rules.riskWeights[c.key] || {};
+    const tr = el('tr', null, el('td', null, c.label));
+    for (const r of RATINGS) {
+      const bp = byClass[r.key];
+      tr.append(el('td', null, el('input', {
+        type: 'number', min: '0', max: '2000', step: '5',
+        value: bp === undefined || bp === null ? '' : String(bp / 100),
+        'data-cls': c.key, 'data-rg': r.key, placeholder: '—',
+        'aria-label': `${c.label} ${r.label} 風險權重百分比`,
+      })));
+    }
+    const anyBp = byClass.ANY;
+    tr.append(el('td', null, el('input', {
+      type: 'number', min: '0', max: '2000', step: '5',
+      value: anyBp === undefined || anyBp === null ? '' : String(anyBp / 100),
+      'data-cls': c.key, 'data-rg': 'ANY', placeholder: '—',
+      'aria-label': `${c.label} 通用風險權重百分比`,
+    })));
+    tbody.append(tr);
+  }
+  table.append(tbody);
+  $('#rwTable').replaceChildren(table);
+}
+
+function renderCcfTable() {
+  const table = el('table', { class: 'grid' });
+  table.append(el('thead', null, el('tr', null,
+    el('th', null, '代碼'), el('th', null, '名稱'), el('th', { class: 'num' }, 'CCF %'), el('th', null, '')
+  )));
+  const tbody = el('tbody');
+  for (const x of state.rules.ccf) {
+    tbody.append(el('tr', null,
+      el('td', null, el('span', { class: 'code' }, x.key)),
+      el('td', null, el('input', { type: 'text', value: x.label, 'data-ccf-label': x.key, 'aria-label': x.key + ' 名稱' })),
+      el('td', null, el('input', { type: 'number', min: '0', max: '100', step: '5', value: String(x.ccf / 100), 'data-ccf-val': x.key, 'aria-label': x.key + ' CCF 百分比' })),
+      el('td', null, el('button', { class: 'btn btn--ghost', type: 'button', 'data-ccf-del': x.key, 'aria-label': '刪除 ' + x.key }, '刪除'))
+    ));
+  }
+  table.append(tbody);
+  $('#ccfTable').replaceChildren(table);
+}
+
+function renderCrmTable() {
+  const table = el('table', { class: 'grid' });
+  table.append(el('thead', null, el('tr', null,
+    el('th', null, '代碼'), el('th', null, '名稱'), el('th', null, '類型'),
+    el('th', { class: 'num' }, '權重 %'), el('th', { class: 'num' }, '折扣 %'), el('th', null, '')
+  )));
+  const tbody = el('tbody');
+  for (const x of state.rules.crm) {
+    tbody.append(el('tr', null,
+      el('td', null, el('span', { class: 'code' }, x.key)),
+      el('td', null, el('input', { type: 'text', value: x.label, 'data-crm-label': x.key, 'aria-label': x.key + ' 名稱' })),
+      el('td', null, el('select', { 'data-crm-kind': x.key, 'aria-label': x.key + ' 類型' },
+        el('option', { value: 'collateral' }, '擔保品'),
+        el('option', { value: 'guarantee' }, '保證'))),
+      el('td', null, el('input', { type: 'number', min: '0', max: '2000', step: '5', value: String(x.weight / 100), 'data-crm-w': x.key, 'aria-label': x.key + ' 權重百分比' })),
+      el('td', null, el('input', { type: 'number', min: '0', max: '100', step: '5', value: String(x.haircut), 'data-crm-h': x.key, 'aria-label': x.key + ' 折扣百分比' })),
+      el('td', null, el('button', { class: 'btn btn--ghost', type: 'button', 'data-crm-del': x.key, 'aria-label': '刪除 ' + x.key }, '刪除'))
+    ));
+  }
+  table.append(tbody);
+  $$('select[data-crm-kind]', table).forEach((s) => {
+    const found = state.rules.crm.find((c) => c.key === s.getAttribute('data-crm-kind'));
+    if (found) s.value = found.kind;
+  });
+  $('#crmTable').replaceChildren(table);
+}
+
+function bindRuleEvents() {
+  $('#rwTable').addEventListener('change', (e) => {
+    const inp = e.target.closest('input[data-cls]');
+    if (!inp) return;
+    const cls = inp.dataset.cls;
+    const rg = inp.dataset.rg;
+    if (!state.rules.riskWeights[cls]) state.rules.riskWeights[cls] = {};
+    const raw = inp.value.trim();
+    if (raw === '') {
+      delete state.rules.riskWeights[cls][rg];
+    } else {
+      const p = Number(raw);
+      if (!Number.isFinite(p) || p < 0 || p > 2000) { inp.value = ''; toast('權重請填 0 到 2000 之間的百分比'); return; }
+      state.rules.riskWeights[cls][rg] = Math.round(p * 100);
+    }
+    rulesChanged();
+  });
+
+  $('#ccfTable').addEventListener('change', (e) => {
+    const label = e.target.closest('[data-ccf-label]');
+    const val = e.target.closest('[data-ccf-val]');
+    if (label) {
+      const item = state.rules.ccf.find((x) => x.key === label.getAttribute('data-ccf-label'));
+      if (item && label.value.trim()) item.label = label.value.trim();
+      rulesChanged();
+    }
+    if (val) {
+      const item = state.rules.ccf.find((x) => x.key === val.getAttribute('data-ccf-val'));
+      const p = Number(val.value);
+      if (item && Number.isFinite(p) && p >= 0 && p <= 100) item.ccf = Math.round(p * 100);
+      else { val.value = item ? String(item.ccf / 100) : '0'; return; }
+      rulesChanged();
+    }
+  });
+
+  $('#ccfTable').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-ccf-del]');
+    if (!btn) return;
+    const key = btn.getAttribute('data-ccf-del');
+    const used = state.exposures.filter((r) => r.ccfKey === key).length;
+    const ok = await confirmDlg({
+      title: '刪除 CCF 科目？',
+      subtitle: key,
+      body: used ? `有 ${fmtInt(used)} 筆明細使用這個代碼，刪除後這些明細會顯示「CCF 代碼未對照」並以 0% 計算。` : '目前沒有明細使用這個代碼。',
+      okText: '刪除', danger: true,
+    });
+    if (!ok) return;
+    state.rules.ccf = state.rules.ccf.filter((x) => x.key !== key);
+    rulesChanged();
+    renderCcfTable();
+  });
+
+  $('#crmTable').addEventListener('change', (e) => {
+    const elLabel = e.target.closest('[data-crm-label]');
+    const elKind = e.target.closest('[data-crm-kind]');
+    const elW = e.target.closest('[data-crm-w]');
+    const elH = e.target.closest('[data-crm-h]');
+    if (elLabel) {
+      const item = state.rules.crm.find((x) => x.key === elLabel.getAttribute('data-crm-label'));
+      if (item && elLabel.value.trim()) item.label = elLabel.value.trim();
+      rulesChanged();
+    }
+    if (elKind) {
+      const item = state.rules.crm.find((x) => x.key === elKind.getAttribute('data-crm-kind'));
+      if (item) item.kind = elKind.value;
+      rulesChanged();
+    }
+    if (elW) {
+      const item = state.rules.crm.find((x) => x.key === elW.getAttribute('data-crm-w'));
+      const p = Number(elW.value);
+      if (item && Number.isFinite(p) && p >= 0 && p <= 2000) item.weight = Math.round(p * 100);
+      else { elW.value = item ? String(item.weight / 100) : '0'; return; }
+      rulesChanged();
+    }
+    if (elH) {
+      const item = state.rules.crm.find((x) => x.key === elH.getAttribute('data-crm-h'));
+      const p = Number(elH.value);
+      if (item && Number.isFinite(p) && p >= 0 && p <= 100) item.haircut = p;
+      else { elH.value = item ? String(item.haircut) : '0'; return; }
+      rulesChanged();
+    }
+  });
+
+  $('#crmTable').addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-crm-del]');
+    if (!btn) return;
+    const key = btn.getAttribute('data-crm-del');
+    const used = state.exposures.filter((r) => r.collateralType === key || r.guaranteeType === key).length;
+    const ok = await confirmDlg({
+      title: '刪除 CRM 類型？',
+      subtitle: key,
+      body: used ? `有 ${fmtInt(used)} 筆明細使用這個類型，刪除後這些明細不再做擔保調整，並顯示「類型未對照」。` : '目前沒有明細使用這個類型。',
+      okText: '刪除', danger: true,
+    });
+    if (!ok) return;
+    state.rules.crm = state.rules.crm.filter((x) => x.key !== key);
+    rulesChanged();
+    renderCrmTable();
+  });
+
+  $('#btnAddCcf').addEventListener('click', () => {
+    const key = $('#newCcfKey').value.trim().toUpperCase().replace(/\s+/g, '_');
+    const label = $('#newCcfLabel').value.trim();
+    const p = Number($('#newCcfVal').value);
+    if (!key || !label || !Number.isFinite(p)) { toast('請填代碼、名稱與 CCF 百分比'); return; }
+    if (state.rules.ccf.some((x) => x.key === key)) { toast('CCF 代碼重複'); return; }
+    state.rules.ccf.push({ key, label, ccf: Math.round(Math.max(0, Math.min(100, p)) * 100) });
+    $('#newCcfKey').value = ''; $('#newCcfLabel').value = ''; $('#newCcfVal').value = '';
+    rulesChanged();
+    renderCcfTable();
+  });
+
+  $('#btnAddCrm').addEventListener('click', () => {
+    const key = $('#newCrmKey').value.trim().toUpperCase().replace(/\s+/g, '_');
+    const label = $('#newCrmLabel').value.trim();
+    const kind = $('#newCrmKind').value;
+    const w = Number($('#newCrmW').value);
+    const h = Number($('#newCrmH').value);
+    if (!key || !label || !Number.isFinite(w)) { toast('請填代碼、名稱與權重百分比'); return; }
+    if (state.rules.crm.some((x) => x.key === key)) { toast('CRM 代碼重複'); return; }
+    state.rules.crm.push({
+      key, label, kind,
+      weight: Math.round(Math.max(0, Math.min(2000, w)) * 100),
+      haircut: Number.isFinite(h) ? Math.max(0, Math.min(100, h)) : 0,
+    });
+    $('#newCrmKey').value = ''; $('#newCrmLabel').value = ''; $('#newCrmW').value = ''; $('#newCrmH').value = '';
+    rulesChanged();
+    renderCrmTable();
+  });
+
+  $('#rateBasis').addEventListener('change', (e) => {
+    const p = Number(e.target.value);
+    if (!Number.isFinite(p) || p < 0 || p > 100) { e.target.value = String(state.rateBasisBp / 100); return; }
+    state.rateBasisBp = Math.round(p * 100);
+    state.rulesRev += 1;
+    recompute();
+    saveRules();
+    renderToolbar();
+    const pill = $('#ruleStatus');
+    if (pill) pill.textContent = `已套用 · 資本比率 ${fmtPct(state.rateBasisBp)}`;
+  });
+}
+
+async function applyPreset(which) {
+  const ok = await confirmDlg({
+    title: '套用預設規則？',
+    subtitle: which === 'basel2' ? 'Basel II 標準法預設' : 'Basel III（2017）修訂版示意',
+    body: '目前的風險權重、CCF 與 CRM 設定會被覆蓋（資料本身不受影響）。自訂過的值會遺失。',
+    okText: '套用',
+  });
+  if (!ok) return;
+  state.rules = makeRules(which);
+  state.rulesRev += 1;
+  state.dataRev += 1;
+  recompute();
+  saveRules();
+  renderRules();
+  toast('已套用預設規則');
+}
+
+/* ============================================================
+   15. 備份與匯出
+   ============================================================ */
+function statBox(label, value) {
+  return el('div', { class: 'stat' }, el('span', null, label), el('b', null, value));
+}
+
+async function renderBackup() {
+  const json = JSON.stringify(state.exposures);
+  const kb = (new Blob([json]).size / 1024).toFixed(0);
+  let persisted = false;
+  try { persisted = navigator.storage && navigator.storage.persisted ? await navigator.storage.persisted() : false; } catch (e) {}
+  $('#storeStats').replaceChildren(
+    statBox('明細筆數', fmtInt(state.exposures.length)),
+    statBox('資料量（JSON）', kb + ' KB'),
+    statBox('儲存模式', memoryMode ? '記憶體' : 'IndexedDB'),
+    statBox('持久化', persisted ? '已取得' : '未取得')
+  );
+  $('#storeNote').textContent = memoryMode
+    ? '目前瀏覽器無法使用 IndexedDB（可能是無痕模式或檔案直接開啟受限），資料只存在這個分頁的記憶體中，關閉即消失。請改用本機靜態伺服器開啟，並務必先匯出 JSON。'
+    : '資料存在這個瀏覽器的 IndexedDB，不會上傳。清除瀏覽器網站資料會一併刪除，建議定期匯出 JSON 備份。';
+  $('#btnExportErrors').disabled = !(imp.lastErrors && imp.lastErrors.length);
+}
+
+function exportJson() {
+  if (!state.exposures.length && !state.rules) { toast('目前沒有資料可匯出'); return; }
+  const payload = {
+    app: CONFIG.appId,
+    schemaVersion: CONFIG.schemaVersion,
+    exportedAt: nowISO(),
+    rateBasisBp: state.rateBasisBp,
+    rules: state.rules,
+    exposures: state.exposures,
+  };
+  download(`信用風險分析備份_${dateStamp()}.json`, JSON.stringify(payload, null, 2), 'application/json');
+  toast(`已匯出 ${fmtInt(state.exposures.length)} 筆`);
+}
+
+function sanitizeRow(r) {
+  return {
+    id: typeof r.id === 'string' && r.id ? r.id : uid(),
+    refNo: String(r.refNo || '') || 'AUTO-' + uid().slice(0, 8),
+    obligor: String(r.obligor || '（未填）'),
+    group: String(r.group || ''),
+    exposureClass: normalizeClass(r.exposureClass),
+    product: String(r.product || ''),
+    rating: normalizeRating(r.rating),
+    drawn: Math.round(parseMoney(r.drawn) || 0),
+    undrawn: Math.max(0, Math.round(parseMoney(r.undrawn) || 0)),
+    ccfKey: String(r.ccfKey || ''),
+    collateralType: String(r.collateralType || ''),
+    collateralValue: Math.max(0, Math.round(parseMoney(r.collateralValue) || 0)),
+    guaranteeType: String(r.guaranteeType || ''),
+    guaranteeAmount: Math.max(0, Math.round(parseMoney(r.guaranteeAmount) || 0)),
+    dpdDays: Math.max(0, Math.round(parseMoney(r.dpdDays) || 0)),
+    asOfDate: parseDate(r.asOfDate) || todayISO(),
+    note: String(r.note || ''),
+    source: String(r.source || 'import'),
+    createdAt: r.createdAt || nowISO(),
+    updatedAt: nowISO(),
+  };
+}
+
+async function importJsonFile(file) {
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (e) {
+    toast('JSON 無法解析，請確認檔案沒有損壞');
+    return;
+  }
+  if (!data || !Array.isArray(data.exposures)) {
+    toast('這不是本工具的備份檔（找不到 exposures）');
+    return;
+  }
+  const rows = [];
+  let bad = 0;
+  for (const r of data.exposures) {
+    if (!r || typeof r !== 'object' || !r.obligor || !r.exposureClass || !Number.isFinite(parseMoney(r.drawn))) { bad += 1; continue; }
+    rows.push(sanitizeRow(r));
+  }
+  if (!rows.length) {
+    toast('備份檔沒有可用資料' + (bad ? `（${bad} 筆格式不符）` : ''));
+    return;
+  }
+  const ok = await confirmDlg({
+    title: '匯入備份 JSON',
+    subtitle: `${fmtInt(rows.length)} 筆可用${bad ? ` · ${fmtInt(bad)} 筆略過` : ''}`,
+    body: '會與現有資料合併：案件編號相同者以備份檔覆蓋，其餘新增。若要整批取代，請先清除所有資料再匯入。',
+    okText: '合併匯入',
+  });
+  if (!ok) return;
+
+  const byRef = new Map(state.exposures.filter((r) => r.refNo).map((r) => [r.refNo, r]));
+  for (const r of rows) {
+    const prev = byRef.get(r.refNo);
+    if (prev) { r.id = prev.id; r.createdAt = prev.createdAt; }
+    byRef.set(r.refNo, r);
+  }
+  await idbPutMany(STORE_EXPOSURES, rows);
+  await reloadExposures();
+  recompute();
+  state.dataRev += 1;
+  if (state.asOfDate !== 'ALL') {
+    const dates = new Set(rows.map((r) => r.asOfDate));
+    if (!dates.has(state.asOfDate)) state.asOfDate = mostCommonDate(rows);
+  }
+  renderAll();
+  toast(`已匯入 ${fmtInt(rows.length)} 筆`);
+}
+
+function exportResultsCsv() {
+  const rows = state.exposures.filter(inScope).slice()
+    .sort((a, b) => String(a.refNo).localeCompare(String(b.refNo)));
+  if (!rows.length) { toast('目前範圍沒有資料'); return; }
+  const header = ['案件編號', '借戶', '集團', '暴險類別', '產品', '評等', '已動用', '未動用', 'CCF%', 'CCF科目',
+    'EAD', '基準權重%', '擔保保證覆蓋', '未覆蓋', '有效權重%', 'RWA', '資本', '逾期天數', '基準日', '檢核'];
+  const out = [header];
+  for (const r of rows) {
+    const c = state.computed.get(r.id) || {};
+    out.push([
+      r.refNo, r.obligor, r.group, classLabel(r.exposureClass), r.product,
+      normalizeRating(r.rating), r.drawn, r.undrawn,
+      ((c.ccf || 0) / 100).toFixed(2), c.ccfLabel || '',
+      c.ead || 0, ((c.baseBp || 0) / 100).toFixed(2),
+      c.covered || 0, c.uncovered || 0, ((c.effBp || 0) / 100).toFixed(2),
+      c.rwa || 0, c.capital || 0, r.dpdDays, r.asOfDate,
+      (c.issues || []).map((k) => (ISSUES[k] ? ISSUES[k].label : k)).join('|'),
+    ]);
+  }
+  download(`信用風險分析結果_${state.asOfDate === 'ALL' ? '全部' : state.asOfDate}.csv`,
+    toCSV(out), 'text/csv;charset=utf-8');
+  toast(`已匯出 ${fmtInt(rows.length)} 筆計算結果`);
+}
+
+async function clearAll() {
+  const ok = await confirmDlg({
+    title: '清除所有資料？',
+    subtitle: `${fmtInt(state.exposures.length)} 筆明細 · 自訂規則也會重設`,
+    body: '這個動作無法復原。若還沒匯出備份，建議先取消，到備份頁匯出 JSON。',
+    okText: '確定清除',
+    danger: true,
+  });
+  if (!ok) return;
+  await idbClear(STORE_EXPOSURES);
+  await idbClear(STORE_META);
+  state.exposures = [];
+  state.rules = makeRules('basel2');
+  state.rateBasisBp = 800;
+  state.computed = new Map();
+  state.rulesRev += 1;
+  state.dataRev += 1;
+  state.asOfDate = 'ALL';
+  state.filters = { q: '', cls: '', rating: '', issue: '', sortKey: 'refNo', sortDir: 'asc' };
+  imp.lastErrors = [];
+  closeAllOverlays();
+  renderAll();
+  toast('已清除所有資料');
+}
+
+async function reloadExposures() {
+  const rows = await idbAll(STORE_EXPOSURES);
+  state.exposures = rows.filter((r) => r && r.id);
+}
+
+/* ============================================================
+   16. 示範資料與範例 CSV
+   ============================================================ */
+const SAMPLE_CSV_HEADER = [
+  '案件編號', '借戶名稱', '集團', '暴險類別', '產品', '外部評等',
+  '已動用餘額', '未動用額度', 'CCF', '擔保品類型', '擔保品市值',
+  '保證類型', '保證金額', '逾期天數', '資料基準日',
+];
+
+const SAMPLE_CSV_ROWS = [
+  ['SMP-001', '亞洲半導體', '亞洲科技集團', '企業', '營運週轉金', 'A', '820,000,000', 180000000, 'UNDRAWN_NC', '', '', '', 0, 0],
+  ['SMP-002', '光洋精密', '光洋集團', '企業', '資本支出貸款', 'BBB', 420000000, 0, 'NONE', '商用不動產', 260000000, '', 0, 0],
+  ['SMP-003', '大灣海運', '大灣集團', '企業', '船舶融資', 'BB', 1200000000, 0, 'NONE', '商用不動產', 700000000, '銀行保證', 300000000, 0],
+  ['SMP-004', '中央政府', '', '主權', '公債投資', 'AAA', 2500000000, 0, 'NONE', '', '', '', 0, 0],
+  ['SMP-005', '台北市政府', '', '公營事業', '市政建設貸款', 'AA', 480000000, 200000000, 'GUARANTEE', '', '', '政府保證', 200000000, 0],
+  ['SMP-006', '台元銀行', '台元金控', '銀行', '同業拆放', 'A+', 900000000, 0, 'NONE', '', '', '', 0, 0],
+  ['SMP-007', '陳先生', '', '住宅抵押', '自用住宅貸款', '未評等', '18,500,000', 0, 'NONE', '住宅不動產', 26000000, '', 0, 0],
+  ['SMP-008', '林小姐', '', '零售', '個人信用貸款', '未評等', 850000, 0, 'NONE', '', '', '', 0, 0],
+  ['SMP-009', '建設公司甲', '', '商用不動產', '建築融資', 'BB', 680000000, 320000000, 'UNDRAWN_NC', '商用不動產', 900000000, '', 0, 0],
+  ['SMP-010', '傳產製造', '', '逾期放款', '逾期放款', 'B', 95000000, 0, 'NONE', '商用不動產', 40000000, '', 0, 120],
+  ['SMP-011', '上市科技', '', '股權', '股權投資', 'AA-', 150000000, 0, 'NONE', '', '', '', 0, 0],
+  ['SMP-012', '承受擔保品', '', '其他資產', '其他資產', '未評等', 8000000, 0, 'NONE', '', '', '', 0, 0],
+];
+
+function buildSampleCsv() {
+  const today = todayISO();
+  const rows = [SAMPLE_CSV_HEADER, ...SAMPLE_CSV_ROWS.map((r) => [...r, today])];
+  return toCSV(rows);
+}
+
+function downloadSampleCsv() {
+  download(`範例_暴險明細_${dateStamp()}.csv`, buildSampleCsv(), 'text/csv;charset=utf-8');
+  toast('已下載範例 CSV，可直接匯入', { timeout: 3600 });
+}
+
+const SEED_DATA = [
+  { refNo: 'EXP-0001', obligor: '亞洲半導體', group: '亞洲科技集團', exposureClass: 'CORPORATE', product: '營運週轉金', rating: 'A', drawn: 820000000, undrawn: 180000000, ccfKey: 'UNDRAWN_NC', collateralType: '', collateralValue: 0, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '主要客戶，週轉金額度' },
+  { refNo: 'EXP-0002', obligor: '光洋精密', group: '光洋集團', exposureClass: 'CORPORATE', product: '資本支出貸款', rating: 'BBB', drawn: 420000000, undrawn: 0, ccfKey: 'NONE', collateralType: 'COMM_RE', collateralValue: 260000000, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '廠房抵押' },
+  { refNo: 'EXP-0003', obligor: '大灣海運', group: '大灣集團', exposureClass: 'CORPORATE', product: '船舶融資', rating: 'BB', drawn: 1200000000, undrawn: 0, ccfKey: 'NONE', collateralType: 'COMM_RE', collateralValue: 700000000, guaranteeType: 'GUAR_BANK', guaranteeAmount: 300000000, dpdDays: 0, note: '船舶與廠房混合擔保' },
+  { refNo: 'EXP-0004', obligor: '富田食品', group: '富田集團', exposureClass: 'CORPORATE', product: '短期借款', rating: 'A', drawn: 150000000, undrawn: 50000000, ccfKey: 'UNDRAWN_COMMIT', collateralType: '', collateralValue: 0, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '' },
+  { refNo: 'EXP-0005', obligor: '新創綠能', group: '新創集團', exposureClass: 'CORPORATE', product: '專案融資', rating: 'B', drawn: 380000000, undrawn: 120000000, ccfKey: 'UNDRAWN_NC', collateralType: 'RESI_RE', collateralValue: 90000000, guaranteeType: 'GUAR_CORP', guaranteeAmount: 50000000, dpdDays: 15, note: '再生能源專案' },
+  { refNo: 'EXP-0006', obligor: '統一零售', group: '統一零售集團', exposureClass: 'CORPORATE', product: '營運週轉金', rating: 'AA-', drawn: 600000000, undrawn: 200000000, ccfKey: 'UNDRAWN_COMMIT', collateralType: 'CASH', collateralValue: 100000000, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '現金定存設質' },
+  { refNo: 'EXP-0007', obligor: '台元銀行', group: '台元金控', exposureClass: 'BANK', product: '同業拆放', rating: 'A+', drawn: 900000000, undrawn: 0, ccfKey: 'NONE', collateralType: '', collateralValue: 0, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '同業往來' },
+  { refNo: 'EXP-0008', obligor: '南山產險', group: '南山集團', exposureClass: 'BANK', product: '附買回交易', rating: 'AA', drawn: 350000000, undrawn: 0, ccfKey: 'NONE', collateralType: 'GOV_BOND', collateralValue: 360000000, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '政府公債擔保' },
+  { refNo: 'EXP-0009', obligor: '中央政府', group: '', exposureClass: 'SOVEREIGN', product: '公債投資', rating: 'AAA', drawn: 2500000000, undrawn: 0, ccfKey: 'NONE', collateralType: '', collateralValue: 0, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '本國主權曝險' },
+  { refNo: 'EXP-0010', obligor: '台北市政府', group: '', exposureClass: 'PSE', product: '市政建設貸款', rating: 'AA', drawn: 480000000, undrawn: 200000000, ccfKey: 'GUARANTEE', collateralType: '', collateralValue: 0, guaranteeType: 'GUAR_GOV', guaranteeAmount: 200000000, dpdDays: 0, note: '' },
+  { refNo: 'EXP-0011', obligor: '陳先生', group: '', exposureClass: 'RESI_MORTGAGE', product: '自用住宅貸款', rating: 'UNRATED', drawn: 18500000, undrawn: 0, ccfKey: 'NONE', collateralType: 'RESI_RE', collateralValue: 26000000, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: 'LTV 約 71%' },
+  { refNo: 'EXP-0012', obligor: '林小姐', group: '', exposureClass: 'RESI_MORTGAGE', product: '自用住宅貸款', rating: 'UNRATED', drawn: 9800000, undrawn: 0, ccfKey: 'NONE', collateralType: 'RESI_RE', collateralValue: 15000000, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '' },
+  { refNo: 'EXP-0013', obligor: '王先生', group: '', exposureClass: 'RETAIL', product: '個人信用貸款', rating: 'UNRATED', drawn: 850000, undrawn: 0, ccfKey: 'NONE', collateralType: '', collateralValue: 0, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '' },
+  { refNo: 'EXP-0014', obligor: '張小姐', group: '', exposureClass: 'RETAIL', product: '信用卡循環', rating: 'UNRATED', drawn: 120000, undrawn: 0, ccfKey: 'NONE', collateralType: '', collateralValue: 0, guaranteeType: '', guaranteeAmount: 0, dpdDays: 30, note: '已進入催收前期' },
+  { refNo: 'EXP-0015', obligor: '小型加工廠', group: '', exposureClass: 'CORPORATE', product: '中小企業貸款', rating: 'BBB-', drawn: 25000000, undrawn: 5000000, ccfKey: 'UNDRAWN_NC', collateralType: 'COMM_RE', collateralValue: 12000000, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '' },
+  { refNo: 'EXP-0016', obligor: '建設公司甲', group: '', exposureClass: 'CRE', product: '建築融資', rating: 'BB', drawn: 680000000, undrawn: 320000000, ccfKey: 'UNDRAWN_NC', collateralType: 'COMM_RE', collateralValue: 900000000, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '興建中個案' },
+  { refNo: 'EXP-0017', obligor: '上市科技', group: '', exposureClass: 'EQUITY', product: '股權投資', rating: 'AA-', drawn: 150000000, undrawn: 0, ccfKey: 'NONE', collateralType: '', collateralValue: 0, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '長期持有' },
+  { refNo: 'EXP-0018', obligor: '傳產製造', group: '', exposureClass: 'PAST_DUE', product: '逾期放款', rating: 'B', drawn: 95000000, undrawn: 0, ccfKey: 'NONE', collateralType: 'COMM_RE', collateralValue: 40000000, guaranteeType: '', guaranteeAmount: 0, dpdDays: 120, note: '逾期 120 天' },
+  { refNo: 'EXP-0019', obligor: '餐飲連鎖', group: '', exposureClass: 'PAST_DUE', product: '逾期放款', rating: 'CCC', drawn: 42000000, undrawn: 0, ccfKey: 'NONE', collateralType: '', collateralValue: 0, guaranteeType: '', guaranteeAmount: 0, dpdDays: 210, note: '已轉催收' },
+  { refNo: 'EXP-0020', obligor: '承受擔保品', group: '', exposureClass: 'OTHER', product: '其他資產', rating: 'UNRATED', drawn: 8000000, undrawn: 0, ccfKey: 'NONE', collateralType: '', collateralValue: 0, guaranteeType: '', guaranteeAmount: 0, dpdDays: 0, note: '法拍承受待處分' },
+];
+
+async function loadSeed() {
+  const today = todayISO();
+  const rows = SEED_DATA.map((s) => ({
+    ...s,
+    id: uid(),
+    asOfDate: today,
+    source: 'sample',
+    createdAt: nowISO(),
+    updatedAt: nowISO(),
+  }));
+  await idbPutMany(STORE_EXPOSURES, rows);
+  await reloadExposures();
+  recompute();
+  state.dataRev += 1;
+  state.asOfDate = today;
+  renderAll();
+  toast(`已載入 ${rows.length} 筆示範資料`, {
+    action: '移除示範',
+    timeout: 10000,
+    onAction: async () => {
+      const samples = state.exposures.filter((r) => r.source === 'sample');
+      for (const r of samples) await idbDel(STORE_EXPOSURES, r.id);
+      state.exposures = state.exposures.filter((r) => r.source !== 'sample');
+      recompute();
+      state.dataRev += 1;
+      renderAll();
+      toast('已移除示範資料');
+    },
+  });
+}
+
+/* ============================================================
+   17. 事件綁定
+   ============================================================ */
+let lastMobile = false;
+
+function bindEvents() {
+  $$('.tab').forEach((b) => b.addEventListener('click', () => setView(b.dataset.view)));
+
+  $('#btnTheme').addEventListener('click', () => {
+    const cur = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    applyTheme(cur === 'dark' ? 'light' : 'dark');
+  });
+
+  const openFilePicker = () => $('#fileCSV').click();
+  $('#btnImport').addEventListener('click', openFilePicker);
+  $('#btnEmptyImport').addEventListener('click', openFilePicker);
+  $('#btnEmptySample').addEventListener('click', downloadSampleCsv);
+  $('#btnSampleCsv').addEventListener('click', downloadSampleCsv);
+
+  $('#fileCSV').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) loadImportFile(f);
+    e.target.value = '';
+  });
+
+  $('#fileJSON').addEventListener('change', async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) await importJsonFile(f);
+    e.target.value = '';
+  });
+
+  $('#btnAdd').addEventListener('click', () => openEditor(null));
+  $('#btnEmptyAdd').addEventListener('click', () => openEditor(null));
+  $('#btnEmptySeed').addEventListener('click', loadSeed);
+  $('#btnSeed').addEventListener('click', async () => {
+    if (!state.exposures.length) { loadSeed(); return; }
+    const ok = await confirmDlg({
+      title: '載入示範資料？',
+      body: `會在現有 ${fmtInt(state.exposures.length)} 筆資料之外，再加入 20 筆示範明細。`,
+      okText: '載入',
+    });
+    if (ok) loadSeed();
+  });
+
+  $('#asOfDate').addEventListener('change', (e) => {
+    state.asOfDate = e.target.value;
+    metaSet('asOfDate', state.asOfDate).catch(() => {});
+    renderAll();
+  });
+
+  $('#groupSeg').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-group]');
+    if (!btn) return;
+    state.groupMode = btn.dataset.group === 'group';
+    $$('#groupSeg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.group === btn.dataset.group)));
+    renderDashboard();
+  });
+
+  $('#topN').addEventListener('change', (e) => {
+    state.topN = Number(e.target.value) || 10;
+    renderConc(getAgg());
+  });
+
+  const onSearch = debounce(() => {
+    state.filters.q = $('#q').value;
+    renderList();
+  }, 180);
+  $('#q').addEventListener('input', onSearch);
+
+  $('#fClass').addEventListener('change', (e) => {
+    state.filters.cls = e.target.value;
+    renderList();
+  });
+  $('#fRating').addEventListener('change', (e) => {
+    state.filters.rating = e.target.value;
+    renderList();
+  });
+  $('#fIssue').addEventListener('change', (e) => {
+    state.filters.issue = e.target.value;
+    renderList();
+  });
+  $('#btnClearFilters').addEventListener('click', () => {
+    state.filters.q = '';
+    state.filters.cls = '';
+    state.filters.rating = '';
+    state.filters.issue = '';
+    if ($('#q').value) $('#q').value = '';
+    renderData();
+  });
+
+  $$('#vhead button').forEach((b) => b.addEventListener('click', () => {
+    const k = b.dataset.sort;
+    if (state.filters.sortKey === k) {
+      state.filters.sortDir = state.filters.sortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      state.filters.sortKey = k;
+      state.filters.sortDir = ['drawn', 'ead', 'effBp', 'rwa', 'dpdDays'].includes(k) ? 'desc' : 'asc';
+    }
+    renderData();
+  }));
+
+  $('#vbody').addEventListener('scroll', () => paintRows(), { passive: true });
+
+  $('#vrows').addEventListener('click', (e) => {
+    const row = e.target.closest('.vrow');
+    if (row) openDrawer(row.dataset.id);
+  });
+  $('#vrows').addEventListener('keydown', (e) => {
+    const row = e.target.closest('.vrow');
+    if (row && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      openDrawer(row.dataset.id);
+    }
+  });
+
+  $('#scrim').addEventListener('click', closeDrawer);
+
+  $$('[data-close]').forEach((b) => b.addEventListener('click', () => {
+    const dlg = $('#' + b.dataset.close);
+    if (dlg && dlg.open) dlg.close();
+  }));
+
+  $('#btnConfirmYes').addEventListener('click', () => settleConfirm(true));
+  $('#btnConfirmNo').addEventListener('click', () => settleConfirm(false));
+  $('#dlgConfirm').addEventListener('cancel', (e) => {
+    e.preventDefault();
+    if (confirmResolver) settleConfirm(false);
+  });
+
+  $('#btnSaveForm').addEventListener('click', saveForm);
+  $('#dlgForm').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT') {
+      e.preventDefault();
+      saveForm();
+    }
+  });
+
+  $('#btnExportJson').addEventListener('click', exportJson);
+  $('#btnImportJson').addEventListener('click', () => $('#fileJSON').click());
+  $('#btnExportCsv').addEventListener('click', exportResultsCsv);
+  $('#btnExportErrors').addEventListener('click', exportImportErrors);
+  $('#btnClearAll').addEventListener('click', clearAll);
+
+  $('#btnPreset2').addEventListener('click', () => applyPreset('basel2'));
+  $('#btnPreset3').addEventListener('click', () => applyPreset('basel3'));
+  $('#btnResetRules').addEventListener('click', () => applyPreset('basel2'));
+
+  bindRuleEvents();
+
+  // 匯入對話框
+  $('#impHasHeader').addEventListener('change', (e) => {
+    imp.hasHeader = e.target.checked;
+    imp.map = {};
+    parseImportText();
+  });
+  $('#impEnc').addEventListener('change', (e) => {
+    imp.encoding = e.target.value;
+    if (!imp.buffer) return;
+    imp.rawText = decodeBuffer(imp.buffer, imp.encoding);
+    imp.map = {};
+    parseImportText();
+  });
+  $('#impDelim').addEventListener('change', (e) => {
+    const v = e.target.value;
+    imp.delim = v === 'auto' ? '' : (v === 'tab' ? '\t' : v);
+    imp.map = {};
+    parseImportText();
+  });
+  $('#impStrategy').addEventListener('change', (e) => {
+    imp.strategy = e.target.value;
+  });
+  $('#btnDoImport').addEventListener('click', async () => {
+    try { await runImport(); }
+    catch (err) {
+      toast('匯入失敗：' + (err && err.message ? err.message : '未知錯誤'));
+      $('#btnDoImport').disabled = false;
+      $('#impProgress').hidden = true;
+    }
+  });
+
+  // 全域快捷鍵
+  document.addEventListener('keydown', (e) => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    const typing = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+    if (e.key === 'Escape') {
+      if ($('#drawer').classList.contains('open')) closeDrawer();
+      return;
+    }
+    if (typing) return;
+    if ($('dialog[open]')) return;
+    if (e.key === '/') {
+      e.preventDefault();
+      if (state.view !== 'data') setView('data');
+      $('#q').focus();
+    } else if (e.key === 'n' || e.key === 'N') {
+      e.preventDefault();
+      openEditor(null);
+    }
+  });
+
+  lastMobile = isMobile();
+  window.addEventListener('resize', debounce(() => {
+    if (isMobile() !== lastMobile) {
+      lastMobile = isMobile();
+      if (state.view === 'data') renderList();
+    }
+  }, 160));
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) onSearch.flush();
+  });
+}
+
+/* ============================================================
+   18. 啟動
+   ============================================================ */
+function normalizeStored(r) {
+  return {
+    ...r,
+    refNo: r.refNo || '',
+    obligor: r.obligor || '（未填）',
+    group: r.group || '',
+    exposureClass: normalizeClass(r.exposureClass),
+    product: r.product || '',
+    rating: normalizeRating(r.rating),
+    drawn: Math.round(num(r.drawn)),
+    undrawn: Math.round(num(r.undrawn)),
+    ccfKey: r.ccfKey || '',
+    collateralType: r.collateralType || '',
+    collateralValue: Math.round(num(r.collateralValue)),
+    guaranteeType: r.guaranteeType || '',
+    guaranteeAmount: Math.round(num(r.guaranteeAmount)),
+    dpdDays: Math.round(num(r.dpdDays)),
+    asOfDate: parseDate(r.asOfDate) || '',
+    note: r.note || '',
+  };
+}
+
+async function boot() {
+  await requestPersist();
+  await openDB();
+  if (memoryMode) {
+    showBanner('目前無法使用 IndexedDB（可能是無痕模式或本機檔案限制），資料只會留在這個分頁，關閉即消失。建議改用本機靜態伺服器開啟，並先匯出備份。');
+  }
+
+  let metaRows = [];
+  try { metaRows = await idbAll(STORE_META); } catch (e) { metaRows = []; }
+  const meta = {};
+  for (const m of metaRows) if (m && m.key) meta[m.key] = m.value;
+
+  if (meta.rules && meta.rules.riskWeights && Array.isArray(meta.rules.ccf) && Array.isArray(meta.rules.crm)) {
+    state.rules = meta.rules;
+  }
+  if (Number.isFinite(Number(meta.rateBasisBp))) state.rateBasisBp = Number(meta.rateBasisBp);
+
+  await reloadExposures();
+  state.exposures = state.exposures.filter((r) => r && r.id).map(normalizeStored);
+
+  recompute();
+  state.dataRev = 1;
+
+  const dates = distinctDates();
+  const savedDate = meta.asOfDate;
+  state.asOfDate = savedDate === 'ALL' ? 'ALL' : (savedDate && dates.includes(savedDate) ? savedDate : (dates[0] || 'ALL'));
+
+  let savedTheme = 'auto';
+  try { savedTheme = localStorage.getItem(CONFIG.themeKey) || 'auto'; } catch (e) {}
+  applyTheme(savedTheme);
+
+  const hash = location.hash.replace(/^#\/?/, '');
+  state.view = ['dashboard', 'data', 'rules', 'backup'].includes(hash) ? hash : 'dashboard';
+  $$('.tab').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.view === state.view)));
+  $$('.view').forEach((s) => { s.hidden = s.id !== 'view-' + state.view; });
+  $('#toolbar').hidden = state.view === 'rules' || state.view === 'backup';
+
+  renderAll();
+  if (state.exposures.length > CONFIG.rowLimitWarn) {
+    toast(`目前 ${fmtInt(state.exposures.length)} 筆，超過 ${fmtInt(CONFIG.rowLimitWarn)} 筆時操作可能變慢，建議先篩選基準日。`, { timeout: 8000 });
+  }
+}
+
+bindEvents();
+boot().catch((err) => {
+  showBanner('初始化失敗：' + (err && err.message ? err.message : '未知錯誤') + '。請重新載入，或改用支援 IndexedDB 的瀏覽器。');
+});
+</script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

@@ -21,6 +21,7 @@ my-spa-tools/
 │  ├─ nsfr-mapping-calc/
 │  ├─ basel-creditrisk-calc/
 │  ├─ sa-cr-credit-risk-studio/  SA-CR 信用風險標準法資本分析平台
+│  ├─ credit-risk-analyse/       信用風險標準法分析工具（15 欄 CSV 匯入、風險權重／CCF／CRM、儀表板與集中度）
 │  ├─ large-exposure-analyzer/
 │  ├─ fixed-width-telegram-parser/
 │  ├─ bank-error-code-resolver/
@@ -142,7 +143,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 62 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 63 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。
