@@ -1,0 +1,2371 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MuseBox Studio — 單頁音樂創作工作台</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-alt: #f1f5f9;
+      --surface-hover: #e2e8f0;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-soft: rgba(99, 102, 241, 0.14);
+      --accent: #ec4899;
+      --accent-soft: rgba(236, 72, 153, 0.15);
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --border: #e2e8f0;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --shadow: 0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --step-off: #e2e8f0;
+      --step-beat: #cbd5e1;
+      --piano-white: #ffffff;
+      --piano-black: #1e293b;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0b0f19;
+      --surface: #151c2c;
+      --surface-alt: #1e293b;
+      --surface-hover: #283548;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #818cf8;
+      --primary-hover: #6366f1;
+      --primary-soft: rgba(129, 140, 248, 0.16);
+      --accent: #f472b6;
+      --accent-soft: rgba(244, 114, 182, 0.16);
+      --success: #34d399;
+      --warning: #fbbf24;
+      --danger: #f87171;
+      --border: #263248;
+      --shadow: 0 8px 20px -4px rgb(0 0 0 / 0.45);
+      --step-off: #1e293b;
+      --step-beat: #27354d;
+      --piano-white: #f8fafc;
+      --piano-black: #0f172a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      flex-wrap: wrap;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.01em;
+    }
+    .brand-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
+    }
+    .transport-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--surface-alt);
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      flex-wrap: wrap;
+    }
+    .bpm-box {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0 0.35rem;
+    }
+    .bpm-box input[type="range"] {
+      width: 85px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons & Inputs */
+    button, .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.8rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    button:hover, .btn:hover { background: var(--surface-hover); }
+    button:active { transform: translateY(1px); }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-accent {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .btn-accent:hover { opacity: 0.9; }
+    .btn-success {
+      background: var(--success);
+      color: #052e16;
+      border-color: var(--success);
+      font-weight: 600;
+    }
+    .btn-danger {
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+    .btn-danger:hover {
+      background: var(--danger);
+      color: #fff;
+    }
+    .btn-sm { padding: 0.28rem 0.55rem; font-size: 0.76rem; }
+
+    input[type="text"], input[type="number"], textarea, select {
+      width: 100%;
+      padding: 0.48rem 0.7rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface-alt);
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus {
+      border-color: var(--primary);
+    }
+
+    /* Main Workspace Layout */
+    .app-layout {
+      display: grid;
+      grid-template-columns: 290px 1fr;
+      gap: 1.1rem;
+      max-width: 1560px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1rem 1.25rem;
+      flex: 1;
+    }
+    @media (max-width: 1024px) {
+      .app-layout { grid-template-columns: 1fr; }
+    }
+
+    /* Sidebar: Project List */
+    aside.sidebar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      box-shadow: var(--shadow);
+      height: fit-content;
+      max-height: calc(100vh - 90px);
+      position: sticky;
+      top: 74px;
+    }
+    @media (max-width: 1024px) {
+      aside.sidebar { position: static; max-height: none; }
+    }
+    .sidebar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .sidebar-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .project-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      overflow-y: auto;
+      padding-right: 0.2rem;
+      max-height: 460px;
+    }
+    .project-item {
+      border: 1px solid var(--border);
+      background: var(--surface-alt);
+      border-radius: var(--radius-sm);
+      padding: 0.65rem 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+    .project-item:hover {
+      border-color: var(--primary);
+    }
+    .project-item.active {
+      background: var(--primary-soft);
+      border-color: var(--primary);
+      box-shadow: inset 3px 0 0 var(--primary);
+    }
+    .project-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.4rem;
+    }
+    .project-name {
+      font-weight: 600;
+      font-size: 0.88rem;
+      word-break: break-word;
+    }
+    .project-badges {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      font-size: 0.7rem;
+    }
+    .tag {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0.1rem 0.45rem;
+      border-radius: 999px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .tag.key-tag {
+      color: var(--primary);
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .project-meta {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Main Studio Area */
+    .studio-workspace {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-width: 0;
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.25rem;
+      box-shadow: var(--shadow);
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.9rem;
+      flex-wrap: wrap;
+    }
+    .panel-title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Project Meta Header Bar */
+    .project-bar {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr auto;
+      gap: 0.75rem;
+      align-items: end;
+    }
+    @media (max-width: 900px) {
+      .project-bar { grid-template-columns: 1fr 1fr; }
+    }
+    .field-label {
+      display: block;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+    }
+
+    /* Chord Progression & Scale Section */
+    .chord-palette {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(80px, 1fr));
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    @media (max-width: 768px) {
+      .chord-palette { grid-template-columns: repeat(4, 1fr); }
+    }
+    .chord-card {
+      background: var(--surface-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.55rem 0.4rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      position: relative;
+      user-select: none;
+    }
+    .chord-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+      background: var(--primary-soft);
+    }
+    .chord-roman {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .chord-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0.1rem 0;
+    }
+    .chord-notes {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+    .chord-add-btn {
+      margin-top: 0.35rem;
+      font-size: 0.7rem;
+      padding: 0.15rem 0.45rem;
+      width: 100%;
+    }
+
+    /* Active Chord Progression Timeline */
+    .progression-timeline {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.65rem;
+      margin-top: 0.5rem;
+    }
+    @media (max-width: 640px) {
+      .progression-timeline { grid-template-columns: repeat(2, 1fr); }
+    }
+    .prog-slot {
+      background: var(--surface-alt);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.7rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 78px;
+      position: relative;
+      transition: all 0.15s;
+      cursor: pointer;
+    }
+    .prog-slot.filled {
+      border-style: solid;
+      border-color: var(--primary);
+      background: var(--primary-soft);
+    }
+    .prog-slot.playing {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-soft);
+      transform: scale(1.02);
+    }
+    .prog-slot-index {
+      position: absolute;
+      top: 5px;
+      left: 8px;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+    .prog-slot-remove {
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding: 2px 5px;
+      cursor: pointer;
+    }
+    .prog-slot-remove:hover { color: var(--danger); background: transparent; }
+
+    /* Step Sequencer Grid */
+    .sequencer-wrap {
+      overflow-x: auto;
+      padding-bottom: 0.35rem;
+    }
+    .seq-section-label {
+      font-size: 0.76rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin: 0.6rem 0 0.4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .seq-row {
+      display: grid;
+      grid-template-columns: 82px repeat(16, minmax(28px, 1fr));
+      gap: 4px;
+      align-items: center;
+      margin-bottom: 4px;
+      min-width: 620px;
+    }
+    .seq-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      padding-right: 0.4rem;
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .seq-cell {
+      height: 28px;
+      border-radius: 4px;
+      background: var(--step-off);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: transform 0.08s, background 0.1s;
+    }
+    .seq-cell.beat-group {
+      background: var(--step-beat);
+    }
+    .seq-cell:hover {
+      border-color: var(--primary);
+    }
+    .seq-cell.active-melody {
+      background: var(--primary);
+      border-color: var(--primary-hover);
+      box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+    }
+    .seq-cell.active-drum {
+      background: var(--accent);
+      border-color: var(--accent);
+      box-shadow: 0 0 8px rgba(236, 72, 153, 0.4);
+    }
+    .seq-cell.current-step {
+      outline: 2px solid var(--warning);
+      outline-offset: -1px;
+      transform: scale(1.06);
+    }
+
+    /* Two-column lower section: Piano + Lyrics/Memo */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    @media (max-width: 980px) {
+      .bottom-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Virtual Piano */
+    .piano-container {
+      position: relative;
+      display: flex;
+      height: 155px;
+      user-select: none;
+      overflow-x: auto;
+      padding: 0.25rem 0;
+    }
+    .piano-key-white {
+      flex: 1;
+      min-width: 36px;
+      background: var(--piano-white);
+      border: 1px solid #94a3b8;
+      border-radius: 0 0 6px 6px;
+      position: relative;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 8px;
+      color: #334155;
+      font-size: 0.7rem;
+      font-weight: 600;
+      z-index: 1;
+      transition: background 0.08s;
+    }
+    .piano-key-white:active, .piano-key-white.pressed {
+      background: #c7d2fe;
+    }
+    .piano-key-white.in-scale::after {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+      margin-bottom: 4px;
+    }
+    .piano-key-black {
+      width: 24px;
+      height: 96px;
+      background: var(--piano-black);
+      border: 1px solid #000;
+      border-radius: 0 0 5px 5px;
+      margin-left: -12px;
+      margin-right: -12px;
+      z-index: 2;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      padding-bottom: 6px;
+      color: #cbd5e1;
+      font-size: 0.62rem;
+      position: relative;
+    }
+    .piano-key-black:active, .piano-key-black.pressed {
+      background: var(--primary);
+    }
+    .piano-key-black.in-scale::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-bottom: 4px;
+    }
+    .kbd-hint {
+      font-size: 0.62rem;
+      opacity: 0.6;
+    }
+
+    /* Visualizer Canvas */
+    #audio-visualizer {
+      width: 110px;
+      height: 28px;
+      border-radius: 4px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    /* Lyrics & Voice Memo */
+    .lyric-tags {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.5rem;
+    }
+    .memo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      margin-top: 0.65rem;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .memo-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      background: var(--surface-alt);
+      padding: 0.4rem 0.65rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-size: 0.78rem;
+    }
+    .memo-item audio {
+      height: 28px;
+      max-width: 200px;
+    }
+
+    /* Empty State & Dialogs */
+    .empty-state {
+      text-align: center;
+      padding: 1.5rem 0.75rem;
+      color: var(--text-muted);
+      border: 1px dashed var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+    }
+    dialog {
+      margin: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      padding: 1.4rem;
+      max-width: 440px;
+      width: 92%;
+      box-shadow: var(--shadow);
+    }
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(2px);
+    }
+    .dialog-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.65rem;
+    }
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1.1rem;
+    }
+
+    /* Toast */
+    #toast-container {
+      position: fixed;
+      bottom: 1.25rem;
+      right: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 9999;
+    }
+    .toast {
+      background: var(--surface);
+      color: var(--text);
+      border-left: 4px solid var(--primary);
+      border-top: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow);
+      font-size: 0.84rem;
+      font-weight: 500;
+      animation: slideIn 0.2s ease;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Studio Header & Transport -->
+  <header>
+    <div class="brand">
+      <div class="brand-badge">🎵</div>
+      <div>
+        <div>MuseBox Studio</div>
+        <div style="font-size: 0.68rem; color: var(--text-muted); font-weight: 400;">離線單頁編曲・和弦・音序器・詞曲靈感工作台</div>
+      </div>
+    </div>
+
+    <div class="transport-bar">
+      <button id="btn-play" class="btn-success" title="空白鍵播放/停止">▶ 播放循環</button>
+      <button id="btn-play-chords" title="只試聽和弦進行">🎹 播和弦</button>
+      <div class="bpm-box">
+        <span>BPM</span>
+        <input type="range" id="bpm-slider" min="60" max="180" value="110">
+        <span id="bpm-display" style="min-width: 28px;">110</span>
+      </div>
+      <div class="bpm-box">
+        <span>音色</span>
+        <select id="synth-wave" style="width: auto; padding: 0.2rem 0.45rem; font-size: 0.78rem;">
+          <option value="triangle">溫暖三角波 (Triangle)</option>
+          <option value="sawtooth">合成鋸齒波 (Sawtooth)</option>
+          <option value="sine">純淨正弦波 (Sine)</option>
+          <option value="square">復古方波 (8-Bit Square)</option>
+        </select>
+      </div>
+      <canvas id="audio-visualizer" width="110" height="28" title="即時音訊頻譜"></canvas>
+    </div>
+
+    <div class="toolbar">
+      <button id="btn-save-project" class="btn-primary" title="儲存目前專案至 IndexedDB (Ctrl+S)">💾 儲存專案</button>
+      <button id="btn-export-wav" title="將目前編曲渲染並匯出為 WAV 音訊檔">🎧 匯出 WAV</button>
+      <button id="btn-export-json" title="備份所有專案為 JSON">📥 備份 JSON</button>
+      <button id="btn-import-trigger" title="從 JSON 還原專案">📤 匯入</button>
+      <input type="file" id="file-import" accept=".json" style="display:none;">
+      <button id="btn-theme" title="切換深色/淺色模式">🌓 主題</button>
+    </div>
+  </header>
+
+  <div class="app-layout">
+    <!-- Left Sidebar: Project Library -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">🗂️ 創作專案庫 (<span id="project-count">0</span>)</div>
+        <button id="btn-new-project" class="btn-primary btn-sm">＋ 新專案</button>
+      </div>
+
+      <input type="text" id="search-input" placeholder="🔍 搜尋歌名、調性、標籤或歌詞...">
+
+      <div style="display:flex; gap:0.35rem;">
+        <select id="filter-genre" style="font-size:0.78rem; padding:0.35rem 0.5rem;">
+          <option value="">全部曲風標籤</option>
+          <option value="Pop">Pop 流行</option>
+          <option value="Lo-Fi">Lo-Fi 放鬆</option>
+          <option value="Synthwave">Synthwave 電子</option>
+          <option value="Rock">Rock 搖滾</option>
+          <option value="Jazz">Jazz / R&B</option>
+          <option value="Ballad">Ballad 抒情</option>
+        </select>
+        <button id="btn-duplicate-project" class="btn-sm" title="複製目前專案">📄 複製</button>
+        <button id="btn-delete-project" class="btn-danger btn-sm" title="刪除目前專案">🗑️</button>
+      </div>
+
+      <div id="project-list" class="project-list"></div>
+      <div id="project-empty" class="empty-state" style="display:none;">
+        找不到符合條件的創作專案
+      </div>
+    </aside>
+
+    <!-- Right Main Workspace -->
+    <main class="studio-workspace">
+      <!-- 1. Project Metadata & Key/Scale Config -->
+      <section class="panel">
+        <div class="project-bar">
+          <div>
+            <label class="field-label" for="proj-title">🎵 專案 / 歌曲名稱</label>
+            <input type="text" id="proj-title" placeholder="輸入創作名稱...">
+          </div>
+          <div>
+            <label class="field-label" for="proj-genre">🏷️ 曲風標籤</label>
+            <select id="proj-genre">
+              <option value="Pop">Pop 流行</option>
+              <option value="Lo-Fi">Lo-Fi 放鬆</option>
+              <option value="Synthwave">Synthwave 電子</option>
+              <option value="Rock">Rock 搖滾</option>
+              <option value="Jazz">Jazz / R&B</option>
+              <option value="Ballad">Ballad 抒情</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="proj-root">🎼 主音 (Key)</label>
+            <select id="proj-root">
+              <option value="C">C</option>
+              <option value="C#">C# / Db</option>
+              <option value="D">D</option>
+              <option value="Eb">Eb / D#</option>
+              <option value="E">E</option>
+              <option value="F">F</option>
+              <option value="F#">F# / Gb</option>
+              <option value="G">G</option>
+              <option value="Ab">Ab / G#</option>
+              <option value="A">A</option>
+              <option value="Bb">Bb / A#</option>
+              <option value="B">B</option>
+            </select>
+          </div>
+          <div>
+            <label class="field-label" for="proj-scale">📐 音階調式 (Scale)</label>
+            <select id="proj-scale">
+              <option value="major">Major 自然大調</option>
+              <option value="minor">Minor 自然小調</option>
+              <option value="dorian">Dorian 多利安調式</option>
+              <option value="pentatonic">Pentatonic 五聲音階</option>
+            </select>
+          </div>
+          <div style="display:flex; gap:0.4rem;">
+            <button id="btn-inspire-all" class="btn-accent" title="一鍵隨機生成和弦、旋律與鼓組靈感">✨ 靈感隨機生成</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. Chord Progression & Diatonic Assistant -->
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>🎹 順階和弦盤與和弦進行 (Chord Progression)</span>
+            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">點擊和弦卡可試聽，點「＋加入」排入下方 4 小節進行</span>
+          </div>
+          <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+            <select id="chord-preset-select" style="width:auto; font-size:0.78rem; padding:0.3rem 0.5rem;">
+              <option value="">✨ 套用經典和弦進行公式...</option>
+              <option value="0,4,5,3">流行萬用 (I - V - vi - IV)</option>
+              <option value="3,4,2,5">日系王道進行 (IV - V - iii - vi)</option>
+              <option value="5,3,0,4">抒情催淚 (vi - IV - I - V)</option>
+              <option value="1,4,0,5">爵士律動 (ii - V - I - vi)</option>
+              <option value="0,5,3,4">復古經典 (I - vi - IV - V)</option>
+              <option value="3,2,1,0">都市 Neo-Soul (IV - iii - ii - I)</option>
+            </select>
+            <button id="btn-clear-chords" class="btn-sm">清空和弦</button>
+          </div>
+        </div>
+
+        <!-- 7 Diatonic Chords -->
+        <div id="chord-palette" class="chord-palette"></div>
+
+        <!-- 4-Bar Progression Slots -->
+        <div class="field-label">目前和弦進行 (4 小節循環 — 點擊小節試聽，點 × 移除)</div>
+        <div id="progression-timeline" class="progression-timeline"></div>
+      </section>
+
+      <!-- 3. 16-Step Melody & Drum Sequencer -->
+      <section class="panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <span>🎛️ 16 步進音序器與鼓機 (Step Sequencer)</span>
+            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:400;">音高自動對應目前調性音階，怎麼點都不走音</span>
+          </div>
+          <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
+            <button id="btn-random-melody" class="btn-sm">🎲 隨機旋律</button>
+            <select id="drum-preset-select" style="width:auto; font-size:0.78rem; padding:0.3rem 0.5rem;">
+              <option value="">🥁 載入鼓組節奏型態...</option>
+              <option value="pop">Pop 標準流行節拍</option>
+              <option value="lofi">Lo-Fi 慵懶節拍</option>
+              <option value="four">Four-on-the-Floor 電子舞曲</option>
+              <option value="rock">Rock 搖滾推進</option>
+            </select>
+            <button id="btn-clear-seq" class="btn-sm">清空音序器</button>
+          </div>
+        </div>
+
+        <div class="sequencer-wrap">
+          <div class="seq-section-label">
+            <span>🎵 旋律合成器軌 (Melody Synth — 由高至低)</span>
+            <span id="scale-notes-hint" style="font-weight:500;"></span>
+          </div>
+          <div id="melody-grid"></div>
+
+          <div class="seq-section-label" style="margin-top:0.85rem;">
+            <span>🥁 節奏鼓機軌 (Drum Machine)</span>
+            <span>每格代表 1/16 拍</span>
+          </div>
+          <div id="drum-grid"></div>
+        </div>
+      </section>
+
+      <!-- 4. Bottom Grid: Virtual Piano + Lyrics & Voice Memo -->
+      <div class="bottom-grid">
+        <!-- Virtual Piano -->
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span>🎹 互動式雙八度鍵盤 (C4 - B5)</span>
+            </div>
+            <span style="font-size:0.74rem; color:var(--text-muted);">藍/粉圓點＝調內音｜支援電腦鍵盤 A~L 彈奏</span>
+          </div>
+          <div id="piano-container" class="piano-container"></div>
+          <div style="margin-top:0.65rem; font-size:0.75rem; color:var(--text-muted); display:flex; justify-content:space-between; flex-wrap:wrap; gap:0.4rem;">
+            <span>💡 提示：彈奏時會即時發聲，可搭配循環播放即興找尋主旋律靈感。</span>
+            <span id="last-played-note" style="color:var(--primary); font-weight:700;">等待彈奏...</span>
+          </div>
+        </section>
+
+        <!-- Lyrics, Structure & Voice Memo -->
+        <section class="panel">
+          <div class="panel-header">
+            <div class="panel-title">
+              <span>✍️ 詞曲結構筆記與靈感錄音</span>
+            </div>
+            <div style="display:flex; gap:0.35rem;">
+              <button id="btn-lyric-prompt" class="btn-sm" title="隨機提供一句創作意境或主題">💡 靈感意境</button>
+              <button id="btn-record-memo" class="btn-sm" title="使用麥克風錄下哼唱旋律">🎙️ 錄製哼唱</button>
+            </div>
+          </div>
+
+          <div class="lyric-tags">
+            <button type="button" class="btn-sm lyric-tag-btn" data-tag="[Intro]">＋ Intro</button>
+            <button type="button" class="btn-sm lyric-tag-btn" data-tag="[Verse 1]">＋ Verse</button>
+            <button type="button" class="btn-sm lyric-tag-btn" data-tag="[Pre-Chorus]">＋ Pre-Chorus</button>
+            <button type="button" class="btn-sm lyric-tag-btn" data-tag="[Chorus]">＋ Chorus</button>
+            <button type="button" class="btn-sm lyric-tag-btn" data-tag="[Bridge]">＋ Bridge</button>
+            <button type="button" class="btn-sm lyric-tag-btn" data-tag="[Outro]">＋ Outro</button>
+          </div>
+
+          <textarea id="proj-lyrics" rows="5" placeholder="在此記錄歌詞、段落編排、配器靈感或和弦備註..."></textarea>
+          <div style="display:flex; justify-content:space-between; font-size:0.72rem; color:var(--text-muted); margin-top:0.25rem;">
+            <span id="lyric-prompt-display">點擊「💡 靈感意境」獲取創作主題提示</span>
+            <span id="lyric-char-count">0 字</span>
+          </div>
+
+          <div id="memo-list" class="memo-list"></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <dialog id="confirm-dialog">
+    <div class="dialog-title">確認刪除專案？</div>
+    <p id="confirm-message" style="font-size:0.88rem; color:var(--text-muted);">
+      刪除後無法復原，確定要刪除此音樂創作專案嗎？
+    </p>
+    <div class="dialog-actions">
+      <button type="button" id="btn-confirm-cancel">取消</button>
+      <button type="button" id="btn-confirm-ok" class="btn-danger">確定刪除</button>
+    </div>
+  </dialog>
+
+  <div id="toast-container"></div>
+
+  <script>
+    // =========================================================================
+    // 1. IndexedDB Lightweight Promise Wrapper
+    // =========================================================================
+    class MiniDB {
+      constructor(dbName = 'MuseStudioDB', version = 1, storeName = 'projects') {
+        this.dbName = dbName;
+        this.version = version;
+        this.storeName = storeName;
+        this.db = null;
+      }
+
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(this.dbName, this.version);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(this.storeName)) {
+              db.createObjectStore(this.storeName, { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve(this.db);
+          };
+          req.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async getAll() {
+        await this.init();
+        return new Promise((res, rej) => {
+          const tx = this.db.transaction(this.storeName, 'readonly');
+          const req = tx.objectStore(this.storeName).getAll();
+          req.onsuccess = () => res(req.result || []);
+          req.onerror = () => rej(req.error);
+        });
+      }
+
+      async put(item) {
+        await this.init();
+        return new Promise((res, rej) => {
+          const tx = this.db.transaction(this.storeName, 'readwrite');
+          const req = tx.objectStore(this.storeName).put(item);
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+      }
+
+      async delete(id) {
+        await this.init();
+        return new Promise((res, rej) => {
+          const tx = this.db.transaction(this.storeName, 'readwrite');
+          const req = tx.objectStore(this.storeName).delete(id);
+          req.onsuccess = () => res(true);
+          req.onerror = () => rej(req.error);
+        });
+      }
+    }
+
+    // =========================================================================
+    // 2. Music Theory Constants & Helper Functions
+    // =========================================================================
+    const NOTES = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+    const SCALES = {
+      major: {
+        name: '自然大調',
+        intervals: [0, 2, 4, 5, 7, 9, 11],
+        qualities: ['', 'm', 'm', '', '', 'm', 'dim'],
+        romans: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°']
+      },
+      minor: {
+        name: '自然小調',
+        intervals: [0, 2, 3, 5, 7, 8, 10],
+        qualities: ['m', 'dim', '', 'm', 'm', '', ''],
+        romans: ['i', 'ii°', 'III', 'iv', 'v', 'VI', 'VII']
+      },
+      dorian: {
+        name: 'Dorian 調式',
+        intervals: [0, 2, 3, 5, 7, 9, 10],
+        qualities: ['m', 'm', '', '', 'm', 'dim', ''],
+        romans: ['i', 'ii', 'III', 'IV', 'v', 'vi°', 'VII']
+      },
+      pentatonic: {
+        name: '大調五聲',
+        // 和弦沿用大調順階；旋律音序器使用五聲音階 (rowIntervals，避免重複音)
+        intervals: [0, 2, 4, 5, 7, 9, 11],
+        rowIntervals: [0, 2, 4, 7, 9, 12, 14, 16],
+        qualities: ['', 'm', 'm', '', '', 'm', 'dim'],
+        romans: ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°']
+      }
+    };
+
+    const DRUM_TRACKS = [
+      { id: 'kick', name: 'Kick 大鼓' },
+      { id: 'snare', name: 'Snare 小鼓' },
+      { id: 'hihat', name: 'Hi-Hat 閉鈸' },
+      { id: 'clap', name: 'Clap 拍手' }
+    ];
+
+    const DRUM_PRESETS = {
+      pop: [
+        [1,0,0,0, 0,0,0,0, 1,0,1,0, 0,0,0,0],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+        [1,0,1,0, 1,0,1,0, 1,0,1,0, 1,0,1,0],
+        [0,0,0,0, 0,0,0,0, 0,0,0,0, 1,0,0,1]
+      ],
+      lofi: [
+        [1,0,0,0, 0,0,0,1, 0,0,1,0, 0,0,0,0],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+        [1,0,0,1, 1,0,1,0, 1,0,0,1, 1,0,1,0],
+        [0,0,0,0, 0,0,0,0, 0,1,0,0, 0,0,0,0]
+      ],
+      four: [
+        [1,0,0,0, 1,0,0,0, 1,0,0,0, 1,0,0,0],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+        [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,1,0],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,1,0]
+      ],
+      rock: [
+        [1,0,1,0, 0,0,1,0, 1,0,0,0, 0,0,1,0],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,1],
+        [1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1],
+        [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0]
+      ]
+    };
+
+    const LYRIC_PROMPTS = [
+      '🌧️ 凌晨三點的便利商店，耳機裡播著還沒寫完的副歌',
+      '🌆 霓虹燈倒映在雨後的柏油路，像一封沒寄出的信',
+      '🚆 末班電車駛過高架橋，窗外的城市正在慢慢熄燈',
+      '🌊 海風吹散了夏天的尾聲，我們在防波堤上看著日落',
+      '☕ 冷掉的拿鐵與翻開的筆記本，時間停在午後四點',
+      '🌌 如果銀河有頻率，那一定是我們並肩走過的心跳聲'
+    ];
+
+    function midiToFreq(midi) {
+      return 440 * Math.pow(2, (midi - 69) / 12);
+    }
+
+    function getScaleMidis(rootName, scaleKey, baseOctave = 4) {
+      const rootIdx = NOTES.indexOf(rootName);
+      const baseMidi = 12 * (baseOctave + 1) + rootIdx;
+      const scale = SCALES[scaleKey] || SCALES.major;
+      // Return 8 notes (7 scale degrees + octave root) from top to bottom for sequencer rows
+      const rowIv = scale.rowIntervals || [...scale.intervals, 12];
+      const midis = rowIv.map(semi => baseMidi + semi);
+      return midis.reverse(); // Row 0 = highest note, Row 7 = lowest note
+    }
+
+    function getDiatonicChords(rootName, scaleKey) {
+      const rootIdx = NOTES.indexOf(rootName);
+      const scale = SCALES[scaleKey] || SCALES.major;
+      const baseMidi = 60 + rootIdx; // C4 area
+
+      return scale.intervals.slice(0, 7).map((semi, degIdx) => {
+        const noteIdx = (rootIdx + semi) % 12;
+        const quality = scale.qualities[degIdx];
+        const chordName = NOTES[noteIdx] + quality;
+        const roman = scale.romans[degIdx];
+
+        const thirdOffset = (quality === 'm' || quality === 'dim') ? 3 : 4;
+        const fifthOffset = (quality === 'dim') ? 6 : 7;
+        const rootMidi = baseMidi + semi;
+        const chordMidis = [rootMidi - 12, rootMidi, rootMidi + thirdOffset, rootMidi + fifthOffset];
+        const noteNames = [
+          NOTES[noteIdx],
+          NOTES[(noteIdx + thirdOffset) % 12],
+          NOTES[(noteIdx + fifthOffset) % 12]
+        ];
+
+        return {
+          degree: degIdx,
+          roman,
+          name: chordName,
+          notesLabel: noteNames.join(' - '),
+          midis: chordMidis
+        };
+      });
+    }
+
+    function formatMidiLabel(midi) {
+      const name = NOTES[midi % 12];
+      const oct = Math.floor(midi / 12) - 1;
+      return `${name}${oct}`;
+    }
+
+    // =========================================================================
+    // 3. Web Audio Synthesizer & Drum Engine
+    // =========================================================================
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.analyser = null;
+        this.waveform = 'triangle';
+      }
+
+      ensureContext() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+          this.analyser = this.ctx.createAnalyser();
+          this.analyser.fftSize = 64;
+          this.analyser.connect(this.ctx.destination);
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      playNote(midi, duration = 0.25, timeOffset = 0, gainLevel = 0.18) {
+        this.ensureContext();
+        const now = this.ctx.currentTime + timeOffset;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = this.waveform;
+        osc.frequency.setValueAtTime(midiToFreq(midi), now);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(gainLevel, now + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0008, now + duration);
+
+        osc.connect(gain);
+        gain.connect(this.analyser);
+
+        osc.start(now);
+        osc.stop(now + duration + 0.02);
+      }
+
+      playChord(midis, duration = 0.85) {
+        this.ensureContext();
+        midis.forEach((m, idx) => {
+          // Subtle strum effect (25ms apart)
+          this.playNote(m, duration, idx * 0.025, 0.11);
+        });
+      }
+
+      playDrum(type) {
+        this.ensureContext();
+        const now = this.ctx.currentTime;
+
+        if (type === 'kick') {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(145, now);
+          osc.frequency.exponentialRampToValueAtTime(36, now + 0.14);
+          gain.gain.setValueAtTime(0.55, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+          osc.connect(gain);
+          gain.connect(this.analyser);
+          osc.start(now);
+          osc.stop(now + 0.24);
+        } else if (type === 'snare') {
+          // Noise burst + body tone
+          const bufferSize = Math.floor(this.ctx.sampleRate * 0.15);
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'highpass';
+          filter.frequency.setValueAtTime(700, now);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.28, now);
+          gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.analyser);
+          noise.start(now);
+        } else if (type === 'hihat') {
+          const bufferSize = Math.floor(this.ctx.sampleRate * 0.06);
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'highpass';
+          filter.frequency.setValueAtTime(6500, now);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.16, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.analyser);
+          noise.start(now);
+        } else if (type === 'clap') {
+          const bufferSize = Math.floor(this.ctx.sampleRate * 0.18);
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            const env = i < bufferSize * 0.2 ? (i % 400 < 200 ? 1 : 0.2) : 1;
+            data[i] = (Math.random() * 2 - 1) * env;
+          }
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.setValueAtTime(1400, now);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.24, now);
+          gain.gain.exponentialRampToValueAtTime(0.008, now + 0.18);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.analyser);
+          noise.start(now);
+        }
+      }
+    }
+
+    // =========================================================================
+    // 4. Default Starter Projects & Application State
+    // =========================================================================
+    function createEmptyGrid(rows, cols) {
+      return Array.from({ length: rows }, () => Array(cols).fill(0));
+    }
+
+    function createStarterProjects() {
+      const now = Date.now();
+      return [
+        {
+          id: 'demo-city-pop',
+          title: '霓虹午夜電車 (City Pop Sketch)',
+          genre: 'Pop',
+          rootNote: 'C',
+          scale: 'major',
+          bpm: 112,
+          waveform: 'triangle',
+          progression: [3, 4, 2, 5], // IV - V - iii - vi (F - G - Em - Am)
+          melodyGrid: [
+            [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+            [0,0,1,0, 0,0,1,0, 0,0,1,0, 0,0,0,0],
+            [1,0,0,0, 0,0,0,0, 1,0,0,0, 0,0,1,0],
+            [0,0,0,0, 0,0,0,1, 0,0,0,0, 0,0,0,0],
+            [0,0,0,0, 0,1,0,0, 0,0,0,1, 0,0,0,0],
+            [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,1,0,0],
+            [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+            [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0]
+          ],
+          drumGrid: JSON.parse(JSON.stringify(DRUM_PRESETS.pop)),
+          lyrics: `[Verse 1]\n車窗外倒退的霓虹街景\n耳機裡循環著熟悉和弦進行\n\n[Chorus]\n穿越午夜的高架橋\n把未完的旋律寫進星光裡`,
+          memos: [],
+          updatedAt: now
+        },
+        {
+          id: 'demo-lofi-rain',
+          title: '雨夜咖啡館 (Lo-Fi Chill Beat)',
+          genre: 'Lo-Fi',
+          rootNote: 'A',
+          scale: 'minor',
+          bpm: 84,
+          waveform: 'sine',
+          progression: [0, 5, 2, 6], // Am - F - C - G
+          melodyGrid: [
+            [0,0,0,0, 0,0,1,0, 0,0,0,0, 0,0,0,0],
+            [0,0,0,0, 0,0,0,0, 0,0,1,0, 0,0,0,0],
+            [1,0,0,1, 0,0,0,0, 1,0,0,0, 0,0,1,0],
+            [0,0,0,0, 1,0,0,0, 0,0,0,0, 1,0,0,0],
+            [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+            [0,0,0,0, 0,0,0,0, 0,1,0,0, 0,0,0,0],
+            [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0],
+            [0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0]
+          ],
+          drumGrid: JSON.parse(JSON.stringify(DRUM_PRESETS.lofi)),
+          lyrics: `[Intro]\n(雨聲與溫暖的電鋼琴分解和弦)\n\n[Verse]\n慢下來的節拍，留白也很好聽`,
+          memos: [],
+          updatedAt: now - 3600000
+        }
+      ];
+    }
+
+    const db = new MiniDB('MuseStudioDB', 1, 'projects');
+    const sound = new SoundEngine();
+
+    let projects = [];
+    let currentProject = null;
+    let searchQuery = '';
+    let genreFilter = '';
+
+    // Sequencer playback state
+    let isPlaying = false;
+    let currentStep = 0;
+    let stepTimer = null;
+    let nextTickTime = 0;
+    let lyricSaveTimer = null;
+
+    // Voice recorder state
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    // =========================================================================
+    // 5. UI Helpers & Rendering
+    // =========================================================================
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => el.remove(), 2600);
+    }
+
+    function escapeHTML(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderProjectList() {
+      const listEl = document.getElementById('project-list');
+      const emptyEl = document.getElementById('project-empty');
+      document.getElementById('project-count').textContent = projects.length;
+
+      const filtered = projects.filter(p => {
+        const matchGenre = !genreFilter || p.genre === genreFilter;
+        const q = searchQuery.toLowerCase();
+        const matchQuery = !q ||
+          (p.title || '').toLowerCase().includes(q) ||
+          (p.lyrics || '').toLowerCase().includes(q) ||
+          (p.rootNote || '').toLowerCase().includes(q) ||
+          (p.genre || '').toLowerCase().includes(q);
+        return matchGenre && matchQuery;
+      });
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        return;
+      }
+
+      emptyEl.style.display = 'none';
+      listEl.innerHTML = filtered.map(p => {
+        const isActive = currentProject && currentProject.id === p.id;
+        const scaleLabel = SCALES[p.scale]?.name || p.scale;
+        return `
+          <div class="project-item ${isActive ? 'active' : ''}" data-id="${escapeHTML(p.id)}">
+            <div class="project-item-top">
+              <div class="project-name">${escapeHTML(p.title || '未命名專案')}</div>
+            </div>
+            <div class="project-badges">
+              <span class="tag key-tag">${escapeHTML(p.rootNote)} ${escapeHTML(scaleLabel)}</span>
+              <span class="tag">${escapeHTML(p.genre || 'Pop')}</span>
+              <span class="tag">${Number(p.bpm) || 110} BPM</span>
+            </div>
+            <div class="project-meta">
+              <span>更新：${new Date(p.updatedAt || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderWorkspace() {
+      if (!currentProject) return;
+
+      document.getElementById('proj-title').value = currentProject.title || '';
+      document.getElementById('proj-genre').value = currentProject.genre || 'Pop';
+      document.getElementById('proj-root').value = currentProject.rootNote || 'C';
+      document.getElementById('proj-scale').value = currentProject.scale || 'major';
+      document.getElementById('bpm-slider').value = currentProject.bpm || 110;
+      document.getElementById('bpm-display').textContent = currentProject.bpm || 110;
+      document.getElementById('synth-wave').value = currentProject.waveform || 'triangle';
+      sound.waveform = currentProject.waveform || 'triangle';
+
+      const lyricsEl = document.getElementById('proj-lyrics');
+      lyricsEl.value = currentProject.lyrics || '';
+      document.getElementById('lyric-char-count').textContent = `${lyricsEl.value.length} 字`;
+
+      renderChordAssistant();
+      renderSequencerGrid();
+      renderPiano();
+      renderMemos();
+    }
+
+    function renderChordAssistant() {
+      const chords = getDiatonicChords(currentProject.rootNote, currentProject.scale);
+      const paletteEl = document.getElementById('chord-palette');
+
+      paletteEl.innerHTML = chords.map((c, idx) => `
+        <div class="chord-card" data-degree="${idx}">
+          <div class="chord-roman">${escapeHTML(c.roman)}</div>
+          <div class="chord-name">${escapeHTML(c.name)}</div>
+          <div class="chord-notes">${escapeHTML(c.notesLabel)}</div>
+          <button type="button" class="btn-sm chord-add-btn" data-add-degree="${idx}">＋ 加入進行</button>
+        </div>
+      `).join('');
+
+      const timelineEl = document.getElementById('progression-timeline');
+      const prog = currentProject.progression || [null, null, null, null];
+
+      timelineEl.innerHTML = [0, 1, 2, 3].map(slotIdx => {
+        const deg = prog[slotIdx];
+        const chord = (deg !== null && deg !== undefined && chords[deg]) ? chords[deg] : null;
+        if (!chord) {
+          return `
+            <div class="prog-slot" data-slot="${slotIdx}">
+              <span class="prog-slot-index">Bar ${slotIdx + 1}</span>
+              <span style="font-size:0.76rem; color:var(--text-muted);">點擊上方「＋加入」</span>
+            </div>
+          `;
+        }
+        return `
+          <div class="prog-slot filled" data-slot="${slotIdx}" data-degree="${deg}">
+            <span class="prog-slot-index">Bar ${slotIdx + 1} (${escapeHTML(chord.roman)})</span>
+            <button type="button" class="prog-slot-remove" data-remove-slot="${slotIdx}" title="移除此小節和弦">×</button>
+            <div style="font-size:1.15rem; font-weight:700;">${escapeHTML(chord.name)}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">${escapeHTML(chord.notesLabel)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSequencerGrid() {
+      const scaleMidis = getScaleMidis(currentProject.rootNote, currentProject.scale, 4);
+      document.getElementById('scale-notes-hint').textContent =
+        `調內音：${scaleMidis.slice().reverse().map(formatMidiLabel).join(' · ')}`;
+
+      const melodyGridEl = document.getElementById('melody-grid');
+      melodyGridEl.innerHTML = scaleMidis.map((midi, rowIdx) => {
+        const rowData = currentProject.melodyGrid[rowIdx] || Array(16).fill(0);
+        const cells = rowData.map((active, stepIdx) => {
+          const isBeat = Math.floor(stepIdx / 4) % 2 === 1;
+          const isCur = isPlaying && currentStep === stepIdx;
+          return `<div class="seq-cell ${isBeat ? 'beat-group' : ''} ${active ? 'active-melody' : ''} ${isCur ? 'current-step' : ''}" data-type="melody" data-row="${rowIdx}" data-step="${stepIdx}" title="${formatMidiLabel(midi)} - Step ${stepIdx + 1}"></div>`;
+        }).join('');
+        return `
+          <div class="seq-row">
+            <div class="seq-label">${formatMidiLabel(midi)}</div>
+            ${cells}
+          </div>
+        `;
+      }).join('');
+
+      const drumGridEl = document.getElementById('drum-grid');
+      drumGridEl.innerHTML = DRUM_TRACKS.map((track, rowIdx) => {
+        const rowData = currentProject.drumGrid[rowIdx] || Array(16).fill(0);
+        const cells = rowData.map((active, stepIdx) => {
+          const isBeat = Math.floor(stepIdx / 4) % 2 === 1;
+          const isCur = isPlaying && currentStep === stepIdx;
+          return `<div class="seq-cell ${isBeat ? 'beat-group' : ''} ${active ? 'active-drum' : ''} ${isCur ? 'current-step' : ''}" data-type="drum" data-row="${rowIdx}" data-step="${stepIdx}" title="${track.name} - Step ${stepIdx + 1}"></div>`;
+        }).join('');
+        return `
+          <div class="seq-row">
+            <div class="seq-label">${track.name}</div>
+            ${cells}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderPiano() {
+      const container = document.getElementById('piano-container');
+      const rootIdx = NOTES.indexOf(currentProject.rootNote);
+      const scaleDef = SCALES[currentProject.scale] || SCALES.major;
+      const scaleIntervals = (scaleDef.rowIntervals || scaleDef.intervals).map(i => (rootIdx + i) % 12);
+
+      const kbdMap = ['A','W','S','E','D','F','T','G','Y','H','U','J','K','O','L','P',';',"'"]
+      let html = '';
+      // 2 Octaves from C4 (60) to B5 (83)
+      for (let midi = 60; midi <= 83; midi++) {
+        const noteIdx = midi % 12;
+        const noteName = NOTES[noteIdx];
+        const isBlack = noteName.includes('#') || noteName.includes('b');
+        const inScale = scaleIntervals.includes(noteIdx);
+        const kbdHint = kbdMap[midi - 60] || '';
+
+        if (isBlack) {
+          html += `
+            <div class="piano-key-black ${inScale ? 'in-scale' : ''}" data-midi="${midi}">
+              <span class="kbd-hint">${kbdHint}</span>
+            </div>
+          `;
+        } else {
+          html += `
+            <div class="piano-key-white ${inScale ? 'in-scale' : ''}" data-midi="${midi}">
+              <span class="kbd-hint">${kbdHint}</span>
+              <span>${formatMidiLabel(midi)}</span>
+            </div>
+          `;
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    function renderMemos() {
+      const listEl = document.getElementById('memo-list');
+      const memos = currentProject.memos || [];
+      if (memos.length === 0) {
+        listEl.innerHTML = '';
+        return;
+      }
+      listEl.innerHTML = memos.map((m, idx) => `
+        <div class="memo-item">
+          <span>🎙️ ${escapeHTML(m.label || `錄音備忘 #${idx + 1}`)}</span>
+          <div style="display:flex; align-items:center; gap:0.4rem;">
+            <audio controls src="${/^data:audio\//.test(m.dataUrl || '') ? escapeHTML(m.dataUrl) : ''}"></audio>
+            <button type="button" class="btn-danger btn-sm" data-delete-memo="${idx}">刪除</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // =========================================================================
+    // 6. Sequencer Playback & Real-time Visualizer
+    // =========================================================================
+    function highlightCurrentStep() {
+      document.querySelectorAll('.seq-cell.current-step').forEach(el => el.classList.remove('current-step'));
+      document.querySelectorAll(`.seq-cell[data-step="${currentStep}"]`).forEach(el => el.classList.add('current-step'));
+
+      document.querySelectorAll('.prog-slot.playing').forEach(el => el.classList.remove('playing'));
+      const barIdx = Math.floor(currentStep / 4);
+      const slotEl = document.querySelector(`.prog-slot[data-slot="${barIdx}"]`);
+      if (slotEl) slotEl.classList.add('playing');
+    }
+
+    function runSequencerStep() {
+      if (!isPlaying || !currentProject) return;
+
+      highlightCurrentStep();
+      const stepDurationSec = (60 / (currentProject.bpm || 110)) / 4;
+
+      // 1. Trigger chord on every 4th step (start of each bar in 16-step loop)
+      if (currentStep % 4 === 0) {
+        const barIdx = Math.floor(currentStep / 4);
+        const deg = currentProject.progression?.[barIdx];
+        if (deg !== null && deg !== undefined) {
+          const chords = getDiatonicChords(currentProject.rootNote, currentProject.scale);
+          if (chords[deg]) {
+            sound.playChord(chords[deg].midis, stepDurationSec * 3.6);
+          }
+        }
+      }
+
+      // 2. Trigger active melody notes
+      const scaleMidis = getScaleMidis(currentProject.rootNote, currentProject.scale, 4);
+      scaleMidis.forEach((midi, rowIdx) => {
+        if (currentProject.melodyGrid[rowIdx]?.[currentStep]) {
+          sound.playNote(midi, stepDurationSec * 1.4, 0, 0.19);
+        }
+      });
+
+      // 3. Trigger active drum hits
+      DRUM_TRACKS.forEach((track, rowIdx) => {
+        if (currentProject.drumGrid[rowIdx]?.[currentStep]) {
+          sound.playDrum(track.id);
+        }
+      });
+
+      currentStep = (currentStep + 1) % 16;
+      const intervalMs = ((60 / (currentProject.bpm || 110)) / 4) * 1000;
+      // 漂移修正：以絕對時間排程下一步，避免 setTimeout 累積誤差
+      if (nextTickTime < performance.now() - 200) nextTickTime = performance.now();
+      nextTickTime += intervalMs;
+      stepTimer = setTimeout(runSequencerStep, Math.max(0, nextTickTime - performance.now()));
+    }
+
+    function togglePlay() {
+      const btn = document.getElementById('btn-play');
+      if (isPlaying) {
+        isPlaying = false;
+        clearTimeout(stepTimer);
+        btn.textContent = '▶ 播放循環';
+        btn.classList.remove('btn-danger');
+        btn.classList.add('btn-success');
+        document.querySelectorAll('.seq-cell.current-step').forEach(el => el.classList.remove('current-step'));
+        document.querySelectorAll('.prog-slot.playing').forEach(el => el.classList.remove('playing'));
+      } else {
+        sound.ensureContext();
+        isPlaying = true;
+        currentStep = 0;
+        btn.textContent = '⏹ 停止播放';
+        nextTickTime = performance.now();
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-danger');
+        runSequencerStep();
+      }
+    }
+
+    // Audio Visualizer Loop
+    function startVisualizer() {
+      const canvas = document.getElementById('audio-visualizer');
+      const ctx2d = canvas.getContext('2d');
+      const bufferLen = 16;
+      const dataArray = new Uint8Array(bufferLen);
+
+      function draw() {
+        requestAnimationFrame(draw);
+        ctx2d.clearRect(0, 0, canvas.width, canvas.height);
+        if (!sound.analyser) return;
+        sound.analyser.getByteFrequencyData(dataArray);
+        const barWidth = (canvas.width / bufferLen) - 2;
+        for (let i = 0; i < bufferLen; i++) {
+          const v = dataArray[i] / 255;
+          const h = Math.max(2, v * canvas.height);
+          ctx2d.fillStyle = i % 2 === 0 ? '#818cf8' : '#f472b6';
+          ctx2d.fillRect(i * (barWidth + 2), canvas.height - h, barWidth, h);
+        }
+      }
+      draw();
+    }
+
+    // =========================================================================
+    // 7. Offline WAV Renderer (Export current loop as downloadable .wav file)
+    // =========================================================================
+    async function exportCurrentProjectToWav() {
+      if (!currentProject) return;
+      showToast('🎧 正在渲染 WAV 音訊檔...');
+
+      const bpm = currentProject.bpm || 110;
+      const stepSec = (60 / bpm) / 4;
+      const totalDuration = stepSec * 16 + 0.5;
+      const sampleRate = 44100;
+      const offlineCtx = new OfflineAudioContext(2, Math.ceil(sampleRate * totalDuration), sampleRate);
+
+      const chords = getDiatonicChords(currentProject.rootNote, currentProject.scale);
+      const scaleMidis = getScaleMidis(currentProject.rootNote, currentProject.scale, 4);
+
+      function scheduleNote(midi, startTime, duration, gainVal) {
+        const osc = offlineCtx.createOscillator();
+        const gain = offlineCtx.createGain();
+        osc.type = currentProject.waveform || 'triangle';
+        osc.frequency.setValueAtTime(midiToFreq(midi), startTime);
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.linearRampToValueAtTime(gainVal, startTime + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0008, startTime + duration);
+        osc.connect(gain);
+        gain.connect(offlineCtx.destination);
+        osc.start(startTime);
+        osc.stop(startTime + duration + 0.02);
+      }
+
+      for (let step = 0; step < 16; step++) {
+        const t = step * stepSec;
+        scheduleOfflineNoiseDrums(offlineCtx, currentProject.drumGrid, step, t);
+        if (step % 4 === 0) {
+          const deg = currentProject.progression?.[Math.floor(step / 4)];
+          if (deg !== null && deg !== undefined && chords[deg]) {
+            chords[deg].midis.forEach((m, idx) => scheduleNote(m, t + idx * 0.02, stepSec * 3.5, 0.1));
+          }
+        }
+        scaleMidis.forEach((midi, rowIdx) => {
+          if (currentProject.melodyGrid[rowIdx]?.[step]) {
+            scheduleNote(midi, t, stepSec * 1.4, 0.18);
+          }
+        });
+        // Simple kick & hihat in offline render
+        if (currentProject.drumGrid[0]?.[step]) {
+          const osc = offlineCtx.createOscillator();
+          const gain = offlineCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(140, t);
+          osc.frequency.exponentialRampToValueAtTime(36, t + 0.14);
+          gain.gain.setValueAtTime(0.5, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+          osc.connect(gain);
+          gain.connect(offlineCtx.destination);
+          osc.start(t);
+          osc.stop(t + 0.22);
+        }
+      }
+
+      const renderedBuffer = await offlineCtx.startRendering();
+      const wavBlob = audioBufferToWav(renderedBuffer);
+      const url = URL.createObjectURL(wavBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${(currentProject.title || 'musebox-track').replace(/[\\/:*?"<>|\s]+/g, '_')}.wav`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('✅ WAV 音訊匯出完成！');
+    }
+
+    // Offline render of snare / hi-hat / clap (kick is handled inline)
+    function scheduleOfflineNoiseDrums(ctx, drumGrid, step, t) {
+      const cfg = [
+        null,
+        { dur: 0.15, type: 'highpass', freq: 700, gain: 0.28 },   // snare
+        { dur: 0.06, type: 'highpass', freq: 6500, gain: 0.16 },  // hihat
+        { dur: 0.18, type: 'bandpass', freq: 1400, gain: 0.24 }   // clap
+      ];
+      for (let row = 1; row < 4; row++) {
+        if (!drumGrid[row]?.[step]) continue;
+        const c = cfg[row];
+        const size = Math.floor(ctx.sampleRate * c.dur);
+        const buf = ctx.createBuffer(1, size, ctx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < size; i++) data[i] = Math.random() * 2 - 1;
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const filter = ctx.createBiquadFilter();
+        filter.type = c.type;
+        filter.frequency.setValueAtTime(c.freq, t);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(c.gain, t);
+        gain.gain.exponentialRampToValueAtTime(0.005, t + c.dur);
+        src.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+        src.start(t);
+      }
+    }
+
+    // Make imported / legacy records safe to render
+    function normalizeProject(p) {
+      const grid = (g, rows, cols = 16) => Array.from({ length: rows }, (_, r) =>
+        Array.from({ length: cols }, (_, c) => (g?.[r]?.[c] ? 1 : 0)));
+      return {
+        ...p,
+        id: String(p.id),
+        title: String(p.title ?? '未命名創作'),
+        genre: p.genre || 'Pop',
+        rootNote: NOTES.includes(p.rootNote) ? p.rootNote : 'C',
+        scale: SCALES[p.scale] ? p.scale : 'major',
+        bpm: Math.min(180, Math.max(60, Number(p.bpm) || 110)),
+        waveform: ['triangle', 'sawtooth', 'sine', 'square'].includes(p.waveform) ? p.waveform : 'triangle',
+        progression: Array.from({ length: 4 }, (_, i) => {
+          const d = p.progression?.[i];
+          return Number.isInteger(d) && d >= 0 && d < 7 ? d : null;
+        }),
+        melodyGrid: grid(p.melodyGrid, 8),
+        drumGrid: grid(p.drumGrid, 4),
+        lyrics: String(p.lyrics ?? ''),
+        memos: Array.isArray(p.memos) ? p.memos : [],
+        updatedAt: Number(p.updatedAt) || Date.now()
+      };
+    }
+
+    function audioBufferToWav(buffer) {
+      const numOfChan = buffer.numberOfChannels;
+      const length = buffer.length * numOfChan * 2 + 44;
+      const out = new ArrayBuffer(length);
+      const view = new DataView(out);
+      const channels = [];
+      let sample, offset = 0, pos = 0;
+
+      function setUint16(data) { view.setUint16(pos, data, true); pos += 2; }
+      function setUint32(data) { view.setUint32(pos, data, true); pos += 4; }
+
+      setUint32(0x46464952); // "RIFF"
+      setUint32(length - 8);
+      setUint32(0x45564157); // "WAVE"
+      setUint32(0x20746d66); // "fmt "
+      setUint32(16);
+      setUint16(1);
+      setUint16(numOfChan);
+      setUint32(buffer.sampleRate);
+      setUint32(buffer.sampleRate * 2 * numOfChan);
+      setUint16(numOfChan * 2);
+      setUint16(16);
+      setUint32(0x61746164); // "data"
+      setUint32(length - pos - 4);
+
+      for (let i = 0; i < numOfChan; i++) channels.push(buffer.getChannelData(i));
+      while (pos < length) {
+        for (let i = 0; i < numOfChan; i++) {
+          sample = Math.max(-1, Math.min(1, channels[i][offset]));
+          sample = (sample < 0 ? sample * 32768 : sample * 32767) | 0;
+          view.setInt16(pos, sample, true);
+          pos += 2;
+        }
+        offset++;
+      }
+      return new Blob([out], { type: 'audio/wav' });
+    }
+
+    // =========================================================================
+    // 8. Database Persistence & Event Wiring
+    // =========================================================================
+    async function saveCurrentProject(silent = false) {
+      if (!currentProject) return;
+      currentProject.title = document.getElementById('proj-title').value.trim() || '未命名創作';
+      currentProject.genre = document.getElementById('proj-genre').value;
+      currentProject.rootNote = document.getElementById('proj-root').value;
+      currentProject.scale = document.getElementById('proj-scale').value;
+      currentProject.bpm = Number(document.getElementById('bpm-slider').value) || 110;
+      currentProject.waveform = document.getElementById('synth-wave').value;
+      currentProject.lyrics = document.getElementById('proj-lyrics').value;
+      currentProject.updatedAt = Date.now();
+
+      try {
+        await db.put(currentProject);
+      } catch (err) {
+        showToast('儲存失敗：' + err.message);
+        return;
+      }
+      const idx = projects.findIndex(p => p.id === currentProject.id);
+      if (idx >= 0) projects[idx] = currentProject;
+      else projects.unshift(currentProject);
+
+      projects.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      renderProjectList();
+      if (!silent) showToast('💾 專案已儲存至 IndexedDB');
+    }
+
+    async function initApp() {
+      const savedTheme = localStorage.getItem('muse_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', savedTheme);
+
+      try {
+        projects = (await db.getAll()).filter(p => p && p.id).map(normalizeProject);
+        if (projects.length === 0) {
+          const starters = createStarterProjects();
+          for (const s of starters) await db.put(s);
+          projects = starters;
+        }
+      } catch (err) {
+        // IndexedDB 不可用（如隱私模式）：退回記憶體模式
+        projects = createStarterProjects();
+        showToast('⚠️ 無法使用 IndexedDB，資料將不會被保存：' + err.message);
+      }
+      projects.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      currentProject = projects[0];
+
+      renderProjectList();
+      renderWorkspace();
+      startVisualizer();
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initApp();
+
+      // Theme toggle
+      document.getElementById('btn-theme').addEventListener('click', () => {
+        const cur = document.documentElement.getAttribute('data-theme');
+        const next = cur === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('muse_theme', next);
+      });
+
+      // Play / Stop
+      document.getElementById('btn-play').addEventListener('click', togglePlay);
+
+      // Play only chords
+      document.getElementById('btn-play-chords').addEventListener('click', () => {
+        if (!currentProject) return;
+        const chords = getDiatonicChords(currentProject.rootNote, currentProject.scale);
+        const prog = currentProject.progression || [];
+        let delay = 0;
+        prog.forEach((deg) => {
+          if (deg !== null && deg !== undefined && chords[deg]) {
+            setTimeout(() => sound.playChord(chords[deg].midis, 0.9), delay);
+            delay += 650;
+          }
+        });
+      });
+
+      // BPM & Waveform
+      document.getElementById('bpm-slider').addEventListener('input', (e) => {
+        document.getElementById('bpm-display').textContent = e.target.value;
+        if (currentProject) currentProject.bpm = Number(e.target.value);
+      });
+      document.getElementById('bpm-slider').addEventListener('change', () => saveCurrentProject(true));
+      document.getElementById('synth-wave').addEventListener('change', (e) => {
+        sound.waveform = e.target.value;
+        if (currentProject) currentProject.waveform = e.target.value;
+        saveCurrentProject(true);
+      });
+
+      // Save Project Button & Ctrl+S
+      document.getElementById('btn-save-project').addEventListener('click', () => saveCurrentProject(false));
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+          e.preventDefault();
+          saveCurrentProject(false);
+        }
+        if (e.code === 'Space' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+          e.preventDefault();
+          togglePlay();
+        }
+      });
+
+      // Metadata inputs auto-update
+      ['proj-title', 'proj-genre'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => saveCurrentProject(true));
+      });
+      ['proj-root', 'proj-scale'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => {
+          currentProject.rootNote = document.getElementById('proj-root').value;
+          currentProject.scale = document.getElementById('proj-scale').value;
+          renderChordAssistant();
+          renderSequencerGrid();
+          renderPiano();
+          saveCurrentProject(true);
+        });
+      });
+
+      // Search & Genre Filter
+      document.getElementById('search-input').addEventListener('input', (e) => {
+        searchQuery = e.target.value.trim();
+        renderProjectList();
+      });
+      document.getElementById('filter-genre').addEventListener('change', (e) => {
+        genreFilter = e.target.value;
+        renderProjectList();
+      });
+
+      // Switch Project
+      document.getElementById('project-list').addEventListener('click', (e) => {
+        const card = e.target.closest('.project-item');
+        if (!card) return;
+        const found = projects.find(p => p.id === card.dataset.id);
+        if (found) {
+          currentProject = found;
+          renderProjectList();
+          renderWorkspace();
+        }
+      });
+
+      // New Project
+      document.getElementById('btn-new-project').addEventListener('click', async () => {
+        const newProj = {
+          id: crypto.randomUUID ? crypto.randomUUID() : 'proj-' + Date.now(),
+          title: `新創作靈感 #${projects.length + 1}`,
+          genre: 'Pop',
+          rootNote: 'C',
+          scale: 'major',
+          bpm: 110,
+          waveform: 'triangle',
+          progression: [0, 4, 5, 3],
+          melodyGrid: createEmptyGrid(8, 16),
+          drumGrid: JSON.parse(JSON.stringify(DRUM_PRESETS.pop)),
+          lyrics: '[Verse 1]\n\n[Chorus]\n',
+          memos: [],
+          updatedAt: Date.now()
+        };
+        await db.put(newProj);
+        projects.unshift(newProj);
+        currentProject = newProj;
+        renderProjectList();
+        renderWorkspace();
+        showToast('✨ 已建立新創作專案');
+      });
+
+      // Duplicate Project
+      document.getElementById('btn-duplicate-project').addEventListener('click', async () => {
+        if (!currentProject) return;
+        const copy = JSON.parse(JSON.stringify(currentProject));
+        copy.id = crypto.randomUUID ? crypto.randomUUID() : 'proj-' + Date.now();
+        copy.title = `${currentProject.title} (副本)`;
+        copy.updatedAt = Date.now();
+        await db.put(copy);
+        projects.unshift(copy);
+        currentProject = copy;
+        renderProjectList();
+        renderWorkspace();
+        showToast('📄 已複製專案');
+      });
+
+      // Delete Project with Confirmation Modal
+      const confirmDialog = document.getElementById('confirm-dialog');
+      document.getElementById('btn-delete-project').addEventListener('click', () => {
+        if (!currentProject) return;
+        document.getElementById('confirm-message').textContent =
+          `確定要刪除「${currentProject.title}」嗎？此操作無法復原。`;
+        confirmDialog.showModal();
+      });
+      document.getElementById('btn-confirm-cancel').addEventListener('click', () => confirmDialog.close());
+      document.getElementById('btn-confirm-ok').addEventListener('click', async () => {
+        confirmDialog.close();
+        if (!currentProject) return;
+        const delId = currentProject.id;
+        await db.delete(delId);
+        projects = projects.filter(p => p.id !== delId);
+        if (projects.length === 0) {
+          const fallback = createStarterProjects()[0];
+          await db.put(fallback);
+          projects = [fallback];
+        }
+        currentProject = projects[0];
+        renderProjectList();
+        renderWorkspace();
+        showToast('🗑️ 專案已刪除');
+      });
+
+      // Chord Palette Interaction
+      document.getElementById('chord-palette').addEventListener('click', (e) => {
+        const addBtn = e.target.closest('[data-add-degree]');
+        const card = e.target.closest('.chord-card');
+        if (!card) return;
+        const deg = Number(card.dataset.degree);
+        const chords = getDiatonicChords(currentProject.rootNote, currentProject.scale);
+        if (chords[deg]) sound.playChord(chords[deg].midis);
+
+        if (addBtn) {
+          if (!Array.isArray(currentProject.progression)) currentProject.progression = [null, null, null, null];
+          const emptyIdx = currentProject.progression.findIndex(x => x === null || x === undefined);
+          if (emptyIdx >= 0) {
+            currentProject.progression[emptyIdx] = deg;
+          } else {
+            currentProject.progression.shift();
+            currentProject.progression.push(deg);
+          }
+          renderChordAssistant();
+          saveCurrentProject(true);
+        }
+      });
+
+      // Progression Timeline Interaction
+      document.getElementById('progression-timeline').addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('[data-remove-slot]');
+        if (removeBtn) {
+          e.stopPropagation();
+          const slotIdx = Number(removeBtn.dataset.removeSlot);
+          currentProject.progression[slotIdx] = null;
+          renderChordAssistant();
+          saveCurrentProject(true);
+          return;
+        }
+        const slot = e.target.closest('.prog-slot');
+        if (slot && slot.dataset.degree !== undefined) {
+          const deg = Number(slot.dataset.degree);
+          const chords = getDiatonicChords(currentProject.rootNote, currentProject.scale);
+          if (chords[deg]) sound.playChord(chords[deg].midis);
+        }
+      });
+
+      // Chord Presets & Clear
+      document.getElementById('chord-preset-select').addEventListener('change', (e) => {
+        if (!e.target.value) return;
+        currentProject.progression = e.target.value.split(',').map(Number);
+        renderChordAssistant();
+        saveCurrentProject(true);
+        const chords = getDiatonicChords(currentProject.rootNote, currentProject.scale);
+        if (chords[currentProject.progression[0]]) sound.playChord(chords[currentProject.progression[0]].midis);
+        e.target.value = '';
+        showToast('🎹 已套用和弦進行公式');
+      });
+
+      document.getElementById('btn-clear-chords').addEventListener('click', () => {
+        currentProject.progression = [null, null, null, null];
+        renderChordAssistant();
+        saveCurrentProject(true);
+      });
+
+      // Step Sequencer Clicks
+      document.querySelector('.sequencer-wrap').addEventListener('click', (e) => {
+        const cell = e.target.closest('.seq-cell');
+        if (!cell) return;
+        const type = cell.dataset.type;
+        const row = Number(cell.dataset.row);
+        const step = Number(cell.dataset.step);
+
+        if (type === 'melody') {
+          const val = currentProject.melodyGrid[row][step] ? 0 : 1;
+          currentProject.melodyGrid[row][step] = val;
+          cell.classList.toggle('active-melody', Boolean(val));
+          if (val) {
+            const scaleMidis = getScaleMidis(currentProject.rootNote, currentProject.scale, 4);
+            sound.playNote(scaleMidis[row], 0.22);
+          }
+        } else if (type === 'drum') {
+          const val = currentProject.drumGrid[row][step] ? 0 : 1;
+          currentProject.drumGrid[row][step] = val;
+          cell.classList.toggle('active-drum', Boolean(val));
+          if (val) sound.playDrum(DRUM_TRACKS[row].id);
+        }
+        saveCurrentProject(true);
+      });
+
+      // Random Melody, Drum Preset, Clear Sequencer
+      document.getElementById('btn-random-melody').addEventListener('click', () => {
+        const grid = createEmptyGrid(8, 16);
+        for (let step = 0; step < 16; step++) {
+          if (Math.random() < 0.55) {
+            const row = Math.floor(Math.random() * 8);
+            grid[row][step] = 1;
+          }
+        }
+        currentProject.melodyGrid = grid;
+        renderSequencerGrid();
+        saveCurrentProject(true);
+        showToast('🎲 已隨機生成調內旋律');
+      });
+
+      document.getElementById('drum-preset-select').addEventListener('change', (e) => {
+        const key = e.target.value;
+        if (!key || !DRUM_PRESETS[key]) return;
+        currentProject.drumGrid = JSON.parse(JSON.stringify(DRUM_PRESETS[key]));
+        renderSequencerGrid();
+        saveCurrentProject(true);
+        e.target.value = '';
+        showToast('🥁 已載入鼓組節奏');
+      });
+
+      document.getElementById('btn-clear-seq').addEventListener('click', () => {
+        currentProject.melodyGrid = createEmptyGrid(8, 16);
+        currentProject.drumGrid = createEmptyGrid(4, 16);
+        renderSequencerGrid();
+        saveCurrentProject(true);
+      });
+
+      // Inspire All Button
+      document.getElementById('btn-inspire-all').addEventListener('click', () => {
+        const roots = ['C', 'D', 'Eb', 'F', 'G', 'A', 'Bb'];
+        const scales = ['major', 'minor', 'dorian', 'pentatonic'];
+        const presets = [
+          [0, 4, 5, 3],
+          [3, 4, 2, 5],
+          [5, 3, 0, 4],
+          [1, 4, 0, 5]
+        ];
+        const drumKeys = Object.keys(DRUM_PRESETS);
+
+        currentProject.rootNote = roots[Math.floor(Math.random() * roots.length)];
+        currentProject.scale = scales[Math.floor(Math.random() * scales.length)];
+        currentProject.progression = presets[Math.floor(Math.random() * presets.length)];
+        currentProject.drumGrid = JSON.parse(JSON.stringify(DRUM_PRESETS[drumKeys[Math.floor(Math.random() * drumKeys.length)]]));
+
+        const grid = createEmptyGrid(8, 16);
+        for (let s = 0; s < 16; s++) {
+          if (s % 2 === 0 || Math.random() < 0.35) {
+            grid[Math.floor(Math.random() * 7)][s] = 1;
+          }
+        }
+        currentProject.melodyGrid = grid;
+
+        renderWorkspace();
+        saveCurrentProject(true);
+        showToast('✨ 已為您生成全新調性、和弦與編曲靈感！');
+      });
+
+      // Virtual Piano Mouse & Keyboard Play
+      const pianoEl = document.getElementById('piano-container');
+      pianoEl.addEventListener('pointerdown', (e) => {
+        const keyEl = e.target.closest('[data-midi]');
+        if (!keyEl) return;
+        const midi = Number(keyEl.dataset.midi);
+        sound.playNote(midi, 0.45, 0, 0.24);
+        keyEl.classList.add('pressed');
+        document.getElementById('last-played-note').textContent = `剛彈奏：${formatMidiLabel(midi)} (${midiToFreq(midi).toFixed(1)} Hz)`;
+        setTimeout(() => keyEl.classList.remove('pressed'), 200);
+      });
+
+      const keyMap = {
+        KeyA: 60, KeyW: 61, KeyS: 62, KeyE: 63, KeyD: 64, KeyF: 65,
+        KeyT: 66, KeyG: 67, KeyY: 68, KeyH: 69, KeyU: 70, KeyJ: 71,
+        KeyK: 72, KeyO: 73, KeyL: 74, KeyP: 75, Semicolon: 76, Quote: 77
+      };
+      window.addEventListener('keydown', (e) => {
+        if (e.repeat || e.ctrlKey || e.metaKey || ['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
+        const midi = keyMap[e.code];
+        if (midi) {
+          sound.playNote(midi, 0.4, 0, 0.22);
+          const keyEl = pianoEl.querySelector(`[data-midi="${midi}"]`);
+          if (keyEl) {
+            keyEl.classList.add('pressed');
+            setTimeout(() => keyEl.classList.remove('pressed'), 180);
+          }
+          document.getElementById('last-played-note').textContent = `剛彈奏：${formatMidiLabel(midi)} (${midiToFreq(midi).toFixed(1)} Hz)`;
+        }
+      });
+
+      // Lyrics & Structure Tags
+      const lyricsEl = document.getElementById('proj-lyrics');
+      lyricsEl.addEventListener('input', () => {
+        document.getElementById('lyric-char-count').textContent = `${lyricsEl.value.length} 字`;
+        clearTimeout(lyricSaveTimer);
+        lyricSaveTimer = setTimeout(() => saveCurrentProject(true), 500);
+      });
+
+      document.querySelectorAll('.lyric-tag-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tag = btn.dataset.tag;
+          const start = lyricsEl.selectionStart ?? lyricsEl.value.length;
+          const prefix = start > 0 && !lyricsEl.value.slice(0, start).endsWith('\n') ? '\n\n' : '';
+          const insertText = `${prefix}${tag}\n`;
+          lyricsEl.setRangeText(insertText, start, start, 'end');
+          lyricsEl.focus();
+          document.getElementById('lyric-char-count').textContent = `${lyricsEl.value.length} 字`;
+          saveCurrentProject(true);
+        });
+      });
+
+      document.getElementById('btn-lyric-prompt').addEventListener('click', () => {
+        const prompt = LYRIC_PROMPTS[Math.floor(Math.random() * LYRIC_PROMPTS.length)];
+        document.getElementById('lyric-prompt-display').textContent = prompt;
+      });
+
+      // Microphone Voice Memo Recording
+      const recordBtn = document.getElementById('btn-record-memo');
+      recordBtn.addEventListener('click', async () => {
+        if (isRecording && mediaRecorder) {
+          mediaRecorder.stop();
+          isRecording = false;
+          recordBtn.textContent = '🎙️ 錄製哼唱';
+          recordBtn.classList.remove('btn-danger');
+          return;
+        }
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioChunks = [];
+          mediaRecorder = new MediaRecorder(stream);
+          mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) audioChunks.push(e.data);
+          };
+          mediaRecorder.onstop = () => {
+            stream.getTracks().forEach(t => t.stop());
+            const blob = new Blob(audioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              if (!Array.isArray(currentProject.memos)) currentProject.memos = [];
+              currentProject.memos.push({
+                label: `靈感哼唱 (${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+                dataUrl: reader.result
+              });
+              renderMemos();
+              saveCurrentProject(true);
+              showToast('🎙️ 哼唱錄音已儲存至專案');
+            };
+            reader.readAsDataURL(blob);
+          };
+          mediaRecorder.start();
+          isRecording = true;
+          recordBtn.textContent = '⏹ 結束錄音';
+          recordBtn.classList.add('btn-danger');
+          showToast('🎙️ 開始錄音，再次點擊結束');
+        } catch (err) {
+          showToast('無法開啟麥克風：' + err.message);
+        }
+      });
+
+      document.getElementById('memo-list').addEventListener('click', (e) => {
+        const delBtn = e.target.closest('[data-delete-memo]');
+        if (!delBtn) return;
+        const idx = Number(delBtn.dataset.deleteMemo);
+        currentProject.memos.splice(idx, 1);
+        renderMemos();
+        saveCurrentProject(true);
+      });
+
+      // Export WAV
+      document.getElementById('btn-export-wav').addEventListener('click', exportCurrentProjectToWav);
+
+      // Export JSON Backup
+      document.getElementById('btn-export-json').addEventListener('click', async () => {
+        await saveCurrentProject(true);
+        const all = await db.getAll();
+        const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `musebox-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('📥 已匯出所有創作專案 JSON 備份');
+      });
+
+      // Import JSON Backup
+      const fileImport = document.getElementById('file-import');
+      document.getElementById('btn-import-trigger').addEventListener('click', () => fileImport.click());
+      fileImport.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          const list = Array.isArray(parsed) ? parsed : (parsed.projects || []);
+          if (!Array.isArray(list) || list.length === 0) {
+            showToast('匯入失敗：JSON 檔案格式不正確');
+            return;
+          }
+          for (const item of list) {
+            if (item && item.id) await db.put(normalizeProject(item));
+          }
+          projects = (await db.getAll()).map(normalizeProject);
+          projects.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+          currentProject = projects[0];
+          renderProjectList();
+          renderWorkspace();
+          showToast(`📤 成功匯入 ${list.length} 個創作專案！`);
+        } catch (err) {
+          showToast('讀取備份檔錯誤：' + err.message);
+        }
+        fileImport.value = '';
+      });
+    });
+  </script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

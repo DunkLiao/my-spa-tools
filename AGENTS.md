@@ -74,12 +74,15 @@ my-spa-tools/
 │  ├─ svg-pattern-studio/        SVG Pattern Studio 向量背景紋理生成器（9 種圖樣、配色與 SVG／CSS／PNG 匯出）
 │  ├─ card-workshop/             圖卡工房（30 款範本、三種畫布、即時預覽與 PNG／JSON 匯出）
 │  └─ moodboard/                 Moodboard 靈感素材庫（圖片／連結／文字、標籤看板與備份）
-└─ diagram/                      流程與圖表建模
-   ├─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器
-   └─ vba-dependency-explorer/   VBA Dependency Explorer 依賴關係分析與視覺化
+├─ diagram/                      流程與圖表建模
+│  ├─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器
+│  └─ vba-dependency-explorer/   VBA Dependency Explorer 依賴關係分析與視覺化
+└─ music/                        音樂創作
+   ├─ musebox-studio/            MuseBox Studio 單頁音樂創作工作台（和弦進行、音序器、虛擬鋼琴與詞曲筆記）
+   └─ chord-studio/              和聲工房 Chord Studio 和弦進行工坊（順階／自由和弦、拍數與 BPM、WAV／JSON 匯出）
 ```
 
-分類層固定為七類：`agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`。每個工具自成一層子資料夾，HTML 檔名沿用工具原名。**所有工具頁面都位於根目錄下兩層**（`<類別>/<工具>/<檔名>.html`）。
+分類層固定為八類：`agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`、`music/`。每個工具自成一層子資料夾，HTML 檔名沿用工具原名。**所有工具頁面都位於根目錄下兩層**（`<類別>/<工具>/<檔名>.html`）。
 
 ## 強制規則
 
@@ -127,7 +130,7 @@ my-spa-tools/
 ## 命名與分類慣例
 
 - 資料夾名稱一律使用小寫 kebab-case，並對齊工具語意（例如 `oracle-sql-formatter`）。
-- 工具放在 `agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/` 七類之一。
+- 工具放在 `agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`、`music/` 八類之一。
 - HTML 入口檔名沿用工具既有名稱，不隨資料夾改名。
 - 單一工具的說明請併入根目錄 `README.md`，**不要**在各工具子資料夾內另建 README。
 
@@ -143,7 +146,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 63 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 65 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。
