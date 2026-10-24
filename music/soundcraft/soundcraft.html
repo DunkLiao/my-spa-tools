@@ -1,0 +1,3422 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoundCraft - 音樂創作與靈感工作台</title>
+  <style>
+    :root {
+      --bg-base: #12131a;
+      --bg-surface: #1a1c26;
+      --bg-surface-elevated: #232736;
+      --bg-card: #202330;
+      --border-color: #31364a;
+      --border-focus: #6366f1;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --primary-glow: rgba(99, 102, 241, 0.35);
+      --accent: #ec4899;
+      --accent-hover: #db2777;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --cyan: #06b6d4;
+      --purple: #8b5cf6;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace;
+    }
+
+    [data-theme="light"] {
+      --bg-base: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-surface-elevated: #f1f5f9;
+      --bg-card: #ffffff;
+      --border-color: #e2e8f0;
+      --border-focus: #4f46e5;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-dim: #94a3b8;
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-glow: rgba(79, 70, 229, 0.2);
+      --accent: #db2777;
+      --accent-hover: #be185d;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+      --shadow-md: 0 4px 10px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 10px 20px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    input, textarea, select, button {
+      font-family: inherit;
+      user-select: text;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+    }
+
+    .nav-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      cursor: pointer;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    .current-project-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.8rem;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+      max-width: 250px;
+    }
+
+    .current-project-badge:hover {
+      border-color: var(--primary);
+    }
+
+    .project-name-text {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .transport-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-surface-elevated);
+      padding: 0.3rem 0.6rem;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+    }
+
+    .nav-tabs {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .nav-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.5rem 0.85rem;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: var(--transition);
+    }
+
+    .nav-tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .nav-tab-btn.active {
+      color: #fff;
+      background: var(--primary);
+      box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    [data-theme="light"] .nav-tab-btn:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .icon-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .icon-btn:hover {
+      color: var(--text-main);
+      border-color: var(--primary);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 1.5rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .tab-panel {
+      display: none;
+      animation: fadeIn 0.2s ease-out;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Common Card Styles */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      gap: 1rem;
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-main);
+    }
+
+    .card-subtitle {
+      font-size: 0.825rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    /* Controls & Inputs */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: var(--transition);
+      user-select: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 0 12px var(--primary-glow);
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface-elevated);
+      color: var(--text-main);
+      border-color: var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-accent:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-sm {
+      padding: 0.35rem 0.65rem;
+      font-size: 0.8rem;
+    }
+
+    .btn-icon-only {
+      padding: 0.5rem;
+      border-radius: var(--radius-md);
+    }
+
+    .input-field, .select-field, .textarea-field {
+      background: var(--bg-base);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .input-field:focus, .select-field:focus, .textarea-field:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+
+    /* Master Global Transport Player */
+    .master-transport-wrapper {
+      background: linear-gradient(145deg, var(--bg-surface), var(--bg-surface-elevated));
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .transport-left {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .play-btn-large {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 16px var(--primary-glow);
+      transition: var(--transition);
+    }
+
+    .play-btn-large:hover {
+      transform: scale(1.05);
+      background: var(--primary-hover);
+    }
+
+    .play-btn-large.playing {
+      background: var(--accent);
+      box-shadow: 0 0 16px rgba(236, 72, 153, 0.4);
+    }
+
+    .bpm-control {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--bg-base);
+      padding: 0.35rem 0.75rem;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+    }
+
+    .bpm-input {
+      width: 54px;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+    }
+
+    .key-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .sound-synth-selector {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* TAB 1: CHORD STUDIO */
+    .chord-studio-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    .progression-shelf {
+      background: var(--bg-base);
+      border: 2px dashed var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      overflow-x: auto;
+      scrollbar-width: thin;
+    }
+
+    .chord-slot {
+      position: relative;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      min-width: 110px;
+      height: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .chord-slot:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .chord-slot.active-beat {
+      border-color: var(--accent);
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(236, 72, 153, 0.3));
+      box-shadow: 0 0 16px rgba(236, 72, 153, 0.4);
+      transform: scale(1.05);
+    }
+
+    .chord-slot-root {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: var(--text-main);
+    }
+
+    .chord-slot-degree {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+
+    .chord-slot-actions {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      display: none;
+      gap: 2px;
+    }
+
+    .chord-slot:hover .chord-slot-actions {
+      display: flex;
+    }
+
+    .slot-action-btn {
+      width: 20px;
+      height: 20px;
+      background: rgba(0, 0, 0, 0.5);
+      border: none;
+      border-radius: 4px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      cursor: pointer;
+    }
+
+    .slot-action-btn:hover {
+      background: var(--danger);
+    }
+
+    .empty-shelf-hint {
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      width: 100%;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    /* Chord Picker Palette */
+    .chord-palette {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .palette-degrees {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+      gap: 0.65rem;
+    }
+
+    .palette-chord-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 0.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .palette-chord-card:hover {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.12);
+      transform: translateY(-2px);
+    }
+
+    .palette-chord-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .palette-chord-type {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .progression-presets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .preset-pill {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: 9999px;
+      padding: 0.35rem 0.8rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .preset-pill:hover {
+      color: var(--text-main);
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.15);
+    }
+
+    /* Virtual Piano Keyboard */
+    .piano-section {
+      margin-top: 1.5rem;
+    }
+
+    .piano-wrapper {
+      position: relative;
+      background: #0d0f17;
+      border: 2px solid #232738;
+      border-radius: var(--radius-lg);
+      padding: 1.5rem 1rem 1rem;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      box-shadow: inset 0 6px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .piano-keys {
+      display: flex;
+      position: relative;
+      height: 160px;
+      width: fit-content;
+      margin: 0 auto;
+    }
+
+    .key-white {
+      width: 44px;
+      height: 100%;
+      background: linear-gradient(180deg, #f0f0f0 0%, #ffffff 80%, #e2e8f0 100%);
+      border: 1px solid #94a3b8;
+      border-radius: 0 0 6px 6px;
+      position: relative;
+      z-index: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 8px;
+      color: #334155;
+      font-size: 0.75rem;
+      font-weight: 700;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      transition: background 0.05s ease, transform 0.05s ease;
+    }
+
+    .key-white:active, .key-white.active {
+      background: #c7d2fe;
+      transform: translateY(2px);
+      box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.3);
+      color: var(--primary);
+    }
+
+    .key-white.in-scale {
+      box-shadow: inset 0 -4px 0 var(--cyan);
+    }
+
+    .key-white.chord-active {
+      background: #a5b4fc !important;
+      border-color: var(--primary);
+    }
+
+    .key-black {
+      width: 26px;
+      height: 60%;
+      background: linear-gradient(180deg, #27272a 0%, #09090b 100%);
+      border: 1px solid #3f3f46;
+      border-radius: 0 0 4px 4px;
+      position: absolute;
+      z-index: 2;
+      cursor: pointer;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 6px;
+      color: #a1a1aa;
+      font-size: 0.65rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+      transition: background 0.05s ease, transform 0.05s ease;
+    }
+
+    .key-black:active, .key-black.active {
+      background: #4338ca;
+      transform: translateY(2px);
+      color: white;
+    }
+
+    .key-black.chord-active {
+      background: #6366f1 !important;
+    }
+
+    .piano-legend {
+      display: flex;
+      gap: 1.5rem;
+      justify-content: center;
+      margin-top: 0.75rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* TAB 2: LYRICS & CHORDS WRITER */
+    .lyrics-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .lyrics-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .lyrics-editor-box {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .lyrics-textarea {
+      width: 100%;
+      height: 480px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 0.95rem;
+      line-height: 1.8;
+      padding: 1rem;
+      resize: vertical;
+      outline: none;
+    }
+
+    .quick-tags-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .quick-tag-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+    }
+
+    .quick-tag-btn:hover {
+      border-color: var(--primary);
+      color: var(--text-main);
+    }
+
+    .lyrics-preview-box {
+      background: var(--bg-base);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      height: 480px;
+      overflow-y: auto;
+      padding: 1.25rem;
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      line-height: 2.2;
+    }
+
+    .preview-section-title {
+      color: var(--accent);
+      font-weight: 700;
+      font-size: 1.1rem;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      border-bottom: 1px dashed var(--border-color);
+      padding-bottom: 0.2rem;
+    }
+
+    .preview-line {
+      min-height: 2rem;
+      position: relative;
+      margin-bottom: 0.5rem;
+      white-space: pre-wrap;
+    }
+
+    .preview-chord-tag {
+      color: var(--primary);
+      font-weight: 800;
+      background: rgba(99, 102, 241, 0.15);
+      border-radius: 4px;
+      padding: 1px 5px;
+      margin: 0 2px;
+      display: inline-block;
+      cursor: pointer;
+    }
+
+    .preview-chord-tag:hover {
+      background: var(--primary);
+      color: white;
+    }
+
+    /* TAB 3: 16-STEP DRUM SEQUENCER */
+    .sequencer-grid-wrapper {
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+    }
+
+    .drum-machine-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-width: 720px;
+    }
+
+    .drum-step-indicators {
+      display: grid;
+      grid-template-columns: 140px repeat(16, 1fr);
+      gap: 0.4rem;
+      padding-left: 0.5rem;
+    }
+
+    .step-indicator-dot {
+      height: 6px;
+      background: var(--bg-surface-elevated);
+      border-radius: 3px;
+      transition: background 0.1s;
+    }
+
+    .step-indicator-dot.active-step {
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+
+    .drum-track-row {
+      display: grid;
+      grid-template-columns: 140px repeat(16, 1fr);
+      gap: 0.4rem;
+      align-items: center;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.5rem;
+    }
+
+    .drum-track-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-right: 0.75rem;
+    }
+
+    .drum-track-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .drum-track-preview-btn {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: var(--bg-base);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .drum-track-preview-btn:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .step-btn {
+      height: 42px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .step-btn:hover {
+      border-color: var(--text-muted);
+    }
+
+    .step-btn:nth-child(4n + 2) {
+      margin-left: 3px;
+      border-left: 2px solid var(--border-focus);
+    }
+
+    .step-btn.active {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      border-color: transparent;
+      box-shadow: 0 0 10px var(--primary-glow);
+    }
+
+    .step-btn.playing {
+      outline: 2px solid white;
+    }
+
+    /* TAB 4: AUDIO & VOICE MEMO RECORDER */
+    .recorder-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.5fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .recorder-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .recorder-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2.5rem 1.5rem;
+      gap: 1.25rem;
+    }
+
+    .record-btn-glow {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--danger);
+      border: none;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+      transition: var(--transition);
+    }
+
+    .record-btn-glow:hover {
+      transform: scale(1.08);
+    }
+
+    .record-btn-glow.recording {
+      animation: pulseRecord 1.5s infinite;
+      background: #b91c1c;
+    }
+
+    @keyframes pulseRecord {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 24px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .waveform-canvas {
+      width: 100%;
+      height: 70px;
+      background: var(--bg-base);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-color);
+    }
+
+    .memo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-height: 480px;
+      overflow-y: auto;
+    }
+
+    .memo-item {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .memo-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .memo-title-edit {
+      font-weight: 700;
+      color: var(--text-main);
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+
+    .memo-title-edit:focus {
+      border-bottom: 1px solid var(--primary);
+    }
+
+    .memo-audio-player {
+      width: 100%;
+      height: 36px;
+    }
+
+    /* TAB 5: PROJECTS LIST & BACKUP */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1rem;
+    }
+
+    .project-card {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 180px;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .project-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .project-card.active-project {
+      border-color: var(--primary);
+      box-shadow: 0 0 16px var(--primary-glow);
+    }
+
+    .project-card-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: var(--primary);
+      color: white;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-weight: 700;
+    }
+
+    .project-card-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 0.4rem;
+    }
+
+    .project-card-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    /* Modal / Dialog */
+    dialog {
+      margin: auto;
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      box-shadow: var(--shadow-lg);
+      max-width: 500px;
+      width: 90vw;
+    }
+
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+
+    /* Toast System */
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      z-index: 1000;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto;
+      background: var(--bg-surface-elevated);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-left: 4px solid var(--primary);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1.25rem;
+      box-shadow: var(--shadow-lg);
+      font-size: 0.875rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      animation: slideIn 0.2s ease-out;
+      min-width: 240px;
+    }
+
+    .toast.success { border-left-color: var(--success); }
+    .toast.error { border-left-color: var(--danger); }
+    .toast.warning { border-left-color: var(--warning); }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Utilities */
+    .flex-row { display: flex; align-items: center; }
+    .gap-2 { gap: 0.5rem; }
+    .gap-3 { gap: 0.75rem; }
+    .space-between { justify-content: space-between; }
+    .w-full { width: 100%; }
+    .text-sm { font-size: 0.875rem; }
+    .text-muted { color: var(--text-muted); }
+    .font-mono { font-family: var(--font-mono); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--bg-surface-elevated);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .nav-container {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .nav-tabs {
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+      .master-transport-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .transport-left {
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="nav-container">
+      <div class="flex-row gap-3">
+        <div class="brand" id="brand-home" title="SoundCraft 音樂創作工作台">
+          <div class="brand-logo">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 18V5l12-2v13"></path>
+              <circle cx="6" cy="18" r="3"></circle>
+              <circle cx="18" cy="16" r="3"></circle>
+            </svg>
+          </div>
+          <span>SoundCraft</span>
+        </div>
+
+        <div class="current-project-badge" id="current-project-pill" title="點擊切換或管理專案">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span class="project-name-text" id="header-project-name">載入中...</span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="nav-tabs">
+        <button class="nav-tab-btn active" data-tab="tab-chords">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+          和弦與進行
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-lyrics">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+          歌詞與草稿
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-drums">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+          節拍機 (16步)
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-recorder">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          靈感錄音
+        </button>
+        <button class="nav-tab-btn" data-tab="tab-projects">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          專案庫
+        </button>
+      </nav>
+
+      <!-- Right Header Actions -->
+      <div class="header-actions">
+        <button class="icon-btn" id="btn-theme-toggle" title="切換明暗主題">
+          <svg id="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-export-json" title="匯出所有專案備份 (JSON)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          備份匯出
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-import-json-trigger" title="匯入備份">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          匯入
+        </button>
+        <input type="file" id="file-import-input" accept=".json" style="display:none;">
+      </div>
+    </div>
+  </header>
+
+  <!-- Main View Area -->
+  <main>
+    <!-- Master Global Transport & Key Settings -->
+    <section class="master-transport-wrapper">
+      <div class="transport-left">
+        <button class="play-btn-large" id="master-play-btn" title="播放/暫停總循環 (和弦+節拍)">
+          <svg id="master-play-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </button>
+
+        <div class="bpm-control">
+          <span class="text-muted text-sm font-mono">BPM</span>
+          <input type="number" id="global-bpm" class="bpm-input" min="40" max="240" value="110">
+          <button class="btn btn-secondary btn-sm" id="bpm-tap" title="連點按鈕以量測節奏 (Tap Tempo)">TAP</button>
+        </div>
+
+        <div class="key-selector">
+          <span>調性:</span>
+          <select id="global-key" class="select-field" style="padding: 0.35rem 0.5rem; font-weight:700;">
+            <option value="C">C 大調</option>
+            <option value="G">G 大調</option>
+            <option value="D">D 大調</option>
+            <option value="A">A 大調</option>
+            <option value="E">E 大調</option>
+            <option value="B">B 大調</option>
+            <option value="F#">F# 大調</option>
+            <option value="F">F 大調</option>
+            <option value="Bb">B♭ 大調</option>
+            <option value="Eb">E♭ 大調</option>
+            <option value="Ab">A♭ 大調</option>
+            <option value="Db">D♭ 大調</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex-row gap-3">
+        <div class="sound-synth-selector">
+          <span class="text-muted text-sm">音色:</span>
+          <select id="synth-sound-preset" class="select-field" style="padding: 0.35rem 0.5rem;">
+            <option value="electric-piano">溫暖電鋼琴 (Electric Piano)</option>
+            <option value="acoustic-piano">三角鋼琴 (Grand Piano)</option>
+            <option value="synth-pad">氛圍合成器 (Ambient Pad)</option>
+            <option value="pluck">靈感撥弦 (Pluck Synth)</option>
+          </select>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-save-project-quick" title="儲存當前專案">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+          儲存專案
+        </button>
+      </div>
+    </section>
+
+    <!-- TAB 1: 和弦與進行 (Chord Studio) -->
+    <section class="tab-panel active" id="tab-chords">
+      <div class="chord-studio-grid">
+        <!-- Progression Timeline Shelf -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h20M7 12a5 5 0 0 1 5-5 5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5z"></path></svg>
+                和弦進行軌道 (Chord Progression)
+              </div>
+              <div class="card-subtitle">按順序播放進行，每小節 4 拍。點擊和弦可立即試聽，可點擊垃圾桶移除。</div>
+            </div>
+            <div class="flex-row gap-2">
+              <button class="btn btn-secondary btn-sm" id="btn-clear-progression">清空進行</button>
+              <button class="btn btn-primary btn-sm" id="btn-copy-progression-lyrics">帶入歌詞稿紙</button>
+            </div>
+          </div>
+
+          <div class="progression-shelf" id="progression-shelf">
+            <!-- Dynamic Chord Slots -->
+            <div class="empty-shelf-hint" id="empty-prog-hint">
+              尚未添加和弦。請從下方常用和弦盤點擊添加，或套用流行歌曲經典進行預設！
+            </div>
+          </div>
+        </div>
+
+        <!-- Chord Palette & Generator -->
+        <div class="card chord-palette">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                當前調性順階和弦盤 (Diatonic Chords)
+              </div>
+              <div class="card-subtitle">點擊直接加入進行軌道，或長按試聽。</div>
+            </div>
+            <div class="flex-row gap-2">
+              <span class="text-sm text-muted">和弦延伸:</span>
+              <select id="chord-extension-select" class="select-field" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                <option value="triad">三和弦 (Triads)</option>
+                <option value="7th">七和弦 (7th Chords)</option>
+                <option value="sus4">掛留和弦 (sus4/add9)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Chord Degree Cards (I to vii°) -->
+          <div class="palette-degrees" id="diatonic-chords-container">
+            <!-- Rendered by JS -->
+          </div>
+
+          <!-- Popular Chord Progression Presets -->
+          <div style="margin-top: 0.75rem;">
+            <span class="text-sm text-muted" style="font-weight: 600;">經典風格進行預設:</span>
+            <div class="progression-presets">
+              <span class="preset-pill" data-preset="pop-4chord">流行金曲萬能 (I - V - vi - IV)</span>
+              <span class="preset-pill" data-preset="emotional">抒情深情 (vi - IV - I - V)</span>
+              <span class="preset-pill" data-preset="royal-anime">日系動漫王道 (IV - V - iii - vi)</span>
+              <span class="preset-pill" data-preset="rnb-jazz">R&B / 爵士靈魂 (ii - V - I - VI)</span>
+              <span class="preset-pill" data-preset="citypop">City Pop 復古律動 (IV - iii - ii - I)</span>
+              <span class="preset-pill" data-preset="pachelbel">卡農進行 (I - V - vi - iii - IV - I - IV - V)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Virtual Piano Keyboard & Scale Visualizer -->
+        <div class="card piano-section">
+          <div class="card-header">
+            <div>
+              <div class="card-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M6 8v8M10 8v8M14 8v8M18 8v8"></path></svg>
+                互動鍵盤與音階檢視器 (2 Octaves)
+              </div>
+              <div class="card-subtitle">電腦鍵盤可直接彈奏 (A, W, S, E, D, F, T, G, Y, H, U, J...)，藍色底標代表當前調性順階音。</div>
+            </div>
+            <div class="flex-row gap-2">
+              <span class="text-sm text-muted">音階顯示:</span>
+              <select id="scale-mode-select" class="select-field" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                <option value="major">自然大調 (Major)</option>
+                <option value="minor">自然小調 (Natural Minor)</option>
+                <option value="dorian">多利安 (Dorian)</option>
+                <option value="pentatonic">大調五聲音階 (Major Pentatonic)</option>
+                <option value="blues">藍調音階 (Blues Scale)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="piano-wrapper">
+            <div class="piano-keys" id="piano-keys-container">
+              <!-- Rendered dynamically (C3 to B4) -->
+            </div>
+          </div>
+
+          <div class="piano-legend">
+            <div class="legend-item">
+              <div class="legend-dot" style="background: var(--cyan);"></div>
+              <span>調性自然音階 (In Scale)</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot" style="background: var(--primary);"></div>
+              <span>正在播放 / 按下之音符 (Active Note)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: 歌詞與和弦草稿紙 (Lyrics & Chords) -->
+    <section class="tab-panel" id="tab-lyrics">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              創作歌詞與和弦編排 (Lyrics & Chords Studio)
+            </div>
+            <div class="card-subtitle">支援 [C] [Am] [G] 等中括號即時和弦標註，右側即時視覺化對齊。點擊右側和弦即可聽聲音！</div>
+          </div>
+          <div class="flex-row gap-2">
+            <button class="btn btn-secondary btn-sm" id="btn-insert-chord-tag">插入和弦標籤</button>
+            <button class="btn btn-secondary btn-sm" id="btn-export-lyrics-text">複製純文字</button>
+          </div>
+        </div>
+
+        <!-- Quick Section Inserts -->
+        <div class="quick-tags-bar" style="margin-bottom: 0.75rem;">
+          <span class="text-sm text-muted">段落快捷:</span>
+          <button class="quick-tag-btn" data-insert="[Intro]">[Intro 前奏]</button>
+          <button class="quick-tag-btn" data-insert="[Verse 1]">[Verse 1 主歌]</button>
+          <button class="quick-tag-btn" data-insert="[Pre-Chorus]">[Pre-Chorus 導歌]</button>
+          <button class="quick-tag-btn" data-insert="[Chorus]">[Chorus 副歌]</button>
+          <button class="quick-tag-btn" data-insert="[Verse 2]">[Verse 2 主歌]</button>
+          <button class="quick-tag-btn" data-insert="[Bridge]">[Bridge 橋段]</button>
+          <button class="quick-tag-btn" data-insert="[Solo]">[Solo 間奏]</button>
+          <button class="quick-tag-btn" data-insert="[Outro]">[Outro 尾奏]</button>
+        </div>
+
+        <div class="lyrics-container">
+          <!-- Left: Markdown/ChordPro-like editor -->
+          <div class="lyrics-editor-box">
+            <textarea id="lyrics-editor" class="lyrics-textarea" placeholder="在此處編寫歌詞... 例如：
+[Verse 1]
+[C]走在熟悉[G]街頭的下雨天
+[Am]回憶泛起[F]那張青澀的臉
+[C]旋律在耳邊[G]輕輕地流連
+[F]唱出那年[G]未完的[C]詩篇"></textarea>
+          </div>
+
+          <!-- Right: Live Formatted View -->
+          <div class="lyrics-preview-box" id="lyrics-preview">
+            <!-- Dynamic Content -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: 節拍機 (16-Step Drum Sequencer) -->
+    <section class="tab-panel" id="tab-drums">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              16 步節拍機 (Drum Machine)
+            </div>
+            <div class="card-subtitle">採用 Web Audio 純原生合成器（Kick, Snare, Hi-hat, Clap），與主循環時鐘完美同步。</div>
+          </div>
+          <div class="flex-row gap-2">
+            <button class="btn btn-secondary btn-sm" id="btn-drum-pattern-preset-pop">流行 4/4 拍</button>
+            <button class="btn btn-secondary btn-sm" id="btn-drum-pattern-preset-trap">Trap / Hip-Hop</button>
+            <button class="btn btn-secondary btn-sm" id="btn-drum-pattern-preset-rock">搖滾推進</button>
+            <button class="btn btn-danger btn-sm" id="btn-drum-clear">清空節奏</button>
+          </div>
+        </div>
+
+        <div class="sequencer-grid-wrapper">
+          <div class="drum-machine-container">
+            <!-- Step Indicators (1-16) -->
+            <div class="drum-step-indicators" id="drum-indicators-row">
+              <div></div> <!-- Spacer for track title -->
+              <!-- 16 indicator dots -->
+            </div>
+
+            <!-- Tracks -->
+            <div class="drum-track-row" data-track="kick">
+              <div class="drum-track-info">
+                <span class="drum-track-name">🥁 大鼓 (Kick)</span>
+                <button class="drum-track-preview-btn" data-sound="kick" title="試聽音色">▶</button>
+              </div>
+              <!-- 16 steps -->
+            </div>
+
+            <div class="drum-track-row" data-track="snare">
+              <div class="drum-track-info">
+                <span class="drum-track-name">💥 小鼓 (Snare)</span>
+                <button class="drum-track-preview-btn" data-sound="snare" title="試聽音色">▶</button>
+              </div>
+              <!-- 16 steps -->
+            </div>
+
+            <div class="drum-track-row" data-track="hihat-closed">
+              <div class="drum-track-info">
+                <span class="drum-track-name">🎩 閉鈸 (Closed Hat)</span>
+                <button class="drum-track-preview-btn" data-sound="hihat-closed" title="試聽音色">▶</button>
+              </div>
+              <!-- 16 steps -->
+            </div>
+
+            <div class="drum-track-row" data-track="hihat-open">
+              <div class="drum-track-info">
+                <span class="drum-track-name">🔔 開鈸 (Open Hat)</span>
+                <button class="drum-track-preview-btn" data-sound="hihat-open" title="試聽音色">▶</button>
+              </div>
+              <!-- 16 steps -->
+            </div>
+
+            <div class="drum-track-row" data-track="clap">
+              <div class="drum-track-info">
+                <span class="drum-track-name">👏 擊掌 (Hand Clap)</span>
+                <button class="drum-track-preview-btn" data-sound="clap" title="試聽音色">▶</button>
+              </div>
+              <!-- 16 steps -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 4: 靈感錄音 (Audio Memos) -->
+    <section class="tab-panel" id="tab-recorder">
+      <div class="recorder-grid">
+        <!-- Record Controller -->
+        <div class="card recorder-card">
+          <div class="card-title">麥克風靈感捕捉</div>
+          <div class="card-subtitle">哼唱一段旋律、彈奏一段吉他，即時收錄至此專案！</div>
+
+          <button class="record-btn-glow" id="btn-record-toggle" title="開始錄音">
+            <svg id="record-mic-icon" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+          </button>
+
+          <div style="font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700;" id="record-timer">00:00</div>
+          
+          <canvas class="waveform-canvas" id="record-waveform-canvas"></canvas>
+
+          <div class="text-sm text-dim" id="record-status-label">準備就緒，點擊紅色按鈕開始</div>
+        </div>
+
+        <!-- Memos List in this Project -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">本專案靈感錄音庫</div>
+              <div class="card-subtitle">錄音安全儲存在瀏覽器本地 IndexedDB，隨時回放。</div>
+            </div>
+            <span class="badge" id="memo-count-badge">0 則錄音</span>
+          </div>
+
+          <div class="memo-list" id="memo-list-container">
+            <div class="empty-shelf-hint" id="empty-memos-hint" style="margin-top: 2rem;">
+              目前尚無錄音備忘，點擊左側開始錄製！
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: 專案庫 (Projects Library) -->
+    <section class="tab-panel" id="tab-projects">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">創作專案庫 (Projects)</div>
+            <div class="card-subtitle">所有歌曲草稿均自動儲存在瀏覽器本地 IndexedDB，支援隨時新建與切換。</div>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-create-project-modal">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            新建專案
+          </button>
+        </div>
+
+        <div class="projects-grid" id="projects-grid-container">
+          <!-- Rendered projects -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Create New Project Dialog -->
+  <dialog id="new-project-dialog">
+    <form id="new-project-form" method="dialog">
+      <div class="card-title" style="margin-bottom: 1rem;">新建音樂創作專案</div>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <label class="text-sm text-muted" style="display:block; margin-bottom: 0.35rem;">專案 / 歌名</label>
+          <input type="text" id="new-proj-title" class="input-field w-full" placeholder="例如：夏日微風、City Night 等" required>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+          <div>
+            <label class="text-sm text-muted" style="display:block; margin-bottom: 0.35rem;">預設調性</label>
+            <select id="new-proj-key" class="select-field w-full">
+              <option value="C">C 大調</option>
+              <option value="G">G 大調</option>
+              <option value="D">D 大調</option>
+              <option value="A">A 大調</option>
+              <option value="E">E 大調</option>
+              <option value="F">F 大調</option>
+              <option value="Bb">B♭ 大調</option>
+              <option value="Eb">E♭ 大調</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm text-muted" style="display:block; margin-bottom: 0.35rem;">節奏 (BPM)</label>
+            <input type="number" id="new-proj-bpm" class="input-field w-full" min="40" max="240" value="110">
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="btn-cancel-new-proj">取消</button>
+        <button type="submit" class="btn btn-primary">建立並開啟</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <!-- JavaScript Codebase -->
+  <script>
+    /**
+     * SoundCraft - All-in-One Songwriting & Music Creation Studio
+     * Pure Vanilla JS + Web Audio API + IndexedDB
+     */
+
+    // --- 1. IndexedDB Helper Wrapper ---
+    class MiniDB {
+      constructor(dbName = 'SoundCraftDB', version = 1) {
+        this.dbName = dbName;
+        this.version = version;
+        this.db = null;
+      }
+
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const request = indexedDB.open(this.dbName, this.version);
+
+          request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            // Projects Store
+            if (!db.objectStoreNames.contains('projects')) {
+              db.createObjectStore('projects', { keyPath: 'id' });
+            }
+            // Audio Memos Store
+            if (!db.objectStoreNames.contains('memos')) {
+              const memoStore = db.createObjectStore('memos', { keyPath: 'id' });
+              memoStore.createIndex('projectId', 'projectId', { unique: false });
+            }
+          };
+
+          request.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve(this.db);
+          };
+
+          request.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      getStore(storeName, mode = 'readonly') {
+        const tx = this.db.transaction(storeName, mode);
+        return tx.objectStore(storeName);
+      }
+
+      async getAll(storeName) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readonly');
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async get(storeName, key) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readonly');
+          const req = store.get(key);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async put(storeName, item) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readwrite');
+          const req = store.put(item);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async delete(storeName, key) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readwrite');
+          const req = store.delete(key);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async getMemosByProject(projectId) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction('memos', 'readonly');
+          const store = tx.objectStore('memos');
+          const index = store.index('projectId');
+          const req = index.getAll(projectId);
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+    }
+
+    // --- 2. Music Theory & Scale Engine ---
+    const MusicTheory = {
+      NOTES: ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'],
+      FLAT_TO_SHARP: {
+        'Db': 'C#', 'Eb': 'D#', 'Gb': 'F#', 'Ab': 'G#', 'Bb': 'A#'
+      },
+      SHARP_TO_FLAT: {
+        'C#': 'Db', 'D#': 'Eb', 'F#': 'Gb', 'G#': 'Ab', 'A#': 'Bb'
+      },
+      // Scale Intervals (semitones)
+      SCALES: {
+        major: [0, 2, 4, 5, 7, 9, 11],
+        minor: [0, 2, 3, 5, 7, 8, 10],
+        dorian: [0, 2, 3, 5, 7, 9, 10],
+        pentatonic: [0, 2, 4, 7, 9],
+        blues: [0, 3, 5, 6, 7, 10]
+      },
+      // Roman numerals for major scale
+      MAJOR_DEGREES: [
+        { roman: 'I', type: 'maj', ext7: 'maj7', extSus: 'sus4' },
+        { roman: 'ii', type: 'min', ext7: 'm7', extSus: 'sus2' },
+        { roman: 'iii', type: 'min', ext7: 'm7', extSus: 'add9' },
+        { roman: 'IV', type: 'maj', ext7: 'maj7', extSus: 'add9' },
+        { roman: 'V', type: 'maj', ext7: '7', extSus: 'sus4' },
+        { roman: 'vi', type: 'min', ext7: 'm7', extSus: 'sus4' },
+        { roman: 'vii°', type: 'dim', ext7: 'm7b5', extSus: 'dim' }
+      ],
+      // Normalize note name
+      normalizeNote(note) {
+        return this.FLAT_TO_SHARP[note] || note;
+      },
+      // Note frequency (A4 = 440Hz)
+      getNoteFreq(noteName, octave = 4) {
+        const normalized = this.normalizeNote(noteName);
+        const semitoneIndex = this.NOTES.indexOf(normalized);
+        if (semitoneIndex === -1) return 440;
+        // C4 is midi 60. A4 is midi 69
+        const midiNumber = 12 + (octave * 12) + semitoneIndex;
+        return 440 * Math.pow(2, (midiNumber - 69) / 12);
+      },
+      // Get all notes in scale for a key
+      getScaleNotes(rootKey, scaleType = 'major') {
+        const root = this.normalizeNote(rootKey);
+        const rootIdx = this.NOTES.indexOf(root);
+        const intervals = this.SCALES[scaleType] || this.SCALES.major;
+        return intervals.map(semitone => this.NOTES[(rootIdx + semitone) % 12]);
+      },
+      // Get diatonic chords in key
+      getDiatonicChords(rootKey, extension = 'triad') {
+        const root = this.normalizeNote(rootKey);
+        const rootIdx = this.NOTES.indexOf(root);
+        const scaleIntervals = this.SCALES.major;
+
+        return this.MAJOR_DEGREES.map((deg, i) => {
+          const chordRoot = this.NOTES[(rootIdx + scaleIntervals[i]) % 12];
+          let chordName = chordRoot;
+          let suffix = '';
+
+          if (extension === '7th') {
+            suffix = deg.ext7;
+          } else if (extension === 'sus4') {
+            suffix = deg.extSus;
+          } else {
+            suffix = (deg.type === 'min') ? 'm' : (deg.type === 'dim' ? 'dim' : '');
+          }
+
+          chordName += suffix;
+          return {
+            name: chordName,
+            root: chordRoot,
+            degree: deg.roman,
+            suffix: suffix
+          };
+        });
+      },
+      // Get chord notes for playback
+      getChordNotes(chordName) {
+        // Parse root and type
+        // Root = letter + optional #/b; the rest is the chord type (e.g. "Bm7b5" -> "B" + "m7b5")
+        const parsed = /^([A-G][#b]?)(.*)$/.exec(String(chordName).trim());
+        if (!parsed) return [];
+        const root = this.normalizeNote(parsed[1]);
+        const type = parsed[2];
+
+        const rootIdx = this.NOTES.indexOf(root);
+        if (rootIdx === -1) return [];
+        let intervals = [0, 4, 7]; // default major triad
+
+        if (type.startsWith('m7b5')) intervals = [0, 3, 6, 10];
+        else if (type.startsWith('maj7')) intervals = [0, 4, 7, 11];
+        else if (type.startsWith('m7')) intervals = [0, 3, 7, 10];
+        else if (type.startsWith('7')) intervals = [0, 4, 7, 10];
+        else if (type.startsWith('m')) intervals = [0, 3, 7];
+        else if (type.startsWith('dim')) intervals = [0, 3, 6];
+        else if (type.startsWith('sus4')) intervals = [0, 5, 7];
+        else if (type.startsWith('sus2')) intervals = [0, 2, 7];
+        else if (type.startsWith('add9')) intervals = [0, 4, 7, 14];
+
+        return intervals.map(int => {
+          const noteIdx = (rootIdx + int) % 12;
+          const octaveOffset = Math.floor((rootIdx + int) / 12);
+          return {
+            note: this.NOTES[noteIdx],
+            octave: 3 + octaveOffset
+          };
+        });
+      }
+    };
+
+    // --- 3. Web Audio Synthesis Engine ---
+    class AudioEngine {
+      constructor() {
+        this.ctx = null;
+        this.masterGain = null;
+        this.isAudioReady = false;
+        this.soundPreset = 'electric-piano';
+      }
+
+      init() {
+        if (this.ctx) {
+          if (this.ctx.state === 'suspended') this.ctx.resume();
+          return;
+        }
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContextClass();
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(0.85, this.ctx.currentTime);
+        this.masterGain.connect(this.ctx.destination);
+        this.isAudioReady = true;
+      }
+
+      // Play synthesized polyphonic piano note
+      playNote(noteName, octave = 4, duration = 0.8, when = 0) {
+        this.init();
+        const startTime = when || this.ctx.currentTime;
+        const freq = MusicTheory.getNoteFreq(noteName, octave);
+
+        if (this.soundPreset === 'electric-piano') {
+          // Rhodes-style FM / Dual Oscillator
+          const osc1 = this.ctx.createOscillator();
+          const osc2 = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(freq, startTime);
+
+          osc2.type = 'triangle';
+          osc2.frequency.setValueAtTime(freq * 2, startTime); // 1 octave overtone
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(freq * 4, startTime);
+
+          gain.gain.setValueAtTime(0.001, startTime);
+          gain.gain.linearRampToValueAtTime(0.35, startTime + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+          osc1.connect(filter);
+          osc2.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.masterGain);
+
+          osc1.start(startTime);
+          osc2.start(startTime);
+          osc1.stop(startTime + duration);
+          osc2.stop(startTime + duration);
+
+        } else if (this.soundPreset === 'synth-pad') {
+          // Lush slow-attack pad
+          const osc = this.ctx.createOscillator();
+          const osc2 = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(freq, startTime);
+          osc2.type = 'sawtooth';
+          osc2.frequency.setValueAtTime(freq * 1.005, startTime); // chorus detune
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(1200, startTime);
+          filter.frequency.exponentialRampToValueAtTime(400, startTime + duration);
+
+          gain.gain.setValueAtTime(0.001, startTime);
+          gain.gain.linearRampToValueAtTime(0.2, startTime + 0.2);
+          gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+          osc.connect(filter);
+          osc2.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.masterGain);
+
+          osc.start(startTime);
+          osc2.start(startTime);
+          osc.stop(startTime + duration);
+          osc2.stop(startTime + duration);
+
+        } else if (this.soundPreset === 'pluck') {
+          // Sharp pluck
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, startTime);
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(4000, startTime);
+          filter.frequency.exponentialRampToValueAtTime(300, startTime + 0.25);
+
+          gain.gain.setValueAtTime(0.4, startTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + Math.min(duration, 0.45));
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.masterGain);
+
+          osc.start(startTime);
+          osc.stop(startTime + Math.min(duration, 0.5));
+
+        } else {
+          // Grand piano approximation
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, startTime);
+
+          gain.gain.setValueAtTime(0.01, startTime);
+          gain.gain.linearRampToValueAtTime(0.4, startTime + 0.01);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+
+          osc.start(startTime);
+          osc.stop(startTime + duration);
+        }
+      }
+
+      // Play an entire chord (polyphonic arpeggiated/strummed)
+      playChord(chordName, duration = 1.6, when = 0) {
+        this.init();
+        const chordNotes = MusicTheory.getChordNotes(chordName);
+        const startTime = when || this.ctx.currentTime;
+
+        chordNotes.forEach((n, idx) => {
+          // subtle human strum delay (15ms apart)
+          const strumDelay = idx * 0.018;
+          this.playNote(n.note, n.octave, duration, startTime + strumDelay);
+        });
+      }
+
+      // Synthesized Drum sounds
+      playDrumSound(type, when = 0) {
+        this.init();
+        const t = when || this.ctx.currentTime;
+
+        if (type === 'kick') {
+          // 808-style pitch-dropping sine
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.frequency.setValueAtTime(150, t);
+          osc.frequency.exponentialRampToValueAtTime(35, t + 0.12);
+
+          gain.gain.setValueAtTime(0.9, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+
+          osc.connect(gain);
+          gain.connect(this.masterGain);
+          osc.start(t);
+          osc.stop(t + 0.35);
+
+        } else if (type === 'snare') {
+          // Tone + White Noise Burst
+          const noiseBuffer = this.createNoiseBuffer(0.2);
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = noiseBuffer;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'highpass';
+          filter.frequency.setValueAtTime(1000, t);
+
+          const noiseGain = this.ctx.createGain();
+          noiseGain.gain.setValueAtTime(0.5, t);
+          noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
+          noise.connect(filter);
+          filter.connect(noiseGain);
+          noiseGain.connect(this.masterGain);
+
+          // Body oscillator
+          const osc = this.ctx.createOscillator();
+          const oscGain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(180, t);
+          osc.frequency.exponentialRampToValueAtTime(60, t + 0.1);
+
+          oscGain.gain.setValueAtTime(0.4, t);
+          oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+
+          osc.connect(oscGain);
+          oscGain.connect(this.masterGain);
+
+          noise.start(t);
+          osc.start(t);
+          noise.stop(t + 0.2);
+          osc.stop(t + 0.12);
+
+        } else if (type === 'hihat-closed') {
+          const noiseBuffer = this.createNoiseBuffer(0.06);
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = noiseBuffer;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'highpass';
+          filter.frequency.setValueAtTime(7000, t);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.35, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.masterGain);
+
+          noise.start(t);
+          noise.stop(t + 0.06);
+
+        } else if (type === 'hihat-open') {
+          const noiseBuffer = this.createNoiseBuffer(0.35);
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = noiseBuffer;
+
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'highpass';
+          filter.frequency.setValueAtTime(6000, t);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.35, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.masterGain);
+
+          noise.start(t);
+          noise.stop(t + 0.35);
+
+        } else if (type === 'clap') {
+          // Multiple quick noise impulses
+          [0, 0.015, 0.03].forEach(delay => {
+            const noise = this.ctx.createBufferSource();
+            noise.buffer = this.createNoiseBuffer(0.15);
+            const filter = this.ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(1400, t + delay);
+
+            const gain = this.ctx.createGain();
+            gain.gain.setValueAtTime(0.35, t + delay);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + delay + 0.12);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(this.masterGain);
+
+            noise.start(t + delay);
+            noise.stop(t + delay + 0.15);
+          });
+        }
+      }
+
+      createNoiseBuffer(duration = 0.2) {
+        const bufferSize = this.ctx.sampleRate * duration;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        return buffer;
+      }
+    }
+
+    // --- 4. Master Sequencer / Transport Clock ---
+    class MasterTransport {
+      constructor(audioEngine) {
+        this.audio = audioEngine;
+        this.isPlaying = false;
+        this.bpm = 110;
+        this.currentStep = 0; // 0 to 15 (16th notes)
+        this.timerId = null;
+        this.onStepCallback = null;
+        this.onBarCallback = null;
+        this.stepDuration = 0; // in seconds
+        this.nextStepTime = 0; // AudioContext time of the next step
+      }
+
+      start() {
+        if (this.isPlaying) return;
+        this.audio.init();
+        this.isPlaying = true;
+        this.currentStep = 0;
+        this.nextStepTime = this.audio.ctx.currentTime + 0.05;
+        this.scheduleNextStep();
+      }
+
+      stop() {
+        this.isPlaying = false;
+        if (this.timerId) {
+          clearTimeout(this.timerId);
+          this.timerId = null;
+        }
+        this.currentStep = 0;
+      }
+
+      setBpm(newBpm) {
+        this.bpm = Math.max(40, Math.min(240, Number(newBpm) || 110));
+      }
+
+      scheduleNextStep() {
+        if (!this.isPlaying) return;
+
+        // Duration of one 16th note in seconds = (60 / bpm) / 4
+        this.stepDuration = (60 / this.bpm) / 4;
+        const stepTime = this.nextStepTime;
+
+        if (this.onStepCallback) {
+          this.onStepCallback(this.currentStep, stepTime);
+        }
+
+        // Each 4 steps = 1 beat; 16 steps = 1 bar (4 beats)
+        if (this.currentStep % 16 === 0 && this.onBarCallback) {
+          const barIndex = Math.floor(this.currentStep / 16);
+          this.onBarCallback(barIndex, stepTime);
+        }
+
+        // Step counter keeps growing so the chord progression can cycle at its own length
+        this.currentStep++;
+        // Absolute-time scheduling: no drift accumulation from setTimeout jitter
+        this.nextStepTime = stepTime + this.stepDuration;
+        const delayMs = Math.max(0, (this.nextStepTime - this.audio.ctx.currentTime - 0.025) * 1000);
+        this.timerId = setTimeout(() => this.scheduleNextStep(), delayMs);
+      }
+    }
+
+    // --- 5. Application State & Main Controller ---
+    class SoundCraftApp {
+      constructor() {
+        this.db = new MiniDB();
+        this.audio = new AudioEngine();
+        this.transport = new MasterTransport(this.audio);
+
+        this.currentProject = null;
+        this.projectsList = [];
+        this.memosList = [];
+
+        // Recording state
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.isRecording = false;
+        this.recordStartTime = null;
+        this.recordTimerInterval = null;
+        this.audioStream = null;
+        this.analyser = null;
+
+        // Tap tempo helper
+        this.tapTimes = [];
+      }
+
+      async init() {
+        this.bindEvents();
+        this.renderPiano();
+        await this.loadProjects();
+
+        // Setup Transport Step Callback
+        this.transport.onStepCallback = (step, time) => {
+          this.handleSequencerStep(step, time);
+        };
+
+        this.transport.onBarCallback = (bar, time) => {
+          this.handleChordProgressionBar(bar, time);
+        };
+
+        this.showToast('歡迎使用 SoundCraft 音樂創作工作台！', 'success');
+      }
+
+      // --- Projects & IndexedDB Logic ---
+      async loadProjects() {
+        try {
+          this.projectsList = await this.db.getAll('projects');
+          if (this.projectsList.length === 0) {
+            // Seed a default project
+            const defaultProject = {
+              id: 'proj_' + Date.now(),
+              title: '夏日微風 (Demo)',
+              key: 'C',
+              bpm: 110,
+              synthSound: 'electric-piano',
+              progression: ['C', 'G', 'Am', 'F'],
+              drumPattern: {
+                kick: [0, 4, 8, 12],
+                snare: [4, 12],
+                'hihat-closed': [0, 2, 4, 6, 8, 10, 12, 14],
+                'hihat-open': [14],
+                clap: [12]
+              },
+              lyrics: `[Intro]\n[C] [G] [Am] [F]\n\n[Verse 1]\n[C]走在熟悉[G]街頭的下雨天\n[Am]回憶泛起[F]那張青澀的臉\n[C]旋律在耳邊[G]輕輕地流連\n[F]唱出那年[G]未完的[C]詩篇\n\n[Chorus]\n[C]隨風飛吧 [G]去向遠方海面\n[Am]帶著夢想 [F]和最初的誓言\n[C]不再猶豫 [G]跨過所有重山\n[F]心中的光 [G]永遠不[C]熄滅`,
+              updatedAt: new Date().toISOString()
+            };
+            await this.db.put('projects', defaultProject);
+            this.projectsList = [defaultProject];
+          }
+
+          // Set active project
+          const lastActiveId = localStorage.getItem('soundcraft_active_project_id');
+          const found = this.projectsList.find(p => p.id === lastActiveId) || this.projectsList[0];
+          await this.setActiveProject(found);
+          this.renderProjectsList();
+
+        } catch (err) {
+          console.error('Failed to load projects:', err);
+          this.showToast('讀取資料庫失敗', 'error');
+        }
+      }
+
+      async setActiveProject(proj) {
+        // Persist pending edits of the project we are leaving (skip if it was deleted / is the same one)
+        if (this.currentProject && this.currentProject.id !== proj.id &&
+            this.projectsList.some(p => p.id === this.currentProject.id)) {
+          await this.saveCurrentProject(true);
+        }
+        this.currentProject = proj;
+        localStorage.setItem('soundcraft_active_project_id', proj.id);
+
+        // Update header & global controls
+        document.getElementById('header-project-name').textContent = proj.title;
+        document.getElementById('global-bpm').value = proj.bpm || 110;
+        document.getElementById('global-key').value = proj.key || 'C';
+        document.getElementById('synth-sound-preset').value = proj.synthSound || 'electric-piano';
+
+        this.transport.setBpm(proj.bpm || 110);
+        this.audio.soundPreset = proj.synthSound || 'electric-piano';
+
+        // Render project state into views
+        this.renderProgressionShelf();
+        this.renderDiatonicChords();
+        this.renderDrumSequencerGrid();
+        this.updateLyricsView(proj.lyrics || '');
+        this.highlightPianoScale();
+
+        // Load project memos
+        await this.loadMemos();
+      }
+
+      async saveCurrentProject(silent = false) {
+        if (!this.currentProject) return;
+        clearTimeout(this.autoSaveTimer);
+
+        // Gather all current UI values
+        this.currentProject.bpm = this.transport.bpm;
+        this.currentProject.key = document.getElementById('global-key').value;
+        this.currentProject.synthSound = document.getElementById('synth-sound-preset').value;
+        this.currentProject.lyrics = document.getElementById('lyrics-editor').value;
+        this.currentProject.updatedAt = new Date().toISOString();
+
+        try {
+          await this.db.put('projects', this.currentProject);
+        } catch (err) {
+          console.error('Failed to save project:', err);
+          this.showToast('儲存專案失敗', 'error');
+          return;
+        }
+        if (!silent) this.showToast('專案已成功儲存！', 'success');
+        this.renderProjectsList();
+      }
+
+      // Debounced silent save (used for lyrics typing)
+      scheduleAutoSave() {
+        clearTimeout(this.autoSaveTimer);
+        this.autoSaveTimer = setTimeout(() => this.saveCurrentProject(true), 800);
+      }
+
+      // --- Memos Storage & Audio Recording ---
+      async loadMemos() {
+        if (!this.currentProject) return;
+        this.memosList = await this.db.getMemosByProject(this.currentProject.id);
+        this.renderMemosList();
+      }
+
+      async startRecording() {
+        try {
+          this.audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          this.audio.init();
+
+          // Analyser setup for waveform visualizer
+          const audioCtx = this.audio.ctx;
+          const source = audioCtx.createMediaStreamSource(this.audioStream);
+          this.analyser = audioCtx.createAnalyser();
+          this.analyser.fftSize = 256;
+          source.connect(this.analyser);
+
+          const canvas = document.getElementById('record-waveform-canvas');
+          if (canvas) {
+            canvas.width = canvas.clientWidth || 360;
+            canvas.height = canvas.clientHeight || 70;
+          }
+
+          this.mediaRecorder = new MediaRecorder(this.audioStream);
+          this.audioChunks = [];
+          const recordingProjectId = this.currentProject.id; // keep memo bound to the project it was recorded in
+          const recorder = this.mediaRecorder;
+          const stream = this.audioStream;
+
+          this.mediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) this.audioChunks.push(e.data);
+          };
+
+          this.mediaRecorder.onstop = async () => {
+            stream.getTracks().forEach(track => track.stop());
+            try {
+              const blob = new Blob(this.audioChunks, { type: recorder.mimeType || 'audio/webm' });
+              const memoItem = {
+                id: 'memo_' + Date.now(),
+                projectId: recordingProjectId,
+                title: '靈感錄音 ' + new Date().toLocaleTimeString(),
+                blob: blob,
+                createdAt: new Date().toISOString()
+              };
+              await this.db.put('memos', memoItem);
+              this.showToast('靈感錄音已保存至專案！', 'success');
+              await this.loadMemos();
+            } catch (err) {
+              console.error('Failed to save memo:', err);
+              this.showToast('儲存錄音失敗', 'error');
+            }
+          };
+
+          this.mediaRecorder.start();
+          this.isRecording = true;
+          this.recordStartTime = Date.now();
+
+          // UI updates
+          const recBtn = document.getElementById('btn-record-toggle');
+          recBtn.classList.add('recording');
+          document.getElementById('record-status-label').textContent = '正在錄音中... 再次點擊結束';
+
+          // Timer ticker
+          this.recordTimerInterval = setInterval(() => {
+            const elapsed = Math.floor((Date.now() - this.recordStartTime) / 1000);
+            const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const secs = String(elapsed % 60).padStart(2, '0');
+            document.getElementById('record-timer').textContent = `${mins}:${secs}`;
+          }, 500);
+
+          // Draw visualizer loop
+          this.drawWaveform();
+
+        } catch (err) {
+          console.error('Microphone error:', err);
+          if (this.audioStream) {
+            this.audioStream.getTracks().forEach(track => track.stop());
+            this.audioStream = null;
+          }
+          this.showToast('無法存取麥克風，請檢查瀏覽器麥克風權限', 'error');
+        }
+      }
+
+      stopRecording() {
+        if (!this.isRecording || !this.mediaRecorder) return;
+        this.mediaRecorder.stop();
+        this.isRecording = false;
+
+        const recBtn = document.getElementById('btn-record-toggle');
+        recBtn.classList.remove('recording');
+        document.getElementById('record-status-label').textContent = '錄音已儲存';
+        clearInterval(this.recordTimerInterval);
+        document.getElementById('record-timer').textContent = '00:00';
+      }
+
+      drawWaveform() {
+        if (!this.isRecording || !this.analyser) return;
+        const canvas = document.getElementById('record-waveform-canvas');
+        const ctx = canvas.getContext('2d');
+        const bufferLength = this.analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        const draw = () => {
+          if (!this.isRecording) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            return;
+          }
+          requestAnimationFrame(draw);
+          this.analyser.getByteTimeDomainData(dataArray);
+
+          ctx.fillStyle = 'rgba(18, 19, 26, 0.4)';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#ef4444';
+          ctx.beginPath();
+
+          const sliceWidth = canvas.width * 1.0 / bufferLength;
+          let x = 0;
+
+          for (let i = 0; i < bufferLength; i++) {
+            const v = dataArray[i] / 128.0;
+            const y = v * canvas.height / 2;
+
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+
+            x += sliceWidth;
+          }
+
+          ctx.lineTo(canvas.width, canvas.height / 2);
+          ctx.stroke();
+        };
+
+        draw();
+      }
+
+      renderMemosList() {
+        // Release object URLs from the previous render
+        (this.memoUrls || []).forEach(u => URL.revokeObjectURL(u));
+        this.memoUrls = [];
+        const container = document.getElementById('memo-list-container');
+        document.getElementById('memo-count-badge').textContent = `${this.memosList.length} 則錄音`;
+
+        if (this.memosList.length === 0) {
+          container.innerHTML = `
+            <div class="empty-shelf-hint" style="margin-top: 2rem;">
+              目前尚無錄音備忘，點擊左側開始錄製！
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = '';
+        this.memosList.forEach(memo => {
+          const item = document.createElement('div');
+          item.className = 'memo-item';
+
+          const audioUrl = URL.createObjectURL(memo.blob);
+          this.memoUrls.push(audioUrl);
+
+          item.innerHTML = `
+            <div class="memo-meta">
+              <input type="text" class="memo-title-edit" value="${this.escapeHtml(memo.title)}" data-id="${memo.id}">
+              <div class="flex-row gap-2">
+                <span class="text-dim text-sm">${new Date(memo.createdAt).toLocaleDateString()}</span>
+                <button class="btn btn-danger btn-sm btn-icon-only btn-delete-memo" data-id="${memo.id}" title="刪除錄音">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            </div>
+            <audio controls src="${audioUrl}" class="memo-audio-player"></audio>
+          `;
+
+          // Handle title renaming
+          const titleInput = item.querySelector('.memo-title-edit');
+          titleInput.addEventListener('change', async (e) => {
+            memo.title = e.target.value.trim() || '未命名錄音';
+            await this.db.put('memos', memo);
+            this.showToast('錄音名稱已更新');
+          });
+
+          // Handle deletion
+          const delBtn = item.querySelector('.btn-delete-memo');
+          delBtn.addEventListener('click', async () => {
+            if (confirm(`確定要刪除「${memo.title}」錄音嗎？`)) {
+              await this.db.delete('memos', memo.id);
+              this.showToast('錄音已刪除');
+              await this.loadMemos();
+            }
+          });
+
+          container.appendChild(item);
+        });
+      }
+
+      // --- Chord Progression Timeline & Palette ---
+      renderProgressionShelf() {
+        const shelf = document.getElementById('progression-shelf');
+        shelf.innerHTML = '';
+
+        const prog = this.currentProject.progression || [];
+        if (prog.length === 0) {
+          shelf.innerHTML = `<div class="empty-shelf-hint" id="empty-prog-hint">
+            尚未添加和弦。請從下方常用和弦盤點擊添加，或套用流行歌曲經典進行預設！
+          </div>`;
+          return;
+        }
+
+        prog.forEach((chordName, index) => {
+          const slot = document.createElement('div');
+          slot.className = 'chord-slot';
+          slot.dataset.index = index;
+
+          slot.innerHTML = `
+            <div class="chord-slot-actions">
+              <button class="slot-action-btn btn-remove-chord" title="刪除此和弦">✕</button>
+            </div>
+            <div class="chord-slot-root">${this.escapeHtml(chordName)}</div>
+            <div class="chord-slot-degree">第 ${index + 1} 小節</div>
+          `;
+
+          // Click slot to test sound
+          slot.addEventListener('click', (e) => {
+            if (e.target.closest('.slot-action-btn')) return;
+            this.audio.playChord(chordName);
+            this.highlightPianoKeysForChord(chordName);
+          });
+
+          // Remove chord button
+          slot.querySelector('.btn-remove-chord').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.currentProject.progression.splice(index, 1);
+            this.renderProgressionShelf();
+            this.saveCurrentProject();
+          });
+
+          shelf.appendChild(slot);
+        });
+      }
+
+      renderDiatonicChords() {
+        const container = document.getElementById('diatonic-chords-container');
+        container.innerHTML = '';
+        const currentKey = document.getElementById('global-key').value;
+        const extension = document.getElementById('chord-extension-select').value;
+        const diatonic = MusicTheory.getDiatonicChords(currentKey, extension);
+
+        diatonic.forEach(chord => {
+          const card = document.createElement('div');
+          card.className = 'palette-chord-card';
+          card.innerHTML = `
+            <span class="palette-chord-name">${chord.name}</span>
+            <span class="palette-chord-type">${chord.degree}</span>
+          `;
+
+          card.addEventListener('click', () => {
+            this.audio.playChord(chord.name);
+            this.highlightPianoKeysForChord(chord.name);
+            // Append to progression
+            if (!this.currentProject.progression) this.currentProject.progression = [];
+            this.currentProject.progression.push(chord.name);
+            this.renderProgressionShelf();
+            this.saveCurrentProject();
+            this.showToast(`已添加 ${chord.name} 至進行軌道`);
+          });
+
+          container.appendChild(card);
+        });
+      }
+
+      applyPresetProgression(presetName) {
+        const key = document.getElementById('global-key').value;
+        const diatonic = MusicTheory.getDiatonicChords(key, 'triad');
+
+        // Map degrees to actual chords
+        const degMap = {};
+        diatonic.forEach(c => degMap[c.degree] = c.name);
+
+        let sequence = [];
+        if (presetName === 'pop-4chord') {
+          // I - V - vi - IV
+          sequence = [degMap['I'], degMap['V'], degMap['vi'], degMap['IV']];
+        } else if (presetName === 'emotional') {
+          // vi - IV - I - V
+          sequence = [degMap['vi'], degMap['IV'], degMap['I'], degMap['V']];
+        } else if (presetName === 'royal-anime') {
+          // IV - V - iii - vi
+          sequence = [degMap['IV'], degMap['V'], degMap['iii'], degMap['vi']];
+        } else if (presetName === 'rnb-jazz') {
+          // ii - V - I - vi
+          sequence = [degMap['ii'], degMap['V'], degMap['I'], degMap['vi']];
+        } else if (presetName === 'citypop') {
+          // IV - iii - ii - I
+          sequence = [degMap['IV'], degMap['iii'], degMap['ii'], degMap['I']];
+        } else if (presetName === 'pachelbel') {
+          // I - V - vi - iii - IV - I - IV - V
+          sequence = [degMap['I'], degMap['V'], degMap['vi'], degMap['iii'], degMap['IV'], degMap['I'], degMap['IV'], degMap['V']];
+        }
+
+        if (sequence.length > 0) {
+          this.currentProject.progression = sequence;
+          this.renderProgressionShelf();
+          this.saveCurrentProject();
+          this.showToast('已成功套用進行預設！');
+        }
+      }
+
+      // --- 16-Step Drum Sequencer ---
+      renderDrumSequencerGrid() {
+        const indicators = document.getElementById('drum-indicators-row');
+        // Clear all except track title spacer
+        indicators.innerHTML = '<div></div>';
+        for (let i = 0; i < 16; i++) {
+          const dot = document.createElement('div');
+          dot.className = 'step-indicator-dot';
+          dot.dataset.step = i;
+          indicators.appendChild(dot);
+        }
+
+        const pattern = this.currentProject.drumPattern || {};
+        ['kick', 'snare', 'hihat-closed', 'hihat-open', 'clap'].forEach(t => {
+          if (!Array.isArray(pattern[t])) pattern[t] = [];
+        });
+
+        const rows = document.querySelectorAll('.drum-track-row');
+        rows.forEach(row => {
+          const trackName = row.dataset.track;
+          // Clear old step buttons
+          row.querySelectorAll('.step-btn').forEach(btn => btn.remove());
+
+          const activeSteps = pattern[trackName] || [];
+
+          for (let step = 0; step < 16; step++) {
+            const btn = document.createElement('button');
+            btn.className = 'step-btn';
+            btn.dataset.step = step;
+            if (activeSteps.includes(step)) {
+              btn.classList.add('active');
+            }
+
+            btn.addEventListener('click', () => {
+              btn.classList.toggle('active');
+              if (btn.classList.contains('active')) {
+                if (!pattern[trackName].includes(step)) pattern[trackName].push(step);
+                this.audio.playDrumSound(trackName);
+              } else {
+                pattern[trackName] = pattern[trackName].filter(s => s !== step);
+              }
+              this.currentProject.drumPattern = pattern;
+              this.saveCurrentProject();
+            });
+
+            row.appendChild(btn);
+          }
+        });
+      }
+
+      // --- Sequencer & Loop Playback Sync ---
+      handleSequencerStep(globalStep, time) {
+        const step16 = globalStep % 16;
+
+        // Visual step indicators
+        const dots = document.querySelectorAll('.step-indicator-dot');
+        dots.forEach((dot, idx) => {
+          dot.classList.toggle('active-step', idx === step16);
+        });
+
+        // Trigger Drum Sounds
+        const pattern = this.currentProject.drumPattern || {};
+        Object.keys(pattern).forEach(track => {
+          if (pattern[track]?.includes(step16)) {
+            this.audio.playDrumSound(track, time);
+          }
+        });
+
+        // Highlight step button visually
+        document.querySelectorAll(`.step-btn[data-step="${step16}"]`).forEach(btn => {
+          btn.classList.add('playing');
+          setTimeout(() => btn.classList.remove('playing'), 100);
+        });
+      }
+
+      handleChordProgressionBar(barIndex, time) {
+        const prog = this.currentProject.progression || [];
+        if (prog.length === 0) return;
+
+        const chordIdx = barIndex % prog.length;
+        const chordName = prog[chordIdx];
+
+        // Play the chord via synth
+        const barSeconds = (60 / this.transport.bpm) * 4;
+        this.audio.playChord(chordName, barSeconds * 0.95, time);
+
+        // Highlight active chord slot in shelf
+        document.querySelectorAll('.chord-slot').forEach((slot, idx) => {
+          slot.classList.toggle('active-beat', idx === chordIdx);
+        });
+
+        this.highlightPianoKeysForChord(chordName);
+      }
+
+      // --- Virtual Piano Keyboard ---
+      renderPiano() {
+        const container = document.getElementById('piano-keys-container');
+        container.innerHTML = '';
+
+        // 2 Octaves: C3 to B4
+        const octaves = [3, 4];
+        let whiteKeyIndex = 0;
+
+        octaves.forEach(octave => {
+          MusicTheory.NOTES.forEach((note, noteIdx) => {
+            const isBlack = note.includes('#');
+
+            if (!isBlack) {
+              const whiteKey = document.createElement('div');
+              whiteKey.className = 'key-white';
+              whiteKey.dataset.note = note;
+              whiteKey.dataset.octave = octave;
+              whiteKey.textContent = `${note}${octave}`;
+
+              whiteKey.addEventListener('mousedown', () => {
+                this.audio.playNote(note, octave, 0.8);
+                whiteKey.classList.add('active');
+              });
+              whiteKey.addEventListener('mouseup', () => whiteKey.classList.remove('active'));
+              whiteKey.addEventListener('mouseleave', () => whiteKey.classList.remove('active'));
+
+              container.appendChild(whiteKey);
+              whiteKeyIndex++;
+            } else {
+              // Black key positioned absolutely above previous white key
+              const blackKey = document.createElement('div');
+              blackKey.className = 'key-black';
+              blackKey.dataset.note = note;
+              blackKey.dataset.octave = octave;
+              // Compute left position based on white key width (44px)
+              const leftPos = (whiteKeyIndex * 44) - 13;
+              blackKey.style.left = `${leftPos}px`;
+
+              blackKey.addEventListener('mousedown', (e) => {
+                e.stopPropagation();
+                this.audio.playNote(note, octave, 0.8);
+                blackKey.classList.add('active');
+              });
+              blackKey.addEventListener('mouseup', () => blackKey.classList.remove('active'));
+              blackKey.addEventListener('mouseleave', () => blackKey.classList.remove('active'));
+
+              container.appendChild(blackKey);
+            }
+          });
+        });
+
+        this.bindComputerKeyboard();
+      }
+
+      highlightPianoScale() {
+        const key = document.getElementById('global-key').value;
+        const scaleMode = document.getElementById('scale-mode-select').value;
+        const scaleNotes = MusicTheory.getScaleNotes(key, scaleMode);
+
+        document.querySelectorAll('.key-white, .key-black').forEach(el => {
+          const note = el.dataset.note;
+          if (scaleNotes.includes(note)) {
+            el.classList.add('in-scale');
+          } else {
+            el.classList.remove('in-scale');
+          }
+        });
+      }
+
+      highlightPianoKeysForChord(chordName) {
+        document.querySelectorAll('.chord-active').forEach(el => el.classList.remove('chord-active'));
+        const chordNotes = MusicTheory.getChordNotes(chordName);
+
+        chordNotes.forEach(n => {
+          const keyEl = document.querySelector(`[data-note="${n.note}"][data-octave="${n.octave}"]`);
+          if (keyEl) {
+            keyEl.classList.add('chord-active');
+            setTimeout(() => keyEl.classList.remove('chord-active'), 1200);
+          }
+        });
+      }
+
+      bindComputerKeyboard() {
+        const keyMap = {
+          'a': { note: 'C', oct: 4 },
+          'w': { note: 'C#', oct: 4 },
+          's': { note: 'D', oct: 4 },
+          'e': { note: 'D#', oct: 4 },
+          'd': { note: 'E', oct: 4 },
+          'f': { note: 'F', oct: 4 },
+          't': { note: 'F#', oct: 4 },
+          'g': { note: 'G', oct: 4 },
+          'y': { note: 'G#', oct: 4 },
+          'h': { note: 'A', oct: 4 },
+          'u': { note: 'A#', oct: 4 },
+          'j': { note: 'B', oct: 4 },
+          'k': { note: 'C', oct: 5 }
+        };
+
+        window.addEventListener('keydown', (e) => {
+          // Ignore if user is typing in input or textarea
+          if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
+          if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+          const k = e.key.toLowerCase();
+          if (keyMap[k]) {
+            const { note, oct } = keyMap[k];
+            this.audio.playNote(note, oct, 0.7);
+            const el = document.querySelector(`[data-note="${note}"][data-octave="${oct}"]`);
+            if (el) el.classList.add('active');
+          }
+        });
+
+        window.addEventListener('keyup', (e) => {
+          const k = e.key.toLowerCase();
+          if (keyMap[k]) {
+            const { note, oct } = keyMap[k];
+            const el = document.querySelector(`[data-note="${note}"][data-octave="${oct}"]`);
+            if (el) el.classList.remove('active');
+          }
+        });
+      }
+
+      // --- Lyrics Studio & ChordPro Formatter ---
+      updateLyricsView(rawText) {
+        const preview = document.getElementById('lyrics-preview');
+        preview.innerHTML = '';
+
+        const lines = rawText.split('\n');
+        lines.forEach(line => {
+          const trimmed = line.trim();
+          if (!trimmed) {
+            const emptyLine = document.createElement('div');
+            emptyLine.className = 'preview-line';
+            emptyLine.innerHTML = '&nbsp;';
+            preview.appendChild(emptyLine);
+            return;
+          }
+
+          // Section headings like [Chorus], [Verse 1]
+          if (/^\[(Intro|Verse|Chorus|Pre-Chorus|Bridge|Solo|Outro).*\]$/i.test(trimmed)) {
+            const heading = document.createElement('div');
+            heading.className = 'preview-section-title';
+            heading.textContent = trimmed;
+            preview.appendChild(heading);
+            return;
+          }
+
+          // Line containing chords: e.g. [C]走在熟悉[G]街頭
+          const lineDiv = document.createElement('div');
+          lineDiv.className = 'preview-line';
+
+          // Replace [Chord] with clickable tag element
+          const formatted = this.escapeHtml(line).replace(/\[([A-G][b#]?[a-zA-Z0-9]*)\]/g, (match, chord) => {
+            return `<span class="preview-chord-tag" data-chord="${chord}">${chord}</span>`;
+          });
+
+          lineDiv.innerHTML = formatted;
+
+          // Add click to audition chord
+          lineDiv.querySelectorAll('.preview-chord-tag').forEach(tag => {
+            tag.addEventListener('click', () => {
+              const chord = tag.dataset.chord;
+              this.audio.playChord(chord);
+              this.highlightPianoKeysForChord(chord);
+            });
+          });
+
+          preview.appendChild(lineDiv);
+        });
+      }
+
+      // --- Projects Grid & Management ---
+      renderProjectsList() {
+        const container = document.getElementById('projects-grid-container');
+        container.innerHTML = '';
+
+        this.projectsList.forEach(proj => {
+          const card = document.createElement('div');
+          card.className = 'project-card';
+          if (this.currentProject && this.currentProject.id === proj.id) {
+            card.classList.add('active-project');
+          }
+
+          const isActive = this.currentProject && this.currentProject.id === proj.id;
+
+          card.innerHTML = `
+            ${isActive ? '<span class="project-card-badge">使用中</span>' : ''}
+            <div>
+              <div class="project-card-title">${this.escapeHtml(proj.title)}</div>
+              <div class="project-card-meta">
+                <span class="badge">調性: ${this.escapeHtml(proj.key)}</span>
+                <span class="badge">BPM: ${this.escapeHtml(proj.bpm)}</span>
+                <span class="badge">和弦數: ${proj.progression?.length || 0}</span>
+              </div>
+            </div>
+            <div class="flex-row space-between" style="margin-top: 1rem;">
+              <span class="text-dim text-sm">${new Date(proj.updatedAt || Date.now()).toLocaleDateString()}</span>
+              <div class="flex-row gap-2">
+                <button class="btn btn-secondary btn-sm btn-open-project">開啟</button>
+                <button class="btn btn-danger btn-sm btn-icon-only btn-delete-project" title="刪除專案">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            </div>
+          `;
+
+          // Switch project
+          card.querySelector('.btn-open-project').addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.setActiveProject(proj);
+            this.showToast(`已切換至專案「${proj.title}」`);
+            // Switch to chords tab
+            document.querySelector('[data-tab="tab-chords"]').click();
+          });
+
+          // Delete project
+          card.querySelector('.btn-delete-project').addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (this.projectsList.length <= 1) {
+              this.showToast('至少需保留一個創作專案', 'warning');
+              return;
+            }
+            if (confirm(`確定要刪除專案「${proj.title}」嗎？所有資料將無法復原。`)) {
+              await this.db.delete('projects', proj.id);
+              try {
+                const orphanMemos = await this.db.getMemosByProject(proj.id);
+                for (const m of orphanMemos) await this.db.delete('memos', m.id);
+              } catch (err) {
+                console.error('Failed to delete project memos:', err);
+              }
+              this.showToast('專案已刪除');
+              await this.loadProjects();
+            }
+          });
+
+          container.appendChild(card);
+        });
+      }
+
+      // --- Export & Import JSON (Backup & Restore) ---
+      async exportAllData() {
+        const projects = await this.db.getAll('projects');
+        const backupData = {
+          app: 'SoundCraft',
+          version: '1.0',
+          exportedAt: new Date().toISOString(),
+          projects: projects
+        };
+
+        const jsonStr = JSON.stringify(backupData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `soundcraft-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        this.showToast('所有專案備份已成功下載！', 'success');
+      }
+
+      // Normalize an untrusted project object from a backup file (returns null if unusable)
+      sanitizeImportedProject(p) {
+        if (!p || typeof p !== 'object' || !p.id || !p.title) return null;
+        const keys = MusicTheory.NOTES.concat(Object.keys(MusicTheory.FLAT_TO_SHARP));
+        const sounds = ['electric-piano', 'acoustic-piano', 'synth-pad', 'pluck'];
+        const bpm = Math.max(40, Math.min(240, Math.round(Number(p.bpm)) || 110));
+        const progression = Array.isArray(p.progression)
+          ? p.progression.filter(c => typeof c === 'string' && /^[A-G][#b]?[a-z0-9]*$/.test(c))
+          : [];
+        const drumPattern = {};
+        ['kick', 'snare', 'hihat-closed', 'hihat-open', 'clap'].forEach(t => {
+          const src = p.drumPattern && Array.isArray(p.drumPattern[t]) ? p.drumPattern[t] : [];
+          drumPattern[t] = [...new Set(src.filter(s => Number.isInteger(s) && s >= 0 && s < 16))];
+        });
+        return {
+          id: String(p.id),
+          title: String(p.title),
+          key: keys.includes(p.key) ? p.key : 'C',
+          bpm,
+          synthSound: sounds.includes(p.synthSound) ? p.synthSound : 'electric-piano',
+          progression,
+          drumPattern,
+          lyrics: typeof p.lyrics === 'string' ? p.lyrics : '',
+          updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : new Date().toISOString()
+        };
+      }
+
+      async importData(file) {
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+
+          if (!data.projects || !Array.isArray(data.projects)) {
+            throw new Error('不合法的備份檔案格式');
+          }
+
+          let imported = 0;
+          for (const raw of data.projects) {
+            const proj = this.sanitizeImportedProject(raw);
+            if (proj) {
+              await this.db.put('projects', proj);
+              imported++;
+            }
+          }
+
+          this.showToast(`成功匯入 ${imported} 個創作專案！`, 'success');
+          await this.loadProjects();
+        } catch (err) {
+          console.error('Import failed:', err);
+          this.showToast('匯入失敗：檔案格式錯誤', 'error');
+        }
+      }
+
+      // --- UI Events Binding ---
+      bindEvents() {
+        // Tab switching
+        document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.querySelectorAll('.nav-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+            btn.classList.add('active');
+            const targetId = btn.dataset.tab;
+            document.getElementById(targetId).classList.add('active');
+          });
+        });
+
+        // Current Project pill click -> go to Projects Tab
+        document.getElementById('current-project-pill').addEventListener('click', () => {
+          document.querySelector('[data-tab="tab-projects"]').click();
+        });
+
+        // Brand click -> go to Chords Tab
+        document.getElementById('brand-home').addEventListener('click', () => {
+          document.querySelector('[data-tab="tab-chords"]').click();
+        });
+
+        // Theme Toggle
+        document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+          const current = document.documentElement.getAttribute('data-theme');
+          const next = current === 'light' ? 'dark' : 'light';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('soundcraft_theme', next);
+          this.showToast(`已切換為 ${next === 'light' ? '明亮' : '暗黑'} 主題`);
+        });
+
+        // Initialize theme from storage
+        const savedTheme = localStorage.getItem('soundcraft_theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Master Play/Stop
+        const masterPlayBtn = document.getElementById('master-play-btn');
+        masterPlayBtn.addEventListener('click', () => {
+          if (!this.transport.isPlaying) {
+            this.transport.start();
+            masterPlayBtn.classList.add('playing');
+            masterPlayBtn.innerHTML = `
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16"></rect>
+                <rect x="14" y="4" width="4" height="16"></rect>
+              </svg>
+            `;
+            this.showToast('循環總播放中');
+          } else {
+            this.transport.stop();
+            masterPlayBtn.classList.remove('playing');
+            masterPlayBtn.innerHTML = `
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            `;
+            // Clear highlights
+            document.querySelectorAll('.step-indicator-dot').forEach(d => d.classList.remove('active-step'));
+            document.querySelectorAll('.chord-slot').forEach(s => s.classList.remove('active-beat'));
+            this.showToast('已停止播放');
+          }
+        });
+
+        // Global BPM Change
+        document.getElementById('global-bpm').addEventListener('change', (e) => {
+          this.transport.setBpm(e.target.value);
+          e.target.value = this.transport.bpm; // reflect clamped value
+          this.saveCurrentProject();
+        });
+
+        // Tap Tempo
+        document.getElementById('bpm-tap').addEventListener('click', () => {
+          const now = Date.now();
+          // Restart the tap sequence after a long pause
+          if (this.tapTimes.length && now - this.tapTimes[this.tapTimes.length - 1] > 2000) this.tapTimes = [];
+          this.tapTimes.push(now);
+          if (this.tapTimes.length > 4) this.tapTimes.shift();
+
+          if (this.tapTimes.length >= 2) {
+            let intervals = [];
+            for (let i = 1; i < this.tapTimes.length; i++) {
+              intervals.push(this.tapTimes[i] - this.tapTimes[i - 1]);
+            }
+            const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+            const computedBpm = Math.round(60000 / avgInterval);
+            if (computedBpm >= 40 && computedBpm <= 240) {
+              document.getElementById('global-bpm').value = computedBpm;
+              this.transport.setBpm(computedBpm);
+              this.saveCurrentProject();
+            }
+          }
+        });
+
+        // Global Key Change
+        document.getElementById('global-key').addEventListener('change', () => {
+          this.renderDiatonicChords();
+          this.highlightPianoScale();
+          this.saveCurrentProject();
+        });
+
+        // Scale mode select
+        document.getElementById('scale-mode-select').addEventListener('change', () => {
+          this.highlightPianoScale();
+        });
+
+        // Chord extension change
+        document.getElementById('chord-extension-select').addEventListener('change', () => {
+          this.renderDiatonicChords();
+        });
+
+        // Synth Sound Preset Change
+        document.getElementById('synth-sound-preset').addEventListener('change', (e) => {
+          this.audio.soundPreset = e.target.value;
+          this.saveCurrentProject();
+        });
+
+        // Quick Save Button
+        document.getElementById('btn-save-project-quick').addEventListener('click', () => {
+          this.saveCurrentProject();
+        });
+
+        // Preset Chord Progressions
+        document.querySelectorAll('.preset-pill').forEach(pill => {
+          pill.addEventListener('click', () => {
+            this.applyPresetProgression(pill.dataset.preset);
+          });
+        });
+
+        // Clear Progression Shelf
+        document.getElementById('btn-clear-progression').addEventListener('click', () => {
+          if (confirm('確定要清空當前進行軌道嗎？')) {
+            this.currentProject.progression = [];
+            this.renderProgressionShelf();
+            this.saveCurrentProject();
+          }
+        });
+
+        // Copy Progression into Lyrics
+        document.getElementById('btn-copy-progression-lyrics').addEventListener('click', () => {
+          const prog = this.currentProject.progression || [];
+          if (prog.length === 0) {
+            this.showToast('軌道上尚無和弦', 'warning');
+            return;
+          }
+          const chordStr = prog.map(c => `[${c}]`).join(' ');
+          const editor = document.getElementById('lyrics-editor');
+          editor.value = editor.value + `\n\n[Section]\n` + chordStr + `\n`;
+          this.updateLyricsView(editor.value);
+          this.saveCurrentProject();
+          this.showToast('已將和弦進行導入歌詞草稿！');
+          document.querySelector('[data-tab="tab-lyrics"]').click();
+        });
+
+        // Drum Sound Previews
+        document.querySelectorAll('.drum-track-preview-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.audio.playDrumSound(btn.dataset.sound);
+          });
+        });
+
+        // Drum Presets
+        document.getElementById('btn-drum-pattern-preset-pop').addEventListener('click', () => {
+          this.currentProject.drumPattern = {
+            kick: [0, 8],
+            snare: [4, 12],
+            'hihat-closed': [0, 2, 4, 6, 8, 10, 12, 14],
+            'hihat-open': [],
+            clap: []
+          };
+          this.renderDrumSequencerGrid();
+          this.saveCurrentProject();
+          this.showToast('已套用流行 4/4 節奏預設');
+        });
+
+        document.getElementById('btn-drum-pattern-preset-trap').addEventListener('click', () => {
+          this.currentProject.drumPattern = {
+            kick: [0, 6, 10],
+            snare: [8],
+            'hihat-closed': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+            'hihat-open': [2, 10],
+            clap: [8]
+          };
+          this.renderDrumSequencerGrid();
+          this.saveCurrentProject();
+          this.showToast('已套用 Trap / 嘻哈節奏預設');
+        });
+
+        document.getElementById('btn-drum-pattern-preset-rock').addEventListener('click', () => {
+          this.currentProject.drumPattern = {
+            kick: [0, 3, 8, 10],
+            snare: [4, 12],
+            'hihat-closed': [0, 2, 4, 6, 8, 10, 12, 14],
+            'hihat-open': [14],
+            clap: []
+          };
+          this.renderDrumSequencerGrid();
+          this.saveCurrentProject();
+          this.showToast('已套用搖滾推進節奏預設');
+        });
+
+        document.getElementById('btn-drum-clear').addEventListener('click', () => {
+          this.currentProject.drumPattern = {
+            kick: [], snare: [], 'hihat-closed': [], 'hihat-open': [], clap: []
+          };
+          this.renderDrumSequencerGrid();
+          this.saveCurrentProject();
+          this.showToast('已清空鼓點');
+        });
+
+        // Lyrics Editor live sync
+        const lyricsEditor = document.getElementById('lyrics-editor');
+        lyricsEditor.addEventListener('input', (e) => {
+          this.updateLyricsView(e.target.value);
+          this.scheduleAutoSave();
+        });
+
+        // Quick tags bar in lyrics
+        document.querySelectorAll('.quick-tag-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const tag = btn.dataset.insert;
+            lyricsEditor.value = lyricsEditor.value + `\n\n${tag}\n`;
+            this.updateLyricsView(lyricsEditor.value);
+            this.saveCurrentProject();
+            lyricsEditor.focus();
+          });
+        });
+
+        // Insert chord tag modal/prompt
+        document.getElementById('btn-insert-chord-tag').addEventListener('click', () => {
+          const chord = prompt('請輸入要插入的和弦名稱（如 C, Am, G7, Fmaj7 等）：', 'C');
+          if (chord) {
+            lyricsEditor.value += `[${chord.trim()}]`;
+            this.updateLyricsView(lyricsEditor.value);
+            this.saveCurrentProject();
+          }
+        });
+
+        // Copy lyrics text
+        document.getElementById('btn-export-lyrics-text').addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(lyricsEditor.value);
+            this.showToast('歌詞已複製至剪貼簿！');
+          } catch (err) {
+            console.error('Clipboard error:', err);
+            this.showToast('複製失敗，請手動選取複製', 'error');
+          }
+        });
+
+        // Mic Recording Toggle
+        document.getElementById('btn-record-toggle').addEventListener('click', () => {
+          if (!this.isRecording) {
+            this.startRecording();
+          } else {
+            this.stopRecording();
+          }
+        });
+
+        // New Project Dialog Modal
+        const dialog = document.getElementById('new-project-dialog');
+        document.getElementById('btn-create-project-modal').addEventListener('click', () => {
+          dialog.showModal();
+        });
+        document.getElementById('btn-cancel-new-proj').addEventListener('click', () => {
+          dialog.close();
+        });
+
+        document.getElementById('new-project-form').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const title = document.getElementById('new-proj-title').value.trim();
+          const key = document.getElementById('new-proj-key').value;
+          const bpm = Math.max(40, Math.min(240, parseInt(document.getElementById('new-proj-bpm').value, 10) || 110));
+
+          if (!title) return;
+
+          const newProj = {
+            id: 'proj_' + Date.now(),
+            title: title,
+            key: key,
+            bpm: bpm,
+            synthSound: 'electric-piano',
+            progression: ['C', 'G', 'Am', 'F'],
+            drumPattern: {
+              kick: [0, 8],
+              snare: [4, 12],
+              'hihat-closed': [0, 2, 4, 6, 8, 10, 12, 14],
+              'hihat-open': [],
+              clap: []
+            },
+            lyrics: `[Verse 1]\n在新的專案寫下動人旋律...`,
+            updatedAt: new Date().toISOString()
+          };
+
+          await this.db.put('projects', newProj);
+          dialog.close();
+          document.getElementById('new-proj-title').value = '';
+          this.showToast(`專案「${title}」已建立！`, 'success');
+          await this.saveCurrentProject(true); // flush edits of the current project before switching
+          await this.loadProjects();
+          // Use the instance held in projectsList so later edits stay in sync with the list
+          await this.setActiveProject(this.projectsList.find(p => p.id === newProj.id) || newProj);
+          document.querySelector('[data-tab="tab-chords"]').click();
+        });
+
+        // Backup Export & Import
+        document.getElementById('btn-export-json').addEventListener('click', () => {
+          this.exportAllData();
+        });
+
+        const importInput = document.getElementById('file-import-input');
+        document.getElementById('btn-import-json-trigger').addEventListener('click', () => {
+          importInput.click();
+        });
+
+        importInput.addEventListener('change', (e) => {
+          if (e.target.files && e.target.files[0]) {
+            this.importData(e.target.files[0]);
+            e.target.value = '';
+          }
+        });
+      }
+
+      // --- Utility Helpers ---
+      showToast(message, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+
+        let iconSvg = '';
+        if (type === 'success') {
+          iconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        } else if (type === 'error') {
+          iconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+        } else {
+          iconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+        }
+
+        toast.innerHTML = `${iconSvg}<span>${this.escapeHtml(message)}</span>`;
+        container.appendChild(toast);
+
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(100%)';
+          toast.style.transition = 'all 0.3s ease';
+          setTimeout(() => toast.remove(), 300);
+        }, 3200);
+      }
+
+      escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+    }
+
+    // Initialize application on DOM ready
+    document.addEventListener('DOMContentLoaded', () => {
+      window.app = new SoundCraftApp();
+      window.app.init();
+    });
+  </script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

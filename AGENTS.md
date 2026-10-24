@@ -80,7 +80,8 @@ my-spa-tools/
 └─ music/                        音樂創作
    ├─ musebox-studio/            MuseBox Studio 單頁音樂創作工作台（和弦進行、音序器、虛擬鋼琴與詞曲筆記）
    ├─ chord-studio/              和聲工房 Chord Studio 和弦進行工坊（順階／自由和弦、拍數與 BPM、WAV／JSON 匯出）
-   └─ groovebox/                 Groovebox 單檔鼓機（8 軌合成鼓、8／16／32 步、Swing、節奏庫與 MIDI／JSON 匯出）
+   ├─ groovebox/                 Groovebox 單檔鼓機（8 軌合成鼓、8／16／32 步、Swing、節奏庫與 MIDI／JSON 匯出）
+   └─ soundcraft/                SoundCraft 音樂創作與靈感工作台（和弦進行、歌詞和弦稿紙、16 步鼓機、靈感錄音與 JSON 備份）
 ```
 
 分類層固定為八類：`agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`、`music/`。每個工具自成一層子資料夾，HTML 檔名沿用工具原名。**所有工具頁面都位於根目錄下兩層**（`<類別>/<工具>/<檔名>.html`）。
@@ -147,7 +148,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 66 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 67 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。
