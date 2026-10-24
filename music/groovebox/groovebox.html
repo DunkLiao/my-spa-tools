@@ -1,0 +1,2781 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="單檔離線 16 步鼓機：8 軌合成鼓、BPM / Swing、節奏庫與 MIDI 匯出。">
+<meta name="theme-color" content="#f3f4f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b0d11" media="(prefers-color-scheme: dark)">
+<title>Groovebox — 單檔鼓機</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f1218'/%3E%3Cg fill='%23ff7247'%3E%3Crect x='7' y='13' width='4' height='6' rx='2'/%3E%3Crect x='14' y='8' width='4' height='16' rx='2'/%3E%3Crect x='21' y='11' width='4' height='10' rx='2'/%3E%3C/g%3E%3C/svg%3E">
+<script>
+  // 首屏先套用主題，避免白閃
+  try {
+    var t = localStorage.getItem('groovebox-theme');
+    if (!t || t === 'auto') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+  } catch (e) { document.documentElement.dataset.theme = 'dark'; }
+</script>
+<style>
+/* 1. tokens ───────────────────────────────────────────── */
+:root {
+  --bg: #f3f4f7;
+  --surface: #ffffff;
+  --surface-2: #eceff4;
+  --surface-3: #e2e6ee;
+  --text: #14161b;
+  --muted: #5a6473;
+  --border: #dce1e9;
+  --accent: #d9481f;
+  --accent-2: #5b46e8;
+  --accent-text: #ffffff;
+  --ok: #17845a;
+  --danger: #c0392b;
+  --step-off: #e7eaf0;
+  --step-beat: #dbe0e9;
+  --focus: #5b46e8;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --space: 16px;
+  --maxw: 1120px;
+  --cell: 46px;
+  --gap: 6px;
+  --labelw: 88px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 10px 30px rgba(16, 24, 40, .06);
+  color-scheme: light;
+}
+[data-theme="dark"] {
+  --bg: #0b0d11;
+  --surface: #13161c;
+  --surface-2: #191d25;
+  --surface-3: #212734;
+  --text: #e9edf3;
+  --muted: #98a3b3;
+  --border: #262d38;
+  --accent: #ff7247;
+  --accent-2: #8b7dff;
+  --accent-text: #1b0b06;
+  --ok: #3ecf8e;
+  --danger: #ff6b6b;
+  --step-off: #1a1f28;
+  --step-beat: #242b37;
+  --focus: #a99fff;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .5), 0 12px 34px rgba(0, 0, 0, .38);
+  color-scheme: dark;
+}
+
+/* 2. base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-tap-highlight-color: transparent;
+}
+h1, h2, h3, p, ul, ol, figure { margin: 0; }
+h1 { font-size: 18px; font-weight: 650; letter-spacing: .01em; line-height: 1.25; }
+h2 { font-size: 16px; font-weight: 650; letter-spacing: .01em; }
+button, input, textarea, select { font: inherit; color: inherit; }
+[type="range"] { accent-color: var(--accent); height: 32px; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* 3. layout ───────────────────────────────────────────── */
+.appbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px max(16px, calc((100% - var(--maxw)) / 2 + 16px));
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.brand svg { flex: none; color: var(--accent); }
+.brand__sub { font-size: 11.5px; color: var(--muted); letter-spacing: .02em; }
+.appbar__actions { display: flex; align-items: center; gap: 8px; }
+main {
+  max-width: var(--maxw); margin: 0 auto; padding: var(--space);
+  display: grid; gap: var(--space);
+}
+.foot {
+  max-width: var(--maxw); margin: 0 auto; padding: 4px 16px 32px;
+  display: flex; justify-content: space-between; gap: 10px 16px; flex-wrap: wrap;
+  color: var(--muted); font-size: 12.5px;
+}
+.foot code { font-size: 12px; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+
+/* 4. components ───────────────────────────────────────── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: var(--space); box-shadow: var(--shadow);
+}
+.card__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 8px 14px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.hint { font-size: 12.5px; color: var(--muted); }
+.hint--muted { margin-top: 10px; }
+.hint--tight { margin-top: 8px; }
+.banner {
+  max-width: var(--maxw); margin: 12px auto 0; padding: 10px 14px;
+  border: 1px solid color-mix(in srgb, var(--danger) 45%, var(--border));
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  color: var(--text); border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  font-size: 13px; width: calc(100% - 32px);
+}
+.banner p { flex: 1; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 42px; padding: 8px 14px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: 14.5px; cursor: pointer; text-decoration: none;
+  transition: background .15s, border-color .15s, transform .05s;
+  white-space: nowrap;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn--primary { background: var(--accent); color: var(--accent-text); border-color: transparent; font-weight: 600; }
+.btn--primary:hover { filter: brightness(1.06); background: var(--accent); }
+.btn--play { background: var(--accent-2); color: #fff; border-color: transparent; font-weight: 650; min-width: 112px; }
+.btn--play:hover { background: var(--accent-2); filter: brightness(1.08); }
+.btn--play.is-playing { background: var(--ok); color: #fff; }
+.btn--danger { background: var(--danger); color: #fff; border-color: transparent; font-weight: 600; }
+.btn--danger-ghost { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
+.btn--danger-ghost:hover { background: color-mix(in srgb, var(--danger) 12%, var(--surface)); }
+.btn--sm { min-height: 38px; padding: 5px 10px; font-size: 13px; border-radius: 8px; }
+.btn--icon { min-width: 44px; padding: 0; font-size: 17px; }
+
+.status { font-size: 12.5px; color: var(--ok); white-space: nowrap; }
+.status.is-unsaved { color: var(--muted); }
+
+/* transport */
+.transport__row { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: flex-end; }
+.field { display: grid; gap: 4px; min-width: 0; }
+.field > span, .field > label { font-size: 12.5px; color: var(--muted); }
+.field--name { flex: 1 1 220px; min-width: 180px; }
+.field--bpm { flex: 0 1 200px; }
+.field--swing { flex: 0 1 150px; }
+.field--vol { flex: 0 1 150px; }
+.field--steps { flex: 0 0 auto; }
+input[type="text"], input[type="search"], input[type="number"], textarea, select {
+  width: 100%; min-height: 42px; padding: 8px 11px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); transition: border-color .15s;
+}
+textarea { resize: vertical; min-height: 62px; }
+input[type="text"]:focus, input[type="search"]:focus, input[type="number"]:focus,
+textarea:focus, select:focus { border-color: var(--accent); outline: none; }
+.bpm { display: flex; align-items: center; gap: 10px; }
+#bpm-num { width: 74px; flex: none; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+.bpm input[type="range"] { flex: 1; min-width: 80px; }
+output { font-variant-numeric: tabular-nums; color: var(--text); font-weight: 600; }
+#play-label { pointer-events: none; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar > select { flex: 1 1 180px; width: auto; min-width: 150px; max-width: 280px; }
+.toolbar__sep { width: 1px; height: 24px; background: var(--border); margin: 0 2px; align-self: center; }
+.machine__hint { display: none; margin-top: 8px; }
+.toolbar--filters { margin-bottom: 4px; }
+.toolbar--filters .search { flex: 1 1 220px; }
+.toolbar--filters select { flex: 0 0 auto; width: auto; min-width: 130px; }
+
+/* sequencer grid */
+.machine { display: grid; grid-template-columns: var(--labelw) minmax(0, 1fr); gap: 10px; align-items: start; margin-top: 14px; }
+.machine__labels { display: flex; flex-direction: column; gap: var(--gap); }
+.label-spacer { height: 18px; flex: none; }
+.labels { display: flex; flex-direction: column; gap: var(--gap); }
+.machine__scroll { overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; scrollbar-width: thin; }
+.ruler {
+  display: grid; grid-template-columns: repeat(var(--cols, 16), var(--cell));
+  gap: var(--gap); height: 18px; margin-bottom: var(--gap); align-items: center;
+}
+.rstep {
+  font-size: 10.5px; color: var(--muted); text-align: center;
+  font-variant-numeric: tabular-nums; transition: color .1s;
+}
+.rstep.is-beat { color: var(--text); opacity: .62; }
+.rstep.is-now { color: var(--accent-2); font-weight: 700; opacity: 1; }
+.rows { display: flex; flex-direction: column; gap: var(--gap); }
+.row { display: grid; grid-template-columns: repeat(var(--cols, 16), var(--cell)); gap: var(--gap); }
+.step {
+  width: var(--cell); height: var(--cell); padding: 0; cursor: pointer;
+  background: var(--step-off); border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: background .12s, border-color .12s, box-shadow .12s, opacity .12s;
+}
+.step.is-beat { background: var(--step-beat); }
+.step:hover { border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
+.step.is-on {
+  background: rgba(217, 114, 71, .42);
+  background: color-mix(in srgb, var(--accent) 36%, var(--step-off));
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+}
+.step.is-accent { background: var(--accent); border-color: var(--accent); }
+.step.is-now {
+  box-shadow: 0 0 0 2px var(--accent-2) inset;
+  box-shadow: 0 0 0 2px var(--accent-2) inset, 0 0 12px color-mix(in srgb, var(--accent-2) 45%, transparent);
+  border-color: var(--accent-2);
+}
+.row.is-dim .step { opacity: .32; }
+.row.is-dim .step.is-now { opacity: .75; }
+.track-label {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  height: var(--cell); padding: 0 9px; cursor: pointer; text-align: left;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px;
+  transition: opacity .12s, border-color .12s;
+}
+.track-label:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); }
+.track-label.is-dim { opacity: .38; }
+.track-label .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.track-label__name { font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* mix */
+.mix { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+.mix summary { cursor: pointer; font-size: 13px; color: var(--muted); min-height: 36px; display: flex; align-items: center; }
+.mix summary:hover { color: var(--text); }
+.mix-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(142px, 1fr)); gap: 10px; margin-top: 8px; }
+.mix-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px; display: grid; gap: 8px; background: var(--surface-2); }
+.mix-card__head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; }
+.mix-card__head .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.mix-card__btns { display: flex; gap: 8px; }
+.mini {
+  width: 40px; height: 34px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface);
+  font-size: 12px; font-weight: 700; color: var(--muted);
+}
+.mini.is-on { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+.mini[data-solo].is-on { background: var(--accent-2); color: #fff; }
+
+/* library */
+.pattern-list { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
+.pattern {
+  display: flex; gap: 10px 14px; justify-content: space-between; align-items: center;
+  flex-wrap: wrap; padding: 10px 12px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 10px;
+}
+.pattern.is-current { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.pattern__main { min-width: 0; flex: 1 1 220px; }
+.pattern__name { font-weight: 600; font-size: 14.5px; overflow-wrap: anywhere; }
+.pattern__meta { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pattern__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+.chip {
+  font-size: 11.5px; padding: 1px 8px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--muted);
+}
+.chip--current { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); font-weight: 600; }
+.empty {
+  margin-top: 12px; padding: 22px 14px; text-align: center;
+  border: 1px dashed var(--border); border-radius: 10px;
+  color: var(--muted); font-size: 13.5px;
+}
+.pager { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 12px; }
+.pager__info { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+/* toast / dialog */
+.toast {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+  z-index: 60; display: flex; align-items: center; gap: 10px;
+  max-width: min(92vw, 520px); padding: 9px 12px 9px 14px;
+  background: var(--text); color: var(--bg);
+  border-radius: 10px; box-shadow: 0 12px 30px rgba(0, 0, 0, .35);
+  font-size: 13.5px; animation: toast-in .18s ease-out;
+}
+.toast__msg { flex: 1; }
+.toast__undo {
+  border: 1px solid currentColor; background: transparent; color: inherit;
+  border-radius: 7px; padding: 5px 10px; min-height: 34px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.toast__close { background: transparent; border: 0; color: inherit; font-size: 15px; cursor: pointer; min-height: 34px; min-width: 30px; opacity: .7; }
+.toast__close:hover { opacity: 1; }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+.dialog {
+  border: 0; border-radius: 16px; padding: 0; width: min(94vw, 460px);
+  background: var(--surface); color: var(--text); box-shadow: 0 24px 70px rgba(0, 0, 0, .45);
+}
+.dialog::backdrop { background: rgba(6, 8, 12, .62); backdrop-filter: blur(2px); }
+.dialog form { padding: 20px; display: grid; gap: 12px; }
+.dialog h2 { font-size: 17px; }
+.dialog__text { font-size: 13.5px; color: var(--muted); line-height: 1.55; }
+.dialog__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+.dialog label.field > span { color: var(--muted); }
+.radios { border: 0; padding: 0; margin: 0; display: grid; gap: 8px; }
+.radios legend { font-size: 12.5px; color: var(--muted); margin-bottom: 4px; }
+.radios label { display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; cursor: pointer; }
+.radios input { width: 18px; height: 18px; accent-color: var(--accent); }
+input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+
+/* 5. responsive ───────────────────────────────────────── */
+@media (max-width: 760px) {
+  :root { --cell: 44px; --gap: 5px; --labelw: 74px; --space: 12px; }
+  body { font-size: 15.5px; }
+  .appbar { padding: 8px 12px; }
+  .brand__sub { display: none; }
+  main { padding: 12px; gap: 12px; }
+  .card { padding: 12px; border-radius: 12px; }
+  .transport__row { gap: 10px 12px; }
+  .field--name { flex: 1 1 100%; }
+  .field--bpm { flex: 1 1 100%; }
+  .field--swing, .field--vol { flex: 1 1 44%; }
+  .field--steps { flex: 1 1 100%; }
+  .btn--play { flex: 1 1 100%; min-height: 48px; }
+  .btn { min-height: 44px; }
+  .btn--sm { min-height: 44px; padding: 6px 12px; }
+  .toolbar > select { min-height: 44px; flex: 1 1 100%; max-width: none; min-width: 0; }
+  .toolbar__sep { display: none; }
+  .machine__hint { display: block; }
+  .foot span:last-child { display: none; }
+  .mini { min-height: 44px; min-width: 44px; }
+  .pattern__actions { width: 100%; }
+  .pattern__actions .btn { flex: 1 1 auto; }
+  .machine { gap: 8px; }
+  .track-label { padding: 0 6px; gap: 5px; }
+  .track-label__name { font-size: 11px; }
+  .toast { bottom: max(12px, env(safe-area-inset-bottom)); }
+  .mix summary { min-height: 44px; }
+  .foot { padding: 4px 12px 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+      <rect x="3" y="9" width="3" height="6" rx="1.5" fill="currentColor" stroke="none"/>
+      <rect x="9" y="4" width="3" height="16" rx="1.5" fill="currentColor" stroke="none"/>
+      <rect x="15" y="7" width="3" height="10" rx="1.5" fill="currentColor" stroke="none"/>
+      <rect x="21" y="10" width="0" height="0"/>
+    </svg>
+    <div>
+      <h1>Groovebox</h1>
+      <p class="brand__sub">16 步鼓機 · 單檔離線</p>
+    </div>
+  </div>
+  <div class="appbar__actions">
+    <span id="save-status" class="status" aria-live="polite">● 尚未存檔</span>
+    <button id="btn-theme" class="btn btn--icon" type="button" aria-label="切換為淺色">☀</button>
+  </div>
+</header>
+
+<div id="mem-banner" class="banner" role="alert" hidden>
+  <p><strong>記憶體模式：</strong>瀏覽器封鎖了本機資料庫，關掉頁面資料就會消失。請用「匯出全部 JSON」備份，或改用本機伺服器開啟（例如 <code>python -m http.server</code>）。</p>
+</div>
+<div id="alert-banner" class="banner" role="alert" hidden>
+  <p id="alert-text"></p>
+  <button id="alert-reload" class="btn btn--sm" type="button">重新載入</button>
+</div>
+
+<main>
+  <!-- 播放控制 -->
+  <section class="card" aria-labelledby="h-transport">
+    <div class="card__head">
+      <h2 id="h-transport">播放</h2>
+      <p class="hint">空白鍵：播放 / 停止</p>
+    </div>
+    <div class="transport__row">
+      <button id="btn-play" class="btn btn--play" type="button" aria-pressed="false">▶ 播放</button>
+      <label class="field field--name">
+        <span>模式名稱</span>
+        <input id="pattern-name" type="text" maxlength="60" autocomplete="off" spellcheck="false" placeholder="未命名節奏">
+      </label>
+      <div class="field field--bpm">
+        <span>BPM</span>
+        <div class="bpm">
+          <input id="bpm-num" type="number" min="40" max="240" step="1" inputmode="numeric" value="100" aria-label="BPM 數值">
+          <input id="bpm-range" type="range" min="40" max="240" step="1" value="100" aria-label="BPM 滑桿">
+        </div>
+      </div>
+      <div class="field field--swing">
+        <label for="swing">Swing <output id="swing-out">0%</output></label>
+        <input id="swing" type="range" min="0" max="60" step="1" value="0">
+      </div>
+      <div class="field field--vol">
+        <label for="volume">主音量 <output id="vol-out">80%</output></label>
+        <input id="volume" type="range" min="0" max="100" step="1" value="80">
+      </div>
+      <div class="field field--steps">
+        <label for="step-count">小節步數</label>
+        <select id="step-count">
+          <option value="8">8 步</option>
+          <option value="16" selected>16 步</option>
+          <option value="32">32 步</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <!-- 節奏格 -->
+  <section class="card" id="seq" aria-labelledby="h-seq">
+    <div class="card__head">
+      <h2 id="h-seq">節奏格</h2>
+      <p class="hint">點一下＝輕音，兩下＝重音，三下＝關閉</p>
+    </div>
+    <div class="toolbar">
+      <button id="btn-save" class="btn btn--primary" type="button">儲存</button>
+      <button id="btn-save-as" class="btn" type="button">另存新檔</button>
+      <button id="btn-new" class="btn" type="button">新節奏</button>
+      <span class="toolbar__sep" aria-hidden="true"></span>
+      <select id="template-select" aria-label="節奏範本"></select>
+      <button id="btn-template" class="btn" type="button">套用範本</button>
+      <button id="btn-random" class="btn" type="button">隨機</button>
+      <button id="btn-clear" class="btn" type="button">清空格子</button>
+    </div>
+    <p class="hint hint--tight">編輯會自動存成草稿；按「儲存」才會加入下方的節奏庫。</p>
+
+    <div class="machine">
+      <div class="machine__labels">
+        <div class="label-spacer" aria-hidden="true"></div>
+        <div id="track-labels" class="labels"></div>
+      </div>
+      <div class="machine__scroll">
+        <div id="ruler" aria-hidden="true"></div>
+        <div id="rows" class="rows" role="group" aria-label="節奏格線，使用方向鍵移動"></div>
+      </div>
+    </div>
+    <p class="hint machine__hint">格子可以左右滑動，看後面的步數。</p>
+
+    <details class="mix">
+      <summary>軌道音量 / 靜音 / 獨奏</summary>
+      <div id="mix-grid" class="mix-grid"></div>
+    </details>
+  </section>
+
+  <!-- 節奏庫 -->
+  <section class="card" aria-labelledby="h-lib">
+    <div class="card__head">
+      <h2 id="h-lib">節奏庫</h2>
+      <p id="library-count" class="hint">0 筆</p>
+    </div>
+    <div class="toolbar toolbar--filters">
+      <label class="search">
+        <span class="sr-only">搜尋節奏</span>
+        <input id="library-search" type="search" placeholder="搜尋名稱或標籤…" autocomplete="off">
+      </label>
+      <select id="library-tag" aria-label="依標籤篩選">
+        <option value="">全部標籤</option>
+      </select>
+    </div>
+    <ul id="library-list" class="pattern-list"></ul>
+    <p id="library-empty" class="empty" hidden></p>
+    <div class="pager">
+      <button id="page-prev" class="btn btn--sm" type="button" disabled>上一頁</button>
+      <span id="page-info" class="pager__info">第 1 / 1 頁</span>
+      <button id="page-next" class="btn btn--sm" type="button" disabled>下一頁</button>
+    </div>
+  </section>
+
+  <!-- 備份 -->
+  <section class="card" aria-labelledby="h-backup">
+    <div class="card__head">
+      <h2 id="h-backup">備份與匯出</h2>
+      <p class="hint">資料只存在這台裝置的瀏覽器</p>
+    </div>
+    <div class="toolbar">
+      <button id="btn-export-json" class="btn" type="button">匯出全部 JSON</button>
+      <button id="btn-export-midi" class="btn" type="button">匯出 MIDI（目前）</button>
+      <button id="btn-export-csv" class="btn" type="button">匯出目錄 CSV</button>
+      <button id="btn-export-md" class="btn" type="button">匯出 Markdown（目前）</button>
+      <button id="btn-import" class="btn" type="button">匯入 JSON</button>
+      <button id="btn-clear-all" class="btn btn--danger-ghost" type="button">清空全部資料</button>
+    </div>
+    <p class="hint hint--muted">JSON 可完整還原；MIDI 可拖進 DAW；CSV 給 Excel；Markdown 方便貼進筆記。匯入前建議先匯出一次備份。</p>
+    <input id="file-input" type="file" accept="application/json,.json" aria-label="選擇 JSON 備份檔">
+  </section>
+</main>
+
+<footer class="foot">
+  <span id="pattern-total">0 筆節奏</span>
+  <span id="db-status">資料庫連線中…</span>
+  <span>v1.0 · <code>/</code> 搜尋 · <code>Space</code> 播放</span>
+</footer>
+
+<!-- 儲存 dialog -->
+<dialog id="dlg-save" class="dialog" aria-labelledby="dlg-save-title">
+  <form method="dialog" id="form-save">
+    <h2 id="dlg-save-title">儲存節奏</h2>
+    <label class="field">
+      <span>名稱</span>
+      <input id="save-name" type="text" maxlength="60" required autocomplete="off" spellcheck="false">
+    </label>
+    <label class="field">
+      <span>標籤（逗號分隔，最多 8 個）</span>
+      <input id="save-tags" type="text" maxlength="140" autocomplete="off" placeholder="例如：練習, 搖滾">
+    </label>
+    <label class="field">
+      <span>備註</span>
+      <textarea id="save-notes" rows="2" maxlength="500" placeholder="選填，例如：副歌前的過門"></textarea>
+    </label>
+    <div class="dialog__actions">
+      <button class="btn" value="cancel" type="button" data-cancel>取消</button>
+      <button class="btn btn--primary" value="ok" type="submit" id="save-ok">儲存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 確認 dialog -->
+<dialog id="dlg-confirm" class="dialog" aria-labelledby="confirm-title">
+  <form method="dialog">
+    <h2 id="confirm-title">確認</h2>
+    <p id="confirm-text" class="dialog__text"></p>
+    <div class="dialog__actions">
+      <button class="btn" value="cancel" type="button" data-cancel>取消</button>
+      <button class="btn btn--primary" value="ok" type="submit" id="confirm-ok">確定</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- 匯入 dialog -->
+<dialog id="dlg-import" class="dialog" aria-labelledby="dlg-import-title">
+  <form method="dialog">
+    <h2 id="dlg-import-title">匯入備份</h2>
+    <p id="import-summary" class="dialog__text"></p>
+    <fieldset class="radios">
+      <legend>匯入方式</legend>
+      <label><input type="radio" name="import-mode" value="merge" checked> 合併（相同 ID 覆蓋，其餘保留）</label>
+      <label><input type="radio" name="import-mode" value="replace"> 取代（先清空現有節奏）</label>
+    </fieldset>
+    <div class="dialog__actions">
+      <button class="btn" value="cancel" type="button" data-cancel>取消</button>
+      <button class="btn btn--primary" value="ok" type="submit">匯入</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden>
+  <span id="toast-msg" class="toast__msg"></span>
+  <button id="toast-undo" class="toast__undo" type="button" hidden>復原</button>
+  <button id="toast-close" class="toast__close" type="button" aria-label="關閉通知">✕</button>
+</div>
+
+<script>
+'use strict';
+(function () {
+  /* ============================================================
+     常數與資料
+     ============================================================ */
+  var CONFIG = {
+    DB_NAME: 'groovebox',
+    DB_VERSION: 1,
+    SCHEMA_VERSION: 1,
+    PAGE_SIZE: 30,
+    MIN_BPM: 40,
+    MAX_BPM: 240,
+    DRAFT_DEBOUNCE: 400,
+    UNDO_MS: 8000,
+    MAX_IMPORT: 5000,
+    THEME_KEY: 'groovebox-theme'
+  };
+
+  var TRACKS = [
+    { id: 'kick',  name: '大鼓',    color: '#ff7247', note: 36, density: 0.30 },
+    { id: 'snare', name: '小鼓',    color: '#f5b33d', note: 38, density: 0.16 },
+    { id: 'hatc',  name: '閉合 HH', color: '#e2d34c', note: 42, density: 0.52 },
+    { id: 'hato',  name: '開放 HH', color: '#7fd06a', note: 46, density: 0.06 },
+    { id: 'clap',  name: '拍手',    color: '#46c7c0', note: 39, density: 0.08 },
+    { id: 'tom',   name: '低音鼓',  color: '#5b9cf5', note: 45, density: 0.10 },
+    { id: 'rim',   name: 'Rim',     color: '#a78bfa', note: 37, density: 0.08 },
+    { id: 'cow',   name: '牛鈴',    color: '#f278b5', note: 56, density: 0.05 }
+  ];
+
+  var TEMPLATES = [
+    {
+      id: 'rock', name: '四拍搖滾', bpm: 100, swing: 0, tags: ['搖滾'],
+      grid: {
+        kick: [[0, 2], [8, 2], [10, 1]],
+        snare: [[4, 2], [12, 2]],
+        hatc: [[0, 2], [2, 2], [4, 2], [6, 2], [8, 2], [10, 2], [12, 2], [14, 2]],
+        hato: [[14, 2]]
+      }
+    },
+    {
+      id: 'disco', name: '迪斯可', bpm: 120, swing: 0, tags: ['舞曲'],
+      grid: {
+        kick: [[0, 2], [4, 2], [8, 2], [12, 2]],
+        snare: [[4, 2], [12, 2]],
+        clap: [[4, 1], [12, 1]],
+        hatc: [[0, 1], [4, 1], [8, 1], [12, 1]],
+        hato: [[2, 2], [6, 2], [10, 2], [14, 2]]
+      }
+    },
+    {
+      id: 'trap', name: 'Trap', bpm: 140, swing: 0, tags: ['嘻哈', 'Trap'],
+      grid: {
+        kick: [[0, 2], [7, 1], [8, 2], [14, 1]],
+        snare: [[4, 2], [12, 2]],
+        clap: [[8, 1]],
+        hatc: [[0, 1], [1, 1], [2, 2], [3, 1], [4, 1], [5, 1], [6, 2], [7, 1], [8, 1], [9, 1], [10, 2], [11, 1], [12, 1], [13, 1], [14, 2], [15, 1]],
+        cow: [[14, 1]]
+      }
+    },
+    {
+      id: 'house', name: 'House', bpm: 126, swing: 0, tags: ['舞曲', 'House'],
+      grid: {
+        kick: [[0, 2], [4, 2], [8, 2], [12, 2]],
+        snare: [[4, 2], [12, 2]],
+        clap: [[4, 1], [12, 1]],
+        hatc: [[0, 1], [2, 1], [4, 1], [6, 1], [8, 1], [10, 1], [12, 1], [14, 1]],
+        hato: [[2, 2], [6, 2], [10, 2], [14, 2]]
+      }
+    },
+    {
+      id: 'boombap', name: 'Boom Bap', bpm: 90, swing: 18, tags: ['嘻哈'],
+      grid: {
+        kick: [[0, 2], [7, 1], [10, 2]],
+        snare: [[4, 2], [12, 2]],
+        hatc: [[0, 1], [2, 1], [4, 1], [6, 1], [8, 1], [10, 1], [12, 1], [14, 1]],
+        rim: [[5, 1], [13, 1]]
+      }
+    },
+    {
+      id: 'ballad', name: '慢板抒情', bpm: 72, swing: 0, tags: ['抒情'],
+      grid: {
+        kick: [[0, 2], [8, 2]],
+        snare: [[4, 2], [12, 2]],
+        hatc: [[0, 1], [4, 1], [8, 1], [12, 1]],
+        tom: [[14, 1]],
+        rim: [[2, 1], [6, 1], [10, 1]]
+      }
+    }
+  ];
+
+  /* ============================================================
+     小工具
+     ============================================================ */
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
+  function clone(v) {
+    if (typeof structuredClone === 'function') {
+      try { return structuredClone(v); } catch (e) { /* fall through */ }
+    }
+    return JSON.parse(JSON.stringify(v));
+  }
+  function uid() {
+    try {
+      if (crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    } catch (e) { /* ignore */ }
+    return 'p-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function fmtTime(iso) {
+    if (!iso) return '—';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    return d.getFullYear() + '/' + pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+  function stamp() {
+    var d = new Date();
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) + '-' + pad2(d.getHours()) + pad2(d.getMinutes());
+  }
+  function safeFile(s) {
+    var out = String(s || 'pattern').replace(/[\\/:*?"<>|]+/g, '_').replace(/\s+/g, '-').slice(0, 40);
+    return out || 'pattern';
+  }
+  function csvCell(v) {
+    var s = v === null || v === undefined ? '' : String(v);
+    // 防 CSV 公式注入：以 = + - @ 開頭的文字在 Excel 會被當公式執行
+    if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = "'" + s;
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+  function parseTags(str) {
+    var parts = String(str || '').split(/[,，;；\n]/);
+    var out = [];
+    parts.forEach(function (p) {
+      var t = p.trim().slice(0, 16);
+      if (t && out.indexOf(t) === -1) out.push(t);
+    });
+    return out.slice(0, 8);
+  }
+  function sanitizeTags(v) {
+    if (Array.isArray(v)) return parseTags(v.join(','));
+    return parseTags(v);
+  }
+  function debounce(fn, ms) {
+    var timer = null;
+    return function () {
+      var args = arguments, self = this;
+      clearTimeout(timer);
+      timer = setTimeout(function () { fn.apply(self, args); }, ms);
+    };
+  }
+  function download(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+  function validIso(v) {
+    if (typeof v !== 'string') return null;
+    var d = new Date(v);
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  }
+
+  /* ============================================================
+     資料模型
+     ============================================================ */
+  function emptyPattern(name) {
+    return {
+      id: null,
+      name: name || '未命名節奏',
+      bpm: 100,
+      stepCount: 16,
+      swing: 0,
+      tracks: TRACKS.map(function (t) {
+        return { id: t.id, mute: false, solo: false, volume: 0.8, steps: new Array(16).fill(0) };
+      }),
+      tags: [],
+      notes: '',
+      createdAt: null,
+      updatedAt: null
+    };
+  }
+
+  function patternFromTemplate(tpl) {
+    var p = emptyPattern(tpl.name);
+    p.bpm = tpl.bpm;
+    p.swing = tpl.swing || 0;
+    p.tags = (tpl.tags || []).slice();
+    p.tracks.forEach(function (tr) {
+      var list = tpl.grid[tr.id] || [];
+      for (var i = 0; i < list.length; i++) {
+        if (list[i][0] < p.stepCount) tr.steps[list[i][0]] = list[i][1];
+      }
+    });
+    return p;
+  }
+
+  function normalizePattern(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    var name = typeof raw.name === 'string' ? raw.name.trim().slice(0, 60) : '';
+    if (!name) return null;
+    var bpm = Math.round(Number(raw.bpm));
+    if (!isFinite(bpm)) bpm = 100;
+    bpm = clamp(bpm, CONFIG.MIN_BPM, CONFIG.MAX_BPM);
+    var stepCount = Number(raw.stepCount);
+    if ([8, 16, 32].indexOf(stepCount) === -1) stepCount = 16;
+    var swing = Math.round(Number(raw.swing));
+    if (!isFinite(swing)) swing = 0;
+    swing = clamp(swing, 0, 60);
+
+    var srcTracks = Array.isArray(raw.tracks) ? raw.tracks : [];
+    var tracks = TRACKS.map(function (t, i) {
+      var src = null;
+      for (var k = 0; k < srcTracks.length; k++) {
+        if (srcTracks[k] && srcTracks[k].id === t.id) { src = srcTracks[k]; break; }
+      }
+      if (!src) src = (srcTracks[i] && typeof srcTracks[i] === 'object') ? srcTracks[i] : {};
+      var steps = new Array(stepCount).fill(0);
+      if (Array.isArray(src.steps)) {
+        for (var s = 0; s < stepCount; s++) {
+          var v = Number(src.steps[s]);
+          steps[s] = v === 2 || v === 1 ? v : 0;
+        }
+      }
+      var vol = Number(src.volume);
+      if (!isFinite(vol)) vol = 0.8;
+      return {
+        id: t.id,
+        mute: !!src.mute,
+        solo: !!src.solo,
+        volume: clamp(vol, 0, 1),
+        steps: steps
+      };
+    });
+
+    var now = new Date().toISOString();
+    var id = (typeof raw.id === 'string' && raw.id.length >= 6) ? raw.id : uid();
+
+    return {
+      id: id,
+      name: name,
+      bpm: bpm,
+      stepCount: stepCount,
+      swing: swing,
+      tracks: tracks,
+      tags: sanitizeTags(raw.tags),
+      notes: typeof raw.notes === 'string' ? raw.notes.slice(0, 500) : '',
+      createdAt: validIso(raw.createdAt) || now,
+      updatedAt: validIso(raw.updatedAt) || now
+    };
+  }
+
+  function toSummary(p) {
+    return {
+      id: p.id,
+      name: p.name,
+      nameLower: String(p.name || '').toLowerCase(),
+      bpm: p.bpm,
+      stepCount: p.stepCount,
+      swing: p.swing,
+      tags: p.tags || [],
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt
+    };
+  }
+
+  /* ============================================================
+     狀態
+     ============================================================ */
+  var state = {
+    current: emptyPattern('未命名節奏'),
+    unsaved: true,
+    modified: false,
+    playing: false,
+    playhead: -1,
+    settings: { volume: 0.8 },
+    lib: { all: [], q: '', tag: '', page: 0 }
+  };
+
+  /* ============================================================
+     儲存層（IndexedDB，全部集中在這裡）
+     ============================================================ */
+  var DB = {
+    db: null,
+    memory: false,
+    mem: { patterns: new Map(), index: new Map(), meta: new Map() },
+
+    open: function () {
+      var self = this;
+      if (!('indexedDB' in window)) {
+        this.memory = true;
+        return Promise.resolve(false);
+      }
+      return new Promise(function (resolve) {
+        var req;
+        try {
+          req = indexedDB.open(CONFIG.DB_NAME, CONFIG.DB_VERSION);
+        } catch (e) {
+          self.memory = true;
+          resolve(false);
+          return;
+        }
+        req.onupgradeneeded = function (event) {
+          var db = req.result;
+          if (event.oldVersion < 1) {
+            if (!db.objectStoreNames.contains('patterns')) {
+              db.createObjectStore('patterns', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('patternIndex')) {
+              var idx = db.createObjectStore('patternIndex', { keyPath: 'id' });
+              idx.createIndex('updatedAt', 'updatedAt');
+              idx.createIndex('nameLower', 'nameLower');
+              idx.createIndex('tags', 'tags', { multiEntry: true });
+            }
+            if (!db.objectStoreNames.contains('meta')) {
+              db.createObjectStore('meta', { keyPath: 'key' });
+            }
+          }
+        };
+        req.onsuccess = function () {
+          self.db = req.result;
+          self.db.onversionchange = function () {
+            try { self.db.close(); } catch (e) { /* ignore */ }
+            showAlert('資料庫已在其他分頁更新，請重新載入本頁。');
+          };
+          resolve(true);
+        };
+        req.onerror = function () {
+          self.memory = true;
+          resolve(false);
+        };
+        req.onblocked = function () {
+          self.memory = true;
+          resolve(false);
+        };
+      });
+    },
+
+    req: function (request) {
+      return new Promise(function (resolve, reject) {
+        request.onsuccess = function () { resolve(request.result); };
+        request.onerror = function () { reject(request.error || new Error('IndexedDB 請求失敗')); };
+      });
+    },
+
+    done: function (tx) {
+      return new Promise(function (resolve, reject) {
+        tx.oncomplete = function () { resolve(); };
+        tx.onerror = function () { reject(tx.error || new Error('交易失敗')); };
+        tx.onabort = function () { reject(tx.error || new Error('交易中止')); };
+      });
+    },
+
+    putPattern: function (rec) {
+      var self = this;
+      var p = clone(rec);
+      var sum = toSummary(p);
+      if (this.memory) {
+        this.mem.patterns.set(p.id, p);
+        this.mem.index.set(p.id, sum);
+        return Promise.resolve(p);
+      }
+      var tx = this.db.transaction(['patterns', 'patternIndex'], 'readwrite');
+      tx.objectStore('patterns').put(p);
+      tx.objectStore('patternIndex').put(sum);
+      return this.done(tx).then(function () { return p; }).catch(function (err) {
+        throw normalizeDbError(err);
+      });
+    },
+
+    putMany: function (list) {
+      var items = list.map(clone);
+      if (this.memory) {
+        items.forEach(function (p) {
+          this.mem.patterns.set(p.id, p);
+          this.mem.index.set(p.id, toSummary(p));
+        }, this);
+        return Promise.resolve(items.length);
+      }
+      var tx = this.db.transaction(['patterns', 'patternIndex'], 'readwrite');
+      var ps = tx.objectStore('patterns');
+      var ix = tx.objectStore('patternIndex');
+      items.forEach(function (p) {
+        ps.put(p);
+        ix.put(toSummary(p));
+      });
+      return this.done(tx).then(function () { return items.length; }).catch(function (err) {
+        throw normalizeDbError(err);
+      });
+    },
+
+    // 取代匯入：清空與寫入放在同一個交易，失敗時整體回滾，不會丟失原資料
+    replaceAll: function (list) {
+      var items = list.map(clone);
+      if (this.memory) {
+        this.mem.patterns.clear();
+        this.mem.index.clear();
+        items.forEach(function (p) {
+          this.mem.patterns.set(p.id, p);
+          this.mem.index.set(p.id, toSummary(p));
+        }, this);
+        return Promise.resolve(items.length);
+      }
+      var tx = this.db.transaction(['patterns', 'patternIndex'], 'readwrite');
+      var ps = tx.objectStore('patterns');
+      var ix = tx.objectStore('patternIndex');
+      ps.clear();
+      ix.clear();
+      items.forEach(function (p) {
+        ps.put(p);
+        ix.put(toSummary(p));
+      });
+      return this.done(tx).then(function () { return items.length; }).catch(function (err) {
+        throw normalizeDbError(err);
+      });
+    },
+
+    getPattern: function (id) {
+      if (this.memory) {
+        var p = this.mem.patterns.get(id);
+        return Promise.resolve(p ? clone(p) : undefined);
+      }
+      var tx = this.db.transaction('patterns', 'readonly');
+      return this.req(tx.objectStore('patterns').get(id));
+    },
+
+    getAllPatterns: function () {
+      if (this.memory) {
+        return Promise.resolve(Array.from(this.mem.patterns.values()).map(clone));
+      }
+      var tx = this.db.transaction('patterns', 'readonly');
+      return this.req(tx.objectStore('patterns').getAll());
+    },
+
+    getAllIndex: function () {
+      if (this.memory) {
+        return Promise.resolve(Array.from(this.mem.index.values()).map(clone));
+      }
+      var tx = this.db.transaction('patternIndex', 'readonly');
+      return this.req(tx.objectStore('patternIndex').getAll());
+    },
+
+    deletePattern: function (id) {
+      if (this.memory) {
+        this.mem.patterns.delete(id);
+        this.mem.index.delete(id);
+        return Promise.resolve();
+      }
+      var tx = this.db.transaction(['patterns', 'patternIndex'], 'readwrite');
+      tx.objectStore('patterns').delete(id);
+      tx.objectStore('patternIndex').delete(id);
+      return this.done(tx).catch(function (err) { throw normalizeDbError(err); });
+    },
+
+    clearPatterns: function () {
+      if (this.memory) {
+        this.mem.patterns.clear();
+        this.mem.index.clear();
+        return Promise.resolve();
+      }
+      var tx = this.db.transaction(['patterns', 'patternIndex'], 'readwrite');
+      tx.objectStore('patterns').clear();
+      tx.objectStore('patternIndex').clear();
+      return this.done(tx).catch(function (err) { throw normalizeDbError(err); });
+    },
+
+    countPatterns: function () {
+      if (this.memory) return Promise.resolve(this.mem.patterns.size);
+      var tx = this.db.transaction('patterns', 'readonly');
+      return this.req(tx.objectStore('patterns').count());
+    },
+
+    countIndex: function () {
+      if (this.memory) return Promise.resolve(this.mem.index.size);
+      var tx = this.db.transaction('patternIndex', 'readonly');
+      return this.req(tx.objectStore('patternIndex').count());
+    },
+
+    clearIndex: function () {
+      if (this.memory) {
+        this.mem.index.clear();
+        return Promise.resolve();
+      }
+      var tx = this.db.transaction('patternIndex', 'readwrite');
+      tx.objectStore('patternIndex').clear();
+      return this.done(tx);
+    },
+
+    getMeta: function (key) {
+      if (this.memory) {
+        var v = this.mem.meta.get(key);
+        return Promise.resolve(v === undefined ? null : clone(v));
+      }
+      var tx = this.db.transaction('meta', 'readonly');
+      return this.req(tx.objectStore('meta').get(key)).then(function (row) {
+        return row ? row.value : null;
+      });
+    },
+
+    setMeta: function (key, value) {
+      if (this.memory) {
+        this.mem.meta.set(key, clone(value));
+        return Promise.resolve();
+      }
+      var tx = this.db.transaction('meta', 'readwrite');
+      tx.objectStore('meta').put({ key: key, value: clone(value) });
+      return this.done(tx).catch(function (err) { throw normalizeDbError(err); });
+    },
+
+    deleteMeta: function (key) {
+      if (this.memory) {
+        this.mem.meta.delete(key);
+        return Promise.resolve();
+      }
+      var tx = this.db.transaction('meta', 'readwrite');
+      tx.objectStore('meta').delete(key);
+      return this.done(tx);
+    }
+  };
+
+  function normalizeDbError(err) {
+    if (err && err.name === 'QuotaExceededError') {
+      return new Error('瀏覽器儲存空間已滿，請先匯出 JSON，再刪除一些節奏');
+    }
+    if (err && err.name === 'InvalidStateError') {
+      return new Error('資料庫連線已失效，請重新載入頁面');
+    }
+    return err || new Error('儲存失敗');
+  }
+
+  /* ============================================================
+     音訊引擎（Web Audio 合成）
+     ============================================================ */
+  var audio = {
+    ctx: null,
+    master: null,
+    noiseBuf: null,
+    volume: 0.8,
+    supported: !!(window.AudioContext || window.webkitAudioContext),
+
+    ensure: function () {
+      if (this.ctx) return this.ctx;
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      try {
+        this.ctx = new AC();
+      } catch (e) {
+        return null;
+      }
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.volume;
+      var comp = this.ctx.createDynamicsCompressor();
+      comp.threshold.value = -10;
+      comp.knee.value = 10;
+      comp.ratio.value = 4;
+      comp.attack.value = 0.003;
+      comp.release.value = 0.2;
+      this.master.connect(comp);
+      comp.connect(this.ctx.destination);
+      this.noiseBuf = this.makeNoise();
+      return this.ctx;
+    },
+
+    makeNoise: function () {
+      var sr = this.ctx.sampleRate;
+      var buf = this.ctx.createBuffer(1, Math.floor(sr * 0.6), sr);
+      var data = buf.getChannelData(0);
+      for (var i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      return buf;
+    },
+
+    resume: function () {
+      if (!this.ctx) return;
+      if (this.ctx.state !== 'running' && this.ctx.resume) {
+        this.ctx.resume().catch(function () { /* 使用者手勢不足時忽略 */ });
+      }
+    },
+
+    setVolume: function (v) {
+      this.volume = clamp(v, 0, 1);
+      if (this.master && this.ctx) {
+        this.master.gain.setTargetAtTime(this.volume, this.ctx.currentTime, 0.01);
+      }
+    },
+
+    now: function () { return this.ctx ? this.ctx.currentTime : 0; },
+
+    play: function (id, time, level) {
+      var fn = this['_' + id];
+      if (typeof fn !== 'function') return;
+      fn.call(this, Math.max(0.0015, Math.min(1.4, level)), time);
+    },
+
+    audition: function (trackIndex, level) {
+      var ctx = this.ensure();
+      if (!ctx) return;
+      this.resume();
+      var tr = state.current.tracks[trackIndex];
+      var gain = tr.volume * (level === 2 ? 1 : 0.62);
+      this.play(tr.id, ctx.currentTime + 0.02, gain);
+    },
+
+    env: function (t, peak, attack, decay) {
+      var g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(Math.max(0.0002, peak), t + attack);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + attack + decay);
+      return g;
+    },
+
+    osc: function (type, freq, t, dur) {
+      var o = this.ctx.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(freq, t);
+      o.start(t);
+      o.stop(t + dur);
+      return o;
+    },
+
+    noise: function (t, dur) {
+      var src = this.ctx.createBufferSource();
+      src.buffer = this.noiseBuf;
+      src.loop = true;
+      src.start(t);
+      src.stop(t + dur + 0.05);
+      return src;
+    },
+
+    filter: function (type, freq, q) {
+      var f = this.ctx.createBiquadFilter();
+      f.type = type;
+      f.frequency.value = freq;
+      if (q) f.Q.value = q;
+      return f;
+    },
+
+    _kick: function (level, t) {
+      var g = this.env(t, 1.05 * level, 0.004, 0.4);
+      g.connect(this.master);
+      var o = this.osc('sine', 168, t, 0.5);
+      o.frequency.exponentialRampToValueAtTime(46, t + 0.14);
+      o.connect(g);
+    },
+
+    _snare: function (level, t) {
+      var g = this.env(t, 0.72 * level, 0.002, 0.19);
+      g.connect(this.master);
+      var hp = this.filter('highpass', 1100);
+      this.noise(t, 0.24).connect(hp);
+      hp.connect(g);
+      var g2 = this.env(t, 0.38 * level, 0.002, 0.075);
+      g2.connect(this.master);
+      this.osc('triangle', 186, t, 0.12).connect(g2);
+    },
+
+    _hatc: function (level, t) {
+      var g = this.env(t, 0.42 * level, 0.001, 0.05);
+      g.connect(this.master);
+      var hp = this.filter('highpass', 7200);
+      this.noise(t, 0.09).connect(hp);
+      hp.connect(g);
+    },
+
+    _hato: function (level, t) {
+      var g = this.env(t, 0.36 * level, 0.001, 0.3);
+      g.connect(this.master);
+      var hp = this.filter('highpass', 6200);
+      this.noise(t, 0.36).connect(hp);
+      hp.connect(g);
+    },
+
+    _clap: function (level, t) {
+      var bp = this.filter('bandpass', 1150, 1.4);
+      bp.connect(this.master);
+      for (var i = 0; i < 3; i++) {
+        var at = t + i * 0.016;
+        var g = this.env(at, 0.48 * level, 0.001, 0.035);
+        g.connect(bp);
+        this.noise(at, 0.06).connect(g);
+      }
+      var tail = this.env(t + 0.05, 0.34 * level, 0.004, 0.13);
+      tail.connect(bp);
+      this.noise(t + 0.05, 0.2).connect(tail);
+    },
+
+    _tom: function (level, t) {
+      var g = this.env(t, 0.68 * level, 0.003, 0.3);
+      g.connect(this.master);
+      var o = this.osc('sine', 224, t, 0.42);
+      o.frequency.exponentialRampToValueAtTime(92, t + 0.22);
+      o.connect(g);
+    },
+
+    _rim: function (level, t) {
+      var g = this.env(t, 0.66 * level, 0.001, 0.045);
+      g.connect(this.master);
+      var bp = this.filter('bandpass', 1700, 4);
+      this.noise(t, 0.06).connect(bp);
+      bp.connect(g);
+      var g2 = this.env(t, 0.28 * level, 0.001, 0.03);
+      g2.connect(this.master);
+      this.osc('square', 460, t, 0.05).connect(g2);
+    },
+
+    _cow: function (level, t) {
+      var g = this.env(t, 0.44 * level, 0.002, 0.24);
+      var bp = this.filter('bandpass', 1900, 1.2);
+      bp.connect(this.master);
+      g.connect(bp);
+      this.osc('square', 540, t, 0.3).connect(g);
+      this.osc('square', 815, t, 0.3).connect(g);
+    }
+  };
+
+  /* ============================================================
+     排程器（lookahead，避免 setTimeout 漂移）
+     ============================================================ */
+  var sequencer = {
+    timer: null,
+    raf: 0,
+    nextStep: 0,
+    nextTime: 0,
+    queue: [],
+
+    start: function () {
+      var self = this;
+      if (state.playing) return;
+      var ctx = audio.ensure();
+      if (!ctx) {
+        showToast('這個瀏覽器不支援 Web Audio，無法播放');
+        return;
+      }
+      audio.resume();
+      audio.setVolume(state.settings.volume);
+      state.playing = true;
+      this.nextStep = 0;
+      this.nextTime = ctx.currentTime + 0.08;
+      this.queue = [];
+      this.timer = setInterval(function () { self.schedule(); }, 25);
+      this.schedule();
+      this.loopUI();
+      updatePlayUI();
+    },
+
+    stop: function () {
+      if (this.timer) clearInterval(this.timer);
+      this.timer = null;
+      if (this.raf) cancelAnimationFrame(this.raf);
+      this.raf = 0;
+      this.queue = [];
+      state.playing = false;
+      state.playhead = -1;
+      setPlayhead(-1);
+      updatePlayUI();
+    },
+
+    schedule: function () {
+      var ctx = audio.ctx;
+      if (!ctx) return;
+      var p = state.current;
+      var stepDur = 60 / p.bpm / 4;
+      var swing = stepDur * (p.swing / 100) * 0.5;
+      var guard = 0;
+      if (this.nextTime < ctx.currentTime - 0.2) {
+        // 分頁被瀏覽器凍結後回來：跳過漏掉的拍子，不要一次爆音
+        this.nextTime = ctx.currentTime + 0.05;
+        this.queue = [];
+        setPlayhead(-1);
+      }
+      while (this.nextTime < ctx.currentTime + 0.12 && guard++ < 64) {
+        var step = this.nextStep >= p.stepCount ? 0 : this.nextStep; // 播放中縮短步數時回到第 1 步
+        var when = this.nextTime + (step % 2 === 1 ? swing : 0);
+        this.emit(step, when);
+        this.queue.push({ step: step, time: when });
+        this.nextStep = (step + 1) % p.stepCount;
+        this.nextTime += stepDur;
+      }
+      while (this.queue.length && this.queue[0].time < ctx.currentTime - 0.25) this.queue.shift();
+    },
+
+    emit: function (step, when) {
+      var p = state.current;
+      var hasSolo = p.tracks.some(function (tr) { return tr.solo; });
+      p.tracks.forEach(function (tr) {
+        var lvl = tr.steps[step] || 0;
+        if (!lvl) return;
+        if (hasSolo ? !tr.solo : tr.mute) return;
+        audio.play(tr.id, when, tr.volume * (lvl === 2 ? 1 : 0.62));
+      });
+    },
+
+    loopUI: function () {
+      var self = this;
+      if (!state.playing) return;
+      var ctx = audio.ctx;
+      if (ctx) {
+        var now = ctx.currentTime;
+        var changed = false;
+        while (this.queue.length && this.queue[0].time <= now) {
+          state.playhead = this.queue.shift().step;
+          changed = true;
+        }
+        if (changed) setPlayhead(state.playhead);
+      }
+      this.raf = requestAnimationFrame(function () { self.loopUI(); });
+    }
+  };
+
+  /* ============================================================
+     DOM 參照
+     ============================================================ */
+  var el = {
+    seq: $('#seq'),
+    rows: $('#rows'),
+    ruler: $('#ruler'),
+    labels: $('#track-labels'),
+    mixGrid: $('#mix-grid'),
+    playBtn: $('#btn-play'),
+    bpmNum: $('#bpm-num'),
+    bpmRange: $('#bpm-range'),
+    swing: $('#swing'),
+    swingOut: $('#swing-out'),
+    volume: $('#volume'),
+    volOut: $('#vol-out'),
+    stepCount: $('#step-count'),
+    patternName: $('#pattern-name'),
+    templateSelect: $('#template-select'),
+    saveStatus: $('#save-status'),
+    btnTheme: $('#btn-theme'),
+    libList: $('#library-list'),
+    libEmpty: $('#library-empty'),
+    libSearch: $('#library-search'),
+    libTag: $('#library-tag'),
+    libCount: $('#library-count'),
+    pagePrev: $('#page-prev'),
+    pageNext: $('#page-next'),
+    pageInfo: $('#page-info'),
+    total: $('#pattern-total'),
+    dbStatus: $('#db-status'),
+    toast: $('#toast'),
+    toastMsg: $('#toast-msg'),
+    toastUndo: $('#toast-undo'),
+    toastClose: $('#toast-close'),
+    memBanner: $('#mem-banner'),
+    alertBanner: $('#alert-banner'),
+    alertText: $('#alert-text'),
+    alertReload: $('#alert-reload'),
+    dlgSave: $('#dlg-save'),
+    dlgSaveTitle: $('#dlg-save-title'),
+    saveName: $('#save-name'),
+    saveTags: $('#save-tags'),
+    saveNotes: $('#save-notes'),
+    dlgConfirm: $('#dlg-confirm'),
+    confirmTitle: $('#confirm-title'),
+    confirmText: $('#confirm-text'),
+    confirmOk: $('#confirm-ok'),
+    dlgImport: $('#dlg-import'),
+    importSummary: $('#import-summary'),
+    fileInput: $('#file-input')
+  };
+
+  /* ============================================================
+     通知 / 對話框
+     ============================================================ */
+  var toastTimer = null;
+  var toastUndoFn = null;
+
+  function showToast(msg, opts) {
+    opts = opts || {};
+    el.toast.hidden = false;
+    el.toastMsg.textContent = msg;
+    toastUndoFn = opts.undo ? opts.onUndo : null;
+    el.toastUndo.hidden = !toastUndoFn;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, opts.duration || 3600);
+  }
+  function hideToast() {
+    el.toast.hidden = true;
+    clearTimeout(toastTimer);
+    toastTimer = null;
+    toastUndoFn = null;
+  }
+  function showAlert(text) {
+    el.alertText.textContent = text;
+    el.alertBanner.hidden = false;
+  }
+
+  var confirmResolve = null;
+  function askConfirm(opts) {
+    return new Promise(function (resolve) {
+      if (confirmResolve) { confirmResolve(false); confirmResolve = null; }
+      if (el.dlgConfirm.open) el.dlgConfirm.close();
+      confirmResolve = resolve;
+      el.confirmTitle.textContent = opts.title || '確認';
+      el.confirmText.textContent = opts.message || '';
+      el.confirmOk.textContent = opts.okText || '確定';
+      el.confirmOk.className = 'btn ' + (opts.danger ? 'btn--danger' : 'btn--primary');
+      el.dlgConfirm.returnValue = ''; // 按 Esc 關閉不會重設 returnValue，避免沿用上次的 'ok'
+      el.dlgConfirm.showModal();
+    });
+  }
+
+  /* ============================================================
+     播放狀態 / 播放頭
+     ============================================================ */
+  function updatePlayUI() {
+    if (!audio.supported) {
+      el.playBtn.textContent = '此瀏覽器不支援音訊';
+      el.playBtn.disabled = true;
+      el.playBtn.title = '需要 Web Audio API，仍可編輯與匯出節奏';
+      el.playBtn.setAttribute('aria-pressed', 'false');
+      el.playBtn.classList.remove('is-playing');
+      return;
+    }
+    el.playBtn.disabled = false;
+    el.playBtn.textContent = state.playing ? '■ 停止' : '▶ 播放';
+    el.playBtn.setAttribute('aria-pressed', state.playing ? 'true' : 'false');
+    el.playBtn.classList.toggle('is-playing', state.playing);
+  }
+
+  var playheadCells = [];
+  function setPlayhead(step) {
+    playheadCells.forEach(function (c) { c.classList.remove('is-now'); });
+    playheadCells = [];
+    if (step >= 0) {
+      var cells = el.rows.querySelectorAll('.step[data-s="' + step + '"]');
+      cells.forEach(function (c) { c.classList.add('is-now'); playheadCells.push(c); });
+    }
+    $$('.rstep', el.ruler).forEach(function (r) {
+      r.classList.toggle('is-now', step >= 0 && Number(r.dataset.s) === step);
+    });
+  }
+
+  function togglePlay() {
+    if (state.playing) sequencer.stop();
+    else sequencer.start();
+  }
+
+  /* ============================================================
+     節奏格繪製
+     ============================================================ */
+  function paintStep(btn, level, trackName, idx) {
+    btn.classList.toggle('is-on', level === 1);
+    btn.classList.toggle('is-accent', level === 2);
+    btn.setAttribute('aria-pressed', level ? 'true' : 'false');
+    btn.setAttribute('aria-label', trackName + ' 第 ' + (idx + 1) + ' 步 ' + (level === 2 ? '重音' : level === 1 ? '輕音' : '關閉'));
+  }
+
+  function renderGrid() {
+    var p = state.current;
+    var cols = p.stepCount;
+    el.seq.style.setProperty('--cols', String(cols));
+    el.seq.removeAttribute('data-playhead');
+    playheadCells = [];
+
+    var ruler = document.createElement('div');
+    ruler.className = 'ruler';
+    for (var s = 0; s < cols; s++) {
+      var tick = document.createElement('span');
+      tick.className = 'rstep' + (s % 4 === 0 ? ' is-beat' : '');
+      tick.dataset.s = String(s);
+      tick.textContent = String(s + 1);
+      ruler.appendChild(tick);
+    }
+    el.ruler.replaceChildren(ruler);
+
+    var labelFrag = document.createDocumentFragment();
+    p.tracks.forEach(function (tr, t) {
+      var meta = TRACKS[t];
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'track-label';
+      b.dataset.t = String(t);
+      b.title = '點擊試聽 ' + meta.name;
+      var dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = meta.color;
+      var name = document.createElement('span');
+      name.className = 'track-label__name';
+      name.textContent = meta.name;
+      b.append(dot, name);
+      b.addEventListener('click', function () { audio.audition(t, 2); });
+      labelFrag.appendChild(b);
+    });
+    el.labels.replaceChildren(labelFrag);
+
+    var rowFrag = document.createDocumentFragment();
+    p.tracks.forEach(function (tr, t) {
+      var meta = TRACKS[t];
+      var row = document.createElement('div');
+      row.className = 'row';
+      row.dataset.t = String(t);
+      row.setAttribute('role', 'group');
+      row.setAttribute('aria-label', meta.name + ' 軌道');
+      for (var s = 0; s < cols; s++) {
+        var cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'step';
+        cell.dataset.t = String(t);
+        cell.dataset.s = String(s);
+        if (s % 4 === 0) cell.classList.add('is-beat');
+        cell.tabIndex = (t === 0 && s === 0) ? 0 : -1;
+        paintStep(cell, tr.steps[s], meta.name, s);
+        row.appendChild(cell);
+      }
+      rowFrag.appendChild(row);
+    });
+    el.rows.replaceChildren(rowFrag);
+    applyMixVisuals();
+  }
+
+  function focusCell(t, s) {
+    var cell = el.rows.querySelector('.step[data-t="' + t + '"][data-s="' + s + '"]');
+    if (!cell) return;
+    $$('.step', el.rows).forEach(function (c) { c.tabIndex = -1; });
+    cell.tabIndex = 0;
+    cell.focus();
+  }
+
+  /* ============================================================
+     混音面板
+     ============================================================ */
+  function buildMixPanel() {
+    var frag = document.createDocumentFragment();
+    TRACKS.forEach(function (meta, t) {
+      var card = document.createElement('div');
+      card.className = 'mix-card';
+      card.dataset.t = String(t);
+
+      var head = document.createElement('div');
+      head.className = 'mix-card__head';
+      var dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = meta.color;
+      var nm = document.createElement('span');
+      nm.textContent = meta.name;
+      head.append(dot, nm);
+
+      var btns = document.createElement('div');
+      btns.className = 'mix-card__btns';
+      var mute = document.createElement('button');
+      mute.type = 'button';
+      mute.className = 'mini';
+      mute.dataset.mute = '1';
+      mute.textContent = 'M';
+      mute.title = '靜音';
+      mute.setAttribute('aria-label', meta.name + ' 靜音');
+      mute.setAttribute('aria-pressed', 'false');
+      var solo = document.createElement('button');
+      solo.type = 'button';
+      solo.className = 'mini';
+      solo.dataset.solo = '1';
+      solo.textContent = 'S';
+      solo.title = '獨奏';
+      solo.setAttribute('aria-label', meta.name + ' 獨奏');
+      solo.setAttribute('aria-pressed', 'false');
+      btns.append(mute, solo);
+
+      var vol = document.createElement('input');
+      vol.type = 'range';
+      vol.min = '0';
+      vol.max = '100';
+      vol.step = '1';
+      vol.value = '80';
+      vol.setAttribute('aria-label', meta.name + ' 音量');
+
+      card.append(head, btns, vol);
+      frag.appendChild(card);
+    });
+    el.mixGrid.replaceChildren(frag);
+  }
+
+  function applyMixVisuals() {
+    var p = state.current;
+    var hasSolo = p.tracks.some(function (t) { return t.solo; });
+    $$('.row', el.rows).forEach(function (row, t) {
+      var tr = p.tracks[t];
+      row.classList.toggle('is-dim', hasSolo ? !tr.solo : tr.mute);
+    });
+    $$('.track-label', el.labels).forEach(function (b, t) {
+      var tr = p.tracks[t];
+      b.classList.toggle('is-dim', hasSolo ? !tr.solo : tr.mute);
+    });
+    p.tracks.forEach(function (tr, t) {
+      var card = el.mixGrid.querySelector('.mix-card[data-t="' + t + '"]');
+      if (!card) return;
+      var mute = card.querySelector('[data-mute]');
+      var solo = card.querySelector('[data-solo]');
+      var range = card.querySelector('input[type="range"]');
+      mute.classList.toggle('is-on', tr.mute);
+      mute.setAttribute('aria-pressed', tr.mute ? 'true' : 'false');
+      solo.classList.toggle('is-on', tr.solo);
+      solo.setAttribute('aria-pressed', tr.solo ? 'true' : 'false');
+      if (document.activeElement !== range) range.value = String(Math.round(tr.volume * 100));
+    });
+  }
+
+  /* ============================================================
+     介面同步
+     ============================================================ */
+  function renderTransport() {
+    var p = state.current;
+    if (document.activeElement !== el.patternName) el.patternName.value = p.name;
+    el.bpmNum.value = String(p.bpm);
+    el.bpmRange.value = String(p.bpm);
+    el.swing.value = String(p.swing);
+    el.swingOut.textContent = p.swing + '%';
+    el.volume.value = String(Math.round(state.settings.volume * 100));
+    el.volOut.textContent = Math.round(state.settings.volume * 100) + '%';
+    if (el.stepCount.value !== String(p.stepCount)) el.stepCount.value = String(p.stepCount);
+    updateSaveStatus();
+  }
+
+  function updateSaveStatus() {
+    var s = state.current;
+    if (state.unsaved) {
+      el.saveStatus.textContent = s.id ? '● 未儲存變更' : '● 尚未存檔';
+      el.saveStatus.classList.add('is-unsaved');
+    } else {
+      el.saveStatus.textContent = '✓ 已儲存';
+      el.saveStatus.classList.remove('is-unsaved');
+    }
+  }
+
+  function renderAll() {
+    renderTransport();
+    renderGrid();
+    updatePlayUI();
+    renderLibrary();
+  }
+
+  function updateFooter() {
+    el.total.textContent = state.lib.all.length + ' 筆節奏';
+    el.dbStatus.textContent = DB.memory ? '記憶體模式（不會保存）' : 'IndexedDB 已連結';
+  }
+
+  /* ============================================================
+     草稿（自動保存目前編輯）
+     ============================================================ */
+  var draftTimer = null;
+  function markDirty() {
+    state.unsaved = true;
+    state.modified = true;
+    updateSaveStatus();
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(persistDraft, CONFIG.DRAFT_DEBOUNCE);
+  }
+  function persistDraft() {
+    clearTimeout(draftTimer);
+    draftTimer = null;
+    DB.setMeta('draft', {
+      pattern: state.current,
+      unsaved: state.unsaved,
+      savedAt: new Date().toISOString()
+    }).catch(function () { /* 草稿失敗不阻斷操作 */ });
+  }
+  var settingsTimer = null;
+  function persistSettings() {
+    clearTimeout(settingsTimer);
+    settingsTimer = setTimeout(function () {
+      DB.setMeta('settings', state.settings).catch(function () { /* 忽略 */ });
+    }, CONFIG.DRAFT_DEBOUNCE);
+  }
+
+  /* ============================================================
+     模式庫
+     ============================================================ */
+  function libraryFiltered() {
+    var q = state.lib.q.trim().toLowerCase();
+    var tag = state.lib.tag;
+    var items = state.lib.all.slice();
+    if (q) {
+      items = items.filter(function (it) {
+        if (String(it.nameLower || '').indexOf(q) !== -1) return true;
+        return (it.tags || []).some(function (t) { return String(t).toLowerCase().indexOf(q) !== -1; });
+      });
+    }
+    if (tag) items = items.filter(function (it) { return (it.tags || []).indexOf(tag) !== -1; });
+    items.sort(function (a, b) {
+      return String(b.updatedAt || '').localeCompare(String(a.updatedAt || ''));
+    });
+    return items;
+  }
+
+  function renderTagOptions() {
+    var tags = [];
+    state.lib.all.forEach(function (it) {
+      (it.tags || []).forEach(function (t) { if (tags.indexOf(t) === -1) tags.push(t); });
+    });
+    tags.sort(function (a, b) { return a.localeCompare(b, 'zh-Hant'); });
+    if (state.lib.tag && tags.indexOf(state.lib.tag) === -1) state.lib.tag = '';
+    var frag = document.createDocumentFragment();
+    var allOpt = document.createElement('option');
+    allOpt.value = '';
+    allOpt.textContent = '全部標籤';
+    frag.appendChild(allOpt);
+    tags.forEach(function (t) {
+      var o = document.createElement('option');
+      o.value = t;
+      o.textContent = '#' + t;
+      frag.appendChild(o);
+    });
+    el.libTag.replaceChildren(frag);
+    el.libTag.value = state.lib.tag;
+  }
+
+  function renderLibrary() {
+    var items = libraryFiltered();
+    var pages = Math.max(1, Math.ceil(items.length / CONFIG.PAGE_SIZE));
+    if (state.lib.page > pages - 1) state.lib.page = pages - 1;
+    if (state.lib.page < 0) state.lib.page = 0;
+    var start = state.lib.page * CONFIG.PAGE_SIZE;
+    var slice = items.slice(start, start + CONFIG.PAGE_SIZE);
+
+    var frag = document.createDocumentFragment();
+    slice.forEach(function (it) {
+      var li = document.createElement('li');
+      li.className = 'pattern' + (it.id === state.current.id ? ' is-current' : '');
+      li.dataset.id = it.id;
+
+      var main = document.createElement('div');
+      main.className = 'pattern__main';
+
+      var name = document.createElement('p');
+      name.className = 'pattern__name';
+      name.textContent = it.name;
+
+      var meta = document.createElement('p');
+      meta.className = 'pattern__meta';
+      meta.textContent = it.bpm + ' BPM · ' + it.stepCount + ' 步 · Swing ' + (it.swing || 0) + '% · ' + fmtTime(it.updatedAt);
+
+      main.append(name, meta);
+
+      var chips = document.createElement('div');
+      chips.className = 'chips';
+      (it.tags || []).forEach(function (t) {
+        var chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.textContent = '#' + t;
+        chips.appendChild(chip);
+      });
+      if (it.id === state.current.id) {
+        var cur = document.createElement('span');
+        cur.className = 'chip chip--current';
+        cur.textContent = state.unsaved ? '編輯中 · 未儲存' : '編輯中';
+        chips.appendChild(cur);
+      }
+      if (chips.childNodes.length) main.appendChild(chips);
+
+      var actions = document.createElement('div');
+      actions.className = 'pattern__actions';
+      [['load', '載入'], ['dup', '複製'], ['del', '刪除']].forEach(function (pair) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn--sm' + (pair[0] === 'del' ? ' btn--danger-ghost' : '');
+        b.dataset.act = pair[0];
+        b.textContent = pair[1];
+        actions.appendChild(b);
+      });
+
+      li.append(main, actions);
+      frag.appendChild(li);
+    });
+    el.libList.replaceChildren(frag);
+
+    if (!state.lib.all.length) {
+      el.libEmpty.hidden = false;
+      el.libEmpty.textContent = '節奏庫是空的。做好一段節奏後按「儲存」，它就會出現在這裡。';
+    } else if (!items.length) {
+      el.libEmpty.hidden = false;
+      el.libEmpty.textContent = '找不到符合搜尋或標籤的節奏。試試清空條件。';
+    } else {
+      el.libEmpty.hidden = true;
+    }
+
+    el.pagePrev.disabled = state.lib.page <= 0;
+    el.pageNext.disabled = state.lib.page >= pages - 1;
+    el.pageInfo.textContent = '第 ' + (state.lib.page + 1) + ' / ' + pages + ' 頁 · 共 ' + items.length + ' 筆';
+    el.libCount.textContent = state.lib.all.length + ' 筆';
+  }
+
+  function refreshLibrary() {
+    return DB.getAllIndex().then(function (list) {
+      state.lib.all = list;
+      renderTagOptions();
+      renderLibrary();
+      updateFooter();
+    }).catch(function () {
+      showToast('讀取節奏庫失敗，請重新載入頁面');
+    });
+  }
+
+  /* ============================================================
+     儲存 / 刪除 / 載入
+     ============================================================ */
+  function hasHits() {
+    return state.current.tracks.some(function (tr) {
+      return tr.steps.some(function (v) { return v > 0; });
+    });
+  }
+
+  function saveCurrent(asNew) {
+    var p = state.current;
+    var now = new Date().toISOString();
+    var rec = clone(p);
+    rec.name = String(p.name || '').trim().slice(0, 60) || '未命名節奏';
+    if (asNew || !rec.id) {
+      rec.id = uid();
+      rec.createdAt = now;
+    } else {
+      rec.createdAt = p.createdAt || now;
+    }
+    rec.updatedAt = now;
+
+    el.saveStatus.textContent = '儲存中…';
+    return Promise.resolve().then(function () { return DB.putPattern(rec); }).then(function (saved) {
+      state.current = saved;
+      state.unsaved = false;
+      state.modified = false;
+      persistDraft();
+      renderTransport();
+      updateFooter();
+      notifyTabs();
+      return refreshLibrary().then(function () {
+        showToast(asNew ? '已建立「' + saved.name + '」' : '已儲存「' + saved.name + '」');
+        return saved;
+      });
+    }).catch(function (err) {
+      updateSaveStatus();
+      showToast('儲存失敗：' + (err && err.message ? err.message : '未知錯誤'));
+      throw err;
+    });
+  }
+
+  function openSaveDialog(mode) {
+    if (el.dlgSave.open) return;
+    el.dlgSave.dataset.mode = mode;
+    el.dlgSaveTitle.textContent = mode === 'saveas' ? '另存為新節奏' : (state.current.id ? '編輯節奏資訊' : '儲存新節奏');
+    el.saveName.value = mode === 'saveas' ? (state.current.name + ' 複本').slice(0, 60) : state.current.name;
+    el.saveTags.value = state.current.tags.join(', ');
+    el.saveNotes.value = state.current.notes || '';
+    el.dlgSave.returnValue = '';
+    el.dlgSave.showModal();
+    el.saveName.focus();
+    el.saveName.select();
+  }
+
+  function loadPattern(id) {
+    return DB.getPattern(id).then(function (rec) {
+      if (!rec) {
+        showToast('找不到這個節奏，可能已被刪除');
+        return refreshLibrary();
+      }
+      var copy = normalizePattern(rec);
+      if (!copy) {
+        showToast('這個節奏的資料不完整，無法載入');
+        return;
+      }
+      if (state.playing) sequencer.stop();
+      state.current = copy;
+      state.unsaved = false;
+      state.modified = false;
+      persistDraft();
+      renderAll();
+      showToast('已載入「' + copy.name + '」');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }).catch(function () {
+      showToast('載入失敗，請重新載入頁面');
+    });
+  }
+
+  function ensureCanReplaceCurrent() {
+    if (!state.modified) return Promise.resolve(true);
+    return askConfirm({
+      title: '目前節奏尚未儲存',
+      message: '載入其他節奏或建立新節奏，會讓目前這些未儲存的變更消失。要繼續嗎？',
+      okText: '繼續'
+    });
+  }
+
+  function duplicatePattern(id) {
+    return DB.getPattern(id).then(function (rec) {
+      if (!rec) return;
+      var copy = clone(rec);
+      var now = new Date().toISOString();
+      copy.id = uid();
+      copy.name = (rec.name + ' 複本').slice(0, 60);
+      copy.createdAt = now;
+      copy.updatedAt = now;
+      return DB.putPattern(copy).then(function () {
+        return refreshLibrary().then(function () {
+          notifyTabs();
+          showToast('已複製為「' + copy.name + '」');
+        });
+      });
+    }).catch(function () {
+      showToast('複製失敗，請再試一次');
+    });
+  }
+
+  var pendingDelete = null;
+  function deletePattern(id) {
+    return DB.getPattern(id).then(function (rec) {
+      if (!rec) return;
+      return DB.deletePattern(id).then(function () {
+        if (pendingDelete) clearTimeout(pendingDelete.timer);
+        pendingDelete = {
+          pattern: rec,
+          timer: setTimeout(function () { pendingDelete = null; }, CONFIG.UNDO_MS)
+        };
+        if (state.current.id === id) {
+          state.current.id = null;
+          state.unsaved = true;
+          state.modified = true;
+          persistDraft();
+          updateSaveStatus();
+        }
+        return refreshLibrary().then(function () {
+          notifyTabs();
+          showToast('已刪除「' + rec.name + '」', {
+            undo: true,
+            duration: CONFIG.UNDO_MS,
+            onUndo: undoDelete
+          });
+        });
+      });
+    }).catch(function () {
+      showToast('刪除失敗，請再試一次');
+    });
+  }
+
+  function undoDelete() {
+    if (!pendingDelete) return Promise.resolve();
+    clearTimeout(pendingDelete.timer);
+    var rec = pendingDelete.pattern;
+    pendingDelete = null;
+    return DB.putPattern(rec).then(function () {
+      return refreshLibrary().then(function () {
+        notifyTabs();
+        showToast('已復原「' + rec.name + '」');
+      });
+    }).catch(function () {
+      showToast('復原失敗，請重新載入頁面');
+    });
+  }
+
+  /* ============================================================
+     匯入 / 匯出
+     ============================================================ */
+  function parseBackup(text) {
+    var data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error('匯入失敗：這個檔案不是有效的 JSON');
+    }
+    var rawList;
+    if (Array.isArray(data)) {
+      rawList = data;
+    } else if (data && typeof data === 'object' && Array.isArray(data.patterns)) {
+      if (data.schemaVersion && Number(data.schemaVersion) > CONFIG.SCHEMA_VERSION) {
+        throw new Error('這個備份來自較新版本的工具，請先更新再匯入');
+      }
+      rawList = data.patterns;
+    } else {
+      throw new Error('匯入失敗：檔案裡找不到 patterns 陣列');
+    }
+    if (!rawList.length) throw new Error('匯入失敗：備份裡沒有節奏');
+    if (rawList.length > CONFIG.MAX_IMPORT) throw new Error('匯入失敗：一次最多 ' + CONFIG.MAX_IMPORT + ' 筆');
+
+    var byId = new Map();
+    var skipped = 0;
+    rawList.forEach(function (raw) {
+      var p = normalizePattern(raw);
+      if (!p) { skipped++; return; }
+      if (byId.has(p.id)) skipped++;
+      byId.set(p.id, p);
+    });
+    var valid = Array.from(byId.values());
+    if (!valid.length) throw new Error('匯入失敗：所有節奏的資料格式都不正確（需要 name 與 tracks）');
+    return { patterns: valid, skipped: skipped };
+  }
+
+  function exportJSON() {
+    return DB.getAllPatterns().then(function (list) {
+      var now = new Date().toISOString();
+      var includedCurrent = false;
+      // 目前編輯中、還沒存進節奏庫的內容也一併帶走，避免匯出了卻漏掉手上的節奏
+      if (hasHits() && (state.unsaved || state.modified)) {
+        var cur = clone(state.current);
+        cur.name = String(cur.name || '').trim().slice(0, 60) || '未命名節奏';
+        if (!cur.id) cur.id = uid();
+        cur.createdAt = cur.createdAt || now;
+        cur.updatedAt = now;
+        list = list.filter(function (p) { return p.id !== cur.id; });
+        list.push(cur);
+        includedCurrent = true;
+      }
+      list.sort(function (a, b) { return String(a.name).localeCompare(String(b.name), 'zh-Hant'); });
+      var payload = {
+        app: 'groovebox',
+        schemaVersion: CONFIG.SCHEMA_VERSION,
+        exportedAt: now,
+        count: list.length,
+        patterns: list
+      };
+      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      download(blob, 'groovebox-' + stamp() + '.json');
+      showToast('已匯出 ' + list.length + ' 筆節奏' + (includedCurrent ? '（含目前編輯）' : ''));
+    }).catch(function () {
+      showToast('匯出失敗，請重新載入頁面');
+    });
+  }
+
+  function buildMidi(pattern) {
+    var PPQ = 480;
+    var STEP = PPQ / 4;
+    var micros = Math.round(60000000 / pattern.bpm);
+    var events = [];
+    var order = 0;
+
+    function push(tick, prio, bytes) {
+      events.push({ tick: tick, prio: prio, order: order++, bytes: bytes });
+    }
+
+    push(0, 0, [0xFF, 0x51, 0x03, (micros >> 16) & 0xFF, (micros >> 8) & 0xFF, micros & 0xFF]);
+    var nameBytes = new TextEncoder().encode(pattern.name || 'Pattern');
+    push(0, 0, [0xFF, 0x03].concat(vlq(nameBytes.length), Array.from(nameBytes)));
+    push(0, 0, [0xFF, 0x58, 0x04, 0x04, 0x02, 0x18, 0x08]);
+
+    pattern.tracks.forEach(function (tr, ti) {
+      var note = TRACKS[ti].note;
+      tr.steps.forEach(function (lvl, s) {
+        if (!lvl) return;
+        var vel = lvl === 2 ? 112 : 78;
+        var on = s * STEP;
+        var off = on + 45;
+        push(on, 2, [0x99, note, vel]);
+        push(off, 1, [0x89, note, 0x40]);
+      });
+    });
+
+    events.sort(function (a, b) {
+      return a.tick - b.tick || a.prio - b.prio || a.order - b.order;
+    });
+
+    var track = [];
+    var last = 0;
+    events.forEach(function (ev) {
+      track.push.apply(track, vlq(ev.tick - last));
+      track.push.apply(track, ev.bytes);
+      last = ev.tick;
+    });
+    track.push(0x00, 0xFF, 0x2F, 0x00);
+
+    var bytes = [];
+    function ascii(s) {
+      for (var i = 0; i < s.length; i++) bytes.push(s.charCodeAt(i));
+    }
+    ascii('MThd');
+    pushU32(bytes, 6);
+    pushU16(bytes, 0);
+    pushU16(bytes, 1);
+    pushU16(bytes, PPQ);
+    ascii('MTrk');
+    pushU32(bytes, track.length);
+    track.forEach(function (b) { bytes.push(b); });
+    return new Uint8Array(bytes);
+  }
+
+  function vlq(n) {
+    var out = [n & 0x7F];
+    n = Math.floor(n / 128);
+    while (n > 0) {
+      out.unshift((n & 0x7F) | 0x80);
+      n = Math.floor(n / 128);
+    }
+    return out;
+  }
+
+  function pushU32(arr, n) {
+    arr.push((n >>> 24) & 0xFF, (n >>> 16) & 0xFF, (n >>> 8) & 0xFF, n & 0xFF);
+  }
+  function pushU16(arr, n) {
+    arr.push((n >>> 8) & 0xFF, n & 0xFF);
+  }
+
+  function exportMidi() {
+    try {
+      if (!hasHits()) {
+        showToast('目前節奏是空的，先放幾個音再匯出');
+        return;
+      }
+      var data = buildMidi(state.current);
+      download(new Blob([data], { type: 'audio/midi' }), 'groovebox-' + safeFile(state.current.name) + '.mid');
+      showToast('已匯出 MIDI：' + state.current.name);
+    } catch (e) {
+      showToast('MIDI 匯出失敗：' + (e && e.message ? e.message : '未知錯誤'));
+    }
+  }
+
+  function exportCSV() {
+    DB.getAllPatterns().then(function (list) {
+      if (!list.length) {
+        showToast('節奏庫是空的，沒有目錄可匯出');
+        return;
+      }
+      list.sort(function (a, b) { return String(a.name).localeCompare(String(b.name), 'zh-Hant'); });
+      var rows = [['id', 'name', 'bpm', 'stepCount', 'swing', 'tags', 'notes', 'createdAt', 'updatedAt']];
+      list.forEach(function (p) {
+        rows.push([
+          p.id, p.name, p.bpm, p.stepCount, p.swing,
+          (p.tags || []).join('|'), p.notes || '', p.createdAt || '', p.updatedAt || ''
+        ]);
+      });
+      var csv = '\uFEFF' + rows.map(function (r) { return r.map(csvCell).join(','); }).join('\r\n') + '\r\n';
+      download(new Blob([csv], { type: 'text/csv;charset=utf-8' }), 'groovebox-catalog-' + stamp() + '.csv');
+      showToast('已匯出 ' + list.length + ' 筆節奏目錄');
+    }).catch(function () {
+      showToast('匯出 CSV 失敗');
+    });
+  }
+
+  function exportMarkdown() {
+    var p = state.current;
+    var lines = [];
+    lines.push('# ' + p.name);
+    lines.push('');
+    lines.push('- BPM：' + p.bpm);
+    lines.push('- 步數：' + p.stepCount);
+    lines.push('- Swing：' + p.swing + '%');
+    if (p.tags.length) lines.push('- 標籤：' + p.tags.join('、'));
+    if (p.notes) lines.push('- 備註：' + p.notes.replace(/\s*[\r\n]+\s*/g, ' '));
+    lines.push('');
+    lines.push('| 軌道 | ' + Array.from({ length: p.stepCount }, function (_, i) { return i + 1; }).join(' | ') + ' |');
+    lines.push('|' + new Array(p.stepCount + 1).fill('---').join('|') + '|');
+    p.tracks.forEach(function (tr, t) {
+      var cells = tr.steps.map(function (v) { return v === 2 ? '●' : v === 1 ? '○' : '·'; });
+      lines.push('| ' + TRACKS[t].name + ' | ' + cells.join(' | ') + ' |');
+    });
+    lines.push('');
+    lines.push('`●` 重音 · `○` 輕音 · `·` 關閉');
+    lines.push('');
+    var md = lines.join('\n');
+    download(new Blob([md], { type: 'text/markdown;charset=utf-8' }), 'groovebox-' + safeFile(p.name) + '.md');
+    showToast('已匯出 Markdown 節奏表');
+  }
+
+  var pendingImport = null;
+
+  function handleFile(file) {
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) {
+      showToast('檔案太大（上限 20MB）');
+      return;
+    }
+    file.text().then(function (text) {
+      try {
+        var parsed = parseBackup(text);
+        pendingImport = parsed;
+        el.importSummary.textContent = '讀到 ' + parsed.patterns.length + ' 筆有效節奏' +
+          (parsed.skipped ? '，另有 ' + parsed.skipped + ' 筆格式不符已略過' : '') + '。';
+        el.dlgImport.returnValue = '';
+        el.dlgImport.showModal();
+      } catch (err) {
+        pendingImport = null;
+        showToast(err && err.message ? err.message : '匯入失敗');
+      }
+    }).catch(function () {
+      showToast('讀取檔案失敗');
+    });
+  }
+
+  /* ============================================================
+     多分頁同步
+     ============================================================ */
+  var channel = null;
+  try {
+    if ('BroadcastChannel' in window) {
+      channel = new BroadcastChannel('groovebox');
+      channel.onmessage = function (e) {
+        if (e.data === 'changed') refreshLibrary();
+      };
+    }
+  } catch (e) { /* 不支援就略過 */ }
+
+  function notifyTabs() {
+    try { if (channel) channel.postMessage('changed'); } catch (e) { /* 忽略 */ }
+  }
+
+  /* ============================================================
+     主題
+     ============================================================ */
+  function updateThemeButton() {
+    var dark = document.documentElement.dataset.theme === 'dark';
+    el.btnTheme.textContent = dark ? '☀' : '☾';
+    el.btnTheme.setAttribute('aria-label', dark ? '切換為淺色' : '切換為深色');
+  }
+
+  /* ============================================================
+     事件綁定
+     ============================================================ */
+  function bindEvents() {
+    el.playBtn.addEventListener('click', function () {
+      audio.resume();
+      togglePlay();
+    });
+
+    el.btnTheme.addEventListener('click', function () {
+      var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem(CONFIG.THEME_KEY, next); } catch (e) { /* 忽略 */ }
+      updateThemeButton();
+    });
+
+    el.bpmNum.addEventListener('input', function () {
+      var v = Number(el.bpmNum.value);
+      if (!isFinite(v) || el.bpmNum.value === '') return;
+      var n = clamp(Math.round(v), CONFIG.MIN_BPM, CONFIG.MAX_BPM);
+      state.current.bpm = n;
+      el.bpmRange.value = String(n);
+      markDirty();
+    });
+    el.bpmNum.addEventListener('change', function () {
+      var n = clamp(Math.round(Number(el.bpmNum.value) || state.current.bpm), CONFIG.MIN_BPM, CONFIG.MAX_BPM);
+      state.current.bpm = n;
+      el.bpmNum.value = String(n);
+      el.bpmRange.value = String(n);
+      markDirty();
+    });
+    el.bpmRange.addEventListener('input', function () {
+      var n = clamp(Math.round(Number(el.bpmRange.value)), CONFIG.MIN_BPM, CONFIG.MAX_BPM);
+      state.current.bpm = n;
+      el.bpmNum.value = String(n);
+      markDirty();
+    });
+
+    el.swing.addEventListener('input', function () {
+      state.current.swing = clamp(Math.round(Number(el.swing.value)), 0, 60);
+      el.swingOut.textContent = state.current.swing + '%';
+      markDirty();
+    });
+
+    el.volume.addEventListener('input', function () {
+      var v = clamp(Number(el.volume.value) / 100, 0, 1);
+      state.settings.volume = v;
+      el.volOut.textContent = Math.round(v * 100) + '%';
+      audio.setVolume(v);
+      persistSettings();
+    });
+
+    el.stepCount.addEventListener('change', function () {
+      var next = Number(el.stepCount.value);
+      var p = state.current;
+      if (next === p.stepCount) return;
+      var truncates = next < p.stepCount && p.tracks.some(function (tr) {
+        return tr.steps.slice(next).some(function (v) { return v > 0; });
+      });
+      var apply = function () {
+        p.stepCount = next;
+        p.tracks.forEach(function (tr) {
+          var arr = tr.steps.slice(0, next);
+          while (arr.length < next) arr.push(0);
+          tr.steps = arr;
+        });
+        markDirty();
+        renderGrid();
+        updateSaveStatus();
+      };
+      if (truncates) {
+        askConfirm({
+          title: '縮短步數',
+          message: '第 ' + next + ' 步之後的節奏會被刪除，這個動作無法復原。',
+          okText: '縮短'
+        }).then(function (ok) {
+          if (ok) apply();
+          else el.stepCount.value = String(p.stepCount);
+        });
+      } else {
+        apply();
+      }
+    });
+
+    el.patternName.addEventListener('input', function () {
+      state.current.name = el.patternName.value.slice(0, 60);
+      markDirty();
+    });
+
+    /* --- 節奏格點擊 --- */
+    el.rows.addEventListener('click', function (e) {
+      var cell = e.target.closest('.step');
+      if (!cell) return;
+      var t = Number(cell.dataset.t);
+      var s = Number(cell.dataset.s);
+      var tr = state.current.tracks[t];
+      var next = (tr.steps[s] + 1) % 3;
+      tr.steps[s] = next;
+      paintStep(cell, next, TRACKS[t].name, s);
+      markDirty();
+      if (next) audio.audition(t, next);
+    });
+
+    el.rows.addEventListener('focusin', function (e) {
+      var cell = e.target.closest('.step');
+      if (!cell) return;
+      $$('.step', el.rows).forEach(function (c) { c.tabIndex = -1; });
+      cell.tabIndex = 0;
+    });
+
+    el.rows.addEventListener('keydown', function (e) {
+      var cell = e.target.closest('.step');
+      if (!cell) return;
+      var t = Number(cell.dataset.t);
+      var s = Number(cell.dataset.s);
+      var nt = t;
+      var ns = s;
+      var cols = state.current.stepCount;
+      if (e.key === 'ArrowRight') { ns = Math.min(cols - 1, s + 1); }
+      else if (e.key === 'ArrowLeft') { ns = Math.max(0, s - 1); }
+      else if (e.key === 'ArrowDown') { nt = Math.min(TRACKS.length - 1, t + 1); }
+      else if (e.key === 'ArrowUp') { nt = Math.max(0, t - 1); }
+      else return;
+      e.preventDefault();
+      focusCell(nt, ns);
+    });
+
+    /* --- 混音 --- */
+    el.mixGrid.addEventListener('click', function (e) {
+      var btn = e.target.closest('button.mini');
+      if (!btn) return;
+      var card = btn.closest('.mix-card');
+      var t = Number(card.dataset.t);
+      var tr = state.current.tracks[t];
+      if ('mute' in btn.dataset) tr.mute = !tr.mute;
+      if ('solo' in btn.dataset) tr.solo = !tr.solo;
+      applyMixVisuals();
+      markDirty();
+    });
+    el.mixGrid.addEventListener('input', function (e) {
+      var input = e.target;
+      if (!input.matches('input[type="range"]')) return;
+      var card = input.closest('.mix-card');
+      var t = Number(card.dataset.t);
+      state.current.tracks[t].volume = clamp(Number(input.value) / 100, 0, 1);
+      markDirty();
+    });
+
+    /* --- 工具列 --- */
+    $('#btn-save').addEventListener('click', function () {
+      if (state.current.id) saveCurrent(false).catch(function () { });
+      else openSaveDialog('new');
+    });
+    $('#btn-save-as').addEventListener('click', function () {
+      openSaveDialog('saveas');
+    });
+
+    $('#btn-new').addEventListener('click', function () {
+      ensureCanReplaceCurrent().then(function (ok) {
+        if (!ok) return;
+        if (state.playing) sequencer.stop();
+        state.current = emptyPattern('未命名節奏');
+        state.unsaved = true;
+        state.modified = false;
+        persistDraft();
+        renderAll();
+        el.patternName.focus();
+        el.patternName.select();
+        showToast('已建立新節奏，做好後按「儲存」');
+      });
+    });
+
+    $('#btn-template').addEventListener('click', function () {
+      var tpl = TEMPLATES.filter(function (t) { return t.id === el.templateSelect.value; })[0];
+      if (!tpl) return;
+      ensureCanReplaceCurrent().then(function (ok) {
+        if (!ok) return;
+        if (state.playing) sequencer.stop();
+        state.current = patternFromTemplate(tpl);
+        state.unsaved = true;
+        state.modified = false;
+        persistDraft();
+        renderAll();
+        showToast('已套用範本「' + tpl.name + '」，按「儲存」保存');
+      });
+    });
+
+    $('#btn-random').addEventListener('click', function () {
+      var backup = clone(state.current);
+      var p = state.current;
+      p.tracks.forEach(function (tr, t) {
+        var base = TRACKS[t].density;
+        tr.steps = Array.from({ length: p.stepCount }, function (_, s) {
+          if (t === 0 && s % 4 === 0) return 2;
+          var chance = base;
+          if (t === 1 && (s === 4 || s === 12)) chance = 0.95;
+          if (t === 2 && s % 2 === 0) chance = Math.min(1, chance + 0.2);
+          if (s % 4 === 0) chance *= 0.4;
+          return Math.random() < chance ? (Math.random() < 0.3 ? 2 : 1) : 0;
+        });
+      });
+      renderGrid();
+      markDirty();
+      showToast('已產生隨機節奏', {
+        undo: true,
+        duration: 6000,
+        onUndo: function () {
+          if (state.current !== p) { showToast('已切換或儲存節奏，無法復原'); return; }
+          state.current = backup;
+          renderAll();
+          markDirty();
+        }
+      });
+    });
+
+    $('#btn-clear').addEventListener('click', function () {
+      if (!hasHits()) {
+        showToast('節奏格已經是空的');
+        return;
+      }
+      var backup = clone(state.current);
+      var cur = state.current;
+      state.current.tracks.forEach(function (tr) { tr.steps = tr.steps.map(function () { return 0; }); });
+      renderGrid();
+      markDirty();
+      showToast('已清空節奏格', {
+        undo: true,
+        duration: 6000,
+        onUndo: function () {
+          if (state.current !== cur) { showToast('已切換或儲存節奏，無法復原'); return; }
+          state.current = backup;
+          renderAll();
+          markDirty();
+        }
+      });
+    });
+
+    /* --- 節奏庫 --- */
+    el.libSearch.addEventListener('input', debounce(function () {
+      state.lib.q = el.libSearch.value;
+      state.lib.page = 0;
+      renderLibrary();
+    }, 150));
+    el.libTag.addEventListener('change', function () {
+      state.lib.tag = el.libTag.value;
+      state.lib.page = 0;
+      renderLibrary();
+    });
+    el.pagePrev.addEventListener('click', function () {
+      state.lib.page = Math.max(0, state.lib.page - 1);
+      renderLibrary();
+      $('#library-list').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+    el.pageNext.addEventListener('click', function () {
+      state.lib.page += 1;
+      renderLibrary();
+      $('#library-list').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+    el.libList.addEventListener('click', function (e) {
+      var btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      var li = btn.closest('.pattern');
+      if (!li) return;
+      var id = li.dataset.id;
+      var act = btn.dataset.act;
+      if (act === 'load') {
+        ensureCanReplaceCurrent().then(function (ok) {
+          if (ok) loadPattern(id);
+        });
+      } else if (act === 'dup') {
+        duplicatePattern(id);
+      } else if (act === 'del') {
+        deletePattern(id);
+      }
+    });
+
+    /* --- 備份 --- */
+    $('#btn-export-json').addEventListener('click', exportJSON);
+    $('#btn-export-midi').addEventListener('click', exportMidi);
+    $('#btn-export-csv').addEventListener('click', exportCSV);
+    $('#btn-export-md').addEventListener('click', exportMarkdown);
+    $('#btn-import').addEventListener('click', function () { el.fileInput.click(); });
+    el.fileInput.addEventListener('change', function () {
+      var f = el.fileInput.files && el.fileInput.files[0];
+      el.fileInput.value = '';
+      handleFile(f);
+    });
+    $('#btn-clear-all').addEventListener('click', function () {
+      askConfirm({
+        title: '清空全部資料',
+        message: '節奏庫與目前草稿都會被刪除，無法復原。建議先按「匯出全部 JSON」備份。',
+        okText: '全部清空',
+        danger: true
+      }).then(function (ok) {
+        if (!ok) return;
+        DB.clearPatterns().then(function () {
+          return DB.deleteMeta('draft').catch(function () { });
+        }).then(function () {
+          state.lib.all = [];
+          state.lib.q = '';
+          state.lib.tag = '';
+          state.lib.page = 0;
+          el.libSearch.value = '';
+          state.current = emptyPattern('未命名節奏');
+          state.unsaved = true;
+          state.modified = false;
+          if (state.playing) sequencer.stop();
+          renderAll();
+          persistDraft();
+          updateFooter();
+          notifyTabs();
+          showToast('已清空全部資料');
+        }).catch(function (err) {
+          showToast('清空失敗：' + (err && err.message ? err.message : '未知錯誤'));
+        });
+      });
+    });
+
+    /* --- 對話框 --- */
+    // 取消鈕為 type="button"，避免在輸入框按 Enter 時被當成預設送出鈕而取消
+    $$('.dialog [data-cancel]').forEach(function (b) {
+      b.addEventListener('click', function () { b.closest('dialog').close('cancel'); });
+    });
+
+    el.dlgSave.addEventListener('close', function () {
+      if (el.dlgSave.returnValue !== 'ok') return;
+      var name = el.saveName.value.trim();
+      if (!name) {
+        showToast('請輸入節奏名稱');
+        return;
+      }
+      state.current.name = name.slice(0, 60);
+      state.current.tags = parseTags(el.saveTags.value);
+      state.current.notes = el.saveNotes.value.trim().slice(0, 500);
+      var asNew = el.dlgSave.dataset.mode === 'saveas' || !state.current.id;
+      saveCurrent(asNew).catch(function () { });
+    });
+
+    el.dlgConfirm.addEventListener('close', function () {
+      var resolve = confirmResolve;
+      confirmResolve = null;
+      if (resolve) resolve(el.dlgConfirm.returnValue === 'ok');
+    });
+
+    el.dlgImport.addEventListener('close', function () {
+      var parsed = pendingImport;
+      pendingImport = null;
+      if (el.dlgImport.returnValue !== 'ok' || !parsed) return;
+      var modeInput = document.querySelector('input[name="import-mode"]:checked');
+      var mode = modeInput ? modeInput.value : 'merge';
+      var work = Promise.resolve().then(function () {
+        return mode === 'replace' ? DB.replaceAll(parsed.patterns) : DB.putMany(parsed.patterns);
+      });
+      work.then(function () {
+        return refreshLibrary();
+      }).then(function () {
+        notifyTabs();
+        showToast('已匯入 ' + parsed.patterns.length + ' 筆節奏（' + (mode === 'replace' ? '取代' : '合併') + '）' +
+          (parsed.skipped ? '，略過 ' + parsed.skipped + ' 筆壞資料' : ''));
+        if (mode === 'replace') {
+          state.current.id = null;
+          state.unsaved = true;
+          updateSaveStatus();
+        }
+      }).catch(function (err) {
+        showToast('匯入失敗：' + (err && err.message ? err.message : '未知錯誤'));
+      });
+    });
+
+    el.toastClose.addEventListener('click', hideToast);
+    el.toastUndo.addEventListener('click', function () {
+      var fn = toastUndoFn;
+      hideToast();
+      if (fn) fn();
+    });
+    el.alertReload.addEventListener('click', function () { location.reload(); });
+
+    /* --- 全域快捷鍵 --- */
+    document.addEventListener('keydown', function (e) {
+      var tag = (e.target.tagName || '').toLowerCase();
+      var interactive = tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'button' || e.target.isContentEditable;
+      var dialogOpen = !!document.querySelector('dialog[open]');
+      if (e.key === ' ' && !interactive && !dialogOpen) {
+        e.preventDefault();
+        audio.resume();
+        togglePlay();
+      } else if (e.key === '/' && !interactive && !dialogOpen) {
+        e.preventDefault();
+        el.libSearch.focus();
+      } else if ((e.ctrlKey || e.metaKey) && String(e.key).toLowerCase() === 's') {
+        e.preventDefault();
+        if (!dialogOpen) openSaveDialog(state.current.id ? 'edit' : 'new');
+      }
+    });
+
+    document.addEventListener('pointerdown', function () {
+      if (audio.ctx) audio.resume();
+    }, { passive: true });
+
+    window.addEventListener('pagehide', function () {
+      if (draftTimer) persistDraft();
+    });
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden' && draftTimer) persistDraft();
+    });
+  }
+
+  /* ============================================================
+     啟動
+     ============================================================ */
+  function fillTemplateSelect() {
+    var frag = document.createDocumentFragment();
+    TEMPLATES.forEach(function (t) {
+      var o = document.createElement('option');
+      o.value = t.id;
+      o.textContent = t.name + ' · ' + t.bpm + ' BPM';
+      frag.appendChild(o);
+    });
+    el.templateSelect.replaceChildren(frag);
+  }
+
+  function memoryMode() {
+    DB.memory = true;
+    el.memBanner.hidden = false;
+    updateFooter();
+  }
+
+  function repairIndex() {
+    return Promise.all([DB.countPatterns(), DB.countIndex()]).then(function (counts) {
+      if (counts[0] === counts[1]) return;
+      return DB.getAllPatterns().then(function (all) {
+        return DB.clearIndex().then(function () {
+          return DB.putMany(all);
+        });
+      });
+    });
+  }
+
+  function boot() {
+    bindEvents();
+    buildMixPanel();
+    fillTemplateSelect();
+    updateThemeButton();
+
+    DB.open().then(function (ok) {
+      if (!ok) memoryMode();
+      return repairIndex().catch(function () { /* 修復失敗不阻斷 */ });
+    }).then(function () {
+      return DB.getMeta('settings');
+    }).then(function (settings) {
+      if (settings && typeof settings.volume === 'number') {
+        state.settings.volume = clamp(settings.volume, 0, 1);
+      }
+      audio.setVolume(state.settings.volume);
+      return DB.getMeta('draft');
+    }).then(function (draft) {
+      if (draft && draft.pattern && Array.isArray(draft.pattern.tracks) && draft.pattern.tracks.length) {
+        // 名稱被清空時 normalizePattern 會拒收，先補預設名稱以免草稿遺失
+        if (typeof draft.pattern.name !== 'string' || !draft.pattern.name.trim()) draft.pattern.name = '未命名節奏';
+        var restored = normalizePattern(draft.pattern);
+        if (restored) {
+          if (draft.pattern.id === null) restored.id = null;
+          state.current = restored;
+          state.unsaved = draft.unsaved !== false;
+          state.modified = state.unsaved;
+        } else {
+          state.current = patternFromTemplate(TEMPLATES[0]);
+          state.unsaved = true;
+        }
+      } else {
+        state.current = patternFromTemplate(TEMPLATES[0]);
+        state.current.id = null;
+        state.unsaved = true;
+      }
+      persistDraft();
+      renderAll();
+      return refreshLibrary();
+    }).then(function () {
+      return DB.setMeta('schemaVersion', CONFIG.SCHEMA_VERSION).catch(function () { });
+    }).then(function () {
+      updateFooter();
+      if (!DB.memory && navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().catch(function () { });
+      }
+    }).catch(function () {
+      memoryMode();
+      state.current = patternFromTemplate(TEMPLATES[0]);
+      state.unsaved = true;
+      renderAll();
+      showToast('資料庫初始化失敗，已切換為記憶體模式');
+    });
+  }
+
+  boot();
+})();
+</script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
