@@ -884,6 +884,12 @@
         下載 CSV 範本
       </button>
 
+      <!-- Sample Portfolio CSV Download -->
+      <button class="btn btn-secondary btn-sm" id="btnDownloadSampleCsv" title="下載 22 筆內建範例暴險 CSV（欄位與批次匯入相同，可直接再匯入）">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+        下載範例 CSV
+      </button>
+
       <!-- CSV Batch Import -->
       <label class="btn btn-secondary btn-sm" style="margin:0; cursor:pointer;" title="批次匯入 CSV 授信暴險檔案">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -2051,6 +2057,13 @@
     /**
      * 3. Comprehensive Benchmark Sample Data (22 Realistic Cases with Pricing)
      */
+    // 匯入範本與範例 CSV 共用的欄位順序（第 12 欄「特定損失準備提存率」為選填，舊版 11 欄檔案仍可匯入）
+    const IMPORT_CSV_HEADERS = [
+      '暴險代碼', '交易對手/案名', '資產類別代碼', '外部評等(1-6或unrated)',
+      '名目金額(百萬)', 'CCF轉換率(%)', '擔保品抵減(百萬)', '房貸LTV(%)',
+      '授信利差(%)', '預期損失率(%)', '備註說明', '特定損失準備提存率(%)'
+    ];
+
     const SAMPLE_EXPOSURES = [
       { id: 'EXP-1001', counterparty: '中華民國財政部 5年期中央政府公債', assetClass: 'sovereign', ratingGrade: '1', grossExposure: 3500, ccf: 100, crmCollateral: 0, ltv: 0, provisionRate: 0, interestSpread: 1.25, expectedLoss: 0.01, notes: '國家級主權暴險 (零風險權數，流動性儲備)' },
       { id: 'EXP-1002', counterparty: '台灣半導體龍頭企業 資本支出專案聯貸', assetClass: 'corporate_standard', ratingGrade: '1', grossExposure: 2800, ccf: 100, crmCollateral: 0, ltv: 0, provisionRate: 0, interestSpread: 1.85, expectedLoss: 0.05, notes: '標普 AAA~AA- 等級，適用 20% 權數' },
@@ -2904,13 +2917,15 @@
 
       // Download CSV Template
       document.getElementById('btnDownloadCsvTemplate').addEventListener('click', () => {
-        const headers = ['暴險代碼', '交易對手/案名', '資產類別代碼', '外部評等(1-6或unrated)', '名目金額(百萬)', 'CCF轉換率(%)', '擔保品抵減(百萬)', '房貸LTV(%)', '授信利差(%)', '預期損失率(%)', '備註說明'];
         const sampleRows = [
-          ['EXP-DEMO1', '範例台積電中長期資本融資', 'corporate_standard', '1', '1000.0', '100', '0.0', '0', '2.10', '0.05', 'Grade 1 優質評等'],
-          ['EXP-DEMO2', '範例大安區住宅房貸', 'mortgage_res', 'unrated', '80.0', '100', '0.0', '65', '2.25', '0.08', '自住住宅優質首購'],
-          ['EXP-DEMO3', '範例合格科技中小企業', 'corporate_sme', 'unrated', '150.0', '100', '30.0', '0', '3.40', '0.50', '符合15億營收門檻']
+          ['EXP-DEMO1', '範例台積電中長期資本融資', 'corporate_standard', '1', '1000.0', '100', '0.0', '0', '2.10', '0.05', 'Grade 1 優質評等', '0'],
+          ['EXP-DEMO2', '範例大安區住宅房貸', 'mortgage_res', 'unrated', '80.0', '100', '0.0', '65', '2.25', '0.08', '自住住宅優質首購', '0'],
+          ['EXP-DEMO3', '範例合格科技中小企業', 'corporate_sme', 'unrated', '150.0', '100', '30.0', '0', '3.40', '0.50', '符合15億營收門檻', '0'],
+          ['EXP-DEMO4', '範例逾期放款 (提存不足)', 'defaulted', '6', '50.0', '100', '0.0', '0', '0.00', '20.00', '提存未達20%適用150%權數', '10']
         ];
-        const csvContent = '\uFEFF' + headers.join(',') + '\n' + sampleRows.map(r => r.map(c => `"${c}"`).join(',')).join('\n');
+        const csvContent = '\uFEFF' + [IMPORT_CSV_HEADERS, ...sampleRows]
+          .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+          .join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -2919,6 +2934,26 @@
         a.click();
         URL.revokeObjectURL(a.href);
         showToast('已下載標準 CSV 匯入範本', 'success');
+      });
+
+      // Download Sample Portfolio CSV (22 built-in benchmark exposures, re-importable)
+      document.getElementById('btnDownloadSampleCsv').addEventListener('click', () => {
+        const rows = SAMPLE_EXPOSURES.map(item => [
+          item.id, item.counterparty, item.assetClass, item.ratingGrade,
+          item.grossExposure, item.ccf, item.crmCollateral, item.ltv,
+          item.interestSpread, item.expectedLoss, item.notes || '', item.provisionRate || 0
+        ]);
+        const csvContent = '\uFEFF' + [IMPORT_CSV_HEADERS, ...rows]
+          .map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))
+          .join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `SA-CR-Sample-Portfolio-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        showToast(`已下載 ${SAMPLE_EXPOSURES.length} 筆範例暴險 CSV，可直接批次匯入`, 'success');
       });
 
       // Batch CSV Import
@@ -2953,6 +2988,8 @@
               const interestSpread = parseFloat(cols[8]) || 2.50;
               const expectedLoss = parseFloat(cols[9]) || 0.30;
               const notes = cols[10] || '批次 CSV 匯入';
+              const parsedProvision = parseFloat(cols[11]);
+              const provisionRate = Number.isFinite(parsedProvision) ? parsedProvision : 25;
 
               const item = {
                 id,
@@ -2963,7 +3000,7 @@
                 ccf,
                 crmCollateral,
                 ltv,
-                provisionRate: 25,
+                provisionRate,
                 interestSpread,
                 expectedLoss,
                 notes
