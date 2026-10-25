@@ -56,6 +56,8 @@ my-spa-tools/
 │  ├─ word-counter/              文件字數與閱讀時間統計
 │  ├─ wbs-gantt/                 WBS 甘特排程器
 │  ├─ project-tracker/           專案時程暨處理流程紀錄系統（事件、流程紀錄、附件與提醒）
+│  ├─ protrack/                  ProTrack 輕量專案與任務管理系統（多專案看板、清單、統計與 JSON 備份）
+│  ├─ kiseq-workspace/           栖序專案工作台（專案任務看板、總覽、逾期追蹤與 JSON 備份）
 │  ├─ scratchpad/                離線速記便箋
 │  ├─ meeting-burn-rate/         會議燃燒成本看板（即時人力成本與產出評估卡）
 │  ├─ spec-diff/                 SpecDiff 規格書比對工具（版本比對與審查標註）
@@ -150,7 +152,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 69 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 71 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

@@ -1,0 +1,2139 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ProTrack - 輕量專案與任務管理系統</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-subtle: #f1f5f9;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --primary-subtle: #eff6ff;
+      --success: #10b981;
+      --success-subtle: #ecfdf5;
+      --warning: #f59e0b;
+      --warning-subtle: #fffbeb;
+      --danger: #ef4444;
+      --danger-subtle: #fef2f2;
+      --purple: #8b5cf6;
+      --purple-subtle: #f5f3ff;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --radius-lg: 14px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0b0f19;
+      --surface: #131c2e;
+      --surface-subtle: #1a253c;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #22314e;
+      --primary: #3b82f6;
+      --primary-hover: #60a5fa;
+      --primary-subtle: rgba(59, 130, 246, 0.15);
+      --success: #10b981;
+      --success-subtle: rgba(16, 185, 129, 0.15);
+      --warning: #f59e0b;
+      --warning-subtle: rgba(245, 158, 11, 0.15);
+      --danger: #f87171;
+      --danger-subtle: rgba(239, 68, 68, 0.15);
+      --purple: #a855f7;
+      --purple-subtle: rgba(168, 85, 247, 0.15);
+      --shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+      --shadow-lg: 0 12px 24px rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Common Buttons */
+    button, .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.5rem 0.85rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    button:hover, .btn:hover {
+      background: var(--surface-subtle);
+      border-color: var(--text-muted);
+    }
+    button.btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+    button.btn-primary:hover {
+      background: var(--primary-hover);
+    }
+    button.btn-sm {
+      padding: 0.3rem 0.55rem;
+      font-size: 0.8rem;
+    }
+    button.btn-danger {
+      color: var(--danger);
+      border-color: var(--border);
+    }
+    button.btn-danger:hover {
+      background: var(--danger);
+      color: #fff;
+      border-color: var(--danger);
+    }
+    button.btn-ghost {
+      border-color: transparent;
+      background: transparent;
+    }
+    button.btn-ghost:hover {
+      background: var(--surface-subtle);
+    }
+
+    /* Form inputs */
+    input, select, textarea {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.875rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-subtle);
+    }
+
+    /* Header Navbar */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: var(--shadow);
+    }
+
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: linear-gradient(135deg, var(--primary), #6366f1);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 700;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 4px rgba(59, 130, 246, 0.4);
+    }
+    .brand-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .brand-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Sub-header Project & View Bar */
+    .sub-nav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .project-selector-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .project-select {
+      max-width: 200px;
+      font-weight: 600;
+    }
+
+    .view-tabs {
+      display: flex;
+      background: var(--surface-subtle);
+      padding: 3px;
+      border-radius: var(--radius-sm);
+      gap: 3px;
+    }
+    .view-tab {
+      padding: 0.35rem 0.85rem;
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      border-radius: calc(var(--radius-sm) - 2px);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .view-tab.active {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    /* Project Stats Summary Bar */
+    .stats-bar {
+      padding: 0.75rem 1.5rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+    .stat-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .stat-val {
+      font-size: 1.35rem;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+    .progress-bar-bg {
+      height: 6px;
+      background: var(--surface-subtle);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 0.35rem;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--success);
+      border-radius: 999px;
+      transition: width 0.3s ease;
+    }
+
+    /* Filter & Search Bar */
+    .filter-section {
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 1.5rem 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .search-box {
+      flex: 1;
+      min-width: 220px;
+      position: relative;
+    }
+    .search-box input {
+      padding-left: 2rem;
+    }
+    .search-icon {
+      position: absolute;
+      left: 0.65rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* Main Content Area */
+    main {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 0 1.5rem 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Kanban Board Layout */
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.25rem;
+      align-items: start;
+    }
+    @media (max-width: 1100px) {
+      .kanban-board {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 640px) {
+      .kanban-board {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .kanban-col {
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 270px);
+      min-height: 420px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .kanban-col.drag-over {
+      background: var(--primary-subtle);
+      border-color: var(--primary);
+    }
+    .col-header {
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .col-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+    .col-badge {
+      font-size: 0.75rem;
+      padding: 0.1rem 0.5rem;
+      border-radius: 999px;
+      background: var(--surface);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      font-weight: 600;
+    }
+    .col-cards-list {
+      padding: 0.75rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      flex: 1;
+    }
+
+    /* Task Card */
+    .task-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem;
+      box-shadow: var(--shadow);
+      cursor: grab;
+      transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+      position: relative;
+    }
+    .task-card:active {
+      cursor: grabbing;
+    }
+    .task-card:hover {
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+    .task-card.dragging {
+      opacity: 0.4;
+      transform: scale(0.98);
+    }
+
+    .task-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.4rem;
+    }
+    .task-card-title {
+      font-weight: 600;
+      font-size: 0.925rem;
+      line-height: 1.35;
+      color: var(--text);
+    }
+    .task-card-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-bottom: 0.6rem;
+      white-space: pre-line;
+    }
+
+    .tags-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-bottom: 0.6rem;
+    }
+    .tag-badge {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .task-card-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      padding-top: 0.5rem;
+      border-top: 1px solid var(--border);
+      gap: 0.5rem;
+    }
+    .task-meta-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .badge-priority {
+      font-size: 0.72rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .priority-high { background: var(--danger-subtle); color: var(--danger); border: 1px solid var(--danger); }
+    .priority-medium { background: var(--warning-subtle); color: var(--warning); border: 1px solid var(--warning); }
+    .priority-low { background: var(--success-subtle); color: var(--success); border: 1px solid var(--success); }
+
+    .badge-due {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      font-size: 0.72rem;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .badge-due.overdue {
+      background: var(--danger-subtle);
+      color: var(--danger);
+      border-color: var(--danger);
+      font-weight: 600;
+    }
+    .badge-due.today {
+      background: var(--warning-subtle);
+      color: var(--warning);
+      border-color: var(--warning);
+      font-weight: 600;
+    }
+
+    .badge-project {
+      font-size: 0.7rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      background: var(--primary-subtle);
+      color: var(--primary);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .checklist-counter {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+
+    /* List View Layout */
+    .list-view-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .list-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.875rem;
+    }
+    .list-table th {
+      background: var(--surface-subtle);
+      padding: 0.75rem 1rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+    .list-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .list-table tr:hover td {
+      background: var(--surface-subtle);
+    }
+    .list-table tr:last-child td {
+      border-bottom: none;
+    }
+    .task-title-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+
+    /* Analytics Dashboard Layout */
+    .analytics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+    .analytics-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+    }
+    .analytics-title {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .chart-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.85rem;
+    }
+    .chart-bar-label {
+      width: 90px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .chart-bar-track {
+      flex: 1;
+      height: 10px;
+      background: var(--surface-subtle);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .chart-bar-value {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.4s ease;
+    }
+    .chart-bar-count {
+      width: 40px;
+      text-align: right;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    /* Modal / Dialog */
+    dialog {
+      margin: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      color: var(--text);
+      padding: 1.75rem;
+      max-width: 580px;
+      width: 92%;
+      box-shadow: var(--shadow-lg);
+    }
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(3px);
+    }
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .dialog-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .dialog-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.85rem;
+    }
+    @media (max-width: 480px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .form-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .dialog-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.65rem;
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Checklist in dialog */
+    .checklist-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      max-height: 140px;
+      overflow-y: auto;
+      padding: 0.25rem 0;
+    }
+    .checklist-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--surface-subtle);
+      padding: 0.35rem 0.6rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.85rem;
+    }
+    .checklist-item span {
+      flex: 1;
+    }
+    .checklist-item.done span {
+      text-decoration: line-through;
+      color: var(--text-muted);
+    }
+    .checklist-add-row {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.35rem;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1.5rem;
+      color: var(--text-muted);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      margin-top: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .empty-state-icon {
+      font-size: 2.5rem;
+    }
+
+    /* Toast Notification */
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    .toast {
+      pointer-events: auto;
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.75rem 1.2rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      animation: slideIn 0.25s ease forwards;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Action bar buttons on task */
+    .card-actions-dropdown {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-wrap">
+      <div class="brand-icon">P</div>
+      <div>
+        <div class="brand-title">ProTrack 專案管理小工具</div>
+        <div class="brand-subtitle">離線首選 · 輕量敏捷看板與任務追蹤</div>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button id="btn-theme" title="切換深色/淺色主題">🌓 主題</button>
+      <button id="btn-export" title="備份所有專案與任務為 JSON">📥 匯出</button>
+      <button id="btn-import-trigger" title="載入 JSON 備份檔">📤 匯入</button>
+      <input type="file" id="file-import" accept=".json" style="display:none;">
+      <button id="btn-reset-demo" class="btn-ghost" title="重新填入示範資料">🔄 重設示範</button>
+      <button id="btn-new-task" class="btn-primary">＋ 新增任務</button>
+    </div>
+  </header>
+
+  <!-- Sub Navigation -->
+  <div class="sub-nav">
+    <div class="project-selector-wrap">
+      <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">專案：</span>
+      <select id="project-filter" class="project-select">
+        <option value="ALL">全部專案 (All Projects)</option>
+      </select>
+      <button id="btn-manage-projects" class="btn-sm" title="管理專案清單">⚙️ 專案管理</button>
+    </div>
+
+    <div class="view-tabs">
+      <button class="view-tab active" data-view="kanban">
+        <span>📋</span> 看板
+      </button>
+      <button class="view-tab" data-view="list">
+        <span>📝</span> 清單
+      </button>
+      <button class="view-tab" data-view="analytics">
+        <span>📊</span> 統計儀表板
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Banner -->
+  <div class="stats-bar" id="stats-banner">
+    <div class="stat-card">
+      <div class="stat-icon" style="background: var(--primary-subtle); color: var(--primary);">🎯</div>
+      <div style="flex: 1;">
+        <div class="stat-label">任務總進度</div>
+        <div class="stat-val" id="stat-progress-pct">0%</div>
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="stat-progress-bar" style="width: 0%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background: var(--purple-subtle); color: var(--purple);">📌</div>
+      <div>
+        <div class="stat-label">總任務數</div>
+        <div class="stat-val" id="stat-total-tasks">0</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background: var(--warning-subtle); color: var(--warning);">⚡</div>
+      <div>
+        <div class="stat-label">進行中</div>
+        <div class="stat-val" id="stat-in-progress">0</div>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon" style="background: var(--danger-subtle); color: var(--danger);">⏰</div>
+      <div>
+        <div class="stat-label">逾期 / 今日截止</div>
+        <div class="stat-val" id="stat-due-urgent">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter & Search Bar -->
+  <div class="filter-section">
+    <div class="search-box">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="search-input" placeholder="搜尋任務標題、內容或標籤...">
+    </div>
+
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+      <select id="priority-filter" style="width: auto;">
+        <option value="ALL">全部優先級</option>
+        <option value="HIGH">🔴 高優先級</option>
+        <option value="MEDIUM">🟡 中優先級</option>
+        <option value="LOW">🟢 低優先級</option>
+      </select>
+
+      <select id="due-filter" style="width: auto;">
+        <option value="ALL">全部日期</option>
+        <option value="OVERDUE">⚠️ 已逾期</option>
+        <option value="TODAY">📅 今天到期</option>
+        <option value="WEEK">⏱️ 7天內到期</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Main Views -->
+  <main>
+    <!-- View 1: Kanban Board -->
+    <div id="view-kanban" class="view-panel">
+      <div class="kanban-board">
+        <!-- Col 1: TODO -->
+        <div class="kanban-col" data-status="TODO" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'TODO')">
+          <div class="col-header">
+            <div class="col-title-wrap">
+              <span>📌 待處理</span>
+              <span class="col-badge" id="badge-count-TODO">0</span>
+            </div>
+            <button class="btn-ghost btn-sm" onclick="openNewTaskModal('TODO')" title="在此狀態新增任務">＋</button>
+          </div>
+          <div class="col-cards-list" id="cards-TODO"></div>
+        </div>
+
+        <!-- Col 2: IN_PROGRESS -->
+        <div class="kanban-col" data-status="IN_PROGRESS" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'IN_PROGRESS')">
+          <div class="col-header">
+            <div class="col-title-wrap">
+              <span>⚡ 進行中</span>
+              <span class="col-badge" id="badge-count-IN_PROGRESS">0</span>
+            </div>
+            <button class="btn-ghost btn-sm" onclick="openNewTaskModal('IN_PROGRESS')" title="在此狀態新增任務">＋</button>
+          </div>
+          <div class="col-cards-list" id="cards-IN_PROGRESS"></div>
+        </div>
+
+        <!-- Col 3: REVIEW -->
+        <div class="kanban-col" data-status="REVIEW" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'REVIEW')">
+          <div class="col-header">
+            <div class="col-title-wrap">
+              <span>🔍 審核 / 驗收</span>
+              <span class="col-badge" id="badge-count-REVIEW">0</span>
+            </div>
+            <button class="btn-ghost btn-sm" onclick="openNewTaskModal('REVIEW')" title="在此狀態新增任務">＋</button>
+          </div>
+          <div class="col-cards-list" id="cards-REVIEW"></div>
+        </div>
+
+        <!-- Col 4: DONE -->
+        <div class="kanban-col" data-status="DONE" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'DONE')">
+          <div class="col-header">
+            <div class="col-title-wrap">
+              <span>✅ 已完成</span>
+              <span class="col-badge" id="badge-count-DONE">0</span>
+            </div>
+            <button class="btn-ghost btn-sm" onclick="openNewTaskModal('DONE')" title="在此狀態新增任務">＋</button>
+          </div>
+          <div class="col-cards-list" id="cards-DONE"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- View 2: List View -->
+    <div id="view-list" class="view-panel" style="display:none;">
+      <div class="list-view-container">
+        <table class="list-table">
+          <thead>
+            <tr>
+              <th style="width: 44px; text-align: center;">完成</th>
+              <th>任務標題 / 所屬專案</th>
+              <th>狀態</th>
+              <th>優先級</th>
+              <th>截止日</th>
+              <th>子任務</th>
+              <th style="width: 120px; text-align: right;">操作</th>
+            </tr>
+          </thead>
+          <tbody id="list-tbody">
+            <!-- Rendered list items -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- View 3: Analytics View -->
+    <div id="view-analytics" class="view-panel" style="display:none;">
+      <div class="analytics-grid">
+        <!-- Status Breakdown -->
+        <div class="analytics-card">
+          <div class="analytics-title"><span>📊</span> 任務狀態分佈</div>
+          <div id="analytics-status-bars"></div>
+        </div>
+
+        <!-- Priority Breakdown -->
+        <div class="analytics-card">
+          <div class="analytics-title"><span>🎯</span> 優先級分佈</div>
+          <div id="analytics-priority-bars"></div>
+        </div>
+
+        <!-- Projects Summary Breakdown -->
+        <div class="analytics-card" style="grid-column: 1 / -1;">
+          <div class="analytics-title"><span>🚀</span> 各專案進度概覽</div>
+          <div id="analytics-project-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="empty-state" class="empty-state" style="display:none;">
+      <div class="empty-state-icon">📂</div>
+      <div style="font-weight: 600; font-size: 1.1rem;">沒有符合條件的任務</div>
+      <p style="font-size: 0.875rem;">請調整搜尋條件，或點擊上方「＋ 新增任務」建立新工作事項！</p>
+    </div>
+  </main>
+
+  <!-- Modal: Task Create / Edit Dialog -->
+  <dialog id="task-dialog">
+    <div class="dialog-header">
+      <div class="dialog-title" id="task-dialog-title">新增任務</div>
+      <button class="btn-ghost btn-sm" onclick="closeTaskDialog()">✕</button>
+    </div>
+    <form class="dialog-form" id="task-form">
+      <input type="hidden" id="task-id">
+
+      <div class="form-group">
+        <label class="form-label" for="task-title">任務標題 *</label>
+        <input type="text" id="task-title" required placeholder="例如：設計登入介面 UI Mockup">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="task-project">所屬專案</label>
+          <select id="task-project" required></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="task-status">任務狀態</label>
+          <select id="task-status">
+            <option value="TODO">📌 待處理</option>
+            <option value="IN_PROGRESS">⚡ 進行中</option>
+            <option value="REVIEW">🔍 審核 / 驗收</option>
+            <option value="DONE">✅ 已完成</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" for="task-priority">優先級</label>
+          <select id="task-priority">
+            <option value="HIGH">🔴 高優先級</option>
+            <option value="MEDIUM" selected>🟡 中優先級</option>
+            <option value="LOW">🟢 低優先級</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="task-due-date">截止日期</label>
+          <input type="date" id="task-due-date">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="task-tags">標籤 (以逗點分隔)</label>
+        <input type="text" id="task-tags" placeholder="例如：UI/UX, 前端, API">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="task-desc">詳細說明 / 筆記</label>
+        <textarea id="task-desc" rows="3" placeholder="補充任務需求、驗收標準或備忘..."></textarea>
+      </div>
+
+      <!-- Checklist Section -->
+      <div class="form-group">
+        <label class="form-label">子任務檢查清單 (Subtasks)</label>
+        <div class="checklist-container" id="checklist-items-wrap"></div>
+        <div class="checklist-add-row">
+          <input type="text" id="new-subtask-input" placeholder="輸入子任務內容後按 Enter 或新增" onkeydown="if(event.key==='Enter'){event.preventDefault(); addSubtaskFromInput();}">
+          <button type="button" class="btn-sm" onclick="addSubtaskFromInput()">＋ 新增</button>
+        </div>
+      </div>
+
+      <div class="dialog-footer">
+        <button type="button" class="btn" onclick="closeTaskDialog()">取消</button>
+        <button type="submit" class="btn-primary">儲存任務</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal: Project Management Dialog -->
+  <dialog id="projects-dialog">
+    <div class="dialog-header">
+      <div class="dialog-title">專案列表管理</div>
+      <button class="btn-ghost btn-sm" onclick="closeProjectsDialog()">✕</button>
+    </div>
+    <div style="margin-bottom: 1rem;">
+      <form id="new-project-form" style="display: flex; gap: 0.5rem;">
+        <input type="text" id="new-project-name" required placeholder="新專案名稱 (如：行動 App 改版)" style="flex: 1;">
+        <button type="submit" class="btn-primary btn-sm">＋ 建立專案</button>
+      </form>
+    </div>
+    <div style="font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-muted);">現有專案：</div>
+    <div id="project-manage-list" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem;"></div>
+    <div class="dialog-footer">
+      <button type="button" class="btn" onclick="closeProjectsDialog()">完成關閉</button>
+    </div>
+  </dialog>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <script>
+    /* =====================================================================
+     * 1. Promise-based IndexedDB Layer
+     * ===================================================================== */
+    class ProTrackDB {
+      constructor(dbName = 'ProTrackDB', version = 1) {
+        this.dbName = dbName;
+        this.version = version;
+        this.db = null;
+      }
+
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(this.dbName, this.version);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('projects')) {
+              db.createObjectStore('projects', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('tasks')) {
+              const taskStore = db.createObjectStore('tasks', { keyPath: 'id' });
+              taskStore.createIndex('projectId', 'projectId', { unique: false });
+              taskStore.createIndex('status', 'status', { unique: false });
+            }
+          };
+          req.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve(this.db);
+          };
+          req.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      async getAll(storeName) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readonly');
+          const store = tx.objectStore(storeName);
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async put(storeName, item) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          const req = store.put(item);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async delete(storeName, id) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          const req = store.delete(id);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async clear(storeName) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const tx = this.db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          const req = store.clear();
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+    }
+
+    /* =====================================================================
+     * 2. Application State & Demo Data
+     * ===================================================================== */
+    const db = new ProTrackDB();
+
+    let state = {
+      projects: [],
+      tasks: [],
+      activeView: 'kanban', // 'kanban' | 'list' | 'analytics'
+      filters: {
+        projectId: 'ALL',
+        priority: 'ALL',
+        due: 'ALL',
+        search: ''
+      },
+      currentEditingSubtasks: [],
+      draggedTaskId: null
+    };
+
+    const DEFAULT_DEMO_PROJECTS = [
+      { id: 'proj-1', name: '官網改版 3.0', color: '#3b82f6', createdAt: Date.now() - 86400000 * 10 },
+      { id: 'proj-2', name: '行動 App 交付', color: '#10b981', createdAt: Date.now() - 86400000 * 7 },
+      { id: 'proj-3', name: '行銷秋季專案', color: '#f59e0b', createdAt: Date.now() - 86400000 * 5 }
+    ];
+
+    const getTodayISO = (offsetDays = 0) => {
+      const d = new Date();
+      d.setDate(d.getDate() + offsetDays);
+      // 使用本地時間格式化（toISOString 為 UTC，在 UTC+8 凌晨會差一天）
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+
+    const DEFAULT_DEMO_TASKS = [
+      {
+        id: 'task-1',
+        projectId: 'proj-1',
+        title: '響應式首頁設計稿審核',
+        description: '確認手機、平板與桌面三種解析度版面規格，以及深色主題樣式。',
+        status: 'TODO',
+        priority: 'HIGH',
+        dueDate: getTodayISO(1),
+        tags: ['UI/UX', '設計'],
+        subtasks: [
+          { id: 'st-1', text: '確認色票系統', done: true },
+          { id: 'st-2', text: '首頁輪播圖確認', done: false },
+          { id: 'st-3', text: '字體階層規範', done: false }
+        ],
+        updatedAt: Date.now() - 3600000 * 2
+      },
+      {
+        id: 'task-2',
+        projectId: 'proj-1',
+        title: '實作使用者登入與 JWT 授權',
+        description: '串接後端 Auth API，包含 Refresh Token 自動換發機制。',
+        status: 'IN_PROGRESS',
+        priority: 'HIGH',
+        dueDate: getTodayISO(0), // 今天
+        tags: ['前端', 'API', '安全'],
+        subtasks: [
+          { id: 'st-4', text: '登入表單防呆校驗', done: true },
+          { id: 'st-5', text: 'Token 儲存與攔截器', done: true },
+          { id: 'st-6', text: '忘記密碼驗證信流程', done: false }
+        ],
+        updatedAt: Date.now() - 3600000 * 4
+      },
+      {
+        id: 'task-3',
+        projectId: 'proj-2',
+        title: '推播通知功能測試',
+        description: '驗證 iOS APNs 與 Android FCM 於不同狀態下推播接收與點擊跳轉行為。',
+        status: 'REVIEW',
+        priority: 'MEDIUM',
+        dueDate: getTodayISO(3),
+        tags: ['App', '測試', 'QA'],
+        subtasks: [
+          { id: 'st-7', text: 'iOS 背景推播喚醒', done: true },
+          { id: 'st-8', text: 'Android 點擊深層連結 (Deep Link)', done: true }
+        ],
+        updatedAt: Date.now() - 86400000
+      },
+      {
+        id: 'task-4',
+        projectId: 'proj-3',
+        title: 'EDM 宣傳文案與主視覺產出',
+        description: '完成秋季限時活動的主視覺設計與三款 EDM 文案 A/B 測試規劃。',
+        status: 'DONE',
+        priority: 'MEDIUM',
+        dueDate: getTodayISO(-2), // 已逾期完成
+        tags: ['行銷', '文案'],
+        subtasks: [
+          { id: 'st-9', text: '主視覺確認', done: true },
+          { id: 'st-10', text: '文案 A/B 測試草稿', done: true }
+        ],
+        updatedAt: Date.now() - 86400000 * 2
+      },
+      {
+        id: 'task-5',
+        projectId: 'proj-2',
+        title: 'App 啟動效能優化 (啟動秒數 < 1.2s)',
+        description: '延遲載入非關鍵模組，排查冷啟動時耗時的初始化函式。',
+        status: 'TODO',
+        priority: 'LOW',
+        dueDate: getTodayISO(5),
+        tags: ['App', '效能'],
+        subtasks: [],
+        updatedAt: Date.now() - 86400000 * 3
+      }
+    ];
+
+    /* =====================================================================
+     * 3. Initialization & Data Loading
+     * ===================================================================== */
+    async function loadData() {
+      try {
+        state.projects = await db.getAll('projects');
+        state.tasks = await db.getAll('tasks');
+
+        // Initial launch demo populator
+        if (state.projects.length === 0 && state.tasks.length === 0) {
+          for (const p of DEFAULT_DEMO_PROJECTS) await db.put('projects', p);
+          for (const t of DEFAULT_DEMO_TASKS) await db.put('tasks', t);
+          state.projects = structuredClone(DEFAULT_DEMO_PROJECTS);
+          state.tasks = structuredClone(DEFAULT_DEMO_TASKS);
+          showToast('已為您載入示範專案與任務！');
+        }
+
+        renderProjectSelects();
+        render();
+      } catch (err) {
+        console.error('Failed to load DB:', err);
+        showToast('讀取本機資料庫失敗: ' + err.message, 'danger');
+      }
+    }
+
+    async function resetDemoData() {
+      if (!confirm('確定要清空目前資料並重新載入示範資料嗎？')) return;
+      await db.clear('projects');
+      await db.clear('tasks');
+      for (const p of DEFAULT_DEMO_PROJECTS) await db.put('projects', p);
+      for (const t of DEFAULT_DEMO_TASKS) await db.put('tasks', t);
+      state.projects = structuredClone(DEFAULT_DEMO_PROJECTS);
+      state.tasks = structuredClone(DEFAULT_DEMO_TASKS);
+      state.filters.projectId = 'ALL';
+      document.getElementById('project-filter').value = 'ALL';
+      renderProjectSelects();
+      render();
+      showToast('已重設為示範資料');
+    }
+
+    /* =====================================================================
+     * 4. UI Rendering Functions
+     * ===================================================================== */
+    function render() {
+      const filteredTasks = getFilteredTasks();
+
+      renderStatsBanner();
+
+      if (state.activeView === 'kanban') {
+        renderKanban(filteredTasks);
+      } else if (state.activeView === 'list') {
+        renderList(filteredTasks);
+      } else if (state.activeView === 'analytics') {
+        renderAnalytics();
+      }
+
+      // Empty state
+      const emptyEl = document.getElementById('empty-state');
+      if (filteredTasks.length === 0 && state.activeView !== 'analytics') {
+        emptyEl.style.display = 'flex';
+      } else {
+        emptyEl.style.display = 'none';
+      }
+    }
+
+    function getFilteredTasks() {
+      return state.tasks.filter(task => {
+        // Project filter
+        if (state.filters.projectId !== 'ALL' && task.projectId !== state.filters.projectId) {
+          return false;
+        }
+
+        // Priority filter
+        if (state.filters.priority !== 'ALL' && task.priority !== state.filters.priority) {
+          return false;
+        }
+
+        // Search query
+        if (state.filters.search.trim()) {
+          const q = state.filters.search.toLowerCase();
+          const matchTitle = (task.title || '').toLowerCase().includes(q);
+          const matchDesc = (task.description || '').toLowerCase().includes(q);
+          const matchTags = (task.tags || []).some(tag => tag.toLowerCase().includes(q));
+          if (!matchTitle && !matchDesc && !matchTags) return false;
+        }
+
+        // Due date filter
+        if (state.filters.due !== 'ALL') {
+          if (!task.dueDate) return false;
+          const today = getTodayISO(0);
+          if (state.filters.due === 'OVERDUE') {
+            if (task.dueDate >= today || task.status === 'DONE') return false;
+          } else if (state.filters.due === 'TODAY') {
+            if (task.dueDate !== today) return false;
+          } else if (state.filters.due === 'WEEK') {
+            const nextWeek = getTodayISO(7);
+            if (task.dueDate < today || task.dueDate > nextWeek) return false;
+          }
+        }
+
+        return true;
+      });
+    }
+
+    function renderStatsBanner() {
+      const activeTasks = state.filters.projectId === 'ALL'
+        ? state.tasks
+        : state.tasks.filter(t => t.projectId === state.filters.projectId);
+
+      const total = activeTasks.length;
+      const done = activeTasks.filter(t => t.status === 'DONE').length;
+      const inProgress = activeTasks.filter(t => t.status === 'IN_PROGRESS').length;
+      const today = getTodayISO(0);
+      const urgent = activeTasks.filter(t => t.status !== 'DONE' && t.dueDate && t.dueDate <= today).length;
+
+      const pct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+      document.getElementById('stat-progress-pct').textContent = `${pct}%`;
+      document.getElementById('stat-progress-bar').style.width = `${pct}%`;
+      document.getElementById('stat-total-tasks').textContent = total;
+      document.getElementById('stat-in-progress').textContent = inProgress;
+      document.getElementById('stat-due-urgent').textContent = urgent;
+    }
+
+    /* Render: Kanban Board */
+    function renderKanban(tasks) {
+      const cols = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
+
+      cols.forEach(status => {
+        const colList = document.getElementById(`cards-${status}`);
+        const colBadge = document.getElementById(`badge-count-${status}`);
+        const statusTasks = tasks.filter(t => t.status === status);
+
+        colBadge.textContent = statusTasks.length;
+
+        if (statusTasks.length === 0) {
+          colList.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 2rem 0;">暫無任務</div>`;
+          return;
+        }
+
+        colList.innerHTML = statusTasks.map(t => createTaskCardHTML(t)).join('');
+      });
+    }
+
+    function createTaskCardHTML(task) {
+      const project = state.projects.find(p => p.id === task.projectId);
+      const projectName = project ? project.name : '未分類';
+
+      // Priority badge label
+      const priorityLabels = { HIGH: '🔴 高', MEDIUM: '🟡 中', LOW: '🟢 低' };
+      const priorityClass = `priority-${(task.priority || 'medium').toLowerCase()}`;
+
+      // Due date status
+      let dueDateBadge = '';
+      if (task.dueDate) {
+        const today = getTodayISO(0);
+        let statusClass = '';
+        if (task.status !== 'DONE') {
+          if (task.dueDate < today) statusClass = 'overdue';
+          else if (task.dueDate === today) statusClass = 'today';
+        }
+        dueDateBadge = `<span class="badge-due ${statusClass}">📅 ${task.dueDate}</span>`;
+      }
+
+      // Tags
+      const tagsHTML = (task.tags || []).map(tag => `<span class="tag-badge">#${escapeHTML(tag)}</span>`).join('');
+
+      // Subtasks count
+      let subtasksHTML = '';
+      if (task.subtasks && task.subtasks.length > 0) {
+        const completedCount = task.subtasks.filter(s => s.done).length;
+        subtasksHTML = `<span class="checklist-counter" title="已完成 ${completedCount} / ${task.subtasks.length}">☑️ ${completedCount}/${task.subtasks.length}</span>`;
+      }
+
+      return `
+        <div class="task-card" draggable="true" data-id="${task.id}" 
+             ondragstart="handleDragStart(event, '${task.id}')" 
+             ondragend="handleDragEnd(event)">
+          <div class="task-card-header">
+            <div class="task-card-title">${escapeHTML(task.title)}</div>
+            <div class="card-actions-dropdown">
+              <button class="btn-ghost btn-sm" onclick="openEditTaskModal('${task.id}')" title="編輯任務">✏️</button>
+              <button class="btn-ghost btn-sm" onclick="deleteTask('${task.id}')" title="刪除任務">🗑️</button>
+            </div>
+          </div>
+
+          ${task.description ? `<div class="task-card-desc">${escapeHTML(task.description)}</div>` : ''}
+
+          ${tagsHTML ? `<div class="tags-wrap">${tagsHTML}</div>` : ''}
+
+          <div class="task-card-meta">
+            <div class="task-meta-left">
+              <span class="badge-project">${escapeHTML(projectName)}</span>
+              <span class="badge-priority ${priorityClass}">${priorityLabels[task.priority] || '中'}</span>
+              ${dueDateBadge}
+            </div>
+            <div>
+              ${subtasksHTML}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    /* Render: List View */
+    function renderList(tasks) {
+      const tbody = document.getElementById('list-tbody');
+      if (tasks.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2.5rem; color: var(--text-muted);">無符合條件的任務</td></tr>`;
+        return;
+      }
+
+      const statusMap = {
+        TODO: '📌 待處理',
+        IN_PROGRESS: '⚡ 進行中',
+        REVIEW: '🔍 審核中',
+        DONE: '✅ 已完成'
+      };
+
+      const priorityMap = {
+        HIGH: '<span class="badge-priority priority-high">🔴 高</span>',
+        MEDIUM: '<span class="badge-priority priority-medium">🟡 中</span>',
+        LOW: '<span class="badge-priority priority-low">🟢 低</span>'
+      };
+
+      tbody.innerHTML = tasks.map(task => {
+        const project = state.projects.find(p => p.id === task.projectId);
+        const projectName = project ? project.name : '未分類';
+        const isDone = task.status === 'DONE';
+
+        const subtaskSummary = task.subtasks && task.subtasks.length > 0
+          ? `${task.subtasks.filter(s => s.done).length} / ${task.subtasks.length}`
+          : '-';
+
+        return `
+          <tr>
+            <td style="text-align: center;">
+              <input type="checkbox" ${isDone ? 'checked' : ''} onchange="toggleTaskDone('${task.id}', this.checked)" style="cursor: pointer; width: 16px; height: 16px;">
+            </td>
+            <td>
+              <div class="task-title-cell">
+                <div style="font-weight: 600; ${isDone ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
+                  ${escapeHTML(task.title)}
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">
+                  <span class="badge-project">${escapeHTML(projectName)}</span>
+                  ${(task.tags || []).map(t => `<span class="tag-badge">#${escapeHTML(t)}</span>`).join(' ')}
+                </div>
+              </div>
+            </td>
+            <td>
+              <select onchange="updateTaskStatus('${task.id}', this.value)" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                <option value="TODO" ${task.status === 'TODO' ? 'selected' : ''}>📌 待處理</option>
+                <option value="IN_PROGRESS" ${task.status === 'IN_PROGRESS' ? 'selected' : ''}>⚡ 進行中</option>
+                <option value="REVIEW" ${task.status === 'REVIEW' ? 'selected' : ''}>🔍 審核中</option>
+                <option value="DONE" ${task.status === 'DONE' ? 'selected' : ''}>✅ 已完成</option>
+              </select>
+            </td>
+            <td>${priorityMap[task.priority] || priorityMap.MEDIUM}</td>
+            <td style="font-size: 0.825rem;">${task.dueDate || '-'}</td>
+            <td style="font-size: 0.825rem; color: var(--text-muted);">${subtaskSummary}</td>
+            <td style="text-align: right;">
+              <button class="btn-ghost btn-sm" onclick="openEditTaskModal('${task.id}')">✏️ 編輯</button>
+              <button class="btn-ghost btn-sm btn-danger" onclick="deleteTask('${task.id}')">🗑️</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    /* Render: Analytics Dashboard */
+    function renderAnalytics() {
+      const activeTasks = state.filters.projectId === 'ALL'
+        ? state.tasks
+        : state.tasks.filter(t => t.projectId === state.filters.projectId);
+
+      const total = activeTasks.length || 1; // avoid divide by zero
+
+      // 1. Status breakdown
+      const statusCounts = {
+        '📌 待處理 (TODO)': activeTasks.filter(t => t.status === 'TODO').length,
+        '⚡ 進行中 (IN PROGRESS)': activeTasks.filter(t => t.status === 'IN_PROGRESS').length,
+        '🔍 審核中 (REVIEW)': activeTasks.filter(t => t.status === 'REVIEW').length,
+        '✅ 已完成 (DONE)': activeTasks.filter(t => t.status === 'DONE').length
+      };
+
+      const statusColors = ['#94a3b8', '#3b82f6', '#f59e0b', '#10b981'];
+
+      document.getElementById('analytics-status-bars').innerHTML = Object.entries(statusCounts).map(([label, count], idx) => {
+        const pct = Math.round((count / total) * 100);
+        return `
+          <div class="chart-bar-row">
+            <div class="chart-bar-label" title="${label}">${label.split(' ')[0]}</div>
+            <div class="chart-bar-track">
+              <div class="chart-bar-value" style="width: ${pct}%; background: ${statusColors[idx]};"></div>
+            </div>
+            <div class="chart-bar-count">${count} (${pct}%)</div>
+          </div>
+        `;
+      }).join('');
+
+      // 2. Priority breakdown
+      const priorityCounts = {
+        '🔴 高優先級': activeTasks.filter(t => t.priority === 'HIGH').length,
+        '🟡 中優先級': activeTasks.filter(t => t.priority === 'MEDIUM').length,
+        '🟢 低優先級': activeTasks.filter(t => t.priority === 'LOW').length
+      };
+      const prioColors = ['#ef4444', '#f59e0b', '#10b981'];
+
+      document.getElementById('analytics-priority-bars').innerHTML = Object.entries(priorityCounts).map(([label, count], idx) => {
+        const pct = Math.round((count / total) * 100);
+        return `
+          <div class="chart-bar-row">
+            <div class="chart-bar-label">${label}</div>
+            <div class="chart-bar-track">
+              <div class="chart-bar-value" style="width: ${pct}%; background: ${prioColors[idx]};"></div>
+            </div>
+            <div class="chart-bar-count">${count} (${pct}%)</div>
+          </div>
+        `;
+      }).join('');
+
+      // 3. Projects progress list
+      const projContainer = document.getElementById('analytics-project-list');
+      if (state.projects.length === 0) {
+        projContainer.innerHTML = '<div style="color: var(--text-muted);">尚無專案</div>';
+        return;
+      }
+
+      projContainer.innerHTML = state.projects.map(proj => {
+        const pTasks = state.tasks.filter(t => t.projectId === proj.id);
+        const pTotal = pTasks.length;
+        const pDone = pTasks.filter(t => t.status === 'DONE').length;
+        const pPct = pTotal === 0 ? 0 : Math.round((pDone / pTotal) * 100);
+
+        return `
+          <div style="margin-bottom: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; font-weight: 600; margin-bottom: 0.35rem;">
+              <span>📁 ${escapeHTML(proj.name)}</span>
+              <span style="color: var(--text-muted);">${pDone} / ${pTotal} 任務完成 (${pPct}%)</span>
+            </div>
+            <div class="progress-bar-bg" style="height: 9px;">
+              <div class="progress-bar-fill" style="width: ${pPct}%; background: ${proj.color || 'var(--primary)'};"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderProjectSelects() {
+      // 1. Top filter dropdown
+      const filterSelect = document.getElementById('project-filter');
+      const currentFilter = state.filters.projectId;
+      filterSelect.innerHTML = `<option value="ALL">全部專案 (All Projects)</option>` +
+        state.projects.map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
+      filterSelect.value = currentFilter;
+
+      // 2. Dialog select
+      const dialogSelect = document.getElementById('task-project');
+      dialogSelect.innerHTML = state.projects.map(p => `<option value="${p.id}">${escapeHTML(p.name)}</option>`).join('');
+
+      // 3. Project management dialog list
+      const projList = document.getElementById('project-manage-list');
+      if (projList) {
+        projList.innerHTML = state.projects.map(p => `
+          <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 0.75rem; background: var(--surface-subtle); border-radius: var(--radius-sm);">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <span style="width: 12px; height: 12px; border-radius: 50%; background: ${p.color || '#3b82f6'}; display: inline-block;"></span>
+              <span style="font-weight: 600;">${escapeHTML(p.name)}</span>
+            </div>
+            <button class="btn-ghost btn-sm btn-danger" onclick="deleteProject('${p.id}')">刪除</button>
+          </div>
+        `).join('');
+      }
+    }
+
+    /* =====================================================================
+     * 5. Task CRUD Operations
+     * ===================================================================== */
+    function openNewTaskModal(status = 'TODO') {
+      if (state.projects.length === 0) {
+        showToast('請先建立至少一個專案！', 'warning');
+        openProjectsDialog();
+        return;
+      }
+      document.getElementById('task-dialog-title').textContent = '新增任務';
+      document.getElementById('task-form').reset();
+      document.getElementById('task-id').value = '';
+      document.getElementById('task-status').value = status;
+      if (state.filters.projectId !== 'ALL') {
+        document.getElementById('task-project').value = state.filters.projectId;
+      }
+      state.currentEditingSubtasks = [];
+      renderSubtasksInModal();
+      document.getElementById('task-dialog').showModal();
+    }
+
+    function openEditTaskModal(id) {
+      const task = state.tasks.find(t => t.id === id);
+      if (!task) return;
+
+      document.getElementById('task-dialog-title').textContent = '編輯任務';
+      document.getElementById('task-id').value = task.id;
+      document.getElementById('task-title').value = task.title;
+      document.getElementById('task-project').value = task.projectId;
+      document.getElementById('task-status').value = task.status;
+      document.getElementById('task-priority').value = task.priority || 'MEDIUM';
+      document.getElementById('task-due-date').value = task.dueDate || '';
+      document.getElementById('task-tags').value = (task.tags || []).join(', ');
+      document.getElementById('task-desc').value = task.description || '';
+
+      state.currentEditingSubtasks = JSON.parse(JSON.stringify(task.subtasks || []));
+      renderSubtasksInModal();
+
+      document.getElementById('task-dialog').showModal();
+    }
+
+    function closeTaskDialog() {
+      document.getElementById('task-dialog').close();
+    }
+
+    async function handleTaskFormSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('task-id').value || 'task-' + crypto.randomUUID();
+      const title = document.getElementById('task-title').value.trim();
+      const projectId = document.getElementById('task-project').value;
+      const status = document.getElementById('task-status').value;
+      const priority = document.getElementById('task-priority').value;
+      const dueDate = document.getElementById('task-due-date').value;
+      const tagsRaw = document.getElementById('task-tags').value;
+      const description = document.getElementById('task-desc').value.trim();
+
+      const tags = tagsRaw.split(/[,，]/).map(t => t.trim()).filter(Boolean);
+
+      const taskObj = {
+        id,
+        projectId,
+        title,
+        status,
+        priority,
+        dueDate,
+        tags,
+        description,
+        subtasks: state.currentEditingSubtasks,
+        updatedAt: Date.now()
+      };
+
+      try {
+        await db.put('tasks', taskObj);
+
+        const existingIdx = state.tasks.findIndex(t => t.id === id);
+        if (existingIdx >= 0) {
+          state.tasks[existingIdx] = taskObj;
+          showToast('任務已成功更新！');
+        } else {
+          state.tasks.unshift(taskObj);
+          showToast('新任務已建立！');
+        }
+
+        closeTaskDialog();
+        render();
+      } catch (err) {
+        showToast('儲存任務失敗: ' + err.message, 'danger');
+      }
+    }
+
+    async function deleteTask(id) {
+      const task = state.tasks.find(t => t.id === id);
+      if (!task) return;
+      if (!confirm(`確定要刪除任務「${task.title}」嗎？`)) return;
+
+      try {
+        await db.delete('tasks', id);
+        state.tasks = state.tasks.filter(t => t.id !== id);
+        render();
+        showToast('任務已刪除');
+      } catch (err) {
+        showToast('刪除失敗: ' + err.message, 'danger');
+      }
+    }
+
+    async function updateTaskStatus(id, newStatus) {
+      const task = state.tasks.find(t => t.id === id);
+      if (!task || task.status === newStatus) return;
+
+      task.status = newStatus;
+      task.updatedAt = Date.now();
+      await db.put('tasks', task);
+      render();
+      showToast(`已移動至「${getStatusLabel(newStatus)}」`);
+    }
+
+    async function toggleTaskDone(id, isDone) {
+      const newStatus = isDone ? 'DONE' : 'TODO';
+      await updateTaskStatus(id, newStatus);
+    }
+
+    function getStatusLabel(status) {
+      const map = { TODO: '待處理', IN_PROGRESS: '進行中', REVIEW: '審核中', DONE: '已完成' };
+      return map[status] || status;
+    }
+
+    /* Subtask helpers in modal */
+    function renderSubtasksInModal() {
+      const wrap = document.getElementById('checklist-items-wrap');
+      if (state.currentEditingSubtasks.length === 0) {
+        wrap.innerHTML = `<div style="font-size: 0.8rem; color: var(--text-muted); padding: 0.25rem 0;">無子任務，可在下方輸入新增</div>`;
+        return;
+      }
+      wrap.innerHTML = state.currentEditingSubtasks.map((st, i) => `
+        <div class="checklist-item ${st.done ? 'done' : ''}">
+          <input type="checkbox" ${st.done ? 'checked' : ''} onchange="state.currentEditingSubtasks[${i}].done = this.checked; renderSubtasksInModal();">
+          <span>${escapeHTML(st.text)}</span>
+          <button type="button" class="btn-ghost btn-sm" onclick="state.currentEditingSubtasks.splice(${i}, 1); renderSubtasksInModal();" style="padding: 0 4px; font-size: 0.75rem;">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function addSubtaskFromInput() {
+      const input = document.getElementById('new-subtask-input');
+      const val = input.value.trim();
+      if (!val) return;
+      state.currentEditingSubtasks.push({
+        id: 'st-' + crypto.randomUUID(),
+        text: val,
+        done: false
+      });
+      input.value = '';
+      renderSubtasksInModal();
+    }
+
+    /* =====================================================================
+     * 6. Drag and Drop Kanban Implementation
+     * ===================================================================== */
+    function handleDragStart(e, taskId) {
+      state.draggedTaskId = taskId;
+      e.dataTransfer.setData('text/plain', taskId);
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => {
+        const el = document.querySelector(`.task-card[data-id="${taskId}"]`);
+        if (el) el.classList.add('dragging');
+      }, 0);
+    }
+
+    function handleDragEnd(e) {
+      const el = document.querySelector('.task-card.dragging');
+      if (el) el.classList.remove('dragging');
+      document.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+      state.draggedTaskId = null;
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const col = e.currentTarget;
+      col.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+      const col = e.currentTarget;
+      if (col.contains(e.relatedTarget)) return; // 仍在欄位內部，避免閃爍
+      col.classList.remove('drag-over');
+    }
+
+    async function handleDrop(e, targetStatus) {
+      e.preventDefault();
+      const col = e.currentTarget;
+      col.classList.remove('drag-over');
+
+      const taskId = e.dataTransfer.getData('text/plain') || state.draggedTaskId;
+      if (!taskId) return;
+
+      const task = state.tasks.find(t => t.id === taskId);
+      if (task && task.status !== targetStatus) {
+        task.status = targetStatus;
+        task.updatedAt = Date.now();
+        await db.put('tasks', task);
+        render();
+        showToast(`已移動任務至「${getStatusLabel(targetStatus)}」`);
+      }
+    }
+
+    /* =====================================================================
+     * 7. Projects Management
+     * ===================================================================== */
+    function openProjectsDialog() {
+      renderProjectSelects();
+      document.getElementById('projects-dialog').showModal();
+    }
+
+    function closeProjectsDialog() {
+      document.getElementById('projects-dialog').close();
+    }
+
+    async function handleNewProjectSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('new-project-name');
+      const name = input.value.trim();
+      if (!name) return;
+
+      const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+      const newProj = {
+        id: 'proj-' + crypto.randomUUID(),
+        name,
+        color: randomColor,
+        createdAt: Date.now()
+      };
+
+      try {
+        await db.put('projects', newProj);
+        state.projects.push(newProj);
+        input.value = '';
+        renderProjectSelects();
+        render();
+        showToast(`專案「${name}」已建立！`);
+      } catch (err) {
+        showToast('建立專案失敗: ' + err.message, 'danger');
+      }
+    }
+
+    async function deleteProject(id) {
+      const proj = state.projects.find(p => p.id === id);
+      if (!proj) return;
+
+      const count = state.tasks.filter(t => t.projectId === id).length;
+      const msg = count > 0
+        ? `確定要刪除專案「${proj.name}」嗎？該專案底下有 ${count} 個任務將一併被刪除！`
+        : `確定要刪除專案「${proj.name}」嗎？`;
+
+      if (!confirm(msg)) return;
+
+      try {
+        await db.delete('projects', id);
+        // Delete related tasks
+        const tasksToDelete = state.tasks.filter(t => t.projectId === id);
+        for (const t of tasksToDelete) {
+          await db.delete('tasks', t.id);
+        }
+
+        state.projects = state.projects.filter(p => p.id !== id);
+        state.tasks = state.tasks.filter(t => t.projectId !== id);
+
+        if (state.filters.projectId === id) {
+          state.filters.projectId = 'ALL';
+          document.getElementById('project-filter').value = 'ALL';
+        }
+
+        renderProjectSelects();
+        render();
+        showToast(`專案「${proj.name}」已刪除`);
+      } catch (err) {
+        showToast('刪除失敗: ' + err.message, 'danger');
+      }
+    }
+
+    /* =====================================================================
+     * 8. Export and Import (JSON Data Backup & Restore)
+     * ===================================================================== */
+    async function exportData() {
+      try {
+        const backupData = {
+          app: 'ProTrack',
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          projects: state.projects,
+          tasks: state.tasks
+        };
+
+        const jsonStr = JSON.stringify(backupData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        const filename = `protrack-backup-${new Date().toISOString().slice(0, 10)}.json`;
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast('備份資料已成功匯出！');
+      } catch (err) {
+        showToast('匯出失敗: ' + err.message, 'danger');
+      }
+    }
+
+    async function handleFileImport(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async (evt) => {
+        try {
+          const imported = JSON.parse(evt.target.result);
+          if (!Array.isArray(imported?.projects) || !Array.isArray(imported?.tasks)) {
+            throw new Error('不合法的備份檔案結構 (projects 與 tasks 必須為陣列)');
+          }
+          // 驗證並正規化不可信資料（id 限制字元以避免注入 inline handler）
+          const safeId = v => /^[\w-]+$/.test(String(v ?? '')) ? String(v) : null;
+          const STATUSES = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
+          const PRIOS = ['HIGH', 'MEDIUM', 'LOW'];
+          imported.projects = imported.projects.map(p => {
+            const id = safeId(p?.id);
+            if (!id || !p.name) throw new Error('專案資料缺少有效的 id 或 name');
+            return {
+              id, name: String(p.name),
+              color: /^#[0-9a-fA-F]{3,8}$/.test(p.color) ? p.color : '#3b82f6',
+              createdAt: Number(p.createdAt) || Date.now()
+            };
+          });
+          imported.tasks = imported.tasks.map(t => {
+            const id = safeId(t?.id);
+            if (!id || !t.title) throw new Error('任務資料缺少有效的 id 或 title');
+            return {
+              id, projectId: String(t.projectId ?? ''), title: String(t.title),
+              description: String(t.description ?? ''),
+              status: STATUSES.includes(t.status) ? t.status : 'TODO',
+              priority: PRIOS.includes(t.priority) ? t.priority : 'MEDIUM',
+              dueDate: /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate) ? t.dueDate : '',
+              tags: Array.isArray(t.tags) ? t.tags.map(String) : [],
+              subtasks: (Array.isArray(t.subtasks) ? t.subtasks : []).map((s, i) => ({
+                id: String(s?.id ?? 'st-' + i), text: String(s?.text ?? ''), done: !!s?.done
+              })),
+              updatedAt: Number(t.updatedAt) || Date.now()
+            };
+          });
+
+          if (!confirm(`確認要匯入備份資料嗎？\n專案數：${imported.projects.length}，任務數：${imported.tasks.length}\n這將覆蓋本機目前的資料。`)) {
+            e.target.value = '';
+            return;
+          }
+
+          // Clear existing stores
+          await db.clear('projects');
+          await db.clear('tasks');
+
+          // Batch put
+          for (const p of imported.projects) await db.put('projects', p);
+          for (const t of imported.tasks) await db.put('tasks', t);
+
+          state.projects = imported.projects;
+          state.tasks = imported.tasks;
+          state.filters.projectId = 'ALL';
+          document.getElementById('project-filter').value = 'ALL';
+
+          renderProjectSelects();
+          render();
+          showToast('資料備份已成功恢復！');
+        } catch (err) {
+          showToast('匯入失敗: ' + err.message, 'danger');
+        } finally {
+          e.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    /* =====================================================================
+     * 9. Utilities & Event Binding
+     * ===================================================================== */
+    function escapeHTML(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/[&<>"']/g, c => (
+        { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+      ));
+    }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+
+      const icon = type === 'danger' ? '⚠️' : (type === 'warning' ? '⚡' : '✨');
+      toast.innerHTML = `<span>${icon}</span> <span>${escapeHTML(msg)}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(8px)';
+        toast.style.transition = 'all 0.25s ease';
+        setTimeout(() => toast.remove(), 250);
+      }, 2800);
+    }
+
+    // Theme Toggle
+    function initTheme() {
+      const savedTheme = localStorage.getItem('protrack_theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      }
+    }
+
+    function toggleTheme() {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const newTheme = isDark ? 'light' : 'dark';
+      if (newTheme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+      }
+      localStorage.setItem('protrack_theme', newTheme);
+      showToast(newTheme === 'dark' ? '已切換為深色模式' : '已切換為淺色模式');
+    }
+
+    // Dom Event Listeners Setup
+    document.addEventListener('DOMContentLoaded', () => {
+      initTheme();
+      loadData();
+
+      // Top Actions
+      document.getElementById('btn-theme').addEventListener('click', toggleTheme);
+      document.getElementById('btn-export').addEventListener('click', exportData);
+      document.getElementById('btn-import-trigger').addEventListener('click', () => {
+        document.getElementById('file-import').click();
+      });
+      document.getElementById('file-import').addEventListener('change', handleFileImport);
+      document.getElementById('btn-reset-demo').addEventListener('click', resetDemoData);
+      document.getElementById('btn-new-task').addEventListener('click', () => openNewTaskModal('TODO'));
+
+      // Project filter
+      document.getElementById('project-filter').addEventListener('change', (e) => {
+        state.filters.projectId = e.target.value;
+        render();
+      });
+      document.getElementById('btn-manage-projects').addEventListener('click', openProjectsDialog);
+      document.getElementById('new-project-form').addEventListener('submit', handleNewProjectSubmit);
+
+      // View tabs
+      document.querySelectorAll('.view-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          const viewName = tab.getAttribute('data-view');
+          state.activeView = viewName;
+
+          document.getElementById('view-kanban').style.display = viewName === 'kanban' ? 'block' : 'none';
+          document.getElementById('view-list').style.display = viewName === 'list' ? 'block' : 'none';
+          document.getElementById('view-analytics').style.display = viewName === 'analytics' ? 'block' : 'none';
+
+          render();
+        });
+      });
+
+      // Search & Filters
+      document.getElementById('search-input').addEventListener('input', (e) => {
+        state.filters.search = e.target.value;
+        render();
+      });
+
+      document.getElementById('priority-filter').addEventListener('change', (e) => {
+        state.filters.priority = e.target.value;
+        render();
+      });
+
+      document.getElementById('due-filter').addEventListener('change', (e) => {
+        state.filters.due = e.target.value;
+        render();
+      });
+
+      // Forms
+      document.getElementById('task-form').addEventListener('submit', handleTaskFormSubmit);
+    });
+  </script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
