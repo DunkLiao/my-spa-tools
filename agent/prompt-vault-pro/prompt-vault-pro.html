@@ -1,0 +1,1655 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Prompt Vault Pro</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+<style>
+:root{
+  --bg:#f5f6fa;--panel:#fff;--panel2:#f0f2f7;--text:#1d2330;--muted:#6b7385;--border:#dfe3ec;
+  --accent:#5b5bd6;--accent2:#8b5cf6;--accent-soft:rgba(91,91,214,.10);--ring:rgba(91,91,214,.25);
+  --ok:#2f9e6b;--danger:#d64545;--warn:#c9821b;--star:#f5b301;
+  --shadow:0 4px 18px rgba(20,30,60,.08);--radius:10px;
+  --mono:ui-monospace,SFMono-Regular,Consolas,"Cascadia Mono",Menlo,monospace;
+}
+[data-theme=dark]{
+  --bg:#0f1117;--panel:#171a23;--panel2:#1f2330;--text:#e6e8ef;--muted:#8a91a5;--border:#2a2f3d;
+  --accent:#8b84ff;--accent2:#b18cff;--accent-soft:rgba(139,132,255,.14);--ring:rgba(139,132,255,.3);
+  --shadow:0 4px 18px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:system-ui,-apple-system,"Segoe UI","Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif;background:var(--bg);color:var(--text);font-size:14px;overflow:hidden;display:flex;flex-direction:column}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}
+.muted{color:var(--muted)}.small{font-size:12px}.pad{padding:4px 10px}
+em{color:var(--danger);font-style:normal}
+/* top bar */
+.topbar{height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--border)}
+.logo{font-size:16px;white-space:nowrap;display:flex;align-items:center;gap:6px;user-select:none}
+.logo .pro{font-size:11px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:2px 7px;border-radius:6px;font-weight:700}
+.search{flex:1;max-width:560px;margin:0 auto}
+.search input{width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel2);outline:none}
+.search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.btn{border:1px solid var(--border);background:var(--panel);padding:7px 12px;border-radius:8px;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+.btn:hover{border-color:var(--accent)}
+.btn:focus-visible,.icon-btn:focus-visible,.nav-item:focus-visible,.card:focus-visible,.tag:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn.danger{color:var(--danger)}
+.btn.danger:hover,.btn.danger.solid{background:var(--danger);color:#fff;border-color:var(--danger)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.icon-btn{border:none;background:transparent;font-size:18px;cursor:pointer;padding:6px 8px;border-radius:8px;line-height:1}
+.icon-btn:hover{background:var(--panel2)}
+.banner{flex:none;background:#fff3cd;color:#7a5600;padding:8px 14px;border-bottom:1px solid #f0d78c;font-size:13px;display:flex;gap:10px;align-items:center}
+.banner span{flex:1}
+[data-theme=dark] .banner{background:#3a2f12;color:#f3d48a;border-color:#5a4a1c}
+/* layout */
+.layout{flex:1;min-height:0;display:grid;grid-template-columns:230px 380px 1fr}
+.sidebar{background:var(--panel);border-right:1px solid var(--border);overflow:auto;padding:10px 8px;display:flex;flex-direction:column;gap:14px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;border:none;background:none;width:100%;text-align:left;min-height:34px}
+.nav-item:hover{background:var(--panel2)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nav-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nav-item .cnt{margin-left:auto;font-size:12px;color:var(--muted);font-weight:400}
+.nav-item .edit{opacity:0}
+.nav-item:hover .edit,.nav-item .edit:focus{opacity:1}
+.side-head{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);padding:0 10px 4px;letter-spacing:.05em}
+.mini{border:none;background:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px 6px;border-radius:6px}
+.mini:hover{background:var(--panel2);color:var(--accent)}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.tag-cloud{display:flex;flex-wrap:wrap;gap:5px;padding:0 6px}
+.tag{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;background:var(--panel2);border:1px solid var(--border);cursor:pointer;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tag small{color:var(--muted);font-size:10px}
+.tag.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tag.active small{color:rgba(255,255,255,.8)}
+.side-foot{margin-top:auto;font-size:11px;color:var(--muted);padding:8px 10px 2px;border-top:1px solid var(--border);line-height:1.6}
+.scrim{display:none}
+.side-head .grp{display:flex;gap:2px}
+.tm-list{display:flex;flex-direction:column;gap:4px;max-height:50vh;overflow:auto}
+.tm-row{display:flex;align-items:center;gap:8px;padding:5px 8px;border:1px solid var(--border);border-radius:8px}
+.tm-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* list */
+.listpane{display:flex;flex-direction:column;border-right:1px solid var(--border);min-width:0;min-height:0}
+.list-toolbar{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--panel)}
+.list-title{font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+select{border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:6px 8px;cursor:pointer}
+.active-filters{display:flex;flex-wrap:wrap;gap:6px}
+.active-filters:not(:empty){padding:8px 12px;border-bottom:1px solid var(--border)}
+.fchip{display:inline-flex;align-items:center;gap:4px;background:var(--accent-soft);color:var(--accent);border:none;border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer}
+.batchbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px 12px;background:var(--accent-soft);border-bottom:1px solid var(--border)}
+.batchbar #batchCount{font-weight:600;margin-right:4px}
+.list{flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+.card{display:flex;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;cursor:pointer;transition:border-color .12s,box-shadow .12s;flex:none}
+.card:hover{border-color:var(--accent);box-shadow:var(--shadow)}
+.card.sel{border-color:var(--accent);box-shadow:0 0 0 2px var(--ring)}
+.card.checked{background:var(--accent-soft)}
+.card .thumb{width:58px;height:58px;object-fit:cover;border-radius:8px;flex:none;background:var(--panel2)}
+.card-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.card-top{display:flex;align-items:center;gap:6px}
+.card-title{font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card-snippet{color:var(--muted);font-size:12px;line-height:1.5;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-family:var(--mono)}
+.card-foot{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);min-width:0}
+.card-foot .tags{display:flex;gap:4px;overflow:hidden;flex:1;min-width:0}
+.chip{padding:1px 7px;border-radius:999px;background:var(--panel2);font-size:11px;white-space:nowrap;border:1px solid var(--border)}
+.star-btn{border:none;background:none;cursor:pointer;font-size:16px;color:var(--muted);padding:0 2px;line-height:1}
+.star-btn.on,.icon-btn.star.on{color:var(--star)}
+.copy-btn{border:1px solid var(--border);background:var(--panel2);border-radius:6px;cursor:pointer;padding:2px 7px;font-size:12px}
+.copy-btn:hover{border-color:var(--accent);color:var(--accent)}
+.chk{width:16px;height:16px;margin:3px 0 0;accent-color:var(--accent);flex:none;pointer-events:none}
+.empty{flex:1;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);gap:12px;text-align:center;padding:24px}
+.empty .big{font-size:44px}
+.more{align-self:center;margin:6px 0 12px}
+/* editor */
+.editorpane{overflow:auto;background:var(--panel);min-width:0;min-height:0;display:flex;flex-direction:column}
+.editor{width:100%;max-width:920px;margin:0 auto;padding:16px 22px 0;display:flex;flex-direction:column;gap:14px}
+.ed-head{display:flex;gap:6px;align-items:center}
+.title-input{flex:1;min-width:0;font-size:20px;font-weight:700;border:none;border-bottom:2px solid transparent;background:none;padding:6px 2px;outline:none}
+.title-input:focus{border-bottom-color:var(--accent)}
+.ed-meta{font-size:12px;color:var(--muted);margin-top:-8px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.field-head label,.lbl{font-weight:600;font-size:13px}
+.counter{margin-left:auto;font-size:12px;color:var(--muted)}
+textarea,.inp{width:100%;border:1px solid var(--border);background:var(--panel2);border-radius:8px;padding:9px 11px;outline:none}
+textarea{resize:vertical;font-family:var(--mono);line-height:1.6;font-size:13px}
+textarea:focus,.inp:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring);outline:none}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.mini-field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);transition:opacity .15s}
+.mini-field.dim{opacity:.45}
+.mini-field .inp{color:var(--text);font-size:13px;padding:7px 9px}
+.tagbox{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px solid var(--border);background:var(--panel2);border-radius:8px;padding:6px 8px;min-height:40px;cursor:text}
+.tagbox:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--ring)}
+.tagbox input{border:none;background:none;outline:none;flex:1;min-width:140px;padding:3px}
+.tagchip{display:inline-flex;align-items:center;gap:2px;background:var(--accent-soft);color:var(--accent);border-radius:999px;padding:2px 3px 2px 10px;font-size:12px}
+.tagchip button{border:none;background:none;cursor:pointer;color:inherit;font-size:14px;line-height:1;padding:0 4px;border-radius:50%}
+.tagchip button:hover{background:var(--ring)}
+details.params>summary{cursor:pointer;font-weight:600;font-size:13px;margin-bottom:10px;user-select:none}
+.imgbox{border:2px dashed var(--border);border-radius:10px;min-height:110px;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;position:relative;overflow:hidden;text-align:center;padding:8px;outline:none}
+.imgbox:focus-visible{border-color:var(--accent)}
+.imgbox.drag{border-color:var(--accent);background:var(--accent-soft)}
+.imgbox img{max-width:100%;max-height:300px;display:block;border-radius:6px}
+.imgbox .rm{position:absolute;top:8px;right:8px}
+.composer{border:1px solid var(--border);border-radius:10px;padding:10px;background:var(--bg);display:flex;flex-direction:column;gap:8px;margin-top:-6px}
+.comp-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+.tab{border:1px solid var(--border);background:var(--panel);border-radius:999px;padding:3px 11px;cursor:pointer;font-size:12px}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.snip{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--border);background:var(--panel);border-radius:8px;padding:4px 2px 4px 10px;cursor:grab;font-size:12.5px;user-select:none}
+.snip:hover{border-color:var(--accent);color:var(--accent)}
+.snip .x{border:none;background:none;cursor:pointer;color:var(--muted);opacity:0;padding:0 5px;font-size:13px}
+.snip:hover .x,.snip .x:focus{opacity:1}
+.hint{font-size:11.5px;color:var(--muted)}
+.ed-actions{position:sticky;bottom:0;background:var(--panel);border-top:1px solid var(--border);padding:12px 0 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px;z-index:2}
+.copy-group{display:flex}
+.copy-group .btn{border-radius:8px 0 0 8px}
+.copy-group select{border-radius:0 8px 8px 0;border-left:none}
+.dirty{color:var(--warn);font-size:12px;font-weight:600;margin-left:auto}
+/* toast */
+.toasts{position:fixed;bottom:84px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:1000;align-items:center;pointer-events:none}
+.toast{pointer-events:auto;background:#1f2330;color:#fff;padding:10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);display:flex;gap:12px;align-items:center;font-size:13px;animation:tin .2s;max-width:90vw}
+.toast.ok{background:#1e6b4a}.toast.err{background:var(--danger)}
+.toast button{background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:3px 10px;cursor:pointer;font-weight:600}
+@keyframes tin{from{opacity:0;transform:translateY(8px)}}
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(10,14,25,.5);display:flex;align-items:center;justify-content:center;z-index:900;padding:16px;animation:fade .15s}
+@keyframes fade{from{opacity:0}}
+.modal{background:var(--panel);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.3);width:100%;max-width:470px;max-height:90vh;display:flex;flex-direction:column}
+.modal.wide{max-width:860px}
+.modal-h{padding:14px 18px;font-weight:700;font-size:16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.modal-b{padding:16px 18px;overflow:auto;display:flex;flex-direction:column;gap:12px;line-height:1.6}
+.modal-f{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.modal-f .left{margin-right:auto}
+.err-box{background:rgba(214,69,69,.1);color:var(--danger);border-radius:8px;padding:10px 12px;word-break:break-word}
+.io-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.io-card{border:1px solid var(--border);border-radius:10px;padding:14px;cursor:pointer;background:var(--panel2);text-align:left}
+.io-card:hover{border-color:var(--accent)}
+.io-card b{display:block;font-size:15px;margin-bottom:4px}
+.vwrap{display:grid;grid-template-columns:260px 1fr;gap:14px;min-height:300px}
+.vlist{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow:auto}
+.vitem{border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.vitem.active{border-color:var(--accent);background:var(--accent-soft)}
+.vbtns{display:flex;gap:6px}
+.diff{border:1px solid var(--border);border-radius:8px;padding:10px 12px;overflow:auto;max-height:60vh}
+.diff h4{margin:10px 0 4px;font-size:13px}.diff h4:first-child{margin-top:0}
+.tok{display:inline-block;padding:1px 7px;border-radius:5px;margin:2px;font-family:var(--mono);font-size:12px;background:var(--panel2);text-decoration:none}
+ins.tok{background:rgba(47,158,107,.18);color:var(--ok)}
+del.tok{background:rgba(214,69,69,.15);color:var(--danger)}
+kbd{font-family:var(--mono);font-size:11px;border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--panel2)}
+.only-mobile{display:none!important}
+@media (max-width:900px){
+  .only-mobile{display:inline-flex!important}
+  .layout{grid-template-columns:1fr}
+  .sidebar{position:fixed;top:56px;left:0;bottom:0;width:270px;z-index:600;transform:translateX(-102%);transition:transform .2s;box-shadow:var(--shadow)}
+  body.drawer .sidebar{transform:none}
+  body.drawer .scrim{display:block;position:fixed;inset:56px 0 0 0;background:rgba(0,0,0,.35);z-index:550}
+  .listpane{border-right:none}
+  .editorpane{position:fixed;inset:0;z-index:700;display:none}
+  body.editing .editorpane{display:flex}
+  .editor{padding:10px 14px 0}
+  .grid4{grid-template-columns:1fr 1fr}
+  .btn-label,.logo b{display:none}
+  .vwrap{grid-template-columns:1fr}
+}
+@media (max-width:560px){.grid2,.io-grid{grid-template-columns:1fr}.topbar{gap:6px;padding:0 8px}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button id="btnMenu" class="icon-btn only-mobile" aria-label="開啟選單">☰</button>
+  <div class="logo" title="Prompt Vault Pro v1.1">🔐 <b>Prompt Vault</b> <span class="pro">PRO</span></div>
+  <div class="search"><input id="q" type="search" placeholder="搜尋標題、Prompt、標籤、備註…（Ctrl+K）" aria-label="搜尋 Prompt"></div>
+  <button id="btnNew" class="btn primary" aria-label="新增 Prompt">＋<span class="btn-label"> 新增</span></button>
+  <button id="btnIO" class="btn" aria-label="匯入或匯出">⇅<span class="btn-label"> 匯入/匯出</span></button>
+  <button id="btnHelp" class="icon-btn" aria-label="快捷鍵說明">⌨️</button>
+  <button id="btnTheme" class="icon-btn" aria-label="切換深淺色主題">🌙</button>
+</header>
+<div id="banner" class="banner hidden" role="alert"><span id="bannerText"></span><button class="mini" id="bannerClose" aria-label="關閉提示">✕</button></div>
+<main class="layout">
+  <aside id="sidebar" class="sidebar" aria-label="導覽">
+    <nav id="navViews"></nav>
+    <div>
+      <div class="side-head">分類 <button id="btnAddCat" class="mini" aria-label="新增分類">＋ 新增</button></div>
+      <div id="navCats"></div>
+    </div>
+    <div>
+      <div class="side-head">標籤 <span class="grp"><button id="btnManageTags" class="mini" aria-label="管理標籤">管理</button><button id="btnClearTags" class="mini" aria-label="清除標籤篩選">清除</button></span></div>
+      <div id="tagCloud" class="tag-cloud"></div>
+    </div>
+    <div class="side-foot" id="storageInfo">—</div>
+  </aside>
+  <div id="scrim" class="scrim"></div>
+  <section class="listpane" aria-label="Prompt 列表">
+    <div class="list-toolbar">
+      <div id="listTitle" class="list-title">全部</div>
+      <select id="sortSel" aria-label="排序方式">
+        <option value="updated">最近更新</option>
+        <option value="created">建立時間</option>
+        <option value="use">使用次數</option>
+        <option value="name">名稱</option>
+      </select>
+      <button id="btnSelect" class="btn sm" aria-pressed="false">多選</button>
+    </div>
+    <div id="activeFilters" class="active-filters"></div>
+    <div id="batchBar" class="batchbar hidden">
+      <span id="batchCount">已選 0</span>
+      <button class="btn sm" data-batch="all">全選</button>
+      <button class="btn sm" data-batch="fav">⭐ 收藏</button>
+      <button class="btn sm" data-batch="unfav">取消收藏</button>
+      <button class="btn sm" data-batch="cat">改分類</button>
+      <button class="btn sm" data-batch="tag">加標籤</button>
+      <button class="btn sm danger" data-batch="del">刪除</button>
+    </div>
+    <div id="list" class="list" role="list"></div>
+  </section>
+  <section id="editorPane" class="editorpane" aria-label="編輯區">
+    <div id="emptyEditor" class="empty">
+      <div class="big">✨</div>
+      <div>選擇左側的 Prompt，或建立一筆新的</div>
+      <button class="btn primary" id="btnNew2">＋ 新增 Prompt</button>
+      <div class="hint"><kbd>Ctrl</kbd>+<kbd>K</kbd> 搜尋　<kbd>Alt</kbd>+<kbd>N</kbd> 新增　<kbd>Ctrl</kbd>+<kbd>S</kbd> 儲存</div>
+    </div>
+    <form id="editor" class="editor hidden" autocomplete="off" novalidate>
+      <div class="ed-head">
+        <button type="button" id="edBack" class="icon-btn only-mobile" aria-label="返回列表">←</button>
+        <input id="fTitle" class="title-input" maxlength="100" placeholder="Prompt 標題（必填）" aria-label="標題">
+        <button type="button" id="fFav" class="icon-btn star" aria-label="收藏" aria-pressed="false">☆</button>
+      </div>
+      <div class="ed-meta" id="edMeta"></div>
+
+      <div class="field">
+        <div class="field-head">
+          <label for="fPrompt">正面 Prompt <em>*</em></label>
+          <button type="button" class="btn sm" id="btnComposer" aria-expanded="false">🧩 組合器</button>
+          <span class="counter" id="cPrompt"></span>
+        </div>
+        <textarea id="fPrompt" rows="7" spellcheck="false" placeholder="masterpiece, best quality, ..."></textarea>
+      </div>
+
+      <div id="composer" class="composer hidden">
+        <div class="comp-head">
+          <div id="compTabs" class="tabs" role="tablist"></div>
+          <select id="compTarget" aria-label="插入目標">
+            <option value="fPrompt">插入至：正面</option>
+            <option value="fNegative">插入至：負面</option>
+          </select>
+          <button type="button" class="btn sm" id="btnAddSnip">＋ 片段</button>
+        </div>
+        <div id="compChips" class="chips"></div>
+        <div class="hint">點擊片段插入游標位置（自動補逗號），也可以直接拖曳到輸入框。滑過片段按 × 可刪除。</div>
+      </div>
+
+      <div class="field">
+        <div class="field-head"><label for="fNegative">負面 Prompt</label><span class="counter" id="cNeg"></span></div>
+        <textarea id="fNegative" rows="3" spellcheck="false" placeholder="low quality, blurry, watermark, ..."></textarea>
+      </div>
+
+      <div class="grid2">
+        <div class="field"><label class="lbl" for="fCategory">分類</label><select id="fCategory" class="inp"></select></div>
+        <div class="field"><label class="lbl" for="fPlatform">平台</label>
+          <select id="fPlatform" class="inp">
+            <option value="mj">Midjourney</option><option value="flux">Flux</option><option value="sdxl">SDXL / SD</option><option value="other">其他</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="lbl" for="fTagInput">標籤</label>
+        <div class="tagbox" id="tagBox"><input id="fTagInput" list="tagList" placeholder="輸入後按 Enter 或逗號" aria-label="新增標籤"></div>
+        <datalist id="tagList"></datalist>
+      </div>
+
+      <details class="field params" open>
+        <summary>⚙️ 生成參數</summary>
+        <div class="grid4">
+          <label class="mini-field" data-for="all">比例 (ar)<input id="p_ar" class="inp" list="arList" placeholder="16:9"></label>
+          <label class="mini-field" data-for="sd">Steps<input id="p_steps" class="inp" type="number" min="1" max="200" placeholder="30"></label>
+          <label class="mini-field" data-for="sd">CFG<input id="p_cfg" class="inp" type="number" min="0" max="30" step="0.5" placeholder="7"></label>
+          <label class="mini-field" data-for="sd">Sampler<input id="p_sampler" class="inp" list="samplerList" placeholder="DPM++ 2M Karras"></label>
+          <label class="mini-field" data-for="all">Seed<input id="p_seed" class="inp" placeholder="隨機"></label>
+          <label class="mini-field" data-for="mj">Stylize (MJ)<input id="p_stylize" class="inp" type="number" min="0" max="1000" placeholder="100"></label>
+          <label class="mini-field" data-for="mj">Chaos (MJ)<input id="p_chaos" class="inp" type="number" min="0" max="100" placeholder="0"></label>
+          <label class="mini-field" data-for="sd">Model / LoRA<input id="p_model" class="inp" placeholder="sd_xl_base_1.0"></label>
+        </div>
+        <datalist id="arList"><option value="1:1"><option value="16:9"><option value="9:16"><option value="4:3"><option value="3:4"><option value="3:2"><option value="2:3"><option value="21:9"></datalist>
+        <datalist id="samplerList"><option value="DPM++ 2M Karras"><option value="DPM++ SDE Karras"><option value="Euler a"><option value="Euler"><option value="DDIM"><option value="UniPC"></datalist>
+      </details>
+
+      <div class="field">
+        <span class="lbl">範例圖</span>
+        <div id="imgBox" class="imgbox" tabindex="0" role="button" aria-label="上傳範例圖"></div>
+      </div>
+
+      <div class="field">
+        <label class="lbl" for="fNote">備註</label>
+        <textarea id="fNote" rows="2" placeholder="使用心得、模型版本、出處…" style="font-family:inherit"></textarea>
+      </div>
+
+      <div class="ed-actions">
+        <div class="copy-group">
+          <button type="button" id="btnCopy" class="btn primary" title="Ctrl+Shift+C">📋 複製</button>
+          <select id="copyMode" aria-label="複製模式">
+            <option value="pos">僅正面</option><option value="params">正面＋參數</option><option value="both">正面＋負面</option>
+          </select>
+        </div>
+        <button type="button" id="btnSave" class="btn ok" title="Ctrl+S">💾 儲存</button>
+        <button type="button" id="btnDup" class="btn">⧉ 複製一份</button>
+        <button type="button" id="btnVersions" class="btn">🕘 版本</button>
+        <button type="button" id="btnDelete" class="btn danger" aria-label="刪除">🗑 刪除</button>
+        <span id="dirtyMark" class="dirty hidden">● 未儲存</span>
+      </div>
+    </form>
+  </section>
+</main>
+<div id="modalRoot"></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<input type="file" id="fileImport" accept="application/json,.json" hidden>
+<input type="file" id="fileImage" accept="image/*" hidden>
+<script>
+'use strict';
+/* =========================================================
+ * Prompt Vault Pro — 離線 AI 生圖 Prompt 管理工具
+ * 單檔 SPA · Vanilla JS · IndexedDB · 無外部依賴 · 無 API
+ * ========================================================= */
+
+/* ---------- 常數 ---------- */
+const APP = 'PromptVaultPro', SCHEMA = 1;
+const PLATFORMS = { mj: 'Midjourney', flux: 'Flux', sdxl: 'SDXL / SD', other: '其他' };
+const COPY_MODES = { pos: '僅正面', params: '正面＋參數', both: '正面＋負面' };
+const MAX_VERSIONS = 50;
+const PARAM_KEYS = ['ar', 'steps', 'cfg', 'sampler', 'seed', 'stylize', 'chaos', 'model'];
+const GROUPS = { quality: '品質', style: '畫風', lighting: '光影', camera: '鏡頭', composition: '構圖', color: '色調', scene: '場景', negative: '負面' };
+const DEFAULT_CATS = [['人物', '#e8618c'], ['風景', '#2f9e6b'], ['建築', '#d9902b'], ['動漫', '#7c6cf0'], ['金融', '#3b82f6']];
+const DEFAULT_SNIPPETS = [
+  ['quality', [['傑作', 'masterpiece'], ['最佳品質', 'best quality'], ['超精細', 'ultra detailed'], ['8K', '8k uhd'], ['高解析', 'highres'], ['銳利對焦', 'sharp focus']]],
+  ['style', [['寫實攝影', 'photorealistic'], ['電影感', 'cinematic'], ['動漫', 'anime style'], ['水彩', 'watercolor painting'], ['油畫', 'oil painting'], ['3D 渲染', '3d render, octane render'], ['扁平插畫', 'flat illustration, vector art'], ['賽博龐克', 'cyberpunk'], ['像素風', 'pixel art'], ['等距視角', 'isometric'], ['極簡', 'minimalist']]],
+  ['lighting', [['電影燈光', 'cinematic lighting'], ['柔光', 'soft lighting'], ['體積光', 'volumetric lighting'], ['輪廓光', 'rim lighting'], ['黃金時刻', 'golden hour'], ['霓虹', 'neon lights'], ['攝影棚光', 'studio lighting'], ['丁達爾光', 'god rays']]],
+  ['camera', [['85mm 人像', '85mm portrait lens'], ['廣角', 'wide angle lens'], ['微距', 'macro shot'], ['淺景深', 'shallow depth of field, bokeh'], ['空拍', 'aerial view'], ['低角度', 'low angle shot'], ['底片感', 'film grain, analog photo']]],
+  ['composition', [['特寫', 'close-up'], ['半身', 'medium shot'], ['全身', 'full body shot'], ['置中構圖', 'centered composition'], ['三分法', 'rule of thirds'], ['對稱', 'symmetrical composition']]],
+  ['color', [['藍金色調', 'blue and gold color palette'], ['低飽和', 'muted colors'], ['高對比', 'high contrast'], ['暖色調', 'warm tones'], ['冷色調', 'cool tones'], ['黑白', 'monochrome']]],
+  ['negative', [['低品質', 'low quality, worst quality'], ['模糊', 'blurry'], ['手部崩壞', 'bad hands, extra fingers, missing fingers'], ['解剖錯誤', 'bad anatomy, deformed'], ['浮水印', 'watermark, signature'], ['文字', 'text, logo'], ['裁切', 'cropped, out of frame'], ['JPEG 雜訊', 'jpeg artifacts']]],
+];
+const SAMPLE_PROMPTS = [
+  { title: '賽博台北夜市', cat: '風景', platform: 'mj', tags: ['cyberpunk', 'city', '夜景'],
+    prompt: 'cyberpunk Taipei night market, rainy street, neon signs reflecting on wet ground, crowded food stalls, cinematic lighting, ultra detailed',
+    negative: 'blurry, watermark, text', params: { ar: '16:9', stylize: 250, chaos: 10 }, note: '雨夜反光效果很好' },
+  { title: '金融風險儀表板封面', cat: '金融', platform: 'flux', tags: ['金融', 'dashboard', '簡報'],
+    prompt: 'professional risk management dashboard, financial heatmap, institutional banking report design, clean infographic style, blue and gold color palette',
+    negative: '', params: { ar: '16:9' }, note: '適合稽核報告與簡報封面' },
+  { title: '商務人像（SDXL）', cat: '人物', platform: 'sdxl', tags: ['portrait', '商務'],
+    prompt: 'masterpiece, best quality, asian female financial analyst, short hair, black business suit, modern office, 85mm portrait lens, soft lighting, shallow depth of field, bokeh',
+    negative: 'low quality, worst quality, bad hands, extra fingers, bad anatomy, watermark, text',
+    params: { ar: '3:4', steps: 30, cfg: 7, sampler: 'DPM++ 2M Karras', model: 'sd_xl_base_1.0' }, note: '' },
+];
+
+/* ---------- 工具函式 ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => (crypto && crypto.randomUUID) ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+const now = () => Date.now();
+const pad = n => String(n).padStart(2, '0');
+const fmtTime = t => { if (!t) return '—'; const d = new Date(t); return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const relTime = t => {
+  if (!t) return '從未';
+  const s = (now() - t) / 1000;
+  if (s < 60) return '剛剛'; if (s < 3600) return `${Math.floor(s / 60)} 分鐘前`;
+  if (s < 86400) return `${Math.floor(s / 3600)} 小時前`; if (s < 86400 * 30) return `${Math.floor(s / 86400)} 天前`;
+  return fmtTime(t).slice(0, 10);
+};
+const debounce = (fn, ms) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; };
+const splitTokens = s => String(s || '').split(/[,，\n]/).map(x => x.trim()).filter(Boolean);
+const normTag = s => String(s).replace(/[,，]/g, ' ').trim().replace(/\s+/g, ' ').slice(0, 40);
+const safeColor = c => /^#[0-9a-f]{6}$/i.test(c || '') ? c : '#888888';
+const mb = b => (b / 1048576).toFixed(b > 1048576 * 100 ? 0 : 1) + ' MB';
+const randColor = () => '#' + [0, 0, 0].map(() => (80 + Math.floor(Math.random() * 150)).toString(16).padStart(2, '0')).join('');
+const guard = () => !Editor.dirty || confirm('目前有未儲存的修改，確定要放棄並離開嗎？');
+
+function normalizePrompt(x) {
+  const t = now(); const pr = (x.params && typeof x.params === 'object') ? x.params : {};
+  const params = {}; PARAM_KEYS.forEach(k => { const v = pr[k]; params[k] = (v === undefined || v === null) ? '' : v; });
+  const num = v => Number.isFinite(+v) ? +v : 0;
+  return {
+    id: String(x.id), title: String(x.title ?? '').trim().slice(0, 100),
+    prompt: String(x.prompt ?? ''), negative: String(x.negative ?? ''),
+    categoryId: x.categoryId ? String(x.categoryId) : null,
+    tags: [...new Set((Array.isArray(x.tags) ? x.tags : []).map(normTag).filter(Boolean))],
+    platform: PLATFORMS[x.platform] ? x.platform : 'other', params, note: String(x.note ?? ''),
+    favorite: x.favorite ? 1 : 0, // 以 0/1 儲存，讓 IndexedDB index 可用
+    useCount: num(x.useCount), lastUsedAt: num(x.lastUsedAt),
+    createdAt: num(x.createdAt) || t, updatedAt: num(x.updatedAt) || t,
+  };
+}
+function blobToDataUrl(blob) {
+  return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
+}
+function dataUrlToBlob(u) {
+  const i = u.indexOf(','); const head = u.slice(0, i), body = u.slice(i + 1);
+  const mime = (head.match(/^data:([^;,]+)/) || [])[1] || 'application/octet-stream';
+  if (!/;base64$/i.test(head)) return new Blob([decodeURIComponent(body)], { type: mime });
+  const bin = atob(body); const arr = new Uint8Array(bin.length);
+  for (let k = 0; k < bin.length; k++) arr[k] = bin.charCodeAt(k);
+  return new Blob([arr], { type: mime });
+}
+function sizeFromAr(ar, base = 1024) {
+  const m = String(ar || '').match(/^\s*(\d+(?:\.\d+)?)\s*[:x×]\s*(\d+(?:\.\d+)?)\s*$/i); if (!m) return '';
+  const r = +m[1] / +m[2]; if (!r) return '';
+  const w = Math.max(64, Math.round(Math.sqrt(base * base * r) / 64) * 64), h = Math.max(64, Math.round(Math.sqrt(base * base / r) / 64) * 64);
+  return `${w}x${h}`;
+}
+
+/* ---------- 設定（僅 UI 設定放 localStorage） ---------- */
+const Settings = {
+  key: 'pvp.settings', d: { theme: null, copyMode: 'pos', sort: 'updated' },
+  get() { try { return { ...this.d, ...JSON.parse(localStorage.getItem(this.key) || '{}') }; } catch { return { ...this.d }; } },
+  set(k, v) { const s = this.get(); s[k] = v; try { localStorage.setItem(this.key, JSON.stringify(s)); } catch { /* ignore */ } },
+};
+
+/* ---------- IndexedDB 封裝 ---------- */
+const DB = {
+  name: 'PromptVaultPro', version: 1, db: null, fresh: false,
+  STORES: ['prompts', 'categories', 'tags', 'history', 'versions', 'snippets', 'images'],
+  open() {
+    return new Promise((resolve, reject) => {
+      if (!('indexedDB' in window) || !window.indexedDB) return reject(new Error('此瀏覽器不支援 IndexedDB'));
+      let req; try { req = indexedDB.open(this.name, this.version); } catch (e) { return reject(e); }
+      req.onupgradeneeded = e => {
+        const d = req.result; this.fresh = e.oldVersion === 0;
+        if (!d.objectStoreNames.contains('prompts')) {
+          const s = d.createObjectStore('prompts', { keyPath: 'id' });
+          ['title', 'categoryId', 'favorite', 'useCount', 'lastUsedAt', 'updatedAt', 'createdAt'].forEach(i => s.createIndex(i, i));
+          s.createIndex('tags', 'tags', { multiEntry: true });
+        }
+        if (!d.objectStoreNames.contains('categories')) {
+          const s = d.createObjectStore('categories', { keyPath: 'id' });
+          s.createIndex('name', 'name', { unique: true }); s.createIndex('order', 'order');
+        }
+        if (!d.objectStoreNames.contains('tags')) d.createObjectStore('tags', { keyPath: 'name' });
+        for (const n of ['history', 'versions']) if (!d.objectStoreNames.contains(n)) {
+          const s = d.createObjectStore(n, { keyPath: 'id', autoIncrement: true });
+          s.createIndex('promptId', 'promptId'); s.createIndex('at', 'at');
+        }
+        if (!d.objectStoreNames.contains('snippets')) d.createObjectStore('snippets', { keyPath: 'id' }).createIndex('group', 'group');
+        if (!d.objectStoreNames.contains('images')) d.createObjectStore('images', { keyPath: 'promptId' });
+      };
+      req.onsuccess = () => {
+        this.db = req.result;
+        this.db.onversionchange = () => { this.db.close(); UI.banner('資料庫已在其他分頁升級，請重新整理此頁面。'); };
+        resolve(this.db);
+      };
+      req.onerror = () => reject(req.error || new Error('開啟資料庫失敗'));
+      req.onblocked = () => UI.banner('資料庫被其他分頁占用，請關閉其他 Prompt Vault Pro 分頁後重新整理。');
+    });
+  },
+  /** 執行交易；fn 內同步發出請求，交易 complete 才 resolve。 */
+  tx(stores, mode, fn) {
+    return new Promise((resolve, reject) => {
+      let t; try { t = this.db.transaction(stores, mode); } catch (e) { return reject(e); }
+      let out; t.oncomplete = () => resolve(out);
+      t.onabort = () => reject(t.error || new Error('交易已中止'));
+      try { out = fn(t); } catch (e) { try { t.abort(); } catch { /* */ } reject(e); }
+    });
+  },
+  _read(store, fn) { return this.tx([store], 'readonly', t => { const box = {}; const r = fn(t.objectStore(store)); r.onsuccess = () => { box.v = r.result; }; return box; }).then(b => b.v); },
+  getAll(store) { return this._read(store, s => s.getAll()); },
+  get(store, key) { return this._read(store, s => s.get(key)); },
+  byIndex(store, index, key) { return this._read(store, s => s.index(index).getAll(IDBKeyRange.only(key))); },
+  put(store, val) { return this.tx([store], 'readwrite', t => { t.objectStore(store).put(val); }); },
+  delete(store, key) { return this.tx([store], 'readwrite', t => { t.objectStore(store).delete(key); }); },
+  clear(store) { return this.tx([store], 'readwrite', t => { t.objectStore(store).clear(); }); },
+  /** 在交易中刪除 index=promptId 的所有紀錄 */
+  purgeIn(t, store, promptId) {
+    const os = t.objectStore(store); const r = os.index('promptId').openKeyCursor(IDBKeyRange.only(promptId));
+    r.onsuccess = () => { const c = r.result; if (c) { os.delete(c.primaryKey); c.continue(); } };
+  },
+};
+
+/* ---------- 狀態 ---------- */
+const S = {
+  prompts: [], cats: [], tags: new Map(), snippets: [], images: new Map(), imgUrls: new Map(), hay: new Map(),
+  view: { type: 'all', id: null }, tagFilters: [], query: '', sort: 'updated', selectedId: null,
+  multi: false, checked: new Set(), limit: 200, listKey: '', compGroup: 'quality', persisted: false,
+};
+function imgUrl(id) {
+  if (!S.images.has(id)) return null;
+  if (!S.imgUrls.has(id)) S.imgUrls.set(id, URL.createObjectURL(S.images.get(id)));
+  return S.imgUrls.get(id);
+}
+function dropUrl(id) { const u = S.imgUrls.get(id); if (u) { URL.revokeObjectURL(u); S.imgUrls.delete(id); } }
+function replaceInState(np) {
+  const i = S.prompts.findIndex(x => x.id === np.id);
+  if (i >= 0) S.prompts[i] = np; else S.prompts.push(np);
+  Search.index(np);
+}
+
+/* ---------- 跨分頁同步 ---------- */
+const Sync = {
+  ch: ('BroadcastChannel' in window) ? new BroadcastChannel('pvp-sync') : null,
+  ping() { try { this.ch && this.ch.postMessage({ t: now() }); } catch { /* */ } },
+  init() {
+    if (!this.ch) return;
+    this.ch.onmessage = debounce(async () => {
+      await Repo.loadAll();
+      if (Editor.cur && !Editor.cur._new) {
+        const p = S.prompts.find(x => x.id === Editor.cur.id);
+        if (!p) { if (!Editor.dirty) { Editor.close(); S.selectedId = null; Router.go({ p: null }, { replace: true, noGuard: true }); } }
+        else if (!Editor.dirty && p.updatedAt !== Editor.cur.updatedAt) Editor.open(p);
+        else { Editor.syncFrom(p); Editor.renderImage(); }
+      }
+      UI.renderAll();
+    }, 200);
+  },
+};
+
+/* ---------- Repository ---------- */
+const Repo = {
+  async loadAll() {
+    const [p, c, t, s, i] = await Promise.all(['prompts', 'categories', 'tags', 'snippets', 'images'].map(n => DB.getAll(n)));
+    S.prompts = p.map(normalizePrompt); S.hay.clear(); S.prompts.forEach(x => Search.index(x));
+    S.cats = c.sort((a, b) => a.order - b.order);
+    S.tags = new Map(t.map(x => [x.name, x.count]));
+    S.snippets = s.sort((a, b) => (Number.isFinite(a.order) ? a.order : 1e9) - (Number.isFinite(b.order) ? b.order : 1e9) || String(a.label).localeCompare(String(b.label), 'zh-Hant'));
+    S.imgUrls.forEach(u => URL.revokeObjectURL(u)); S.imgUrls.clear();
+    S.images = new Map(i.map(x => [x.promptId, x.blob]));
+  },
+  async seed() {
+    const t = now();
+    const cats = DEFAULT_CATS.map(([name, color], i) => ({ id: uid(), name, color, order: i }));
+    let so = 0; const snippets = DEFAULT_SNIPPETS.flatMap(([group, items]) => items.map(([label, value]) => ({ id: uid(), group, label, value, order: so++ })));
+    const samples = SAMPLE_PROMPTS.map((s, i) => normalizePrompt({ ...s, id: uid(), categoryId: cats.find(c => c.name === s.cat)?.id, createdAt: t - i * 60000, updatedAt: t - i * 60000 }));
+    const counts = new Map(); samples.forEach(p => p.tags.forEach(x => counts.set(x, (counts.get(x) || 0) + 1)));
+    await DB.tx(['categories', 'snippets', 'prompts', 'tags', 'versions', 'history'], 'readwrite', tx => {
+      cats.forEach(c => tx.objectStore('categories').put(c));
+      snippets.forEach(s => tx.objectStore('snippets').put(s));
+      samples.forEach(p => {
+        tx.objectStore('prompts').put(p);
+        tx.objectStore('versions').add({ promptId: p.id, snapshot: p, at: p.updatedAt });
+        tx.objectStore('history').add({ promptId: p.id, action: 'create', at: p.createdAt });
+      });
+      counts.forEach((count, name) => tx.objectStore('tags').put({ name, count }));
+    });
+  },
+  tagDelta(oldTags, newTags, m = new Map()) {
+    oldTags.forEach(t => m.set(t, (m.get(t) || 0) - 1));
+    newTags.forEach(t => m.set(t, (m.get(t) || 0) + 1));
+    return m;
+  },
+  /** 在同一交易中更新 tags.count，回傳新的計數 Map（交易成功後才套用到記憶體） */
+  applyTagDelta(tx, delta) {
+    const st = tx.objectStore('tags'); const next = new Map(S.tags);
+    for (const [name, d] of delta) {
+      if (!d) continue;
+      const c = (next.get(name) || 0) + d;
+      if (c > 0) { next.set(name, c); st.put({ name, count: c }); } else { next.delete(name); st.delete(name); }
+    }
+    return next;
+  },
+  /** image: undefined=不變, null=移除, Blob=設定 */
+  async savePrompt(p, { image } = {}) {
+    const old = S.prompts.find(x => x.id === p.id);
+    const delta = this.tagDelta(old ? old.tags : [], p.tags); let next;
+    await DB.tx(['prompts', 'tags', 'history', 'versions', 'images'], 'readwrite', tx => {
+      tx.objectStore('prompts').put(p);
+      next = this.applyTagDelta(tx, delta);
+      tx.objectStore('history').add({ promptId: p.id, action: old ? 'update' : 'create', at: p.updatedAt });
+      tx.objectStore('versions').add({ promptId: p.id, snapshot: p, at: p.updatedAt });
+      if (image === null) tx.objectStore('images').delete(p.id);
+      else if (image instanceof Blob) tx.objectStore('images').put({ promptId: p.id, blob: image });
+    });
+    S.tags = next; replaceInState(p);
+    if (image !== undefined) { dropUrl(p.id); if (image) S.images.set(p.id, image); else S.images.delete(p.id); }
+    this.pruneVersions(p.id).catch(() => { });
+    Sync.ping(); return p;
+  },
+  async patch(id, fn, action) {
+    const p = S.prompts.find(x => x.id === id); if (!p) return null;
+    const np = fn({ ...p });
+    await DB.tx(['prompts', 'history'], 'readwrite', tx => {
+      tx.objectStore('prompts').put(np);
+      if (action) tx.objectStore('history').add({ promptId: id, action, at: now() });
+    });
+    replaceInState(np); Sync.ping(); return np;
+  },
+  markUsed(id) { return this.patch(id, p => ({ ...p, useCount: p.useCount + 1, lastUsedAt: now() }), 'copy'); },
+  toggleFav(id) { return this.patch(id, p => ({ ...p, favorite: p.favorite ? 0 : 1 })); },
+  async batchUpdate(ids, fn) {
+    const items = ids.map(id => S.prompts.find(x => x.id === id)).filter(Boolean);
+    const updated = items.map(p => normalizePrompt(fn({ ...p, tags: [...p.tags] })));
+    const delta = new Map(); items.forEach((p, i) => this.tagDelta(p.tags, updated[i].tags, delta));
+    let next;
+    await DB.tx(['prompts', 'tags', 'history'], 'readwrite', tx => {
+      updated.forEach(p => { tx.objectStore('prompts').put(p); tx.objectStore('history').add({ promptId: p.id, action: 'update', at: now() }); });
+      next = this.applyTagDelta(tx, delta);
+    });
+    S.tags = next; updated.forEach(replaceInState); Sync.ping(); return updated;
+  },
+  async deleteMany(ids) {
+    const backups = ids.map(id => ({ p: S.prompts.find(x => x.id === id), img: S.images.get(id) })).filter(b => b.p);
+    const delta = new Map(); backups.forEach(b => this.tagDelta(b.p.tags, [], delta)); let next;
+    await DB.tx(['prompts', 'tags', 'images'], 'readwrite', tx => {
+      backups.forEach(b => { tx.objectStore('prompts').delete(b.p.id); tx.objectStore('images').delete(b.p.id); });
+      next = this.applyTagDelta(tx, delta);
+    });
+    S.tags = next; const set = new Set(ids);
+    S.prompts = S.prompts.filter(p => !set.has(p.id));
+    ids.forEach(id => { S.images.delete(id); S.hay.delete(id); dropUrl(id); S.checked.delete(id); });
+    Sync.ping(); return backups;
+  },
+  async restoreMany(backups) {
+    const delta = new Map(); backups.forEach(b => this.tagDelta([], b.p.tags, delta)); let next;
+    await DB.tx(['prompts', 'tags', 'images'], 'readwrite', tx => {
+      backups.forEach(b => { tx.objectStore('prompts').put(b.p); if (b.img) tx.objectStore('images').put({ promptId: b.p.id, blob: b.img }); });
+      next = this.applyTagDelta(tx, delta);
+    });
+    S.tags = next; backups.forEach(b => { replaceInState(b.p); if (b.img) S.images.set(b.p.id, b.img); });
+    Sync.ping();
+  },
+  purgeAux(ids) { return DB.tx(['history', 'versions'], 'readwrite', tx => ids.forEach(id => { DB.purgeIn(tx, 'history', id); DB.purgeIn(tx, 'versions', id); })); },
+  async saveCat(c) {
+    if (S.cats.some(x => x.name === c.name && x.id !== c.id)) throw new Error(`分類「${c.name}」已存在`);
+    await DB.put('categories', c);
+    const i = S.cats.findIndex(x => x.id === c.id); if (i >= 0) S.cats[i] = c; else S.cats.push(c);
+    S.cats.sort((a, b) => a.order - b.order); Sync.ping();
+  },
+  async deleteCat(id) {
+    const affected = S.prompts.filter(p => p.categoryId === id).map(p => ({ ...p, categoryId: null }));
+    await DB.tx(['categories', 'prompts'], 'readwrite', tx => { tx.objectStore('categories').delete(id); affected.forEach(p => tx.objectStore('prompts').put(p)); });
+    S.cats = S.cats.filter(c => c.id !== id); affected.forEach(replaceInState); Sync.ping();
+    return affected.length;
+  },
+  async moveCat(id, dir) {
+    const i = S.cats.findIndex(c => c.id === id), j = i + dir; if (i < 0 || j < 0 || j >= S.cats.length) return;
+    const arr = [...S.cats];[arr[i], arr[j]] = [arr[j], arr[i]]; arr.forEach((c, k) => { c.order = k; });
+    await DB.tx(['categories'], 'readwrite', tx => arr.forEach(c => tx.objectStore('categories').put(c)));
+    S.cats = arr; Sync.ping();
+  },
+  async saveSnippet(s) {
+    s.order = S.snippets.reduce((m, x) => Math.max(m, Number.isFinite(x.order) ? x.order : 0), -1) + 1;
+    await DB.put('snippets', s); S.snippets.push(s); Sync.ping();
+  },
+  nextCatOrder() { return S.cats.reduce((m, c) => Math.max(m, c.order), -1) + 1; },
+  async pruneVersions(id, keep = MAX_VERSIONS) {
+    const vs = await DB.byIndex('versions', 'promptId', id); if (vs.length <= keep) return;
+    vs.sort((a, b) => b.at - a.at || b.id - a.id); const del = vs.slice(keep).map(v => v.id);
+    await DB.tx(['versions'], 'readwrite', tx => del.forEach(k => tx.objectStore('versions').delete(k)));
+  },
+  /** 啟動時清理：孤兒版本/歷史（例如刪除後 5 秒內關閉頁面）與超過上限的版本 */
+  async maintain() {
+    const ids = new Set(S.prompts.map(p => p.id));
+    const [vs, hs] = await Promise.all([DB.getAll('versions'), DB.getAll('history')]);
+    const delV = [], delH = [], by = new Map();
+    for (const v of vs) { if (!ids.has(v.promptId)) delV.push(v.id); else { if (!by.has(v.promptId)) by.set(v.promptId, []); by.get(v.promptId).push(v); } }
+    for (const arr of by.values()) if (arr.length > MAX_VERSIONS) { arr.sort((a, b) => b.at - a.at || b.id - a.id); arr.slice(MAX_VERSIONS).forEach(v => delV.push(v.id)); }
+    for (const h of hs) if (!ids.has(h.promptId)) delH.push(h.id);
+    if (!delV.length && !delH.length) return;
+    await DB.tx(['versions', 'history'], 'readwrite', tx => { delV.forEach(k => tx.objectStore('versions').delete(k)); delH.forEach(k => tx.objectStore('history').delete(k)); });
+  },
+  /** 標籤改名（newName 已存在則合併）；newName 為 null 代表刪除標籤 */
+  async renameTag(oldName, newName) {
+    const ids = S.prompts.filter(p => p.tags.includes(oldName)).map(p => p.id);
+    if (!ids.length) { await DB.delete('tags', oldName); S.tags.delete(oldName); Sync.ping(); return 0; }
+    const t = now();
+    await this.batchUpdate(ids, p => ({ ...p, tags: p.tags.map(x => x === oldName ? newName : x).filter(Boolean), updatedAt: t }));
+    return ids.length;
+  },
+  async deleteSnippet(id) { await DB.delete('snippets', id); S.snippets = S.snippets.filter(s => s.id !== id); Sync.ping(); },
+  versions(id) { return DB.byIndex('versions', 'promptId', id); },
+  history(id) { return DB.byIndex('history', 'promptId', id); },
+};
+
+/* ---------- 搜尋 ---------- */
+const Search = {
+  index(p) { S.hay.set(p.id, [p.title, p.prompt, p.negative, p.tags.join(' '), p.note].join('\n').toLowerCase()); },
+  filter(list, q, { tags = [] } = {}) {
+    const terms = String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
+    if (!terms.length && !tags.length) return list;
+    return list.filter(p => {
+      if (tags.length && !tags.every(t => p.tags.includes(t))) return false;
+      if (terms.length) { const h = S.hay.get(p.id) || ''; return terms.every(t => h.includes(t)); }
+      return true;
+    });
+  },
+};
+function getVisible() {
+  const v = S.view; let list = S.prompts; let ordered = false;
+  const catIds = new Set(S.cats.map(c => c.id));
+  if (v.type === 'fav') list = list.filter(p => p.favorite);
+  else if (v.type === 'cat') list = list.filter(p => p.categoryId === v.id);
+  else if (v.type === 'uncat') list = list.filter(p => !p.categoryId || !catIds.has(p.categoryId));
+  else if (v.type === 'recent') { list = list.filter(p => p.lastUsedAt > 0).sort((a, b) => b.lastUsedAt - a.lastUsedAt).slice(0, 100); ordered = true; }
+  else if (v.type === 'top') { list = list.filter(p => p.useCount > 0).sort((a, b) => b.useCount - a.useCount || b.lastUsedAt - a.lastUsedAt).slice(0, 100); ordered = true; }
+  list = Search.filter(list, S.query, { tags: S.tagFilters });
+  if (!ordered) {
+    const cmp = {
+      updated: (a, b) => b.updatedAt - a.updatedAt, created: (a, b) => b.createdAt - a.createdAt,
+      use: (a, b) => b.useCount - a.useCount || b.lastUsedAt - a.lastUsedAt,
+      name: (a, b) => a.title.localeCompare(b.title, 'zh-Hant'),
+    }[S.sort] || ((a, b) => b.updatedAt - a.updatedAt);
+    list = [...list].sort(cmp);
+  }
+  return { list, ordered };
+}
+
+/* ---------- 剪貼簿 ---------- */
+const Clip = {
+  build(p, mode) {
+    const pos = (p.prompt || '').trim(), neg = (p.negative || '').trim(), pr = p.params || {};
+    const has = v => v !== '' && v !== null && v !== undefined;
+    if (mode === 'both') return neg ? `${pos}\nNegative prompt: ${neg}` : pos;
+    if (mode === 'params') {
+      if (p.platform === 'mj') {
+        const f = [];
+        if (has(pr.ar)) f.push(`--ar ${pr.ar}`); if (has(pr.stylize)) f.push(`--stylize ${pr.stylize}`);
+        if (has(pr.chaos)) f.push(`--chaos ${pr.chaos}`); if (has(pr.seed)) f.push(`--seed ${pr.seed}`);
+        if (neg) f.push(`--no ${splitTokens(neg).join(', ')}`);
+        return [pos.replace(/\s*\n\s*/g, ' '), ...f].join(' ');
+      }
+      const kv = [];
+      if (has(pr.steps)) kv.push(`Steps: ${pr.steps}`); if (has(pr.sampler)) kv.push(`Sampler: ${pr.sampler}`);
+      if (has(pr.cfg)) kv.push(`CFG scale: ${pr.cfg}`); if (has(pr.seed)) kv.push(`Seed: ${pr.seed}`);
+      const size = sizeFromAr(pr.ar); if (size) kv.push(`Size: ${size}`);
+      if (has(pr.model)) kv.push(`Model: ${pr.model}`);
+      return pos + (neg ? `\nNegative prompt: ${neg}` : '') + (kv.length ? `\n${kv.join(', ')}` : '');
+    }
+    return pos;
+  },
+  async write(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch { /* fallback */ }
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0'; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch { /* */ } ta.remove(); return ok;
+  },
+};
+
+/* ---------- 匯入 / 匯出 ---------- */
+const IO = {
+  async exportJSON() {
+    const ids = new Set(S.prompts.map(p => p.id)); const images = [];
+    for (const [promptId, blob] of S.images) if (ids.has(promptId)) images.push({ promptId, dataUrl: await blobToDataUrl(blob) });
+    const data = {
+      app: APP, schema: SCHEMA, exportedAt: now(),
+      categories: S.cats, prompts: S.prompts.map(p => ({ ...p, favorite: !!p.favorite })), snippets: S.snippets, images,
+    };
+    const d = new Date(); const name = `prompt-vault-${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}.json`;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast(`已匯出 ${S.prompts.length} 筆 Prompt → ${name}`, { type: 'ok', ms: 3500 });
+  },
+  validate(d) {
+    const fail = m => { throw new Error(m); };
+    if (!d || typeof d !== 'object' || Array.isArray(d)) fail('檔案內容不是 JSON 物件。');
+    if (d.app !== APP) fail('這不是 Prompt Vault Pro 的匯出檔（app 欄位不符）。');
+    if (d.schema !== SCHEMA) fail(`不支援的 schema 版本：${String(d.schema)}（目前支援 ${SCHEMA}）。`);
+    for (const k of ['prompts', 'categories', 'snippets', 'images']) if (d[k] !== undefined && !Array.isArray(d[k])) fail(`${k} 必須是陣列。`);
+    const seen = new Set();
+    const prompts = (d.prompts || []).map((p, i) => {
+      if (!p || typeof p !== 'object') fail(`prompts[${i}] 格式錯誤。`);
+      if (typeof p.id !== 'string' || !p.id) fail(`prompts[${i}] 缺少 id。`);
+      if (seen.has(p.id)) fail(`prompts 內 id 重複：${p.id}`); seen.add(p.id);
+      if (typeof p.title !== 'string' || !p.title.trim()) fail(`prompts[${i}] 缺少 title。`);
+      if (typeof p.prompt !== 'string') fail(`prompts[${i}] 缺少 prompt。`);
+      if (p.tags !== undefined && !Array.isArray(p.tags)) fail(`prompts[${i}].tags 必須是陣列。`);
+      return normalizePrompt(p);
+    });
+    const names = new Set();
+    const categories = (d.categories || []).map((c, i) => {
+      if (!c || typeof c.id !== 'string' || !c.id || typeof c.name !== 'string' || !c.name.trim()) fail(`categories[${i}] 格式錯誤。`);
+      const name = c.name.trim().slice(0, 30); if (names.has(name)) fail(`分類名稱重複：${name}`); names.add(name);
+      return { id: c.id, name, color: safeColor(c.color), order: Number.isFinite(+c.order) ? +c.order : i };
+    });
+    const snippets = (d.snippets || []).map((s, i) => {
+      if (!s || typeof s.id !== 'string' || typeof s.group !== 'string' || typeof s.label !== 'string' || typeof s.value !== 'string') fail(`snippets[${i}] 格式錯誤。`);
+      return { id: s.id, group: s.group.trim() || 'other', label: s.label.slice(0, 40), value: s.value, order: Number.isFinite(+s.order) ? +s.order : i };
+    });
+    const images = (d.images || []).filter(m => m && typeof m.promptId === 'string' && typeof m.dataUrl === 'string' && m.dataUrl.startsWith('data:image/'));
+    return { prompts, categories, snippets, images };
+  },
+  async importData(v, mode) {
+    const blobs = new Map();
+    for (const m of v.images) { try { blobs.set(m.promptId, dataUrlToBlob(m.dataUrl)); } catch { /* 略過壞圖 */ } }
+    const stats = { added: 0, updated: 0, skipped: 0, cats: 0, snippets: 0 };
+    let catsToWrite, promptsToWrite, snippetsToWrite; const finalMap = new Map();
+    if (mode === 'overwrite') {
+      catsToWrite = v.categories; const ids = new Set(catsToWrite.map(c => c.id));
+      promptsToWrite = v.prompts.map(p => ids.has(p.categoryId) ? p : { ...p, categoryId: null });
+      snippetsToWrite = v.snippets; stats.added = promptsToWrite.length; stats.cats = catsToWrite.length; stats.snippets = snippetsToWrite.length;
+    } else {
+      const remap = new Map(); catsToWrite = []; let order = Repo.nextCatOrder();
+      const byId = new Map(S.cats.map(c => [c.id, c])), byName = new Map(S.cats.map(c => [c.name, c]));
+      for (const c of v.categories) {
+        if (byId.has(c.id)) continue;
+        if (byName.has(c.name)) { remap.set(c.id, byName.get(c.name).id); continue; }
+        const nc = { ...c, order: order++ }; catsToWrite.push(nc); byId.set(nc.id, nc); byName.set(nc.name, nc);
+      }
+      stats.cats = catsToWrite.length;
+      S.prompts.forEach(p => finalMap.set(p.id, p)); promptsToWrite = [];
+      for (const p0 of v.prompts) {
+        let cid = remap.get(p0.categoryId) || p0.categoryId; if (!byId.has(cid)) cid = null;
+        const p = { ...p0, categoryId: cid }; const ex = finalMap.get(p.id);
+        if (!ex) { stats.added++; promptsToWrite.push(p); } else if (p.updatedAt > ex.updatedAt) { stats.updated++; promptsToWrite.push(p); } else stats.skipped++;
+      }
+      const sid = new Set(S.snippets.map(s => s.id));
+      snippetsToWrite = v.snippets.filter(s => !sid.has(s.id)); stats.snippets = snippetsToWrite.length;
+    }
+    promptsToWrite.forEach(p => finalMap.set(p.id, p));
+    const counts = new Map(); finalMap.forEach(p => p.tags.forEach(t => counts.set(t, (counts.get(t) || 0) + 1)));
+    const at = now();
+    await DB.tx(DB.STORES, 'readwrite', tx => {
+      if (mode === 'overwrite') DB.STORES.forEach(n => tx.objectStore(n).clear()); else tx.objectStore('tags').clear();
+      catsToWrite.forEach(c => tx.objectStore('categories').put(c));
+      promptsToWrite.forEach(p => {
+        tx.objectStore('prompts').put(p);
+        tx.objectStore('versions').add({ promptId: p.id, snapshot: p, at });
+        tx.objectStore('history').add({ promptId: p.id, action: 'import', at });
+        if (blobs.has(p.id)) tx.objectStore('images').put({ promptId: p.id, blob: blobs.get(p.id) });
+      });
+      snippetsToWrite.forEach(s => tx.objectStore('snippets').put(s));
+      counts.forEach((count, name) => tx.objectStore('tags').put({ name, count }));
+    });
+    await Repo.loadAll(); Sync.ping(); return stats;
+  },
+};
+
+/* ---------- Toast / Modal ---------- */
+function toast(msg, { type = '', ms = 2200, action } = {}) {
+  const el = document.createElement('div'); el.className = 'toast ' + type; el.setAttribute('role', 'status');
+  const sp = document.createElement('span'); sp.textContent = msg; el.appendChild(sp);
+  if (action) { const b = document.createElement('button'); b.type = 'button'; b.textContent = action.label; b.onclick = () => { el.remove(); action.fn(); }; el.appendChild(b); }
+  $('#toasts').appendChild(el); setTimeout(() => el.remove(), ms);
+}
+function handleErr(e, prefix = '操作失敗') {
+  console.error(e);
+  const quota = e && (e.name === 'QuotaExceededError' || /quota/i.test(e.message || ''));
+  if (quota) { UI.banner('⚠️ 瀏覽器儲存空間不足，資料未寫入。請立即「匯出 JSON」備份，並刪除不需要的圖片或 Prompt。'); toast('儲存空間不足', { type: 'err', ms: 5000 }); }
+  else toast(`${prefix}：${(e && e.message) || e}`, { type: 'err', ms: 4500 });
+}
+const Modal = {
+  stack: [],
+  get isOpen() { return this.stack.length > 0; },
+  open({ title, body, actions = [{ label: '關閉' }], wide = false }) {
+    return new Promise(resolve => {
+      const bg = document.createElement('div'); bg.className = 'modal-bg';
+      bg.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true" aria-label="${esc(title)}"><div class="modal-h"><span>${esc(title)}</span><button type="button" class="icon-btn" data-close aria-label="關閉">✕</button></div><div class="modal-b"></div><div class="modal-f"></div></div>`;
+      const b = $('.modal-b', bg), f = $('.modal-f', bg);
+      if (typeof body === 'string') b.innerHTML = body; else if (body) b.appendChild(body);
+      const entry = { bg, resolve, prevFocus: document.activeElement };
+      const close = v => this._close(entry, v);
+      actions.forEach(a => {
+        const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'btn ' + (a.cls || ''); btn.textContent = a.label;
+        if (a.primary) btn.dataset.primary = '1';
+        btn.onclick = async () => {
+          if (a.onClick) { let r; try { r = await a.onClick(); } catch (e) { handleErr(e); return; } if (r === false) return; close(r === undefined ? a.value : r); }
+          else close(a.value);
+        };
+        f.appendChild(btn);
+      });
+      bg.addEventListener('mousedown', e => { if (e.target === bg) close(undefined); });
+      $('[data-close]', bg).onclick = () => close(undefined);
+      bg.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && e.target.tagName === 'INPUT' && !['checkbox', 'color', 'file'].includes(e.target.type) && !e.isComposing) {
+          const p = $('[data-primary]', f); if (p) { e.preventDefault(); p.click(); }
+        }
+      });
+      $('#modalRoot').appendChild(bg); this.stack.push(entry);
+      setTimeout(() => { const el = bg.querySelector('.modal-b input:not([type=hidden]), .modal-b select, .modal-b textarea') || $('[data-primary]', f) || f.lastElementChild; el && el.focus(); }, 30);
+    });
+  },
+  _close(entry, v) {
+    const i = this.stack.indexOf(entry); if (i < 0) return;
+    this.stack.splice(i, 1); entry.bg.remove();
+    try { entry.prevFocus && entry.prevFocus.focus && entry.prevFocus.focus(); } catch { /* */ }
+    entry.resolve(v);
+  },
+  closeTop() { const e = this.stack[this.stack.length - 1]; if (e) this._close(e, undefined); },
+  confirm(msg, { title = '確認', ok = '確定', danger = false } = {}) {
+    return this.open({ title, body: `<div>${esc(msg).replace(/\n/g, '<br>')}</div>`, actions: [{ label: '取消', value: false }, { label: ok, cls: danger ? 'danger solid' : 'primary', value: true, primary: true }] }).then(v => v === true);
+  },
+  input({ title, label, value = '', placeholder = '', ok = '確定' }) {
+    const body = document.createElement('div');
+    body.innerHTML = `<label class="mini-field">${esc(label)}<input class="inp" value="${esc(value)}" placeholder="${esc(placeholder)}"></label>`;
+    const inp = $('input', body);
+    return this.open({ title, body, actions: [{ label: '取消' }, { label: ok, cls: 'primary', primary: true, onClick: () => inp.value }] });
+  },
+};
+
+/* ---------- UI 渲染 ---------- */
+const UI = {
+  banner(msg) { $('#bannerText').textContent = msg; $('#banner').classList.remove('hidden'); },
+  viewTitle() {
+    const v = S.view;
+    if (v.type === 'cat') { const c = S.cats.find(x => x.id === v.id); return c ? `📁 ${c.name}` : '分類'; }
+    return { all: '📚 全部', fav: '⭐ 收藏', recent: '🕘 最近使用', top: '🔥 最常使用', uncat: '📭 未分類' }[v.type] || '全部';
+  },
+  renderSidebar() {
+    const catIds = new Set(S.cats.map(c => c.id)); const cnt = { all: S.prompts.length, fav: 0, recent: 0, top: 0, uncat: 0 }; const catCnt = new Map();
+    for (const p of S.prompts) {
+      if (p.favorite) cnt.fav++; if (p.lastUsedAt) cnt.recent++; if (p.useCount) cnt.top++;
+      if (p.categoryId && catIds.has(p.categoryId)) catCnt.set(p.categoryId, (catCnt.get(p.categoryId) || 0) + 1); else cnt.uncat++;
+    }
+    cnt.recent = Math.min(cnt.recent, 100); cnt.top = Math.min(cnt.top, 100);
+    const views = [['all', '📚', '全部'], ['fav', '⭐', '收藏'], ['recent', '🕘', '最近使用'], ['top', '🔥', '最常使用'], ['uncat', '📭', '未分類']];
+    $('#navViews').innerHTML = views.map(([k, i, l]) => `<button type="button" class="nav-item ${S.view.type === k ? 'active' : ''}" data-view="${k}"><span>${i}</span><span class="nm">${l}</span><span class="cnt">${cnt[k]}</span></button>`).join('');
+    $('#navCats').innerHTML = S.cats.map(c => `<div class="nav-item ${S.view.type === 'cat' && S.view.id === c.id ? 'active' : ''}" data-cat="${esc(c.id)}" role="button" tabindex="0"><span class="dot" style="background:${safeColor(c.color)}"></span><span class="nm">${esc(c.name)}</span><span class="cnt">${catCnt.get(c.id) || 0}</span><button type="button" class="mini edit" data-editcat="${esc(c.id)}" aria-label="編輯分類 ${esc(c.name)}">✎</button></div>`).join('') || '<div class="muted small pad">尚無分類</div>';
+    const arr = [...S.tags].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])); const top = arr.slice(0, 80);
+    S.tagFilters.forEach(t => { if (!top.some(x => x[0] === t)) top.push([t, S.tags.get(t) || 0]); });
+    const max = Math.max(1, ...top.map(x => x[1]));
+    $('#tagCloud').innerHTML = top.map(([n, c]) => `<button type="button" class="tag ${S.tagFilters.includes(n) ? 'active' : ''}" data-tag="${esc(n)}" style="font-size:${11 + Math.round(3 * c / max)}px" aria-pressed="${S.tagFilters.includes(n)}">${esc(n)} <small>${c}</small></button>`).join('') || '<div class="muted small pad">尚無標籤</div>';
+    $('#btnClearTags').classList.toggle('hidden', !S.tagFilters.length);
+    $('#tagList').innerHTML = arr.map(([n]) => `<option value="${esc(n)}">`).join('');
+  },
+  cardHTML(p, catMap) {
+    const c = p.categoryId && catMap.get(p.categoryId); const thumb = imgUrl(p.id); const checked = S.checked.has(p.id);
+    const snippet = p.prompt.length > 80 ? p.prompt.slice(0, 80) + '…' : p.prompt;
+    return `<div class="card ${S.selectedId === p.id ? 'sel' : ''} ${checked ? 'checked' : ''}" data-id="${esc(p.id)}" role="listitem" tabindex="0" aria-label="${esc(p.title)}">
+      ${S.multi ? `<input type="checkbox" class="chk" tabindex="-1" ${checked ? 'checked' : ''} aria-hidden="true">` : ''}
+      ${thumb ? `<img class="thumb" src="${thumb}" alt="" loading="lazy">` : ''}
+      <div class="card-body">
+        <div class="card-top"><span class="card-title">${esc(p.title)}</span><button type="button" class="star-btn ${p.favorite ? 'on' : ''}" data-act="fav" aria-label="${p.favorite ? '取消收藏' : '收藏'}">${p.favorite ? '★' : '☆'}</button></div>
+        <div class="card-snippet">${esc(snippet)}</div>
+        <div class="card-foot">
+          ${c ? `<span class="dot" style="background:${safeColor(c.color)}" title="${esc(c.name)}"></span>` : ''}
+          <span class="tags">${p.tags.slice(0, 4).map(t => `<span class="chip">${esc(t)}</span>`).join('')}${p.tags.length > 4 ? `<span class="chip">+${p.tags.length - 4}</span>` : ''}</span>
+          <span title="使用次數">🔥 ${p.useCount}</span>
+          <button type="button" class="copy-btn" data-act="copy" aria-label="複製 ${esc(p.title)}">📋</button>
+        </div>
+      </div></div>`;
+  },
+  renderList() {
+    const key = JSON.stringify([S.view, S.tagFilters, S.query, S.sort]);
+    if (key !== S.listKey) { S.listKey = key; S.limit = 200; }
+    const { list, ordered } = getVisible(); S.visibleIds = list.map(p => p.id);
+    $('#listTitle').textContent = `${this.viewTitle()}（${list.length}）`;
+    $('#sortSel').disabled = ordered; $('#sortSel').title = ordered ? '此檢視有固定排序' : '';
+    const af = [];
+    if (S.query) af.push(`<button type="button" class="fchip" data-clear="q">🔍 ${esc(S.query)} ✕</button>`);
+    S.tagFilters.forEach(t => af.push(`<button type="button" class="fchip" data-clear-tag="${esc(t)}"># ${esc(t)} ✕</button>`));
+    $('#activeFilters').innerHTML = af.join('');
+    $('#batchBar').classList.toggle('hidden', !S.multi);
+    $('#batchCount').textContent = `已選 ${S.checked.size}`;
+    const el = $('#list');
+    if (!list.length) {
+      const filtered = S.query || S.tagFilters.length || S.view.type !== 'all';
+      el.innerHTML = `<div class="empty"><div class="big">${filtered ? '🔎' : '🗂️'}</div><div>${filtered ? '找不到符合條件的 Prompt' : '這裡還沒有 Prompt'}</div><button type="button" class="btn primary" data-act="new">＋ 新增 Prompt</button></div>`;
+      return;
+    }
+    const catMap = new Map(S.cats.map(c => [c.id, c]));
+    const ae = document.activeElement; let keep = null; // 重繪前記住鍵盤焦點
+    if (ae && el.contains(ae)) { const cd = ae.closest('.card'); if (cd) keep = { id: cd.dataset.id, act: ae.dataset ? ae.dataset.act || null : null }; }
+    el.innerHTML = list.slice(0, S.limit).map(p => this.cardHTML(p, catMap)).join('') +
+      (list.length > S.limit ? `<button type="button" class="btn more" data-act="more">顯示更多（還有 ${list.length - S.limit} 筆）</button>` : '');
+    if (keep) {
+      const cd = el.querySelector(`.card[data-id="${CSS.escape(keep.id)}"]`); const t = cd && (keep.act ? cd.querySelector(`[data-act="${keep.act}"]`) : cd);
+      if (t) t.focus({ preventScroll: true });
+    }
+  },
+  renderAll() { this.renderSidebar(); this.renderList(); Editor.renderCatOptions(); Composer.render(); this.storage(); },
+  async storage() {
+    let s = `📄 ${S.prompts.length} 筆 Prompt · 🖼️ ${S.images.size} 張圖`;
+    try { if (navigator.storage && navigator.storage.estimate) { const { usage = 0, quota = 0 } = await navigator.storage.estimate(); s += `<br>💾 已用 ${mb(usage)} / ${mb(quota)}`; } } catch { /* */ }
+    s += `<br>${S.persisted ? '🔒 持久化儲存：已啟用' : '⚠️ 持久化儲存：未啟用（建議定期匯出）'}`;
+    $('#storageInfo').innerHTML = s;
+  },
+  applyTheme(t) {
+    const theme = t || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.dataset.theme = theme; $('#btnTheme').textContent = theme === 'dark' ? '☀️' : '🌙';
+  },
+};
+
+/* ---------- 組合器（Snippets） ---------- */
+const Composer = {
+  groups() {
+    const order = Object.keys(GROUPS);
+    return [...new Set(S.snippets.map(s => s.group))].sort((a, b) => {
+      const ia = order.indexOf(a), ib = order.indexOf(b);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b);
+    });
+  },
+  render() {
+    const gs = this.groups(); if (!gs.includes(S.compGroup)) S.compGroup = gs[0] || 'quality';
+    $('#compTabs').innerHTML = gs.map(g => `<button type="button" role="tab" class="tab ${g === S.compGroup ? 'active' : ''}" data-group="${esc(g)}" aria-selected="${g === S.compGroup}">${esc(GROUPS[g] || g)}</button>`).join('');
+    const items = S.snippets.filter(s => s.group === S.compGroup);
+    $('#compChips').innerHTML = items.map(s => `<span class="snip" draggable="true" data-sid="${esc(s.id)}" title="${esc(s.value)}" role="button" tabindex="0">${esc(s.label)}<button type="button" class="x" data-delsnip="${esc(s.id)}" aria-label="刪除片段 ${esc(s.label)}">×</button></span>`).join('') || '<span class="muted small">此群組沒有片段</span>';
+  },
+  insert(ta, value) {
+    const st = ta.selectionStart ?? ta.value.length, en = ta.selectionEnd ?? st;
+    const before = ta.value.slice(0, st), after = ta.value.slice(en);
+    const pre = before.trim() && !/[,，]\s*$/.test(before) ? ', ' : (before && !/\s$/.test(before) ? ' ' : '');
+    const suf = after.trim() && !/^\s*[,，]/.test(after) ? ', ' : '';
+    ta.focus(); ta.setRangeText(pre + value + suf, st, en, 'end');
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  },
+  async addSnippet() {
+    const gs = this.groups(); const body = document.createElement('div');
+    body.innerHTML = `<label class="mini-field">群組<select class="inp" id="sgGroup">${gs.map(g => `<option value="${esc(g)}" ${g === S.compGroup ? 'selected' : ''}>${esc(GROUPS[g] || g)}</option>`).join('')}<option value="__new">＋ 新群組…</option></select></label>
+      <label class="mini-field hidden" id="sgNewWrap">新群組名稱<input class="inp" id="sgNew" maxlength="20" placeholder="例如：服裝"></label>
+      <label class="mini-field">顯示名稱（中文）<input class="inp" id="sgLabel" maxlength="40" placeholder="例如：電影燈光"></label>
+      <label class="mini-field">插入內容（英文詞）<input class="inp" id="sgValue" placeholder="例如：cinematic lighting"></label>`;
+    $('#sgGroup', body).onchange = e => $('#sgNewWrap', body).classList.toggle('hidden', e.target.value !== '__new');
+    await Modal.open({
+      title: '新增組合器片段', body, actions: [{ label: '取消' }, {
+        label: '新增', cls: 'primary', primary: true, onClick: async () => {
+          let group = $('#sgGroup', body).value; if (group === '__new') group = $('#sgNew', body).value.trim();
+          const label = $('#sgLabel', body).value.trim(), value = $('#sgValue', body).value.trim();
+          if (!group || !value) { toast('請填寫群組與插入內容', { type: 'err' }); return false; }
+          await Repo.saveSnippet({ id: uid(), group, label: label || value, value }); S.compGroup = group; this.render(); toast('已新增片段', { type: 'ok' });
+        },
+      }],
+    });
+  },
+};
+
+/* ---------- 編輯器 ---------- */
+const Editor = {
+  cur: null, base: '', tags: [], fav: false, image: undefined, previewUrl: null,
+  get dirty() { return !!this.cur && (this.serialize() !== this.base || this.image !== undefined); },
+  read() {
+    const params = {};
+    PARAM_KEYS.forEach(k => { const el = $('#p_' + k); const v = el.value.trim(); params[k] = (el.type === 'number' && v !== '' && Number.isFinite(+v)) ? +v : v; });
+    return {
+      title: $('#fTitle').value.trim(), prompt: $('#fPrompt').value, negative: $('#fNegative').value,
+      categoryId: $('#fCategory').value || null, tags: [...this.tags], platform: $('#fPlatform').value, params, note: $('#fNote').value,
+    };
+  },
+  serialize() { return JSON.stringify(this.read()); },
+  fill(d) {
+    $('#fTitle').value = d.title || ''; $('#fPrompt').value = d.prompt || ''; $('#fNegative').value = d.negative || '';
+    this.tags = [...(d.tags || [])]; this.renderTags(); this.renderCatOptions(d.categoryId || '');
+    $('#fPlatform').value = PLATFORMS[d.platform] ? d.platform : 'other';
+    PARAM_KEYS.forEach(k => { $('#p_' + k).value = (d.params && d.params[k] !== undefined) ? d.params[k] : ''; });
+    $('#fNote').value = d.note || ''; this.updateCounters(); this.updatePlatform();
+  },
+  open(p) {
+    if (!p) return this.close();
+    this.cur = { ...p }; this.image = undefined; this.fill(p); this.fav = !!p.favorite; this.renderFav();
+    this.base = this.serialize(); this.renderMeta(); this.renderImage(); this.updateDirty();
+    $('#emptyEditor').classList.add('hidden'); $('#editor').classList.remove('hidden'); document.body.classList.add('editing');
+    $('#btnVersions').disabled = !!p._new; $('#editorPane').scrollTop = 0;
+  },
+  newDraft(seed = {}, { dirty = false } = {}) {
+    const t = now();
+    this.open(normalizePrompt({ platform: 'other', ...seed, id: uid(), useCount: 0, lastUsedAt: 0, createdAt: t, updatedAt: t, favorite: 0 }));
+    this.cur._new = true; $('#btnVersions').disabled = true;
+    if (dirty) this.base = ''; this.renderMeta(); this.updateDirty();
+    setTimeout(() => $('#fTitle').focus(), 30);
+  },
+  close() {
+    this.cur = null; this.image = undefined; if (this.previewUrl) { URL.revokeObjectURL(this.previewUrl); this.previewUrl = null; }
+    $('#editor').classList.add('hidden'); $('#emptyEditor').classList.remove('hidden'); document.body.classList.remove('editing'); this.updateDirty();
+  },
+  syncFrom(np) {
+    if (!np || !this.cur || this.cur.id !== np.id) return;
+    Object.assign(this.cur, { useCount: np.useCount, lastUsedAt: np.lastUsedAt, favorite: np.favorite });
+    this.fav = !!np.favorite; this.renderFav(); this.renderMeta();
+  },
+  renderFav() { const b = $('#fFav'); b.textContent = this.fav ? '★' : '☆'; b.classList.toggle('on', this.fav); b.setAttribute('aria-pressed', this.fav); b.setAttribute('aria-label', this.fav ? '取消收藏' : '收藏'); },
+  renderMeta() {
+    const p = this.cur; if (!p) return;
+    $('#edMeta').textContent = p._new ? '新 Prompt（尚未儲存）' : `建立 ${fmtTime(p.createdAt)} · 更新 ${fmtTime(p.updatedAt)} · 使用 ${p.useCount} 次 · 最後使用 ${relTime(p.lastUsedAt)}`;
+  },
+  renderCatOptions(sel) {
+    const s = $('#fCategory'); const v = sel !== undefined ? sel : s.value;
+    s.innerHTML = '<option value="">（未分類）</option>' + S.cats.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+    s.value = S.cats.some(c => c.id === v) ? v : '';
+  },
+  renderTags() {
+    const box = $('#tagBox'), inp = $('#fTagInput'); $$('.tagchip', box).forEach(x => x.remove());
+    this.tags.forEach((t, i) => {
+      const c = document.createElement('span'); c.className = 'tagchip';
+      c.innerHTML = `${esc(t)}<button type="button" data-rmtag="${i}" aria-label="移除標籤 ${esc(t)}">×</button>`;
+      box.insertBefore(c, inp);
+    });
+  },
+  addTagsFrom(str) {
+    let changed = false;
+    String(str).split(/[,，]/).map(normTag).filter(Boolean).forEach(t => { if (!this.tags.includes(t)) { this.tags.push(t); changed = true; } });
+    if (changed) { this.renderTags(); this.updateDirty(); }
+  },
+  renderImage() {
+    const box = $('#imgBox'); if (this.previewUrl) { URL.revokeObjectURL(this.previewUrl); this.previewUrl = null; }
+    let src = null;
+    if (this.image instanceof Blob) { this.previewUrl = URL.createObjectURL(this.image); src = this.previewUrl; }
+    else if (this.image === undefined && this.cur && S.images.has(this.cur.id)) src = imgUrl(this.cur.id);
+    box.innerHTML = src ? `<img src="${src}" alt="範例圖"><button type="button" class="btn sm danger rm" data-rmimg>移除圖片</button>`
+      : '<div>🖼️ 拖曳圖片到這裡、點擊上傳，或直接貼上<br><span class="hint">自動縮圖至 768px（WebP），存於 IndexedDB</span></div>';
+  },
+  async setImageFile(file) {
+    if (!this.cur) return;
+    try { this.image = await processImage(file); this.renderImage(); this.updateDirty(); } catch (e) { handleErr(e, '圖片處理失敗'); }
+  },
+  removeImage() {
+    const stored = this.cur && S.images.has(this.cur.id);
+    this.image = stored ? null : undefined; this.renderImage(); this.updateDirty();
+  },
+  updateCounters() {
+    const f = v => `${v.length} 字元 · ${splitTokens(v).length} 詞`;
+    $('#cPrompt').textContent = f($('#fPrompt').value); $('#cNeg').textContent = f($('#fNegative').value);
+  },
+  updatePlatform() {
+    const pf = $('#fPlatform').value;
+    $$('.params .mini-field').forEach(el => {
+      const fo = el.dataset.for; const on = fo === 'all' || (fo === 'mj' ? pf === 'mj' : pf !== 'mj');
+      el.classList.toggle('dim', !on);
+    });
+  },
+  updateDirty() {
+    const d = this.dirty; $('#dirtyMark').classList.toggle('hidden', !d);
+    document.title = (d ? '● ' : '') + 'Prompt Vault Pro';
+  },
+  commitTagInput() { const ti = $('#fTagInput'); if (ti.value.trim()) { this.addTagsFrom(ti.value); ti.value = ''; } },
+  markSaved(p) { // 儲存後只更新狀態，不重填表單（保留捲動位置與游標）
+    this.cur = { ...p }; this.image = undefined; this.fav = !!p.favorite; this.renderFav();
+    this.base = this.serialize(); this.renderMeta(); this.renderImage(); this.updateDirty(); $('#btnVersions').disabled = false;
+  },
+  saving: false,
+  async save() {
+    if (!this.cur || this.saving) return;
+    this.commitTagInput();
+    const d = this.read();
+    if (!d.title) { toast('請輸入標題', { type: 'err' }); $('#fTitle').focus(); return; }
+    if (!d.prompt.trim()) { toast('請輸入正面 Prompt', { type: 'err' }); $('#fPrompt').focus(); return; }
+    const isNew = !!this.cur._new;
+    if (!isNew && !this.dirty) { toast('沒有需要儲存的變更'); return; }
+    const t = now();
+    const p = normalizePrompt({ ...this.cur, ...d, favorite: this.fav, createdAt: this.cur.createdAt || t, updatedAt: t });
+    this.saving = true;
+    try { await Repo.savePrompt(p, { image: this.image }); } catch (e) { return handleErr(e, '儲存失敗'); } finally { this.saving = false; }
+    S.selectedId = p.id; this.markSaved(p);
+    if (isNew) Router.go({ p: p.id }, { replace: true, noGuard: true });
+    UI.renderAll(); toast(isNew ? '已新增' : '已儲存', { type: 'ok' });
+  },
+  async copy() {
+    if (!this.cur) return;
+    const mode = $('#copyMode').value; const p = { ...this.cur, ...this.read() };
+    if (!p.prompt.trim()) return toast('Prompt 是空的', { type: 'err' });
+    if (!await Clip.write(Clip.build(p, mode))) return toast('複製失敗，請手動選取文字', { type: 'err' });
+    if (!this.cur._new) {
+      try { const np = await Repo.markUsed(this.cur.id); this.syncFrom(np); UI.renderSidebar(); UI.renderList(); } catch (e) { handleErr(e); }
+    }
+    toast(`已複製（${COPY_MODES[mode]}）${this.dirty ? '・含未儲存內容' : ''}`, { type: 'ok' });
+  },
+  duplicate() {
+    if (!this.cur) return;
+    const d = this.read(); if (!d.title && !d.prompt) return;
+    const img = this.image instanceof Blob ? this.image : (this.image === undefined && S.images.get(this.cur.id)) || undefined;
+    S.selectedId = null; this.newDraft({ ...d, title: (d.title || '未命名').slice(0, 94) + '（副本）' }, { dirty: true });
+    if (img) { this.image = img; this.renderImage(); }
+    this.updateDirty(); Router.go({ p: null }, { noGuard: true }); toast('已建立副本，按「儲存」後生效');
+  },
+  async remove() {
+    if (!this.cur) return;
+    if (this.cur._new) {
+      if (this.dirty && !await Modal.confirm('放棄這筆尚未儲存的新 Prompt？', { ok: '放棄', danger: true })) return;
+      this.close(); return;
+    }
+    if (!await Modal.confirm(`確定刪除「${this.cur.title}」？\n5 秒內可復原。`, { title: '刪除 Prompt', ok: '刪除', danger: true })) return;
+    Actions.deleteWithUndo([this.cur.id]);
+  },
+};
+
+async function processImage(file) {
+  if (!file || !/^image\//.test(file.type)) throw new Error('請選擇圖片檔');
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('無法讀取圖片')); i.src = url; });
+    if (!img.naturalWidth || !img.naturalHeight) throw new Error('無法取得圖片尺寸（不支援的格式）');
+    const max = 768, sc = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * sc)), h = Math.max(1, Math.round(img.naturalHeight * sc));
+    const c = document.createElement('canvas'); c.width = w; c.height = h; const cx = c.getContext('2d'); cx.drawImage(img, 0, 0, w, h);
+    let blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.85));
+    if (!blob || blob.type !== 'image/webp') { // 不支援 WebP 編碼（如舊版 Safari）：JPEG 不支援透明，先墊白底
+      cx.globalCompositeOperation = 'destination-over'; cx.fillStyle = '#fff'; cx.fillRect(0, 0, w, h);
+      blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.86));
+    }
+    if (!blob) throw new Error('圖片轉換失敗');
+    return blob;
+  } finally { URL.revokeObjectURL(url); }
+}
+
+/* ---------- 版本比對 ---------- */
+function tokenDiff(a, b) {
+  const A = splitTokens(a), B = splitTokens(b), sa = new Set(A), sb = new Set(B); const out = [];
+  B.forEach(t => out.push(sa.has(t) ? `<span class="tok">${esc(t)}</span>` : `<ins class="tok">+ ${esc(t)}</ins>`));
+  A.filter(t => !sb.has(t)).forEach(t => out.push(`<del class="tok">− ${esc(t)}</del>`));
+  return out.join('') || '<span class="muted small">（空）</span>';
+}
+function diffHTML(oldV, cur) {
+  const catName = id => (S.cats.find(c => c.id === id) || {}).name || '未分類';
+  const paramStr = pr => PARAM_KEYS.filter(k => pr && pr[k] !== '' && pr[k] !== undefined).map(k => `${k}=${pr[k]}`).join(', ');
+  const line = (label, a, b) => a === b ? `<h4>${label}</h4><span class="tok">${esc(b) || '—'}</span>` : `<h4>${label}</h4><del class="tok">− ${esc(a) || '—'}</del> <ins class="tok">+ ${esc(b) || '—'}</ins>`;
+  return `<div class="hint">綠色 = 目前內容新增；紅色 = 目前內容已移除（相對於所選版本）</div>
+    ${line('標題', oldV.title, cur.title)}
+    <h4>正面 Prompt</h4>${tokenDiff(oldV.prompt, cur.prompt)}
+    <h4>負面 Prompt</h4>${tokenDiff(oldV.negative, cur.negative)}
+    <h4>標籤</h4>${tokenDiff((oldV.tags || []).join(','), (cur.tags || []).join(','))}
+    ${line('分類', catName(oldV.categoryId), catName(cur.categoryId))}
+    ${line('平台', PLATFORMS[oldV.platform] || oldV.platform, PLATFORMS[cur.platform] || cur.platform)}
+    ${line('參數', paramStr(oldV.params), paramStr(cur.params))}
+    ${line('備註', oldV.note || '', cur.note || '')}`;
+}
+
+/* ---------- 路由（hash） ---------- */
+const Router = {
+  last: '', noGuard: false,
+  parse() {
+    const h = location.hash.replace(/^#\/?/, ''); const qi = h.indexOf('?');
+    const path = qi >= 0 ? h.slice(0, qi) : h, qs = qi >= 0 ? h.slice(qi + 1) : '';
+    const parts = path.split('/').filter(Boolean).map(s => { try { return decodeURIComponent(s); } catch { return s; } });
+    const sp = new URLSearchParams(qs); let view = { type: 'all', id: null };
+    if (['all', 'fav', 'recent', 'top', 'uncat'].includes(parts[0])) view = { type: parts[0], id: null };
+    else if (parts[0] === 'cat' && parts[1]) view = { type: 'cat', id: parts[1] };
+    const tags = (sp.get('tags') || '').split(',').map(s => s.trim()).filter(Boolean);
+    return { view, tags, p: sp.get('p') || null };
+  },
+  build({ view, tags, p }) {
+    const path = view.type === 'cat' ? `cat/${encodeURIComponent(view.id)}` : view.type;
+    const sp = new URLSearchParams(); if (tags && tags.length) sp.set('tags', tags.join(',')); if (p) sp.set('p', p);
+    const qs = sp.toString(); return '#/' + path + (qs ? '?' + qs : '');
+  },
+  go(patch, { replace = false, noGuard = false } = {}) {
+    const next = { view: S.view, tags: S.tagFilters, p: S.selectedId, ...patch };
+    if (!noGuard && 'p' in patch && next.p !== S.selectedId) { if (!guard()) return; noGuard = true; } // 先詢問，避免取消後歷史紀錄多出一筆
+    const h = this.build(next);
+    if (noGuard) this.noGuard = true;
+    if (replace || h === location.hash) { history.replaceState(null, '', h); this.apply(); }
+    else location.hash = h;
+  },
+  apply() {
+    const r = this.parse(); const noGuard = this.noGuard; this.noGuard = false;
+    if (r.p && !S.prompts.some(x => x.id === r.p)) { r.p = null; history.replaceState(null, '', this.build(r)); }
+    if (r.view.type === 'cat' && !S.cats.some(c => c.id === r.view.id)) { r.view = { type: 'all', id: null }; history.replaceState(null, '', this.build(r)); }
+    const pChanged = r.p !== S.selectedId;
+    if (pChanged && !noGuard && !guard()) { history.replaceState(null, '', this.last || '#/all'); return; }
+    S.view = r.view; S.tagFilters = r.tags;
+    if (pChanged) {
+      S.selectedId = r.p;
+      if (r.p) Editor.open(S.prompts.find(x => x.id === r.p));
+      else if (!(Editor.cur && Editor.cur._new)) Editor.close();
+    }
+    this.last = location.hash; UI.renderSidebar(); UI.renderList();
+  },
+};
+
+/* ---------- 動作 ---------- */
+const Actions = {
+  newPrompt() {
+    if (!guard()) return;
+    const v = S.view; S.selectedId = null;
+    Editor.newDraft({ categoryId: v.type === 'cat' ? v.id : null, tags: [...S.tagFilters] });
+    Router.go({ p: null }, { noGuard: true }); document.body.classList.remove('drawer');
+  },
+  async toggleFav(id) {
+    try { const np = await Repo.toggleFav(id); Editor.syncFrom(np); UI.renderSidebar(); UI.renderList(); } catch (e) { handleErr(e); }
+  },
+  async copyById(id) {
+    const p = S.prompts.find(x => x.id === id); if (!p) return;
+    const mode = Settings.get().copyMode;
+    if (!await Clip.write(Clip.build(p, mode))) return toast('複製失敗', { type: 'err' });
+    try { const np = await Repo.markUsed(id); Editor.syncFrom(np); UI.renderSidebar(); UI.renderList(); } catch (e) { handleErr(e); }
+    toast(`已複製「${p.title}」（${COPY_MODES[mode]}）`, { type: 'ok' });
+  },
+  async deleteWithUndo(ids) {
+    let backups; try { backups = await Repo.deleteMany(ids); } catch (e) { return handleErr(e, '刪除失敗'); }
+    if (Editor.cur && ids.includes(Editor.cur.id)) { Editor.close(); S.selectedId = null; Router.go({ p: null }, { replace: true, noGuard: true }); }
+    UI.renderAll();
+    let undone = false;
+    const timer = setTimeout(() => { if (!undone) Repo.purgeAux(ids).catch(() => { }); }, 5300);
+    toast(`已刪除 ${backups.length} 筆 Prompt`, {
+      ms: 5000, action: {
+        label: '復原', fn: async () => {
+          undone = true; clearTimeout(timer);
+          try { await Repo.restoreMany(backups); UI.renderAll(); toast('已復原', { type: 'ok' }); } catch (e) { handleErr(e, '復原失敗'); }
+        },
+      },
+    });
+  },
+  async editCategory(cat) {
+    const isNew = !cat; const body = document.createElement('div');
+    body.innerHTML = `<label class="mini-field">名稱<input class="inp" id="cName" maxlength="30" value="${esc(cat ? cat.name : '')}" placeholder="例如：ESG"></label>
+      <label class="mini-field">顏色<input type="color" id="cColor" value="${safeColor(cat ? cat.color : randColor())}" style="width:64px;height:34px;border:none;background:none;padding:0"></label>
+      ${isNew ? '' : `<div style="display:flex;gap:6px"><button type="button" class="btn sm" data-mv="-1">↑ 上移</button><button type="button" class="btn sm" data-mv="1">↓ 下移</button></div>`}`;
+    body.addEventListener('click', async e => {
+      const b = e.target.closest('[data-mv]'); if (!b) return;
+      try { await Repo.moveCat(cat.id, +b.dataset.mv); UI.renderAll(); } catch (er) { handleErr(er); }
+    });
+    const actions = [];
+    if (!isNew) actions.push({
+      label: '刪除分類', cls: 'danger left', onClick: async () => {
+        const n = S.prompts.filter(p => p.categoryId === cat.id).length;
+        if (!await Modal.confirm(`刪除分類「${cat.name}」？${n ? `\n其中 ${n} 筆 Prompt 會改為「未分類」，Prompt 本身不會刪除。` : ''}`, { ok: '刪除', danger: true })) return false;
+        await Repo.deleteCat(cat.id);
+        if (S.view.type === 'cat' && S.view.id === cat.id) Router.go({ view: { type: 'all', id: null } }, { replace: true, noGuard: true });
+        if (Editor.cur && !Editor.dirty && !Editor.cur._new) { const p = S.prompts.find(x => x.id === Editor.cur.id); p && Editor.open(p); }
+        UI.renderAll(); toast('已刪除分類');
+      },
+    });
+    actions.push({ label: '取消' }, {
+      label: isNew ? '新增' : '儲存', cls: 'primary', primary: true, onClick: async () => {
+        const name = $('#cName', body).value.trim().slice(0, 30); if (!name) { toast('請輸入分類名稱', { type: 'err' }); return false; }
+        const c = isNew ? { id: uid(), name, color: $('#cColor', body).value, order: Repo.nextCatOrder() } : { ...cat, name, color: $('#cColor', body).value };
+        try { await Repo.saveCat(c); } catch (e) { toast(e.message, { type: 'err' }); return false; }
+        UI.renderAll(); toast(isNew ? '已新增分類' : '已更新分類', { type: 'ok' });
+      },
+    });
+    await Modal.open({ title: isNew ? '新增分類' : '編輯分類', body, actions });
+  },
+  async batch(act) {
+    if (act === 'all') {
+      const vis = S.visibleIds || []; const allOn = vis.length && vis.every(id => S.checked.has(id));
+      vis.forEach(id => allOn ? S.checked.delete(id) : S.checked.add(id)); UI.renderList(); return;
+    }
+    const ids = [...S.checked]; if (!ids.length) return toast('請先勾選項目');
+    const refresh = () => {
+      if (Editor.cur && ids.includes(Editor.cur.id)) { const p = S.prompts.find(x => x.id === Editor.cur.id); if (p) { if (Editor.dirty) Editor.syncFrom(p); else Editor.open(p); } }
+      UI.renderAll();
+    };
+    try {
+      if (act === 'fav' || act === 'unfav') { await Repo.batchUpdate(ids, p => ({ ...p, favorite: act === 'fav' ? 1 : 0 })); refresh(); toast(`已更新 ${ids.length} 筆`, { type: 'ok' }); }
+      else if (act === 'cat') {
+        const body = `<label class="mini-field">移至分類<select class="inp" id="bCat"><option value="">（未分類）</option>${S.cats.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label>`;
+        const v = await Modal.open({ title: `變更 ${ids.length} 筆的分類`, body, actions: [{ label: '取消' }, { label: '套用', cls: 'primary', primary: true, onClick: () => ({ v: $('#bCat').value }) }] });
+        if (!v) return;
+        await Repo.batchUpdate(ids, p => ({ ...p, categoryId: v.v || null, updatedAt: now() })); refresh(); toast(`已變更 ${ids.length} 筆的分類`, { type: 'ok' });
+      } else if (act === 'tag') {
+        const s = await Modal.input({ title: `為 ${ids.length} 筆加上標籤`, label: '標籤（以逗號分隔）', placeholder: '例如：精選, 2026', ok: '加入' });
+        const add = String(s || '').split(/[,，]/).map(normTag).filter(Boolean); if (!add.length) return;
+        await Repo.batchUpdate(ids, p => ({ ...p, tags: [...new Set([...p.tags, ...add])], updatedAt: now() })); refresh(); toast(`已加入標籤：${add.join('、')}`, { type: 'ok' });
+      } else if (act === 'del') {
+        if (Editor.cur && ids.includes(Editor.cur.id) && Editor.dirty && !confirm('編輯中的 Prompt 有未儲存修改，仍要刪除？')) return;
+        if (!await Modal.confirm(`確定刪除選取的 ${ids.length} 筆 Prompt？\n5 秒內可復原。`, { title: '批次刪除', ok: '刪除', danger: true })) return;
+        await this.deleteWithUndo(ids); S.checked.clear(); UI.renderList();
+      }
+    } catch (e) { handleErr(e); }
+  },
+  async manageTags() {
+    const body = document.createElement('div'); let filter = '';
+    const draw = () => {
+      const arr = [...S.tags].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+      body.innerHTML = arr.length ? `<input class="inp" id="tmFilter" placeholder="篩選標籤…" aria-label="篩選標籤" value="${esc(filter)}"><div class="tm-list">${arr.map(([n, c]) => `<div class="tm-row" data-name="${esc(n)}"><span class="tm-name">${esc(n)}</span><span class="muted small">${c} 筆</span><button type="button" class="btn sm" data-tm="rename">改名</button><button type="button" class="btn sm danger" data-tm="del">刪除</button></div>`).join('')}</div><div class="hint">改名成既有標籤的名稱即可合併。標籤變更會同步套用到所有 Prompt。</div>` : '<div class="muted">尚無標籤</div>';
+      applyFilter();
+    };
+    const applyFilter = () => $$('.tm-row', body).forEach(r => r.classList.toggle('hidden', !!filter && !r.dataset.name.toLowerCase().includes(filter.toLowerCase())));
+    body.addEventListener('input', e => { if (e.target.id === 'tmFilter') { filter = e.target.value.trim(); applyFilter(); } });
+    body.addEventListener('click', async e => {
+      const b = e.target.closest('[data-tm]'); if (!b) return; const name = b.closest('.tm-row').dataset.name;
+      try {
+        let to = null;
+        if (b.dataset.tm === 'rename') {
+          const v = await Modal.input({ title: `重新命名標籤「${name}」`, label: '新名稱（與現有標籤同名則合併）', value: name, ok: '套用' });
+          const nn = normTag(v || ''); if (!nn || nn === name) return; to = nn;
+        } else if (!await Modal.confirm(`刪除標籤「${name}」？\n只會從 ${S.tags.get(name) || 0} 筆 Prompt 移除此標籤，Prompt 本身不會刪除。`, { ok: '刪除', danger: true })) return;
+        const n = await Repo.renameTag(name, to);
+        if (S.tagFilters.includes(name)) { const f = [...new Set(S.tagFilters.map(x => x === name ? to : x).filter(Boolean))]; Router.go({ tags: f }, { replace: true, noGuard: true }); }
+        if (Editor.cur && !Editor.cur._new) {
+          if (!Editor.dirty) { const p = S.prompts.find(x => x.id === Editor.cur.id); p && Editor.open(p); }
+          else { Editor.tags = [...new Set(Editor.tags.map(x => x === name ? to : x).filter(Boolean))]; Editor.renderTags(); Editor.updateDirty(); }
+        }
+        UI.renderAll(); draw(); toast(to ? `已將「${name}」改為「${to}」（${n} 筆）` : `已刪除標籤「${name}」`, { type: 'ok' });
+      } catch (er) { handleErr(er); }
+    });
+    draw(); await Modal.open({ title: '🏷️ 標籤管理', body, actions: [{ label: '關閉' }] });
+  },
+  toggleMulti(on = !S.multi) {
+    S.multi = on; S.checked.clear(); const b = $('#btnSelect');
+    b.textContent = on ? '完成' : '多選'; b.setAttribute('aria-pressed', on); b.classList.toggle('primary', on); UI.renderList();
+  },
+  openIO() {
+    const body = `<div class="io-grid">
+      <button type="button" class="io-card" data-io="export"><b>⬇️ 匯出 JSON</b><span class="muted small">備份全部 Prompt、分類、片段與範例圖</span></button>
+      <button type="button" class="io-card" data-io="import"><b>⬆️ 匯入 JSON</b><span class="muted small">可選擇「合併」或「覆蓋」</span></button></div>
+      <div class="hint">資料只存在本機瀏覽器的 IndexedDB。清除瀏覽資料會一併刪除，建議定期匯出備份。</div>`;
+    const p = Modal.open({ title: '匯入 / 匯出', body, actions: [{ label: '關閉' }] });
+    const root = Modal.stack[Modal.stack.length - 1].bg;
+    root.addEventListener('click', e => {
+      const b = e.target.closest('[data-io]'); if (!b) return;
+      if (b.dataset.io === 'import') { $('#fileImport').click(); Modal.closeTop(); }
+      else { Modal.closeTop(); IO.exportJSON().catch(er => handleErr(er, '匯出失敗')); }
+    });
+    return p;
+  },
+  async importFile(f) {
+    let v;
+    try {
+      const text = await f.text(); let d;
+      try { d = JSON.parse(text); } catch { throw new Error('JSON 解析失敗，檔案可能已損毀或不是 JSON。'); }
+      v = IO.validate(d);
+    } catch (e) {
+      return Modal.open({ title: '匯入失敗', body: `<div class="err-box">${esc(e.message)}</div><div class="muted">現有資料沒有任何變更。</div>` });
+    }
+    const mode = await Modal.open({
+      title: '匯入資料',
+      body: `<div>檔案：<b>${esc(f.name)}</b></div><div>Prompt <b>${v.prompts.length}</b> 筆 · 分類 <b>${v.categories.length}</b> · 片段 <b>${v.snippets.length}</b> · 圖片 <b>${v.images.length}</b></div>
+        <div class="hint"><b>合併</b>：用 id 比對，相同 id 保留 updatedAt 較新的那筆。<br><b>覆蓋</b>：先清空現有資料（含版本紀錄），再寫入。</div>`,
+      actions: [{ label: '取消' }, { label: '覆蓋', cls: 'danger', value: 'overwrite' }, { label: '合併', cls: 'primary', value: 'merge', primary: true }],
+    });
+    if (!mode) return;
+    if (mode === 'overwrite' && !await Modal.confirm(`確定清空現有 ${S.prompts.length} 筆 Prompt 並以匯入檔覆蓋？\n此動作無法復原，建議先匯出備份。`, { title: '二次確認', ok: '確定覆蓋', danger: true })) return;
+    if (!guard()) return;
+    try {
+      const st = await IO.importData(v, mode);
+      Editor.close(); S.selectedId = null; S.checked.clear();
+      Router.go({ view: { type: 'all', id: null }, tags: [], p: null }, { replace: true, noGuard: true }); UI.renderAll();
+      toast(mode === 'overwrite' ? `已覆蓋匯入 ${st.added} 筆 Prompt` : `合併完成：新增 ${st.added}、更新 ${st.updated}、略過 ${st.skipped}`, { type: 'ok', ms: 4500 });
+    } catch (e) { handleErr(e, '匯入失敗，現有資料未變更'); }
+  },
+  showHelp() {
+    const rows = [['Ctrl / ⌘ + K', '聚焦搜尋'], ['Alt + N（或 Ctrl + N*）', '新增 Prompt'], ['Ctrl / ⌘ + S', '儲存'], ['Ctrl / ⌘ + Shift + C', '複製目前 Prompt'], ['Esc', '關閉視窗 / 返回']];
+    Modal.open({
+      title: '⌨️ 快捷鍵', body: `<table style="border-collapse:collapse;width:100%">${rows.map(([k, v]) => `<tr><td style="padding:6px 0"><kbd>${esc(k)}</kbd></td><td>${esc(v)}</td></tr>`).join('')}</table>
+      <div class="hint">* Chrome / Edge 會保留 Ctrl+N（開新視窗），請改用 Alt+N。</div>`,
+    });
+  },
+};
+
+/* ---------- 事件綁定 ---------- */
+function bindEvents() {
+  const q = $('#q');
+  q.addEventListener('input', debounce(() => { S.query = q.value.trim(); UI.renderList(); }, 300));
+  $('#btnNew').onclick = $('#btnNew2').onclick = () => Actions.newPrompt();
+  $('#btnIO').onclick = () => Actions.openIO();
+  $('#fileImport').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) Actions.importFile(f); };
+  $('#btnHelp').onclick = () => Actions.showHelp();
+  $('#btnTheme').onclick = () => { const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; Settings.set('theme', t); UI.applyTheme(t); };
+  $('#btnMenu').onclick = () => document.body.classList.toggle('drawer');
+  $('#scrim').onclick = () => document.body.classList.remove('drawer');
+  $('#bannerClose').onclick = () => $('#banner').classList.add('hidden');
+  $('#btnAddCat').onclick = () => Actions.editCategory(null);
+  $('#btnClearTags').onclick = () => Router.go({ tags: [] });
+  $('#btnManageTags').onclick = () => Actions.manageTags();
+  $('#sortSel').onchange = e => { S.sort = e.target.value; Settings.set('sort', S.sort); UI.renderList(); };
+  $('#btnSelect').onclick = () => Actions.toggleMulti();
+  $('#batchBar').onclick = e => { const b = e.target.closest('[data-batch]'); if (b) Actions.batch(b.dataset.batch); };
+
+  // sidebar
+  $('#sidebar').addEventListener('click', e => {
+    const ec = e.target.closest('[data-editcat]');
+    if (ec) { e.stopPropagation(); return Actions.editCategory(S.cats.find(c => c.id === ec.dataset.editcat)); }
+    const v = e.target.closest('[data-view]'), c = e.target.closest('[data-cat]'), t = e.target.closest('[data-tag]');
+    if (v) { Router.go({ view: { type: v.dataset.view, id: null } }); document.body.classList.remove('drawer'); }
+    else if (c) { Router.go({ view: { type: 'cat', id: c.dataset.cat } }); document.body.classList.remove('drawer'); }
+    else if (t) { const n = t.dataset.tag; const tags = S.tagFilters.includes(n) ? S.tagFilters.filter(x => x !== n) : [...S.tagFilters, n]; Router.go({ tags }); }
+  });
+  $('#navCats').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-cat]')) { e.preventDefault(); e.target.click(); } });
+  $('#activeFilters').onclick = e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.clear === 'q') { q.value = ''; S.query = ''; UI.renderList(); }
+    else if (b.dataset.clearTag !== undefined) Router.go({ tags: S.tagFilters.filter(x => x !== b.dataset.clearTag) });
+  };
+
+  // list
+  const list = $('#list');
+  list.addEventListener('click', e => {
+    const actEl = e.target.closest('[data-act]'); const act = actEl && actEl.dataset.act; const card = e.target.closest('.card'); const id = card && card.dataset.id;
+    if (act === 'new') return Actions.newPrompt();
+    if (act === 'more') { S.limit += 200; return UI.renderList(); }
+    if (!card) return;
+    if (act === 'fav') return Actions.toggleFav(id);
+    if (act === 'copy') return Actions.copyById(id);
+    if (S.multi) { S.checked.has(id) ? S.checked.delete(id) : S.checked.add(id); return UI.renderList(); }
+    if (id === S.selectedId && Editor.cur && Editor.cur.id === id) { document.body.classList.add('editing'); return; }
+    Router.go({ p: id });
+  });
+  list.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('card')) { e.preventDefault(); e.target.click(); } });
+
+  // editor
+  const form = $('#editor');
+  form.addEventListener('submit', e => e.preventDefault());
+  form.addEventListener('input', e => {
+    if (e.target.id === 'fTagInput') return;
+    if (e.target.id === 'fPrompt' || e.target.id === 'fNegative') Editor.updateCounters();
+    Editor.updateDirty();
+  });
+  form.addEventListener('change', e => { if (e.target.id === 'fPlatform') Editor.updatePlatform(); Editor.updateDirty(); });
+  $('#btnSave').onclick = () => Editor.save();
+  $('#btnCopy').onclick = () => Editor.copy();
+  $('#btnDup').onclick = () => Editor.duplicate();
+  $('#btnDelete').onclick = () => Editor.remove();
+  $('#btnVersions').onclick = () => showVersions();
+  $('#copyMode').onchange = e => Settings.set('copyMode', e.target.value);
+  $('#fFav').onclick = () => {
+    if (!Editor.cur) return;
+    if (Editor.cur._new) { Editor.fav = !Editor.fav; Editor.renderFav(); } else Actions.toggleFav(Editor.cur.id);
+  };
+  $('#edBack').onclick = () => {
+    if (Editor.cur && Editor.cur._new) { if (!guard()) return; Editor.close(); return; }
+    Router.go({ p: null });
+  };
+
+  // tags input
+  const ti = $('#fTagInput');
+  ti.addEventListener('keydown', e => {
+    if (e.isComposing) return;
+    if (e.key === 'Enter' || e.key === ',' || e.key === '，') { e.preventDefault(); Editor.addTagsFrom(ti.value); ti.value = ''; }
+    else if (e.key === 'Backspace' && !ti.value && Editor.tags.length) { Editor.tags.pop(); Editor.renderTags(); Editor.updateDirty(); }
+  });
+  ti.addEventListener('input', () => { if (/[,，]/.test(ti.value)) { Editor.addTagsFrom(ti.value); ti.value = ''; } });
+  ti.addEventListener('blur', () => { if (ti.value.trim()) { Editor.addTagsFrom(ti.value); ti.value = ''; } });
+  $('#tagBox').addEventListener('click', e => {
+    const b = e.target.closest('[data-rmtag]');
+    if (b) { Editor.tags.splice(+b.dataset.rmtag, 1); Editor.renderTags(); Editor.updateDirty(); } else ti.focus();
+  });
+
+  // image
+  const box = $('#imgBox'), fi = $('#fileImage');
+  box.addEventListener('click', e => { if (e.target.closest('[data-rmimg]')) { e.stopPropagation(); return Editor.removeImage(); } fi.click(); });
+  box.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target === box) { e.preventDefault(); fi.click(); } });
+  fi.onchange = () => { const f = fi.files[0]; fi.value = ''; if (f) Editor.setImageFile(f); };
+  ['dragenter', 'dragover'].forEach(n => box.addEventListener(n, e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); box.classList.add('drag'); } }));
+  ['dragleave', 'drop'].forEach(n => box.addEventListener(n, () => box.classList.remove('drag')));
+  box.addEventListener('drop', e => { const f = [...e.dataTransfer.files].find(x => /^image\//.test(x.type)); if (f) { e.preventDefault(); Editor.setImageFile(f); } });
+  document.addEventListener('paste', e => {
+    if (!Editor.cur || Modal.isOpen) return;
+    const f = [...(e.clipboardData && e.clipboardData.files || [])].find(x => /^image\//.test(x.type));
+    if (f) { e.preventDefault(); Editor.setImageFile(f); toast('已貼上範例圖（尚未儲存）'); }
+  });
+
+  // composer
+  $('#btnComposer').onclick = () => {
+    const c = $('#composer'); const show = c.classList.contains('hidden'); c.classList.toggle('hidden', !show);
+    $('#btnComposer').setAttribute('aria-expanded', show); if (show) Composer.render();
+  };
+  $('#compTabs').onclick = e => {
+    const t = e.target.closest('[data-group]'); if (!t) return;
+    S.compGroup = t.dataset.group; $('#compTarget').value = S.compGroup === 'negative' ? 'fNegative' : 'fPrompt'; Composer.render();
+  };
+  $('#btnAddSnip').onclick = () => Composer.addSnippet();
+  const chips = $('#compChips');
+  chips.addEventListener('click', async e => {
+    const del = e.target.closest('[data-delsnip]');
+    if (del) {
+      const s = S.snippets.find(x => x.id === del.dataset.delsnip);
+      if (s && await Modal.confirm(`刪除片段「${s.label}」？`, { ok: '刪除', danger: true })) { try { await Repo.deleteSnippet(s.id); Composer.render(); } catch (er) { handleErr(er); } }
+      return;
+    }
+    const sn = e.target.closest('.snip'); if (!sn) return;
+    const s = S.snippets.find(x => x.id === sn.dataset.sid); if (s) Composer.insert($('#' + $('#compTarget').value), s.value);
+  });
+  chips.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('snip')) { e.preventDefault(); e.target.click(); } });
+  chips.addEventListener('dragstart', e => {
+    const sn = e.target.closest('.snip'); if (!sn) return;
+    const s = S.snippets.find(x => x.id === sn.dataset.sid); if (s) { e.dataTransfer.setData('text/plain', s.value + ', '); e.dataTransfer.effectAllowed = 'copy'; }
+  });
+
+  // hash / keyboard / unload
+  window.addEventListener('hashchange', () => Router.apply());
+  window.addEventListener('beforeunload', e => { if (Editor.dirty) { e.preventDefault(); e.returnValue = ''; } });
+  document.addEventListener('keydown', e => {
+    const mod = e.ctrlKey || e.metaKey, k = (e.key || '').toLowerCase();
+    if (e.key === 'Escape') {
+      if (Modal.isOpen) { e.preventDefault(); return Modal.closeTop(); }
+      if (document.body.classList.contains('drawer')) return document.body.classList.remove('drawer');
+      if (matchMedia('(max-width:900px)').matches && document.body.classList.contains('editing')) return $('#edBack').click();
+      if (document.activeElement === q && q.value) { q.value = ''; S.query = ''; UI.renderList(); }
+      return;
+    }
+    if (Modal.isOpen) return;
+    if (mod && !e.shiftKey && k === 'k') { e.preventDefault(); q.focus(); q.select(); }
+    else if ((mod && k === 'n') || (e.altKey && k === 'n')) { e.preventDefault(); Actions.newPrompt(); }
+    else if (mod && !e.shiftKey && k === 's') { e.preventDefault(); if (Editor.cur) Editor.save(); }
+    else if (mod && e.shiftKey && k === 'c') { if (Editor.cur) { e.preventDefault(); Editor.copy(); } }
+  });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (!Settings.get().theme) UI.applyTheme(null); });
+}
+
+async function showVersions() {
+  if (!Editor.cur || Editor.cur._new) return toast('新 Prompt 尚無版本紀錄');
+  let vs; try { vs = (await Repo.versions(Editor.cur.id)).sort((a, b) => b.at - a.at); } catch (e) { return handleErr(e); }
+  const body = document.createElement('div'); body.className = 'vwrap';
+  body.innerHTML = `<div class="vlist">${vs.map((v, i) => `<div class="vitem" data-i="${i}">
+      <div><b>v${vs.length - i}</b> <span class="muted small">${fmtTime(v.at)}</span> ${i === 0 ? '<span class="chip">最新儲存</span>' : ''}
+      <div class="small">${esc(v.snapshot.title)} · ${splitTokens(v.snapshot.prompt).length} 詞</div></div>
+      <div class="vbtns"><button type="button" class="btn sm" data-a="diff">比對</button><button type="button" class="btn sm" data-a="restore">還原</button></div></div>`).join('') || '<div class="muted">沒有版本紀錄</div>'}</div>
+    <div class="diff" id="diffOut"><div class="muted">選擇左側版本，與「目前編輯中」的內容比對。</div></div>`;
+  body.addEventListener('click', e => {
+    const b = e.target.closest('[data-a]'); if (!b) return; const item = b.closest('.vitem'); const v = vs[+item.dataset.i];
+    if (b.dataset.a === 'diff') { $$('.vitem', body).forEach(x => x.classList.toggle('active', x === item)); $('#diffOut', body).innerHTML = diffHTML(v.snapshot, Editor.read()); }
+    else { Editor.fill(v.snapshot); Editor.updateDirty(); Modal.closeTop(); toast('已載入該版本內容，按「儲存」後才會生效', { ms: 3500 }); }
+  });
+  Modal.open({ title: `🕘 版本紀錄 — ${Editor.cur.title}（${vs.length}）`, body, wide: true });
+  if (vs[1]) setTimeout(() => body.querySelector('.vitem[data-i="1"] [data-a="diff"]')?.click(), 0);
+}
+
+/* ---------- 啟動 ---------- */
+async function init() {
+  const st = Settings.get(); UI.applyTheme(st.theme);
+  S.sort = st.sort; $('#sortSel').value = S.sort; $('#copyMode').value = COPY_MODES[st.copyMode] ? st.copyMode : 'pos';
+  bindEvents();
+  try { await DB.open(); }
+  catch (e) {
+    console.error(e);
+    UI.banner(`無法開啟 IndexedDB（${e && e.message || e}）。若以 file:// 開啟或使用無痕模式，瀏覽器可能限制儲存；建議改用本機伺服器（例如 python -m http.server）或 GitHub Pages。`);
+    $('#list').innerHTML = '<div class="empty"><div class="big">⚠️</div><div>資料庫無法使用</div></div>'; return;
+  }
+  try { if (DB.fresh) await Repo.seed(); await Repo.loadAll(); } catch (e) { handleErr(e, '載入資料失敗'); }
+  try {
+    if (navigator.storage && navigator.storage.persisted) {
+      S.persisted = await navigator.storage.persisted();
+      if (!S.persisted && navigator.storage.persist) S.persisted = await navigator.storage.persist();
+    }
+  } catch { /* */ }
+  Repo.maintain().catch(e => console.warn('maintain', e));
+  Sync.init();
+  if (!location.hash) history.replaceState(null, '', '#/all');
+  Router.apply(); UI.renderAll();
+}
+document.addEventListener('DOMContentLoaded', init);
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style></body>
+</html>

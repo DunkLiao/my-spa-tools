@@ -1,0 +1,1501 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Issuer Classifier｜債券發行人分類器</title>
+<style>
+:root{
+  --bg:#f4f6fa;--panel:#fff;--ink:#1c2430;--muted:#6b7686;--line:#dfe4ec;
+  --brand:#1f5fbf;--brand-ink:#fff;--side:#14233b;--side-ink:#cfd9ea;
+  --crit:#c62828;--high:#e65100;--med:#b7791f;--low:#2e7d32;--info:#3b6ea5;
+  --crit-bg:#fdecea;--high-bg:#fff0e0;--med-bg:#fff7db;--low-bg:#e8f5e9;--info-bg:#e8f1fb;
+  --radius:10px;--shadow:0 1px 3px rgba(20,35,59,.10),0 4px 14px rgba(20,35,59,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#10151d;--panel:#18202c;--ink:#e6ebf2;--muted:#93a0b3;--line:#2a3545;--brand:#4b8df0;--side:#0b111b;--side-ink:#aebbd0;
+  --crit-bg:#3a1a1a;--high-bg:#3a2a16;--med-bg:#3a3316;--low-bg:#173322;--info-bg:#18283d;--shadow:none}
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:14px/1.5 "Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+#app{display:flex;height:100vh}
+#side{width:216px;background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;flex:none}
+#side h1{font-size:15px;margin:0;padding:18px 16px 4px;color:#fff;letter-spacing:.3px}
+#side .sub{padding:0 16px 14px;font-size:11px;opacity:.7}
+#side nav{flex:1;overflow:auto}
+#side a{display:block;padding:10px 16px;color:var(--side-ink);text-decoration:none;border-left:3px solid transparent;cursor:pointer}
+#side a:hover{background:rgba(255,255,255,.06)}
+#side a.active{background:rgba(255,255,255,.12);color:#fff;border-left-color:#6aa5ff}
+#side .foot{padding:12px 16px;font-size:11px;opacity:.65;border-top:1px solid rgba(255,255,255,.1)}
+#main{flex:1;overflow:auto;padding:20px 24px 60px}
+h2{margin:0 0 14px;font-size:20px}
+h3{margin:18px 0 8px;font-size:15px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:16px}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.g4{grid-template-columns:repeat(4,minmax(0,1fr))}.g6{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media(max-width:1100px){.g4,.g6{grid-template-columns:repeat(2,minmax(0,1fr))}.g3{grid-template-columns:1fr 1fr}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.kpi .v{font-size:22px;font-weight:700}.kpi .l{font-size:12px;color:var(--muted)}
+label{display:block;font-size:12px;color:var(--muted);margin:0 0 3px}
+input,select,textarea,button{font:inherit;color:inherit}
+input[type=text],input[type=number],input[type=search],select,textarea{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--panel)}
+textarea{min-height:90px;font-family:Consolas,"Cascadia Mono",monospace;font-size:12.5px}
+input:focus,select:focus,textarea:focus{outline:2px solid color-mix(in srgb,var(--brand) 45%,transparent);border-color:var(--brand)}
+button{padding:7px 14px;border-radius:7px;border:1px solid var(--line);background:var(--panel);cursor:pointer}
+button:hover{border-color:var(--brand)}
+button.pri{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+button.dng{color:var(--crit);border-color:var(--crit)}
+button.sm{padding:3px 9px;font-size:12px}
+button:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.row>.f{flex:1;min-width:140px}
+.spacer{flex:1}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:color-mix(in srgb,var(--line) 35%,transparent);font-weight:600;position:sticky;top:0;white-space:nowrap}
+th.sortable{cursor:pointer;user-select:none}
+tr.clk{cursor:pointer}tr.clk:hover td{background:color-mix(in srgb,var(--brand) 7%,transparent)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tbl-wrap{overflow:auto;max-height:70vh;border:1px solid var(--line);border-radius:8px}
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.b-Critical{background:var(--crit-bg);color:var(--crit)}.b-High{background:var(--high-bg);color:var(--high)}
+.b-Medium{background:var(--med-bg);color:var(--med)}.b-Low{background:var(--low-bg);color:var(--low)}
+.b-info{background:var(--info-bg);color:var(--info)}.b-gray{background:var(--line);color:var(--muted)}
+.muted{color:var(--muted)}.small{font-size:12px}.mono{font-family:Consolas,monospace}
+.trace{background:#0f1722;color:#d6e2f3;border-radius:8px;padding:12px;font:12.5px/1.65 Consolas,"Cascadia Mono",monospace;white-space:pre-wrap;word-break:break-all}
+.bar{display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12.5px}
+.bar .n{width:170px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .t{flex:1;background:var(--line);border-radius:4px;height:14px;overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--brand)}
+.bar .c{width:56px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.modal-bg{position:fixed;inset:0;background:rgba(10,18,30,.55);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+.modal{background:var(--panel);border-radius:12px;max-width:880px;width:100%;max-height:92vh;overflow:auto;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.modal h3{margin-top:0}
+.toast-box{position:fixed;right:18px;bottom:18px;z-index:99;display:flex;flex-direction:column;gap:8px}
+.toast{background:#1c2a40;color:#fff;padding:10px 14px;border-radius:8px;box-shadow:var(--shadow);max-width:380px}
+.toast.err{background:#a62a2a}
+.progress{height:10px;background:var(--line);border-radius:6px;overflow:hidden}.progress i{display:block;height:100%;background:var(--brand);width:0}
+.drop{border:2px dashed var(--line);border-radius:12px;padding:30px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.over{border-color:var(--brand);background:var(--info-bg)}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:14px;flex-wrap:wrap}
+.tabs a{padding:8px 14px;cursor:pointer;border-bottom:2px solid transparent;color:var(--muted)}
+.tabs a.on{color:var(--brand);border-bottom-color:var(--brand);font-weight:600}
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:8px}
+.kv{display:grid;grid-template-columns:130px 1fr;gap:4px 10px;font-size:13px}.kv>b{color:var(--muted);font-weight:500}.kv{margin-bottom:8px}
+td button{white-space:nowrap}
+.rvcls{min-width:170px}.rvwhy{min-width:150px}
+.cond{display:grid;grid-template-columns:150px 130px 1fr 32px;gap:6px;margin-bottom:6px}
+.help{font-size:12px;color:var(--muted);margin-top:4px}
+details summary{cursor:pointer;color:var(--brand)}
+.warn{background:var(--med-bg);border:1px solid var(--med);color:var(--med);padding:8px 12px;border-radius:8px;margin-bottom:12px;font-size:13px}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <h1>Issuer Classifier</h1>
+    <div class="sub">債券發行人分類器 v1.0｜本機離線</div>
+    <nav id="nav"></nav>
+    <div class="foot" id="sideFoot">載入中…</div>
+  </aside>
+  <main id="main"></main>
+</div>
+<div class="toast-box" id="toasts"></div>
+<div id="modalRoot"></div>
+<script>
+'use strict';
+// ==== ENGINE START ====
+const APP_VERSION = '1.0.1';
+const SEED_VER = 2;   // 預設規則／名單／權數表版本；變更預設值時遞增，舊資料庫會提示套用
+const CLS = {SOV:'主權國家',PSE:'非中央政府公共部門',MDB:'多邊開發銀行',BANK:'銀行',SOE:'國營事業',CORP:'民營企業',SEC:'證券化暴險',UNKNOWN:'無法判定'};
+const CLS_CODES = Object.keys(CLS);
+const SEV_ORDER = {Critical:4,High:3,Medium:2,Low:1};
+const FINDING_DEF = {
+  F01_TYPE_MISMATCH:{sev:'High',name:'暴險類別不符'},
+  F02_RW_UNDERSTATED:{sev:'Critical',name:'風險權數低估'},
+  F03_RW_OVERSTATED:{sev:'Medium',name:'風險權數高估'},
+  F04_LOW_CONFIDENCE:{sev:'Medium',name:'分類信心不足'},
+  F05_RULE_CONFLICT:{sev:'Medium',name:'規則衝突'},
+  F06_RATING_MISSING:{sev:'Low',name:'缺少外部評等'},
+  F07_SAME_ISSUER_INCONSISTENT:{sev:'High',name:'同一發行人申報不一致'}
+};
+const BOND_EXPECT = {MUNI:'PSE',GOVT:'SOV',MBS:'SEC',CMO:'SEC',FIN:'BANK',CORP:'CORP'};
+
+/* ---------- 名稱正規化 ---------- */
+const SUFFIX_RE = /\b(INC|INCORPORATED|LTD|LIMITED|CORP|CORPORATION|CO|COMPANY|LLC|PLC|SA|AG|NV|LP|LLP)\b/g;
+function normBase(s){
+  s = String(s == null ? '' : s).normalize('NFKC').toUpperCase().replace(/臺/g,'台');
+  s = s.replace(/[.,;:'"`()\[\]{}\/\\&\-_*+!?@#%^=|<>~，。、；：「」『』（）【】]/g,' ');
+  return s.replace(/\s+/g,' ').trim();
+}
+function normName(s){
+  const b = normBase(s);
+  const r = b.replace(SUFFIX_RE,' ').replace(/股份有限公司|有限公司|股份公司/g,' ').replace(/\s+/g,' ').trim();
+  return r || b;
+}
+const _reCache = new Map();
+function kwMatch(hay, kw){
+  if(!kw) return false;
+  if(/^[\x00-\x7F]+$/.test(kw)){
+    let re = _reCache.get(kw);
+    if(!re){ re = new RegExp('(^|[^A-Z0-9])' + kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '($|[^A-Z0-9])'); _reCache.set(kw,re); }
+    return re.test(hay);
+  }
+  return hay.includes(kw);
+}
+
+/* ---------- 規則編譯與比對 ---------- */
+function compileCond(c){
+  const isName = c.field === 'ISSUER_NAME_N' || c.field === 'ISSUER_NAME';
+  const raw = Array.isArray(c.value) ? c.value.join(',') : String(c.value == null ? '' : c.value);
+  let vals, re = null;
+  if(c.op === 'regex'){ vals = [raw]; try{ re = new RegExp(raw,'i'); }catch(e){ re = null; } }
+  else{
+    const parts = (Array.isArray(c.value) ? c.value : raw.split(/[,，、\n]+/)).map(x=>String(x).trim()).filter(Boolean);
+    vals = parts.map(x => isName ? (normName(x) || normBase(x)) : x.toUpperCase());
+  }
+  return {field:c.field, op:c.op, vals, isName, re};
+}
+function compileRules(rules){
+  return (rules || []).filter(r => r.enabled !== false)
+    .map(r => ({...r, _cond:(r.conditions||[]).map(compileCond), _excl:(r.excludes||[]).map(compileCond)}))
+    .sort((a,b) => b.priority - a.priority);
+}
+function fieldVal(rec, n, field){
+  switch(field){
+    case 'ISSUER_NAME_N': return n;
+    case 'ISSUER_NAME': return normBase(rec.issuerName);
+    case 'ISSUER_COUNTRY': return String(rec.country || '').toUpperCase();
+    case 'BOND_TYPE': return String(rec.bondType || '').toUpperCase();
+    case 'CUST_ID': return String(rec.custId || '').toUpperCase();
+  }
+  return '';
+}
+function evalCond(cc, rec, n){
+  const v = fieldVal(rec, n, cc.field);
+  switch(cc.op){
+    case 'equals': return cc.vals.some(x => v === x);
+    case 'in': return cc.vals.includes(v);
+    case 'containsAny': return cc.vals.some(x => cc.isName ? kwMatch(v,x) : v.includes(x));
+    case 'containsAll': return cc.vals.length > 0 && cc.vals.every(x => cc.isName ? kwMatch(v,x) : v.includes(x));
+    case 'startsWith': return cc.vals.some(x => v.startsWith(x));
+    case 'regex': return cc.re ? cc.re.test(cc.field === 'ISSUER_NAME_N' ? v : String(rec.issuerName || '')) : false;
+    case 'isNull': return v === '';
+    case 'notNull': return v !== '';
+  }
+  return false;
+}
+function matchRules(rec, n, rules){
+  const hits = [];
+  for(const r of rules){
+    if(!r._cond.length) continue;
+    if(!r._cond.every(c => evalCond(c, rec, n))) continue;
+    if(r._excl.length && r._excl.some(c => evalCond(c, rec, n))) continue;
+    hits.push(r);
+  }
+  return hits;
+}
+function compileLists(lists){
+  return (lists || []).slice().sort((a,b) => (a.order||0) - (b.order||0)).map(l => ({
+    listId:l.listId, name:l.name, cls:l.cls, tag:l.tag,
+    items:(l.items||[]).map(x => String(x).trim()).filter(Boolean).map(x => {
+      const exact = x.startsWith('=');
+      const n = normName(exact ? x.slice(1) : x) || normBase(x);
+      return {n, exact};
+    })
+  }));
+}
+function matchLists(n, lists){
+  for(const l of lists){
+    for(const it of l.items){
+      if(it.exact ? n === it.n : kwMatch(n, it.n)) return {listId:l.listId, name:l.name, cls:l.cls, tag:l.tag, item:it.n};
+    }
+  }
+  return null;
+}
+
+/* ---------- 評等 ---------- */
+const NO_RATING = /^(NR|N\/R|WR|NA|N\/A|NONE|無|無評等|未評等|-|—)?$/i;
+function bandOf(idx){ return idx <= 3 ? 1 : idx <= 6 ? 2 : idx <= 9 ? 3 : idx <= 15 ? 4 : 5; }
+const BAND_LABEL = ['','AAA～AA-','A+～A-','BBB+～BBB-','BB+～B-','CCC+以下'];
+function parseRating(agency, raw, maps){
+  let s = String(raw == null ? '' : raw).normalize('NFKC').trim().toUpperCase();
+  if(NO_RATING.test(s)) return {empty:true};
+  const m = maps[agency];
+  if(!m) return {bad:true, raw:s};
+  if(m.type === 'map'){
+    s = s.replace(/\(TWN\)|\(TW\)/g,'').replace(/^TW/,'').replace(/[*\s]/g,'');
+    return (s in m.map) ? {idx:m.map[s]} : {bad:true, raw:s};
+  }
+  s = s.replace(/[*\s]/g,'').replace(/\/.*$/,'');
+  const i = m.scale.map(x => String(x).toUpperCase()).indexOf(s);
+  return i >= 0 ? {idx:i} : {bad:true, raw:s};
+}
+function pickRating(rec, maps){
+  const defs = [['SP','S&P',rec.ratings.sp],['MDY','Moody\'s',rec.ratings.mdy],['FITCH','Fitch',rec.ratings.fitch],
+                ['TW','中華信評',rec.ratings.trc],['TW','Fitch(台灣)',rec.ratings.fitchTw],['SP','評等',rec.ratings.generic]];
+  const list = [], bad = [];
+  for(const [ag,label,raw] of defs){
+    const p = parseRating(ag, raw, maps);
+    if(p.empty) continue;
+    if(p.bad){ bad.push(label + ':' + p.raw); continue; }
+    list.push({src:label, ag, raw:String(raw).trim(), idx:p.idx});
+  }
+  if(!list.length) return {rating:null, bad};
+  const sorted = list.slice().sort((a,b) => a.idx - b.idx);
+  const sel = sorted.length === 1 ? sorted[0] : sorted[1];     // 擇低原則：兩家取較低；三家以上先取最好兩家再取較低
+  return {rating:{idx:sel.idx, band:bandOf(sel.idx), list, sel}, bad};
+}
+function twScaleIdx(raw){
+  const s = String(raw == null ? '' : raw).normalize('NFKC').toUpperCase().replace(/\(TWN\)|\(TW\)/g,'').replace(/^TW/,'').replace(/[*\s]/g,'');
+  return SP_SCALE.indexOf(s);
+}
+const TW_HINT = /台灣|台北|新北|桃園|台中|台南|高雄|基隆|新竹|嘉義|宜蘭|苗栗|彰化|南投|雲林|屏東|花蓮|台東|澎湖|金門|連江|中華民國|財政部|國庫署|台電|中油|台水|台鐵|中華郵政|國立|TAIWAN|TAIPEI|CHUNGHWA/;
+function isDomestic(rec, n){
+  const c = String(rec.country || '').trim().toUpperCase();
+  if(c) return c === 'TW' || c === 'TWN' || c === '台灣';
+  return TW_HINT.test(n);
+}
+function normReportedType(s){
+  s = String(s == null ? '' : s).trim();
+  if(!s) return null;
+  const u = s.toUpperCase();
+  if(CLS[u] && u !== 'UNKNOWN') return u;
+  if(/非中央|公共部門|PUBLIC.?SECTOR|SUB.?SOVEREIGN/.test(u)) return 'PSE';
+  if(/多邊|MULTILATERAL/.test(u)) return 'MDB';
+  if(/國營|STATE.?OWNED/.test(u)) return 'SOE';
+  if(/證券化|MBS|CMO|SECURITI/.test(u)) return 'SEC';
+  if(/主權|SOVEREIGN|中央政府|央行/.test(u)) return 'SOV';
+  if(/銀行|BANK/.test(u)) return 'BANK';
+  if(/企業|公司|CORP/.test(u)) return 'CORP';
+  return null;
+}
+
+/* ---------- 權數查定 ---------- */
+function computeRW(cls, tag, rec, rating, cfg, dom){
+  const B = cfg.bands, S = Object.assign({}, DEFAULT_RW.specials, cfg.specials), notes = [];
+  const band = rating ? rating.band : null, rated = !!rating;
+  const pick = row => row.r[band - 1];
+  const R = (rw, basis, dep, extra) => ({rw, basis, dep, notes:(extra ? [extra] : []).concat(notes)});
+  switch(cls){
+    case 'SOV':
+      if(dom) return R(S.SOV_DOM, 'SPECIAL', false, '本國中央政府／中央銀行');
+      return rated ? R(pick(B.SOV), 'RATED', true) : R(B.SOV.un, 'UNRATED', true, '未評等，採未評等權數');
+    case 'PSE':
+      if(tag === 'UNIV' && !rated) return R(S.UNIV, 'SPECIAL', false, '國立大學（無外部評等）');
+      if(dom && tag !== 'UNIV') return R(S.PSE_DOM, 'SPECIAL', false, '本國地方政府／中央行政法人');
+      return rated ? R(pick(B.PSE), 'RATED', true) : R(B.PSE.un, 'UNRATED', true, '未評等，採未評等權數');
+    case 'MDB':
+      if(tag === 'MDB_ZERO'){
+        if(!rated) return R(S.MDB_ZERO, 'SPECIAL', false, 'BCBS 明定 0% 名單（未提供評等，假設不低於 AA-）');
+        if(band <= 1) return R(S.MDB_ZERO, 'SPECIAL', false, 'BCBS 明定名單且評等不低於 AA-');
+        return R(pick(B.MDB), 'RATED', true, '雖在 BCBS 名單但評等低於 AA-，改依評等');
+      }
+      return rated ? R(pick(B.MDB), 'RATED', true) : R(B.MDB.un, 'UNRATED', true, '未評等多邊開發銀行');
+    case 'BANK': {
+      if(tag === 'CHP') return R(rec.shortTerm === true ? S.CHP_ST : S.CHP, 'SPECIAL', false, '中華郵政（無外部評等）');
+      const st = rec.shortTerm === true, row = st ? B.BANK_ST : B.BANK;
+      if(rated){
+        let rw = row.r[band - 1];
+        if(st && band === 4 && rating.idx >= 13) rw = S.BANK_ST_LOWB;
+        return R(rw, 'RATED', true, st ? '銀行短期債權' : null);
+      }
+      let g = String(rec.bankGrade || '').trim().toUpperCase();
+      let extra = '未評等銀行，依資本適足等級 ';
+      const given = ['A','B','C'].includes(g);
+      if(!given){ g = 'B'; extra = '未提供 BANK_GRADE，暫以 B 級計 '; }
+      return R(cfg.bankUnrated[st ? 'ST' : 'LT'][g], 'UNRATED', !given, extra + g + (st ? '（短期）' : '（長期）'));
+    }
+    case 'SOE': return R(S.SOE, 'SPECIAL', false, '國營事業');
+    case 'CORP':
+      if(dom){
+        if(rated){
+          if(rating.sel.ag === 'TW'){          // 手冊 2-6：中華信評／Fitch(台灣) twAA 以上 50%；twA 以上 75%
+            const ti = twScaleIdx(rating.sel.raw);
+            if(ti >= 0 && ti <= 2) return R(S.CORP_TW_AA, 'RATED', true, '境內民營企業：本土評等 twAA 以上');
+            if(ti >= 0 && ti <= 5) return R(S.CORP_TW_A, 'RATED', true, '境內民營企業：本土評等 twA 以上（低於 twAA）');
+            return R(band >= 5 ? B.CORP_TW.r[4] : B.CORP_TW.r[3], 'RATED', true, '境內民營企業：本土評等低於 twA，手冊未明列，依評等帶保守計');
+          }
+          return R(B.CORP_TW.r[band - 1], 'RATED', true, '境內民營企業（國際評等帶）');
+        }
+        if(rec.revenue == null) return R(S.CORP_TW_UN_HIGH, 'UNRATED', true, '未提供營收，保守以 100% 計');
+        return R(rec.revenue <= S.CORP_REV_THRESHOLD ? S.CORP_TW_UN_LOW : S.CORP_TW_UN_HIGH, 'UNRATED', false, '境內無評等，依營收門檻 ' + S.CORP_REV_THRESHOLD.toLocaleString('en-US'));
+      }
+      return rated ? R(pick(B.CORP), 'RATED', true) : R(B.CORP.un, 'UNRATED', true, '未評等企業債權');
+    case 'SEC':
+      if(tag === 'GNMA') return R(S.GNMA, 'SPECIAL', false, 'Ginnie Mae');
+      if(tag === 'GSE'){
+        if(rec.passThrough === true) return R(S.GSE_PT, 'SPECIAL', false, 'Fannie／Freddie 純轉付架構');
+        if(rec.passThrough === false) return R(S.GSE_NPT, 'SPECIAL', false, '非純轉付架構（法定區間 15%～30%，取上限）');
+        return R(S.GSE_PT, 'SPECIAL', false, '未提供 PASS_THROUGH，暫以純轉付計');
+      }
+      return R(null, 'N/A', false, '證券化暴險須人工查定');
+  }
+  return R(null, 'N/A', false);
+}
+
+/* ---------- 分類主流程 ---------- */
+function classify(rec, ctx){
+  const set = ctx.settings, cfg = ctx.rw, trace = [];
+  const n = normName(rec.issuerName);
+  const dom = isDomestic(rec, n);
+  trace.push('ISSUER_NAME : ' + rec.issuerName);
+  trace.push('Normalized  : ' + n + (rec.country ? '   COUNTRY=' + rec.country : (dom ? '   COUNTRY=（未提供，依名稱推定境內）' : '   COUNTRY=（未提供，視為境外）')));
+
+  // ② Master
+  let master = null, mSrc = '';
+  const m1 = rec.custId ? ctx.byKey.get(String(rec.custId)) : null;
+  if(m1 && m1.status === 'confirmed'){ master = m1; mSrc = 'CUST_ID'; }
+  else { const m2 = n ? ctx.byName.get(n) : null; if(m2 && m2.status === 'confirmed'){ master = m2; mSrc = '名稱'; } }
+  trace.push('② Master    : ' + (master ? '✔ 已覆核（' + mSrc + '）→ ' + master.expoType + (master.reason ? '｜' + master.reason : '') : '未命中'));
+  // ③ Alias
+  let aliasM = null;
+  if(!master && ctx.aliasMap.has(n)){
+    const m = ctx.byKey.get(ctx.aliasMap.get(n));
+    if(m && m.status === 'confirmed') aliasM = m;
+  }
+  trace.push('③ Alias     : ' + (aliasM ? '✔ 別名指向 ' + aliasM.key + ' → ' + aliasM.expoType : (master ? '（略過）' : '未命中')));
+  // ④ Lists
+  const lh = matchLists(n, ctx.lists);
+  trace.push('④ Lists     : ' + (lh ? '✔ ' + lh.name + '（' + lh.item + '）→ ' + lh.cls : '未命中'));
+  // ⑤ Rules
+  const hits = matchRules(rec, n, ctx.rules);
+  if(hits.length) hits.forEach((h,i) => trace.push((i ? '             ' : '⑤ Keyword   : ') + (i ? '· ' : '') + '✔ ' + h.ruleId + '（P' + h.priority + '）→ ' + h.result.expoType));
+  else trace.push('⑤ Keyword   : 未命中');
+
+  let cls = null, conf = 0, source = '', tag = null, ruleId = null, rwOverride = null, conflict = false;
+  if(master){ cls = master.expoType; conf = 100; source = 'MASTER'; rwOverride = master.rwOverride; }
+  else if(aliasM){ cls = aliasM.expoType; conf = 95; source = 'ALIAS'; rwOverride = aliasM.rwOverride; }
+  else if(lh){ cls = lh.cls; conf = 95; source = 'LIST'; tag = lh.tag; ruleId = lh.listId; }
+  else if(hits.length){
+    const top = hits[0];
+    cls = top.result.expoType; conf = top.result.confidence != null ? top.result.confidence : 70;
+    source = 'RULE'; ruleId = top.ruleId; tag = top.result.tag || null;
+    const others = top.result.exclusive ? [] : hits.filter(h => h.result.expoType !== cls && h.priority >= top.priority - 10);
+    if(others.length){ conflict = true; conf = Math.max(0, conf - 15); trace.push('             ⚠ 與 ' + others.map(o => o.ruleId + '→' + o.result.expoType).join('、') + ' 衝突，信心 -15'); }
+  }
+  // 標籤沿用（覆核命中時仍保留名單／規則的特殊權數標籤）
+  if(!tag && (source === 'MASTER' || source === 'ALIAS')){
+    if(lh && lh.cls === cls) tag = lh.tag;
+    else { const h = hits.find(x => x.result.expoType === cls && x.result.tag); if(h) tag = h.result.tag; }
+  }
+  // ⑥ Context
+  const exp = BOND_EXPECT[String(rec.bondType || '').toUpperCase()];
+  if(!cls){
+    if(!n){ cls = 'UNKNOWN'; conf = 0; source = 'DEFAULT'; trace.push('⑥ Context   : ISSUER_NAME 為空，無法判定（信心 0）'); }
+    else if(exp){ cls = exp; conf = 65; source = 'CONTEXT'; trace.push('⑥ Context   : BOND_TYPE=' + rec.bondType + ' → 推定 ' + exp + '（信心 65）'); }
+    else { cls = 'CORP'; conf = set.defaultConf; source = 'DEFAULT'; trace.push('⑥ Context   : 無可用線索 → 預設 CORP（信心 ' + conf + '）'); }
+  }else if(source === 'RULE' && exp && ['PSE','SOV','SEC'].includes(exp)){
+    if(exp !== cls){ conflict = true; conf = Math.max(0, conf - 15); trace.push('⑥ Context   : ⚠ BOND_TYPE=' + rec.bondType + ' 暗示 ' + exp + '，與名稱規則 ' + cls + ' 不一致，信心 -15'); }
+    else trace.push('⑥ Context   : BOND_TYPE=' + rec.bondType + ' → 維持 ' + cls);
+  }else trace.push('⑥ Context   : ' + (rec.bondType ? 'BOND_TYPE=' + rec.bondType + '，' : '') + '維持 ' + cls);
+
+  // ⑧ Rating / RW
+  const pr = pickRating(rec, ctx.rmaps);
+  const rating = pr.rating;
+  let ratingText = '';
+  if(rating){
+    ratingText = rating.list.map(x => x.src + ' ' + x.raw).join(' / ') + (rating.list.length > 1 ? ' → 擇低 ' + rating.sel.src + ' ' + rating.sel.raw : '') + ' → 評等帶 ' + BAND_LABEL[rating.band];
+  }
+  if(rating && rating.sel.ag === 'TW'){ const ti = twScaleIdx(rating.sel.raw); if(ti >= 6 && ti <= 14) ratingText += '（本土評等 twA-～twB 為手冊合併區間 BBB+～B-，採保守帶）'; }
+  if(pr.bad.length) ratingText += (ratingText ? '；' : '') + '無法辨識：' + pr.bad.join(',');
+  const rwr = cls === 'UNKNOWN' ? {rw:null, basis:'N/A', dep:false, notes:['無法判定']} : computeRW(cls, tag, rec, rating, cfg, dom);
+  if(rwOverride != null && !isNaN(rwOverride)){ rwr.rw = Number(rwOverride); rwr.basis = 'OVERRIDE'; rwr.notes.unshift('發行人主檔指定權數'); }
+  trace.push('⑧ Rating    : ' + (ratingText || '（無外部評等）'));
+  trace.push('   RW 查定  : ' + (rwr.rw == null ? '—' : rwr.rw + '%') + '（' + rwr.basis + '）' + (rwr.notes.length ? ' ' + rwr.notes.join('；') : ''));
+
+  // ⑨ Compare + Findings
+  const findings = [];
+  const add = (code, msg) => findings.push({code, sev:FINDING_DEF[code].sev, msg});
+  const rptCls = normReportedType(rec.reportedType);
+  if(rec.reportedType && !rptCls) trace.push('   申報類別  : 「' + rec.reportedType + '」無法對應內部類別代碼');
+  if(rptCls && cls !== 'UNKNOWN' && rptCls !== cls) add('F01_TYPE_MISMATCH', '申報「' + CLS[rptCls] + '」，建議「' + CLS[cls] + '」');
+  const skipRw = rwr.dep && !rating && set.skipRwWhenNoRating;
+  if(rec.reportedRw != null && rwr.rw != null && !skipRw){
+    if(rwr.rw > rec.reportedRw + 1e-9) add('F02_RW_UNDERSTATED', '申報 RW ' + rec.reportedRw + '% < 建議 ' + rwr.rw + '%（低估）');
+    else if(rwr.rw < rec.reportedRw - 1e-9) add('F03_RW_OVERSTATED', '申報 RW ' + rec.reportedRw + '% > 建議 ' + rwr.rw + '%（高估）');
+  }
+  if(conf < set.confThreshold) add('F04_LOW_CONFIDENCE', '信心 ' + conf + ' < 門檻 ' + set.confThreshold);
+  if(conflict) add('F05_RULE_CONFLICT', '命中多項衝突規則或與 BOND_TYPE 不一致');
+  if(rwr.dep && !rating) add('F06_RATING_MISSING', cls + ' 需依外部評等查定權數，但資料無評等');
+  let delta = null;
+  if(rec.reportedRw != null && rwr.rw != null && rec.exposureAmt != null && !skipRw) delta = rec.exposureAmt * (rwr.rw - rec.reportedRw) / 100;
+  trace.push('⑨ Compare   : 申報 ' + (rptCls || rec.reportedType || '—') + ' / ' + (rec.reportedRw == null ? '—' : rec.reportedRw + '%') + '  →  ' + (findings.length ? findings.map(f => f.code.split('_')[0]).join(' + ') : '無缺失'));
+  if(skipRw && rec.reportedRw != null) trace.push('             （無評等資料，略過 RW 高低估判斷；僅提供參考權數）');
+
+  const res = {
+    key: rec.custId ? String(rec.custId) : 'N:' + n,
+    custId: rec.custId || '', issuerName: rec.issuerName || '', nameN: n, country: rec.country || '', bondType: rec.bondType || '', bondId: rec.bondId || '',
+    reportedType: rec.reportedType || '', reportedCls: rptCls, reportedRw: rec.reportedRw,
+    sugCls: cls, sugRw: rwr.rw, rwBasis: rwr.basis, confidence: conf, source, ruleId, tag,
+    ratingText, ratingBand: rating ? rating.band : null, exposureAmt: rec.exposureAmt, deltaRwa: delta,
+    findings, trace: trace.join('\n'), ruleVersion: ctx.ruleVersion
+  };
+  recalc(res);
+  return res;
+}
+function recalc(res){
+  res.findingCodes = res.findings.map(f => f.code);
+  let top = '', o = 0;
+  for(const f of res.findings){ if(SEV_ORDER[f.sev] > o){ o = SEV_ORDER[f.sev]; top = f.sev; } }
+  res.severity = top;
+}
+function postProcess(results){
+  const byCust = new Map();
+  for(const r of results){
+    if(!r.custId || !r.reportedCls) continue;
+    if(!byCust.has(r.custId)) byCust.set(r.custId, new Set());
+    byCust.get(r.custId).add(r.reportedCls);
+  }
+  for(const r of results){
+    const s = byCust.get(r.custId);
+    if(s && s.size > 1 && r.reportedCls){
+      r.findings.push({code:'F07_SAME_ISSUER_INCONSISTENT', sev:'High', msg:'同一 CUST_ID 被申報為 ' + [...s].map(x => CLS[x]).join('、')});
+      recalc(r);
+    }
+  }
+  return results;
+}
+
+/* ---------- 匯入對應 ---------- */
+const FIELDS = [
+  {k:'CUST_ID',label:'CUST_ID 發行人代號',req:true,al:['CUST_ID','CUSTID','客戶代號','發行人代號','發行人統編','統編','ISSUER_ID','ISSUERID']},
+  {k:'ISSUER_NAME',label:'ISSUER_NAME 發行人名稱',req:true,al:['ISSUER_NAME','ISSUERNAME','發行人名稱','發行人','ISSUER','發行機構','名稱','NAME']},
+  {k:'ISSUER_COUNTRY',label:'ISSUER_COUNTRY 發行人國別',al:['ISSUER_COUNTRY','COUNTRY','國別','發行人國別','COUNTRY_CODE']},
+  {k:'BOND_ID',label:'BOND_ID 債券代號',al:['BOND_ID','ISIN','債券代號','債券代碼','SECURITY_ID']},
+  {k:'BOND_TYPE',label:'BOND_TYPE 債券種類',al:['BOND_TYPE','債券種類','債券類型']},
+  {k:'PASS_THROUGH',label:'PASS_THROUGH 純轉付',al:['PASS_THROUGH','純轉付']},
+  {k:'RPT_EXPO_TYPE',label:'RPT_EXPO_TYPE 申報暴險類別',al:['RPT_EXPO_TYPE','EXPO_TYPE','EXPOSURE_TYPE','暴險類別','申報暴險類別','暴險類型']},
+  {k:'RPT_RW',label:'RPT_RW 申報風險權數',al:['RPT_RW','RW','RISK_WEIGHT','風險權數','申報風險權數']},
+  {k:'RATING_SP',label:'RATING_SP S&P 評等',al:['RATING_SP','SP','S&P','S&P評等','標普']},
+  {k:'RATING_MDY',label:'RATING_MDY Moody\'s 評等',al:['RATING_MDY','MOODYS','MOODY\'S','穆迪','MDY']},
+  {k:'RATING_FITCH',label:'RATING_FITCH Fitch 評等',al:['RATING_FITCH','FITCH','惠譽']},
+  {k:'RATING_TRC',label:'RATING_TRC 中華信評',al:['RATING_TRC','TRC','中華信評','中華信用評等']},
+  {k:'RATING_FITCH_TW',label:'RATING_FITCH_TW Fitch(台灣)',al:['RATING_FITCH_TW','FITCH_TW','惠譽台灣']},
+  {k:'RATING',label:'RATING 通用評等(S&P 格式)',al:['RATING','評等','外部評等']},
+  {k:'SHORT_TERM',label:'SHORT_TERM 是否3個月內短期',al:['SHORT_TERM','短期','是否短期']},
+  {k:'EXPOSURE_AMT',label:'EXPOSURE_AMT 暴險金額',al:['EXPOSURE_AMT','EXPOSURE','AMOUNT','AMT','暴險金額','金額']},
+  {k:'REVENUE_TWD',label:'REVENUE_TWD 營收(元)',al:['REVENUE_TWD','REVENUE','營收']},
+  {k:'BANK_GRADE',label:'BANK_GRADE 未評等銀行等級(A/B/C)',al:['BANK_GRADE','銀行等級']}
+];
+const hkey = s => String(s).toUpperCase().replace(/[\s_\-]/g,'');
+function autoMapping(headers){
+  const m = {};
+  for(const f of FIELDS){
+    const als = f.al.map(hkey);
+    const h = headers.find(h => als.includes(hkey(h)));
+    if(h) m[f.k] = h;
+  }
+  return m;
+}
+function toBool(v){
+  const s = String(v == null ? '' : v).trim().toUpperCase();
+  if(['Y','YES','TRUE','T','1','是','Ｙ'].includes(s)) return true;
+  if(['N','NO','FALSE','F','0','否'].includes(s)) return false;
+  return null;
+}
+function toNum(v){
+  if(v == null) return null;
+  const s = String(v).replace(/[,\s%]/g,'');
+  if(s === '' || s === '-') return null;
+  const x = Number(s);
+  return isNaN(x) ? null : x;
+}
+function mapRecord(raw, mapping, opts){
+  const g = k => mapping[k] ? raw[mapping[k]] : '';
+  let rw = toNum(g('RPT_RW'));
+  if(rw != null && opts && opts.rwUnit === 'dec') rw = Math.round(rw * 10000) / 100;
+  const str = k => String(g(k) == null ? '' : g(k)).trim();
+  return {
+    custId: str('CUST_ID'), issuerName: str('ISSUER_NAME'), country: str('ISSUER_COUNTRY').toUpperCase(), bondId: str('BOND_ID'),
+    bondType: str('BOND_TYPE').toUpperCase(), passThrough: toBool(g('PASS_THROUGH')), reportedType: str('RPT_EXPO_TYPE'), reportedRw: rw,
+    ratings: {sp:g('RATING_SP'), mdy:g('RATING_MDY'), fitch:g('RATING_FITCH'), trc:g('RATING_TRC'), fitchTw:g('RATING_FITCH_TW'), generic:g('RATING')},
+    shortTerm: toBool(g('SHORT_TERM')), exposureAmt: toNum(g('EXPOSURE_AMT')), revenue: toNum(g('REVENUE_TWD')), bankGrade: str('BANK_GRADE')
+  };
+}
+
+/* ---------- CSV ---------- */
+function parseCSV(text){
+  if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const first = text.split(/\r?\n/, 1)[0];
+  let delim = ',', best = -1;
+  for(const d of [',','\t',';','|']){ const c = first.split(d).length - 1; if(c > best){ best = c; delim = d; } }
+  const rows = []; let row = [], f = '', q = false;
+  for(let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if(q){ if(ch === '"'){ if(text[i+1] === '"'){ f += '"'; i++; } else q = false; } else f += ch; }
+    else if(ch === '"') q = true;
+    else if(ch === delim){ row.push(f); f = ''; }
+    else if(ch === '\n' || ch === '\r'){ if(ch === '\r' && text[i+1] === '\n') i++; row.push(f); f = ''; rows.push(row); row = []; }
+    else f += ch;
+  }
+  if(f !== '' || row.length){ row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+function rowsToObjects(rows){
+  const seen = {};
+  const headers = rows[0].map(h => {
+    let k = String(h).trim() || 'COL'; if(seen[k]){ seen[k]++; k = k + '_' + seen[k]; } else seen[k] = 1; return k;
+  });
+  const data = rows.slice(1).map(r => { const o = {}; headers.forEach((h,i) => o[h] = r[i] == null ? '' : r[i]); return o; });
+  return {headers, data};
+}
+function csvEscape(v){
+  if(v == null) return '';
+  let s = String(v);
+  // 防止 Excel 公式注入：以 = + - @ 開頭的文字（非純數字）前置單引號
+  if(typeof v === 'string' && /^[=+\-@\t\r]/.test(s) && !/^[+-]?\d+(\.\d+)?$/.test(s)) s = "'" + s;
+  return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+}
+function toCSV(headers, rows){ return headers.map(csvEscape).join(',') + '\r\n' + rows.map(r => r.map(csvEscape).join(',')).join('\r\n'); }
+
+/* ---------- 預設資料 ---------- */
+const DEFAULT_RW = {
+  id:'current', version:'114年7月起適用（簡表 2026/3/2 版）',
+  bands:{
+    SOV:{r:[0,20,50,100,150], un:100}, PSE:{r:[20,50,100,100,150], un:100}, MDB:{r:[20,30,50,100,150], un:50},
+    BANK:{r:[20,30,50,100,150], un:null}, BANK_ST:{r:[20,20,20,50,150], un:null},
+    CORP:{r:[20,50,75,100,150], un:100}, CORP_TW:{r:[50,50,75,100,150], un:null}
+  },
+  bankUnrated:{LT:{A:40,B:75,C:150}, ST:{A:20,B:50,C:150}},
+  specials:{SOV_DOM:0, PSE_DOM:20, UNIV:100, MDB_ZERO:0, SOE:50, CHP:100, CHP_ST:50, GNMA:0, GSE_PT:20, GSE_NPT:30, BANK_ST_LOWB:150,
+            CORP_TW_UN_LOW:85, CORP_TW_UN_HIGH:100, CORP_REV_THRESHOLD:5000000, CORP_TW_AA:50, CORP_TW_A:75}
+};
+const SP_SCALE = ['AAA','AA+','AA','AA-','A+','A','A-','BBB+','BBB','BBB-','BB+','BB','BB-','B+','B','B-','CCC+','CCC','CCC-','CC','C','D'];
+const DEFAULT_RMAPS = [
+  {agency:'SP', type:'scale', scale:SP_SCALE},
+  {agency:'FITCH', type:'scale', scale:SP_SCALE},
+  {agency:'MDY', type:'scale', scale:['Aaa','Aa1','Aa2','Aa3','A1','A2','A3','Baa1','Baa2','Baa3','Ba1','Ba2','Ba3','B1','B2','B3','Caa1','Caa2','Caa3','Ca','C']},
+  // 手冊第五章：twAAA～twAA→AAA～AA-；twAA-～twA→A+～A-；twA-～twB→BBB+～B-（合併區間，採保守的 BB+～B- 帶）；twB-以下→CCC+以下
+  {agency:'TW', type:'map', map:{'AAA':3,'AA+':3,'AA':3,'AA-':6,'A+':6,'A':6,'A-':12,'BBB+':12,'BBB':12,'BBB-':12,'BB+':12,'BB':12,'BB-':12,'B+':12,'B':12,'B-':16,'CCC+':16,'CCC':16,'CCC-':16,'CC':16,'C':16,'D':16}}
+];
+const DEFAULT_SETTINGS = {confThreshold:60, defaultConf:60, skipRwWhenNoRating:true, rwUnit:'pct', pageSize:50, rulesRev:1};
+const nameCond = (op, v) => ({field:'ISSUER_NAME_N', op, value:v});
+const DEFAULT_RULES = [
+  {ruleId:'R-SOV-EXC', name:'特例主權（名稱含 STATE OF／COMMONWEALTH OF 但實為主權）', priority:92, enabled:true,
+    conditions:[nameCond('containsAny',['STATE OF ISRAEL','STATE OF QATAR','STATE OF KUWAIT','COMMONWEALTH OF AUSTRALIA','COMMONWEALTH OF THE BAHAMAS'])], excludes:[],
+    result:{expoType:'SOV', confidence:90, exclusive:true}, note:'優先於州政府規則'},
+  {ruleId:'R-PSE-STATE', name:'州／省／縣市等地方政府', priority:90, enabled:true,
+    conditions:[nameCond('containsAny',['STATE OF','COMMONWEALTH OF','PROVINCE OF','COUNTY OF','COUNTY','CITY OF','CITY AND COUNTY','MUNICIPALITY','MUNICIPAL','PREFECTURE','TERRITORY OF','METROPOLITAN GOVERNMENT','州政府','縣政府','市政府','省政府','地方政府','直轄市政府','行政法人'])],
+    excludes:[nameCond('containsAny',['BANK','BANCO','銀行'])],
+    result:{expoType:'PSE', confidence:85}, note:'非中央政府公共部門（國外○○州政府債券應歸此類）'},
+  {ruleId:'R-SOV-CB', name:'中央銀行', priority:88, enabled:true,
+    conditions:[nameCond('containsAny',['CENTRAL BANK','RESERVE BANK','FEDERAL RESERVE','MONETARY AUTHORITY','BANK OF ENGLAND','BANK OF JAPAN','BANK OF CANADA','BANK OF KOREA','中央銀行','央行'])], excludes:[],
+    result:{expoType:'SOV', confidence:85}, note:'手冊：主權國家（含央行）'},
+  {ruleId:'R-SOV-GOV', name:'中央政府／財政部', priority:85, enabled:true,
+    conditions:[nameCond('containsAny',['REPUBLIC OF','KINGDOM OF','GOVERNMENT OF','FEDERAL REPUBLIC OF','SULTANATE OF','EMIRATE OF','GRAND DUCHY OF','UNITED MEXICAN STATES','UNITED STATES OF AMERICA','UNITED STATES TREASURY','US TREASURY','U S TREASURY','HM TREASURY','TREASURY DEPARTMENT','DEPARTMENT OF THE TREASURY','MINISTRY OF FINANCE','財政部','國庫署','中央政府','中華民國政府','國安基金'])], excludes:[],
+    result:{expoType:'SOV', confidence:85}, note:'主權國家'},
+  {ruleId:'R-UNIV-TW', name:'國立大學', priority:82, enabled:true,
+    conditions:[nameCond('containsAll',['國立','大學'])], excludes:[],
+    result:{expoType:'PSE', confidence:80, tag:'UNIV'}, note:'國立大學（無評等 100%）'},
+  {ruleId:'R-UNIV-GEN', name:'大學／學院（須判斷公私立）', priority:80, enabled:true,
+    conditions:[nameCond('containsAny',['UNIVERSITY','大學','學院','COLLEGE'])], excludes:[nameCond('containsAny',['BANK','銀行'])],
+    result:{expoType:'PSE', confidence:55, tag:'UNIV'}, note:'私立學校屬企業，需人工判定'},
+  {ruleId:'R-AGENCY-HINT', name:'政策性銀行／政府機構（需人工判定）', priority:70, enabled:true,
+    conditions:[nameCond('containsAny',['FEDERAL HOME LOAN BANK','FEDERAL FARM CREDIT','FARMER MAC','TENNESSEE VALLEY AUTHORITY','EXPORT IMPORT BANK','EXPORT DEVELOPMENT','KREDITANSTALT','KFW','DEVELOPMENT BANK','JAPAN BANK FOR INTERNATIONAL COOPERATION','政策性銀行','輸出入銀行'])], excludes:[],
+    result:{expoType:'BANK', confidence:50}, note:'名稱像銀行但可能屬公共部門／GSE，列入覆核'},
+  {ruleId:'R-SEC-HINT', name:'證券化商品名稱', priority:60, enabled:true,
+    conditions:[nameCond('containsAny',['MORTGAGE BACKED','MORTGAGE PASS','PASS THROUGH CERTIFICATE','ASSET BACKED','MBS','CMO','證券化','受益證券'])], excludes:[],
+    result:{expoType:'SEC', confidence:55}, note:'證券化暴險須人工查定'},
+  {ruleId:'R-BANK', name:'銀行', priority:50, enabled:true,
+    conditions:[nameCond('containsAny',['BANK','BANCO','BANQUE','BANCA','BANKEN','銀行'])], excludes:[],
+    result:{expoType:'BANK', confidence:80}, note:'一般銀行'}
+];
+const DEFAULT_LISTS = [
+  {listId:'MDB', name:'多邊開發銀行（BCBS 明定 0% 名單）', cls:'MDB', tag:'MDB_ZERO', order:1, items:[
+    'INTERNATIONAL BANK FOR RECONSTRUCTION AND DEVELOPMENT','WORLD BANK','=IBRD','=INTERNATIONAL FINANCE CORPORATION','=IFC','ASIAN DEVELOPMENT BANK','=ADB',
+    'AFRICAN DEVELOPMENT BANK','=AFDB','INTER-AMERICAN DEVELOPMENT BANK','=IADB','EUROPEAN INVESTMENT BANK','=EIB','NORDIC INVESTMENT BANK','=NIB',
+    'EUROPEAN BANK FOR RECONSTRUCTION AND DEVELOPMENT','=EBRD','ASIAN INFRASTRUCTURE INVESTMENT BANK','=AIIB',
+    '國際復興開發銀行','=國際金融公司','亞洲開發銀行','非洲開發銀行','美洲開發銀行','歐洲投資銀行','北歐投資銀行','歐洲復興開發銀行','亞洲基礎設施投資銀行']},
+  {listId:'GNMA', name:'Ginnie Mae', cls:'SEC', tag:'GNMA', order:2, items:['GINNIE MAE','GNMA','GOVERNMENT NATIONAL MORTGAGE ASSOCIATION']},
+  {listId:'GSE', name:'Fannie Mae／Freddie Mac', cls:'SEC', tag:'GSE', order:3, items:['FANNIE MAE','FNMA','FEDERAL NATIONAL MORTGAGE ASSOCIATION','FREDDIE MAC','FHLMC','FEDERAL HOME LOAN MORTGAGE']},
+  {listId:'SOE', name:'國營事業（50%）', cls:'SOE', tag:'SOE', order:4, items:['台灣電力','=台電','TAIWAN POWER','TAIPOWER','台灣中油','=中油','台灣自來水','=台水','TAIWAN WATER','國營台灣鐵路','台灣鐵路','TAIWAN RAILWAYS']},
+  {listId:'CHP', name:'中華郵政', cls:'BANK', tag:'CHP', order:5, items:['中華郵政','CHUNGHWA POST']}
+];
+// ==== ENGINE END ====
+
+// ==== APP CORE ====
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtN = (v, d = 0) => (v == null || isNaN(v)) ? '—' : Number(v).toLocaleString('en-US', {maximumFractionDigits:d});
+const fmtT = ts => ts ? new Date(ts).toLocaleString('zh-TW', {hour12:false}) : '';
+const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+const sleep0 = () => new Promise(r => setTimeout(r, 0));
+const clsLabel = c => c ? (CLS[c] || c) : '—';
+
+function toast(msg, err){
+  const d = document.createElement('div');
+  d.className = 'toast' + (err ? ' err' : '');
+  d.textContent = msg;
+  $('#toasts').appendChild(d);
+  setTimeout(() => d.remove(), err ? 7000 : 3500);
+}
+function openModal(html){
+  $('#modalRoot').innerHTML = '<div class="modal-bg" data-act="modalBg"><div class="modal">' + html + '</div></div>';
+}
+function closeModal(){ $('#modalRoot').innerHTML = ''; }
+function download(name, text, mime){
+  const blob = new Blob([text], {type:mime || 'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const dlCSV = (name, headers, rows) => download(name, '\uFEFF' + toCSV(headers, rows), 'text/csv;charset=utf-8');
+const sevBadge = s => s ? '<span class="badge b-' + s + '">' + s + '</span>' : '<span class="badge b-gray">OK</span>';
+const clsOptions = (sel, withBlank) => (withBlank ? '<option value="">（未填）</option>' : '') + CLS_CODES.map(c => '<option value="' + c + '"' + (c === sel ? ' selected' : '') + '>' + c + '｜' + CLS[c] + '</option>').join('');
+
+/* ---------- IndexedDB ---------- */
+const DB_NAME = 'IssuerClassifierDB', DB_VER = 1;
+let db = null;
+function openDB(){
+  return new Promise((res, rej) => {
+    if(!window.indexedDB) return rej(new Error('此瀏覽器不支援 IndexedDB'));
+    const q = indexedDB.open(DB_NAME, DB_VER);
+    q.onupgradeneeded = () => {
+      const d = q.result;
+      const mk = (n, opt, idx) => { const s = d.createObjectStore(n, opt); (idx || []).forEach(([a, b, o]) => s.createIndex(a, b, o || {})); };
+      mk('issuers', {keyPath:'key'}, [['nameN','nameN'],['expoType','expoType'],['status','status']]);
+      mk('aliases', {keyPath:'aliasN'}, [['key','key']]);
+      mk('rules', {keyPath:'ruleId'}, [['priority','priority']]);
+      mk('lists', {keyPath:'listId'});
+      mk('rwTables', {keyPath:'id'});
+      mk('ratingMaps', {keyPath:'agency'});
+      mk('batches', {keyPath:'batchId'}, [['createdAt','createdAt']]);
+      mk('records', {keyPath:['batchId','chunk']}, [['batchId','batchId']]);   // 每 500 列一個區塊，大幅降低 IndexedDB 寫入負擔
+      mk('results', {keyPath:['batchId','chunk']}, [['batchId','batchId']]);
+      mk('mappings', {keyPath:'mappingId'});
+      mk('auditLogs', {autoIncrement:true}, [['ts','ts'],['entity','entity']]);
+      mk('settings', {keyPath:'key'});
+    };
+    q.onsuccess = () => { q.result.onversionchange = () => { q.result.close(); toast('資料庫已在另一個分頁升級，請重新整理頁面', true); }; res(q.result); };
+    q.onerror = () => rej(q.error);
+    q.onblocked = () => toast('資料庫被其他分頁佔用，請關閉其他 Issuer Classifier 分頁後重試', true);
+  });
+}
+const req = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const store = (n, m) => db.transaction(n, m || 'readonly').objectStore(n);
+const dbAll = n => req(store(n).getAll());
+const dbGet = (n, k) => req(store(n).get(k));
+const dbPut = (n, v) => req(store(n, 'readwrite').put(v));
+const dbDel = (n, k) => req(store(n, 'readwrite').delete(k));
+const dbClear = n => req(store(n, 'readwrite').clear());
+const dbByIndex = (n, i, k) => req(store(n).index(i).getAll(IDBKeyRange.only(k)));
+function dbPutMany(n, arr){
+  return new Promise((res, rej) => {
+    const t = db.transaction(n, 'readwrite'), s = t.objectStore(n);
+    arr.forEach(v => s.put(v));
+    t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  });
+}
+function dbDelByIndex(n, i, k){
+  return new Promise((res, rej) => {
+    const t = db.transaction(n, 'readwrite');
+    const c = t.objectStore(n).index(i).openCursor(IDBKeyRange.only(k));
+    c.onsuccess = () => { const cur = c.result; if(cur){ cur.delete(); cur.continue(); } };
+    t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  });
+}
+const audit = (action, entity, detail) => dbPut('auditLogs', {ts:Date.now(), action, entity, detail:detail || ''}).catch(() => {});
+
+/* ---------- 全域狀態 ---------- */
+const state = {
+  S:{...DEFAULT_SETTINGS}, ctx:null, batches:[], batchId:null, cache:{batchId:null, results:null},
+  imp:null, rf:{q:'', sev:'', code:'', cls:'', src:'', only:true}, sort:{k:'sev', d:-1}, page:1, view:[], lastQuery:null, queue:[], detail:null
+};
+async function loadSettings(){
+  const r = await dbGet('settings', 'app');
+  state.S = {...DEFAULT_SETTINGS, ...(r ? r.v : {})};
+}
+async function saveSettings(){ await dbPut('settings', {key:'app', v:state.S}); state.ctx = null; }
+async function bumpRev(){ state.S.rulesRev = (state.S.rulesRev || 1) + 1; await saveSettings(); }
+
+async function seedIfEmpty(){
+  const seeded = await dbGet('settings', 'seeded');
+  if(seeded){ state.seedStale = seeded.v !== SEED_VER; return; }
+  await dbPutMany('rules', DEFAULT_RULES);
+  await dbPutMany('lists', DEFAULT_LISTS);
+  await dbPut('rwTables', DEFAULT_RW);
+  await dbPutMany('ratingMaps', DEFAULT_RMAPS);
+  await dbPut('settings', {key:'app', v:{...DEFAULT_SETTINGS}});
+  await dbPut('settings', {key:'seeded', v:SEED_VER});
+  state.seedStale = false;
+  await audit('SEED', 'system', '載入預設規則、名單、權數表（' + DEFAULT_RW.version + '）');
+}
+async function getCtx(force){
+  if(state.ctx && !force) return state.ctx;
+  const [rules, lists, rwA, rmA, issuers, aliases] = await Promise.all([dbAll('rules'), dbAll('lists'), dbAll('rwTables'), dbAll('ratingMaps'), dbAll('issuers'), dbAll('aliases')]);
+  const rw = rwA[0] || DEFAULT_RW;
+  rw.specials = Object.assign({}, DEFAULT_RW.specials, rw.specials);
+  if(!rw.bands.CORP_TW) rw.bands.CORP_TW = DEFAULT_RW.bands.CORP_TW;
+  const byKey = new Map(), byName = new Map(), aliasMap = new Map(), rmaps = {};
+  issuers.forEach(i => { byKey.set(i.key, i); if(i.nameN) byName.set(i.nameN, i); });
+  aliases.forEach(a => aliasMap.set(a.aliasN, a.key));
+  rmA.forEach(m => rmaps[m.agency] = m);
+  state.ctx = {settings:state.S, rw, rules:compileRules(rules), lists:compileLists(lists), rmaps, byKey, byName, aliasMap,
+               ruleVersion:rw.version + ' / 規則集 r' + (state.S.rulesRev || 1), counts:{issuers:issuers.length}};
+  return state.ctx;
+}
+async function loadBatches(){
+  state.batches = (await dbAll('batches')).sort((a, b) => b.createdAt - a.createdAt);
+  if(!state.batchId || !state.batches.find(b => b.batchId === state.batchId)) state.batchId = state.batches.length ? state.batches[0].batchId : null;
+}
+const CHUNK = 500;
+async function saveChunks(storeName, batchId, rows, onStep){
+  const STEP = CHUNK * 4;
+  for(let i = 0; i < rows.length; i += STEP){
+    const arr = [];
+    for(let j = i; j < Math.min(rows.length, i + STEP); j += CHUNK) arr.push({batchId, chunk:j / CHUNK, rows:rows.slice(j, j + CHUNK)});
+    await dbPutMany(storeName, arr);
+    if(onStep) onStep(Math.min(rows.length, i + STEP), rows.length);
+  }
+}
+async function loadChunks(storeName, batchId){
+  const cs = await dbByIndex(storeName, 'batchId', batchId);
+  cs.sort((a, b) => a.chunk - b.chunk);
+  const out = [];
+  cs.forEach(c => { for(const r of c.rows) out.push(r); });
+  return out;
+}
+async function getResults(batchId){
+  if(state.cache.batchId === batchId && state.cache.results) return state.cache.results;
+  const rs = (await loadChunks('results', batchId)).sort((a, b) => a.rowNo - b.rowNo);
+  state.cache = {batchId, results:rs};
+  return rs;
+}
+const invalidateResults = () => { state.cache = {batchId:null, results:null}; };
+function summarize(rs){
+  const s = {total:rs.length, withFindings:0, Critical:0, High:0, Medium:0, Low:0, deltaPos:0, issuers:new Set()};
+  rs.forEach(r => {
+    s.issuers.add(r.key);
+    if(r.findings.length) s.withFindings++;
+    if(r.severity) s[r.severity]++;
+    if(r.deltaRwa > 0) s.deltaPos += r.deltaRwa;
+  });
+  s.issuers = s.issuers.size;
+  return s;
+}
+
+/* ---------- 共用畫面元件 ---------- */
+function bars(entries, colorFn){
+  const max = Math.max(1, ...entries.map(e => e[1]));
+  return entries.map(([n, v]) => '<div class="bar"><div class="n" title="' + esc(n) + '">' + esc(n) + '</div><div class="t"><i style="width:' + (v / max * 100) + '%' + (colorFn ? ';background:' + colorFn(n) : '') + '"></i></div><div class="c">' + fmtN(v) + '</div></div>').join('') || '<div class="muted small">無資料</div>';
+}
+function rwTxt(v){ return v == null ? '—' : fmtN(v, 2) + '%'; }
+function findingChips(r){
+  return r.findings.map(f => '<span class="badge b-' + f.sev + '" title="' + esc(f.msg) + '">' + f.code.split('_')[0] + '</span>').join(' ') || '<span class="muted">—</span>';
+}
+function detailHTML(r, opts){
+  opts = opts || {};
+  const fr = r.findings.map(f => '<div style="margin:3px 0"><span class="badge b-' + f.sev + '">' + f.code + '</span> ' + esc(f.msg) + '</div>').join('') || '<div class="muted">無缺失</div>';
+  const kv = [
+    ['CUST_ID', r.custId || '—'], ['國別', r.country || '—'], ['BOND_TYPE', r.bondType || '—'], ['BOND_ID', r.bondId || '—'],
+    ['申報', (r.reportedType ? esc(r.reportedType) + (r.reportedCls ? '（' + r.reportedCls + '）' : '') : '—') + ' / ' + rwTxt(r.reportedRw)],
+    ['建議', '<b>' + r.sugCls + '｜' + CLS[r.sugCls] + '</b> / <b>' + rwTxt(r.sugRw) + '</b>（' + r.rwBasis + '）'],
+    ['信心／來源', r.confidence + ' ／ ' + r.source + (r.ruleId ? '（' + esc(r.ruleId) + '）' : '')],
+    ['外部評等', esc(r.ratingText) || '—'], ['暴險金額', fmtN(r.exposureAmt)], ['ΔRWA', r.deltaRwa == null ? '—' : fmtN(r.deltaRwa)], ['規則版本', esc(r.ruleVersion)]
+  ].map(([k, v]) => '<b>' + k + '</b><div>' + (/^(CUST_ID|國別|BOND_TYPE|BOND_ID)$/.test(k) ? esc(v) : v) + '</div>').join('');
+  const confirm = opts.noConfirm ? '' : '<h3>人工覆核｜確認此發行人的暴險類別</h3><div class="row"><div class="f"><label>確認類別</label><select id="cfCls">' + clsOptions(r.sugCls) + '</select></div>' +
+    '<div class="f" style="flex:2"><label>理由（必填）</label><input type="text" id="cfWhy" placeholder="例如：美國加州州政府一般責任債券，屬非中央政府公共部門"></div>' +
+    '<div><button class="pri" data-act="cfSave">確認並記住</button></div></div><div class="help">確認後寫入發行人主檔，下次遇到相同 CUST_ID 或名稱會直接帶出（信心 100）。</div>';
+  return '<h3>' + esc(r.issuerName) + ' ' + sevBadge(r.severity) + '</h3><div class="kv">' + kv + '</div><h3>缺失</h3>' + fr +
+    '<h3>Rule Trace</h3><div class="trace">' + esc(r.trace) + '</div>' + confirm +
+    '<div style="text-align:right;margin-top:14px"><button data-act="closeModal">關閉</button></div>';
+}
+async function confirmIssuer(r, cls, why){
+  if(!why || !why.trim()){ toast('請填寫理由', true); return false; }
+  if(!r.custId && !r.nameN){ toast('此筆沒有 CUST_ID 也沒有發行人名稱，無法建立主檔', true); return false; }
+  const old = await dbGet('issuers', r.key);
+  const rec = {key:r.key, custId:r.custId || '', name:r.issuerName, nameN:r.nameN, country:r.country || '', expoType:cls, status:'confirmed',
+               reason:why.trim(), rwOverride:old ? old.rwOverride : null, ts:Date.now()};
+  await dbPut('issuers', rec);
+  await audit('CONFIRM', 'issuer:' + r.key, r.issuerName + ' → ' + cls + '｜' + why.trim());
+  await bumpRev(); state.ctx = null;
+  return true;
+}
+
+/* ---------- 缺失態樣報表 ---------- */
+function buildDefects(rs){
+  const g = new Map();
+  rs.forEach(r => {
+    const has = r.findingCodes.some(c => /^F0[123]_/.test(c));
+    if(!has || r.reportedRw == null && !r.reportedCls) return;
+    const k = [r.reportedCls, r.sugCls, r.reportedRw, r.sugRw].join('|');
+    if(!g.has(k)) g.set(k, {rpt:r.reportedCls, sug:r.sugCls, rptRw:r.reportedRw, sugRw:r.sugRw, rows:0, issuers:new Map(), delta:0});
+    const o = g.get(k); o.rows++; o.issuers.set(r.key, r.issuerName); if(r.deltaRwa != null) o.delta += r.deltaRwa;
+  });
+  return [...g.values()].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).map((o, i) => {
+    const names = [...o.issuers.values()], ex = names.slice(0, 3).join('、') + (names.length > 3 ? ' 等' + names.length + '家發行人' : '');
+    let txt;
+    if(o.rpt && o.rpt !== o.sug) txt = '持有 ' + ex + '所發行之債券，應為「' + clsLabel(o.sug) + '」暴險類型，風險權數 ' + rwTxt(o.sugRw) + '，誤列「' + clsLabel(o.rpt) + '」暴險類型，風險權數 ' + rwTxt(o.rptRw);
+    else txt = '持有 ' + ex + '所發行之債券（' + clsLabel(o.sug) + '），風險權數應為 ' + rwTxt(o.sugRw) + '，誤列 ' + rwTxt(o.rptRw);
+    return {no:i + 1, cls:clsLabel(o.rpt || o.sug), text:txt, rows:o.rows, issuers:names.length, delta:o.delta};
+  });
+}
+
+/* ---------- 重跑批次 ---------- */
+async function classifyRecords(recs, ctx, batchId, onProgress){
+  const results = [];
+  for(let i = 0; i < recs.length; i += 1000){
+    recs.slice(i, i + 1000).forEach(rc => { const r = classify(rc.m, ctx); r.batchId = batchId; r.rowNo = rc.rowNo; results.push(r); });
+    if(onProgress) onProgress(Math.min(recs.length, i + 1000), recs.length);
+    await sleep0();
+  }
+  postProcess(results);
+  return results;
+}
+async function rerunBatch(batchId, silent){
+  const ctx = await getCtx(true);
+  const recs = (await loadChunks('records', batchId)).sort((a, b) => a.rowNo - b.rowNo);
+  const old = new Map((await loadChunks('results', batchId)).map(r => [r.rowNo, r]));
+  const news = await classifyRecords(recs, ctx, batchId);
+  const diffs = [];
+  news.forEach(n => {
+    const o = old.get(n.rowNo);
+    if(!o) return;
+    if(o.sugCls !== n.sugCls || o.sugRw !== n.sugRw || o.findingCodes.join() !== n.findingCodes.join()) diffs.push({o, n});
+  });
+  await saveChunks('results', batchId, news);   // 區塊鍵相同，直接覆寫；中途失敗時舊結果仍完整
+  const b = await dbGet('batches', batchId);
+  b.ruleVersion = ctx.ruleVersion; b.summary = summarize(news); b.rerunAt = Date.now();
+  await dbPut('batches', b);
+  await audit('RERUN', 'batch:' + batchId, '重跑 ' + news.length + ' 筆，結果變動 ' + diffs.length + ' 筆（' + ctx.ruleVersion + '）');
+  invalidateResults(); await loadBatches();
+  return diffs;
+}
+function diffModal(diffs){
+  const rows = diffs.slice(0, 300).map(({o, n}) => '<tr><td>' + n.rowNo + '</td><td>' + esc(n.issuerName) + '</td><td>' + o.sugCls + ' / ' + rwTxt(o.sugRw) + '</td><td>' + n.sugCls + ' / ' + rwTxt(n.sugRw) + '</td><td>' + esc(o.findingCodes.map(c => c.slice(0, 3)).join(',') || '—') + ' → ' + esc(n.findingCodes.map(c => c.slice(0, 3)).join(',') || '—') + '</td></tr>').join('');
+  openModal('<h3>重跑完成：結果變動 ' + diffs.length + ' 筆</h3>' + (diffs.length ? '<div class="tbl-wrap"><table><tr><th>列</th><th>發行人</th><th>原建議</th><th>新建議</th><th>缺失</th></tr>' + rows + '</table></div>' + (diffs.length > 300 ? '<div class="help">僅顯示前 300 筆</div>' : '') : '<div class="muted">規則改版後，本批次結果沒有任何變動。</div>') +
+    '<div style="text-align:right;margin-top:12px"><button class="pri" data-act="closeModal">關閉</button></div>');
+}
+
+// ==== PAGES 1 ====
+const main = () => $('#main');
+const emptyBatch = () => '<div class="card"><b>尚無批次資料。</b><p class="muted">請先到「批次匯入」匯入 CSV／JSON，或使用範例資料體驗完整流程。</p><a href="#/import"><button class="pri">前往批次匯入</button></a></div>';
+function batchPicker(){
+  return '<div class="row" style="margin-bottom:12px"><div class="f" style="max-width:420px"><label>批次</label><select data-chg="pickBatch">' +
+    state.batches.map(b => '<option value="' + b.batchId + '"' + (b.batchId === state.batchId ? ' selected' : '') + '>' + esc(b.name) + '（' + fmtN(b.total) + ' 筆｜' + fmtT(b.createdAt) + '）</option>').join('') + '</select></div></div>';
+}
+const SEV_COLOR = {Critical:'#c62828', High:'#e65100', Medium:'#b7791f', Low:'#2e7d32'};
+
+/* ===== Dashboard ===== */
+async function pgDashboard(){
+  await loadBatches();
+  if(!state.batchId){ main().innerHTML = '<h2>總覽 Dashboard</h2>' + emptyBatch(); return; }
+  const b = state.batches.find(x => x.batchId === state.batchId);
+  const rs = await getResults(state.batchId);
+  const s = summarize(rs);
+  const lowConf = rs.filter(r => r.findingCodes.includes('F04_LOW_CONFIDENCE')).length;
+  const byCode = {}, byCls = {}, bySrc = {};
+  rs.forEach(r => { r.findingCodes.forEach(c => byCode[c] = (byCode[c] || 0) + 1); byCls[r.sugCls] = (byCls[r.sugCls] || 0) + 1; bySrc[r.source] = (bySrc[r.source] || 0) + 1; });
+  const top = rs.filter(r => r.deltaRwa != null && r.deltaRwa !== 0).sort((a, c) => Math.abs(c.deltaRwa) - Math.abs(a.deltaRwa)).slice(0, 10);
+  main().innerHTML = '<h2>總覽 Dashboard</h2>' + batchPicker() +
+    '<div class="grid g6" style="margin-bottom:16px">' +
+    [['總筆數', fmtN(s.total)], ['發行人數', fmtN(s.issuers)], ['有缺失筆數', fmtN(s.withFindings)], ['Critical', fmtN(s.Critical)], ['High', fmtN(s.High)], ['ΔRWA（低估合計）', fmtN(s.deltaPos)]]
+      .map(([l, v]) => '<div class="kpi"><div class="v">' + v + '</div><div class="l">' + l + '</div></div>').join('') + '</div>' +
+    '<div class="grid g3">' +
+    '<div class="card"><h3 style="margin-top:0">缺失分布</h3>' + bars(Object.entries(byCode).sort((a, c) => c[1] - a[1]).map(([k, v]) => [k.split('_')[0] + ' ' + FINDING_DEF[k].name, v]), n => SEV_COLOR[Object.values(FINDING_DEF)[Number(n.slice(1, 3)) - 1].sev]) + '</div>' +
+    '<div class="card"><h3 style="margin-top:0">建議暴險類別分布</h3>' + bars(Object.entries(byCls).sort((a, c) => c[1] - a[1]).map(([k, v]) => [k + '｜' + CLS[k], v])) + '</div>' +
+    '<div class="card"><h3 style="margin-top:0">判斷來源</h3>' + bars(Object.entries(bySrc).sort((a, c) => c[1] - a[1])) + '<div class="help">低信心（F04）：' + fmtN(lowConf) + ' 筆。MASTER／ALIAS 代表已人工覆核。</div></div></div>' +
+    '<div class="card"><h3 style="margin-top:0">影響金額 Top 10（|ΔRWA|）</h3><div class="tbl-wrap"><table><tr><th>列</th><th>發行人</th><th>申報</th><th>建議</th><th class="num">暴險金額</th><th class="num">ΔRWA</th><th>缺失</th></tr>' +
+    (top.map(r => '<tr class="clk" data-act="openRow" data-row="' + r.rowNo + '"><td>' + r.rowNo + '</td><td>' + esc(r.issuerName) + '</td><td>' + esc(r.reportedCls || '—') + ' / ' + rwTxt(r.reportedRw) + '</td><td>' + r.sugCls + ' / ' + rwTxt(r.sugRw) + '</td><td class="num">' + fmtN(r.exposureAmt) + '</td><td class="num">' + fmtN(r.deltaRwa) + '</td><td>' + findingChips(r) + '</td></tr>').join('') || '<tr><td colspan="7" class="muted">本批次無可計算 ΔRWA 的缺失（需有申報 RW 與暴險金額）</td></tr>') +
+    '</table></div></div>' +
+    '<div class="muted small">規則版本：' + esc(b.ruleVersion) + '｜匯入檔：' + esc(b.fileName || '—') + '</div>';
+}
+
+/* ===== 單筆查詢 ===== */
+const SAMPLES = {
+  ca:{name:'STATE OF CALIFORNIA', country:'US', bt:'MUNI', sp:'AA-', mdy:'Aa2', rt:'SOV', rw:'0', amt:'1000000'},
+  adb:{name:'Asian Development Bank', country:'', bt:'FIN', sp:'AAA', rt:'BANK', rw:'20', amt:'1000000'},
+  tp:{name:'台灣電力股份有限公司', country:'TW', bt:'CORP', rt:'CORP', rw:'100', amt:'1000000'},
+  mof:{name:'財政部國庫署', country:'TW', bt:'GOVT', rt:'SOV', rw:'0', amt:'1000000'},
+  fnm:{name:'FEDERAL NATIONAL MORTGAGE ASSOCIATION', country:'US', bt:'MBS', rt:'SEC', rw:'20', pt:'N', amt:'1000000'}
+};
+async function pgQuery(){
+  const f = (id, label, extra) => '<div class="f"><label>' + label + '</label>' + extra + '</div>';
+  main().innerHTML = '<h2>單筆查詢</h2><div class="card">' +
+    '<div class="row" style="margin-bottom:8px"><span class="muted small">範例：</span>' + Object.entries({ca:'加州州政府債', adb:'亞洲開發銀行', tp:'台電', mof:'財政部國庫署', fnm:'Fannie Mae（非純轉付）'}).map(([k, v]) => '<button class="sm" data-act="qSample" data-k="' + k + '">' + v + '</button>').join('') + '</div>' +
+    '<div class="row">' + f('', 'ISSUER_NAME 發行人名稱 *', '<input type="text" id="q_name" placeholder="例如：STATE OF CALIFORNIA / 台北市政府">') +
+    f('', 'CUST_ID', '<input type="text" id="q_cust">') + f('', '國別（ISO2，如 US、TW）', '<input type="text" id="q_country" maxlength="3">') +
+    f('', 'BOND_TYPE', '<select id="q_bt"><option value="">（未填）</option>' + ['GOVT','MUNI','AGENCY','CORP','FIN','MBS','CMO','OTHER'].map(x => '<option>' + x + '</option>').join('') + '</select>') + '</div>' +
+    '<div class="row" style="margin-top:8px">' + f('', 'S&P', '<input type="text" id="q_sp" placeholder="AA-">') + f('', "Moody's", '<input type="text" id="q_mdy" placeholder="Aa2">') +
+    f('', 'Fitch', '<input type="text" id="q_fitch">') + f('', '中華信評', '<input type="text" id="q_trc" placeholder="twAA">') +
+    f('', '短期債權（3個月內）', '<select id="q_st"><option value="">未知</option><option value="Y">是</option><option value="N">否</option></select>') +
+    f('', '純轉付架構', '<select id="q_pt"><option value="">未知</option><option value="Y">是</option><option value="N">否</option></select>') + '</div>' +
+    '<div class="row" style="margin-top:8px">' + f('', '未評等銀行等級', '<select id="q_bg"><option value="">未知</option><option>A</option><option>B</option><option>C</option></select>') +
+    f('', '營收（元，境內無評等企業）', '<input type="number" id="q_rev">') +
+    f('', '申報暴險類別（可選）', '<select id="q_rt">' + clsOptions('', true) + '</select>') + f('', '申報 RW %（可選）', '<input type="number" id="q_rw" step="any">') +
+    f('', '暴險金額（可選）', '<input type="number" id="q_amt">') + '<div><button class="pri" data-act="qRun">分類</button></div></div></div><div id="qOut"></div>';
+  $('#q_name').addEventListener('keydown', e => { if(e.key === 'Enter') qRun(); });
+}
+function qFill(k){
+  const s = SAMPLES[k]; if(!s) return;
+  const set = (id, v) => { $('#' + id).value = v == null ? '' : v; };
+  ['name','cust','country','sp','mdy','fitch','trc','rev','rw','amt','bg','st'].forEach(x => set('q_' + x, ''));
+  set('q_name', s.name); set('q_country', s.country); set('q_bt', s.bt || ''); set('q_sp', s.sp); set('q_mdy', s.mdy); set('q_rt', s.rt || '');
+  set('q_rw', s.rw); set('q_amt', s.amt); set('q_pt', s.pt || ''); set('q_st', ''); qRun();
+}
+async function qRun(){
+  const v = id => $('#' + id).value;
+  if(!v('q_name').trim()){ toast('請輸入發行人名稱', true); return; }
+  const mapping = {}; FIELDS.forEach(f => mapping[f.k] = f.k);
+  const raw = {CUST_ID:v('q_cust'), ISSUER_NAME:v('q_name'), ISSUER_COUNTRY:v('q_country'), BOND_TYPE:v('q_bt'), RATING_SP:v('q_sp'), RATING_MDY:v('q_mdy'), RATING_FITCH:v('q_fitch'),
+               RATING_TRC:v('q_trc'), SHORT_TERM:v('q_st'), PASS_THROUGH:v('q_pt'), BANK_GRADE:v('q_bg'), REVENUE_TWD:v('q_rev'), RPT_EXPO_TYPE:v('q_rt'), RPT_RW:v('q_rw'), EXPOSURE_AMT:v('q_amt')};
+  const ctx = await getCtx();
+  const r = classify(mapRecord(raw, mapping, {rwUnit:'pct'}), ctx);
+  state.lastQuery = r;
+  $('#qOut').innerHTML = '<div class="card">' + detailHTML(r, {}).replace('<div style="text-align:right;margin-top:14px"><button data-act="closeModal">關閉</button></div>', '') + '</div>';
+}
+
+/* ===== 批次匯入 ===== */
+const SAMPLE_ROWS = [
+  ['CUST_ID','ISSUER_NAME','ISSUER_COUNTRY','BOND_ID','BOND_TYPE','RPT_EXPO_TYPE','RPT_RW','RATING_SP','RATING_MDY','RATING_FITCH','PASS_THROUGH','SHORT_TERM','EXPOSURE_AMT'],
+  ['C001','STATE OF CALIFORNIA','US','US13063DAA','MUNI','主權國家',0,'AA-','Aa2','AA','','',50000000],
+  ['C001','STATE OF CALIFORNIA','US','US13063DBB','MUNI','非中央政府公共部門',20,'AA-','Aa2','AA','','',3000000000],
+  ['C002','STATE OF TEXAS','US','US882723AA','MUNI','主權國家',0,'AAA','Aaa','AAA','','',20000000000],
+  ['C003','PROVINCE OF ONTARIO','CA','CA683234AA','MUNI','主權國家',0,'A+','Aa3','AA-','','',1500000000],
+  ['C004','REPUBLIC OF KOREA','KR','KR103501AA','GOVT','主權國家',0,'AA','Aa2','AA-','','',4000000000],
+  ['C005','REPUBLIC OF INDONESIA','ID','US455780AA','GOVT','主權國家',0,'BBB','Baa2','BBB','','',2500000000],
+  ['C006','ASIAN DEVELOPMENT BANK','','XS000000AA','FIN','銀行',20,'AAA','Aaa','AAA','','',60000000],
+  ['C007','INTERNATIONAL BANK FOR RECONSTRUCTION AND DEVELOPMENT','','US459058AA','FIN','多邊開發銀行',0,'AAA','Aaa','AAA','','',3500000000],
+  ['C008','FEDERAL NATIONAL MORTGAGE ASSOCIATION','US','US3136AAAA','MBS','證券化暴險',20,'AA+','Aaa','AA+','Y','',7000000000],
+  ['C009','GOVERNMENT NATIONAL MORTGAGE ASSOCIATION','US','US38373AAA','MBS','證券化暴險',20,'AA+','Aaa','AA+','Y','',1000000000],
+  ['C010','台灣電力股份有限公司','TW','TW0000001A','CORP','民營企業',100,'','','','','',30000000000],
+  ['C011','中華郵政股份有限公司','TW','TW0000002A','FIN','銀行',20,'','','','','N',1200000000],
+  ['C012','台北市政府','TW','TW0000003A','MUNI','主權國家',0,'','','','','',90000000],
+  ['C013','財政部國庫署','TW','TW0000004A','GOVT','主權國家',0,'','','','','',10000000000],
+  ['C014','BANK OF AMERICA CORP','US','US06051GAA','FIN','銀行',20,'A-','A1','A','','',8000000000],
+  ['C015','APPLE INC','US','US037833AA','CORP','民營企業',20,'AA+','Aaa','','','',9000000000],
+  ['C016','國立臺灣大學','TW','TW0000005A','CORP','民營企業',100,'','','','','',50000000],
+  ['C017','ISLAMIC DEVELOPMENT BANK','','XS111111AA','FIN','多邊開發銀行',0,'AAA','Aaa','AAA','','',2200000000],
+  ['C018','CITY OF NEW YORK','US','US64966AAA','MUNI','主權國家',0,'AA','Aa2','AA','','',1800000000],
+  ['C019','MYSTERY HOLDINGS LTD','','XS222222AA','CORP','民營企業',100,'','','','','',60000000],
+  ['C020','STATE OF ISRAEL','IL','US46513AAA','GOVT','主權國家',50,'A+','A1','A','','',1300000000]
+];
+async function pgImport(){
+  main().innerHTML = '<h2>批次匯入</h2><div class="card">' +
+    '<div class="drop" id="drop" data-act="pickFile"><div style="font-size:15px;margin-bottom:4px"><b>拖曳 CSV／JSON 到此，或點擊選擇檔案</b></div><div class="small">CSV 自動偵測分隔符號與編碼（UTF-8／Big5）。資料只在本機處理，不會上傳。</div></div>' +
+    '<input type="file" id="fileIn" accept=".csv,.tsv,.txt,.json" style="display:none">' +
+    '<div class="row" style="margin-top:10px"><button data-act="loadSample">載入範例資料（21 筆）</button><button data-act="dlTemplate">下載匯入範本 CSV</button></div></div><div id="impBody"></div>';
+  const drop = $('#drop'), fi = $('#fileIn');
+  fi.addEventListener('change', () => fi.files[0] && importFile(fi.files[0]));
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); e.dataTransfer.files[0] && importFile(e.dataTransfer.files[0]); });
+  if(state.imp) renderImpBody();
+}
+async function importFile(file){
+  try{
+    const buf = await file.arrayBuffer(); let text;
+    try{ text = new TextDecoder('utf-8', {fatal:true}).decode(buf); }
+    catch(e){ try{ text = new TextDecoder('big5').decode(buf); toast('偵測到非 UTF-8 編碼，已改用 Big5 解碼'); }catch(e2){ text = new TextDecoder().decode(buf); } }
+    await loadImportData(file.name, text);
+  }catch(e){ toast('讀取失敗：' + e.message, true); }
+}
+async function loadImportData(name, text){
+  let headers, data;
+  if(/\.json$/i.test(name) || /^\s*[\[{]/.test(text)){
+    let j = JSON.parse(text);
+    if(!Array.isArray(j)) j = j.records || j.data || [];
+    const hs = new Set(); j.forEach(o => Object.keys(o).forEach(k => hs.add(k)));
+    headers = [...hs]; data = j;
+  }else{
+    const rows = parseCSV(text);
+    if(rows.length < 2) throw new Error('檔案沒有資料列');
+    ({headers, data} = rowsToObjects(rows));
+  }
+  if(!data.length) throw new Error('檔案沒有資料列');
+  const sig = headers.map(hkey).sort().join('|');
+  const saved = await dbGet('mappings', sig);
+  const mapping = saved ? saved.mapping : autoMapping(headers);
+  state.imp = {name, headers, data, mapping, sig, rwUnit:saved ? saved.rwUnit : state.S.rwUnit, usedSaved:!!saved};
+  if(location.hash !== '#/import') location.hash = '#/import'; else renderImpBody();
+}
+function renderImpBody(){
+  const m = state.imp, el = $('#impBody'); if(!el || !m) return;
+  const opt = sel => '<option value="">（不對應）</option>' + m.headers.map(h => '<option' + (h === sel ? ' selected' : '') + ' value="' + esc(h) + '">' + esc(h) + '</option>').join('');
+  el.innerHTML = '<div class="card"><h3 style="margin-top:0">' + esc(m.name) + '｜' + fmtN(m.data.length) + ' 列 × ' + m.headers.length + ' 欄' + (m.usedSaved ? ' <span class="badge b-info">已套用先前儲存的對應</span>' : '') + '</h3>' +
+    '<div class="tbl-wrap" style="max-height:200px"><table><tr>' + m.headers.map(h => '<th>' + esc(h) + '</th>').join('') + '</tr>' +
+    m.data.slice(0, 5).map(r => '<tr>' + m.headers.map(h => '<td>' + esc(r[h]) + '</td>').join('') + '</tr>').join('') + '</table></div></div>' +
+    '<div class="card"><h3 style="margin-top:0">欄位對應（Schema Mapping）</h3><div class="grid g3">' +
+    FIELDS.map(f => '<div><label>' + esc(f.label) + (f.k === 'ISSUER_NAME' ? ' <b style="color:var(--crit)">*必填</b>' : f.k === 'CUST_ID' ? ' <b>（建議）</b>' : '') + '</label><select data-chg="mapSel" data-f="' + f.k + '">' + opt(m.mapping[f.k]) + '</select></div>').join('') + '</div>' +
+    '<div class="row" style="margin-top:12px"><div class="f" style="max-width:260px"><label>RPT_RW 單位</label><select id="rwUnit"><option value="pct"' + (m.rwUnit === 'pct' ? ' selected' : '') + '>百分比（20 = 20%）</option><option value="dec"' + (m.rwUnit === 'dec' ? ' selected' : '') + '>小數（0.2 = 20%）</option></select></div>' +
+    '<div class="f" style="max-width:340px"><label>批次名稱</label><input type="text" id="batchName" value="' + esc(m.name.replace(/\.[^.]+$/, '')) + '"></div>' +
+    '<div><button class="pri" data-act="runImport" id="runBtn">執行分類</button></div></div>' +
+    '<div class="progress" style="margin-top:12px;display:none" id="prog"><i></i></div><div class="help" id="progTxt"></div></div>';
+}
+async function runImport(){
+  const m = state.imp;
+  if(!m.mapping.ISSUER_NAME){ toast('請先對應 ISSUER_NAME 欄位', true); return; }
+  m.rwUnit = $('#rwUnit').value;
+  const name = $('#batchName').value.trim() || m.name;
+  $('#runBtn').disabled = true; $('#prog').style.display = 'block';
+  let batchId = null;
+  try{
+    const ctx = await getCtx(true);
+    batchId = uid('B'); const recs = [];
+    m.data.forEach((raw, i) => recs.push({rowNo:i + 1, raw, m:mapRecord(raw, m.mapping, {rwUnit:m.rwUnit})}));
+    $('#progTxt').textContent = '寫入原始資料…';
+    await saveChunks('records', batchId, recs);
+    const results = await classifyRecords(recs, ctx, batchId, (a, b) => { $('#prog i').style.width = (a / b * 90) + '%'; $('#progTxt').textContent = '分類中 ' + fmtN(a) + ' / ' + fmtN(b); });
+    await saveChunks('results', batchId, results, (a, b) => { $('#prog i').style.width = (90 + a / b * 10) + '%'; $('#progTxt').textContent = '寫入結果 ' + fmtN(a) + ' / ' + fmtN(b); });
+    await dbPut('batches', {batchId, name, fileName:m.name, createdAt:Date.now(), total:results.length, mapping:m.mapping, rwUnit:m.rwUnit, ruleVersion:ctx.ruleVersion, summary:summarize(results)});
+    await dbPut('mappings', {mappingId:m.sig, mapping:m.mapping, rwUnit:m.rwUnit, ts:Date.now()});
+    await audit('IMPORT', 'batch:' + batchId, name + '｜' + results.length + ' 筆');
+    state.batchId = batchId; invalidateResults(); state.imp = null; state.page = 1;
+    toast('完成：' + fmtN(results.length) + ' 筆已分類');
+    location.hash = '#/results';
+  }catch(e){
+    console.error(e); toast('匯入失敗：' + e.message, true);
+    if(batchId){ try{ await dbDelByIndex('records', 'batchId', batchId); await dbDelByIndex('results', 'batchId', batchId); await dbDel('batches', batchId); }catch(_){} }   // 清除半途寫入的殘留資料
+    const btn = $('#runBtn'); if(btn) btn.disabled = false;
+  }
+}
+
+/* ===== 結果清單 ===== */
+function filterResults(rs){
+  const f = state.rf, q = f.q.trim().toUpperCase();
+  return rs.filter(r => (!f.only || r.findings.length) && (!f.sev || r.severity === f.sev) && (!f.code || r.findingCodes.includes(f.code)) &&
+    (!f.cls || r.sugCls === f.cls) && (!f.src || r.source === f.src) && (!q || (r.issuerName + ' ' + r.custId + ' ' + r.nameN + ' ' + r.bondId).toUpperCase().includes(q)));
+}
+function sortResults(rs){
+  const {k, d} = state.sort;
+  const val = {row:r => r.rowNo, cust:r => r.custId, name:r => r.issuerName, sev:r => (SEV_ORDER[r.severity] || 0) * 1e15 + Math.abs(r.deltaRwa || 0), conf:r => r.confidence, delta:r => r.deltaRwa == null ? -Infinity : r.deltaRwa}[k];
+  return rs.slice().sort((a, b) => { const x = val(a), y = val(b); return (x < y ? -1 : x > y ? 1 : a.rowNo - b.rowNo) * d; });
+}
+async function pgResults(){
+  await loadBatches();
+  if(!state.batchId){ main().innerHTML = '<h2>結果清單</h2>' + emptyBatch(); return; }
+  const rs = await getResults(state.batchId), f = state.rf;
+  const codes = Object.keys(FINDING_DEF);
+  main().innerHTML = '<h2>結果清單</h2>' + batchPicker() + '<div class="card"><div class="row">' +
+    '<div class="f" style="flex:2"><label>搜尋（名稱／CUST_ID／債券代號）</label><input type="search" id="rf_q" value="' + esc(f.q) + '"></div>' +
+    '<div class="f"><label>嚴重度</label><select data-chg="rf" data-k="sev"><option value="">全部</option>' + ['Critical','High','Medium','Low'].map(x => '<option' + (f.sev === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
+    '<div class="f"><label>缺失</label><select data-chg="rf" data-k="code"><option value="">全部</option>' + codes.map(c => '<option value="' + c + '"' + (f.code === c ? ' selected' : '') + '>' + c.split('_')[0] + ' ' + FINDING_DEF[c].name + '</option>').join('') + '</select></div>' +
+    '<div class="f"><label>建議類別</label><select data-chg="rf" data-k="cls"><option value="">全部</option>' + CLS_CODES.map(c => '<option value="' + c + '"' + (f.cls === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></div>' +
+    '<div class="f"><label>來源</label><select data-chg="rf" data-k="src"><option value="">全部</option>' + ['MASTER','ALIAS','LIST','RULE','CONTEXT','DEFAULT'].map(c => '<option' + (f.src === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select></div>' +
+    '<div><label style="margin-bottom:9px"><input type="checkbox" data-chg="rfOnly"' + (f.only ? ' checked' : '') + '> 只看有缺失</label></div></div>' +
+    '<div class="row" style="margin-top:10px"><span class="muted" id="rcount"></span><span class="spacer"></span>' +
+    '<button data-act="exportResults">匯出 CSV（目前篩選）</button><button data-act="defectReport">缺失態樣報表</button><button data-act="rerun">重跑本批次</button><button class="dng" data-act="delBatch">刪除批次</button></div></div>' +
+    '<div class="card"><div id="rtable"></div></div>';
+  let _t = 0;
+  $('#rf_q').addEventListener('input', e => { state.rf.q = e.target.value; state.page = 1; clearTimeout(_t); _t = setTimeout(renderResultsTable, 150); });
+  renderResultsTable();
+}
+function renderResultsTable(){
+  const rs = state.cache.results || [];
+  state.view = sortResults(filterResults(rs));
+  const ps = state.S.pageSize || 50, pages = Math.max(1, Math.ceil(state.view.length / ps));
+  if(state.page > pages) state.page = pages;
+  const slice = state.view.slice((state.page - 1) * ps, state.page * ps);
+  const th = (k, label, cls) => '<th class="sortable ' + (cls || '') + '" data-act="sortBy" data-k="' + k + '">' + label + (state.sort.k === k ? (state.sort.d > 0 ? ' ▲' : ' ▼') : '') + '</th>';
+  $('#rcount').textContent = '符合 ' + fmtN(state.view.length) + ' / 共 ' + fmtN(rs.length) + ' 筆';
+  $('#rtable').innerHTML = '<div class="tbl-wrap"><table><tr>' + th('row', '列', 'num') + th('cust', 'CUST_ID') + th('name', '發行人') + '<th>申報（類別／RW）</th><th>建議（類別／RW）</th>' + th('conf', '信心', 'num') + '<th>來源</th>' + th('sev', '缺失') + th('delta', 'ΔRWA', 'num') + '</tr>' +
+    (slice.map(r => '<tr class="clk" data-act="openRow" data-row="' + r.rowNo + '"><td class="num">' + r.rowNo + '</td><td>' + esc(r.custId) + '</td><td>' + esc(r.issuerName) + '</td><td>' + esc(r.reportedCls || r.reportedType || '—') + ' / ' + rwTxt(r.reportedRw) + '</td><td><b>' + r.sugCls + '</b> / ' + rwTxt(r.sugRw) + '</td><td class="num">' + r.confidence + '</td><td>' + r.source + '</td><td>' + findingChips(r) + '</td><td class="num">' + (r.deltaRwa == null ? '—' : fmtN(r.deltaRwa)) + '</td></tr>').join('') || '<tr><td colspan="9" class="muted">沒有符合條件的資料</td></tr>') +
+    '</table></div><div class="pager"><button class="sm" data-act="pg" data-d="-1"' + (state.page <= 1 ? ' disabled' : '') + '>上一頁</button><span>' + state.page + ' / ' + pages + '</span><button class="sm" data-act="pg" data-d="1"' + (state.page >= pages ? ' disabled' : '') + '>下一頁</button></div>';
+}
+async function exportResults(){
+  const recs = new Map((await loadChunks('records', state.batchId)).map(r => [r.rowNo, r.raw]));
+  const rawH = [...new Set([...recs.values()].slice(0, 200).flatMap(o => Object.keys(o)))];
+  const H = ['列號','CUST_ID','ISSUER_NAME','國別','BOND_TYPE','申報類別','申報RW','建議類別代碼','建議類別','建議RW','權數依據','信心分數','判斷來源','命中規則/名單','外部評等','暴險金額','ΔRWA','缺失代碼','缺失說明','最高嚴重度','規則版本'];
+  const rows = state.view.map(r => [r.rowNo, r.custId, r.issuerName, r.country, r.bondType, r.reportedType, r.reportedRw, r.sugCls, CLS[r.sugCls], r.sugRw, r.rwBasis, r.confidence, r.source, r.ruleId || '', r.ratingText, r.exposureAmt, r.deltaRwa, r.findingCodes.join('|'), r.findings.map(f => f.msg).join('；'), r.severity, r.ruleVersion].concat(rawH.map(h => (recs.get(r.rowNo) || {})[h])));
+  dlCSV('issuer_classifier_results_' + new Date().toISOString().slice(0, 10) + '.csv', H.concat(rawH.map(h => 'RAW_' + h)), rows);
+  toast('已匯出 ' + fmtN(rows.length) + ' 筆');
+}
+function defectModal(){
+  const d = buildDefects(state.cache.results || []);
+  state.defects = d;
+  openModal('<h3>缺失態樣報表（依 ΔRWA 影響排序）</h3>' + (d.length ? '<div class="tbl-wrap"><table><tr><th>序號</th><th>暴險類別</th><th>缺失態樣</th><th class="num">筆數</th><th class="num">發行人數</th><th class="num">ΔRWA</th></tr>' +
+    d.map(x => '<tr><td>' + x.no + '</td><td>' + esc(x.cls) + '</td><td>' + esc(x.text) + '</td><td class="num">' + x.rows + '</td><td class="num">' + x.issuers + '</td><td class="num">' + fmtN(x.delta) + '</td></tr>').join('') + '</table></div>' : '<div class="muted">本批次沒有類別或權數缺失。</div>') +
+    '<div class="help">「暴險類別」欄為申報（誤列）類別；缺失態樣文字可直接貼入報告後再人工潤飾。</div>' +
+    '<div class="row" style="margin-top:12px;justify-content:flex-end"><button data-act="defCopy">複製（可貼 Excel）</button><button data-act="defCsv">下載 CSV</button><button class="pri" data-act="closeModal">關閉</button></div>');
+}
+
+/* ===== 覆核佇列 ===== */
+async function pgReview(){
+  await loadBatches();
+  if(!state.batchId){ main().innerHTML = '<h2>覆核佇列</h2>' + emptyBatch(); return; }
+  const rs = await getResults(state.batchId);
+  const g = new Map();
+  rs.forEach(r => {
+    if(r.source === 'MASTER' || r.source === 'ALIAS') return;
+    if(!r.findingCodes.some(c => /^F0[1-5]_/.test(c))) return;
+    if(!g.has(r.key)) g.set(r.key, {key:r.key, r, n:0, rpt:new Set(), codes:new Set(), delta:0, sevMax:0});
+    const o = g.get(r.key); o.n++; if(r.reportedCls) o.rpt.add(r.reportedCls); r.findingCodes.forEach(c => o.codes.add(c.split('_')[0]));
+    if(r.deltaRwa != null) o.delta += r.deltaRwa; o.sevMax = Math.max(o.sevMax, SEV_ORDER[r.severity] || 0);
+    if(Math.abs(r.deltaRwa || 0) > Math.abs(o.r.deltaRwa || 0)) o.r = r;
+  });
+  state.queue = [...g.values()].sort((a, b) => b.sevMax - a.sevMax || Math.abs(b.delta) - Math.abs(a.delta));
+  const shown = state.queue.slice(0, 300);
+  main().innerHTML = '<h2>覆核佇列</h2>' + batchPicker() +
+    '<div class="card"><div class="row"><div class="f" style="flex:2"><label>批次確認理由（勾選後一次確認用）</label><input type="text" id="bulkWhy" placeholder="例如：已逐筆核對發行人身分，採系統建議"></div>' +
+    '<div><button data-act="rvBulk">確認勾選項目</button></div><div><button class="pri" data-act="rerun">套用結果並重跑本批次</button></div></div>' +
+    '<div class="help">共 ' + fmtN(state.queue.length) + ' 家發行人待覆核' + (state.queue.length > 300 ? '（僅顯示前 300 家，處理後再重跑可看到其餘）' : '') + '。確認後寫入「發行人主檔」；重跑批次後，已確認發行人會以「MASTER」來源直接帶出。缺失（F01～F03）仍會保留，因為它反映「申報值與正確分類不符」。</div></div>' +
+    '<div class="card"><div class="tbl-wrap" style="max-height:68vh"><table><tr><th></th><th>發行人</th><th>申報</th><th>建議</th><th class="num">信心</th><th>缺失</th><th class="num">筆數</th><th class="num">ΔRWA</th><th>確認類別</th><th>理由</th><th></th></tr>' +
+    (shown.map((o, i) => '<tr data-qi="' + i + '"><td><input type="checkbox" class="rvck"></td><td><a href="#" data-act="rvOpen" data-i="' + i + '"><b>' + esc(o.r.issuerName) + '</b></a><div class="muted small">' + esc(o.r.custId || '（無 CUST_ID）') + (o.r.country ? '｜' + esc(o.r.country) : '') + '</div></td><td>' + esc([...o.rpt].join('、') || '—') + '</td><td>' + o.r.sugCls + ' / ' + rwTxt(o.r.sugRw) + '</td><td class="num">' + o.r.confidence + '<div class="muted small">' + o.r.source + '</div></td><td>' + [...o.codes].map(c => '<span class="badge b-info">' + c + '</span>').join(' ') + '</td><td class="num">' + o.n + '</td><td class="num">' + fmtN(o.delta) + '</td><td><select class="rvcls">' + clsOptions(o.r.sugCls) + '</select></td><td><input type="text" class="rvwhy" placeholder="理由"></td><td><button class="sm pri" data-act="rvOne" data-i="' + i + '">確認</button></td></tr>').join('') || '<tr><td colspan="11" class="muted">沒有待覆核項目 🎉</td></tr>') +
+    '</table></div></div>';
+}
+async function rvConfirmRows(idxs, whyOverride){
+  let ok = 0;
+  for(const i of idxs){
+    const tr = $('tr[data-qi="' + i + '"]'); if(!tr) continue;
+    const o = state.queue[i], cls = $('.rvcls', tr).value, why = (whyOverride || $('.rvwhy', tr).value);
+    if(await confirmIssuer(o.r, cls, why)){ ok++; tr.style.opacity = .4; tr.dataset.qi = ''; $$('input,select,button', tr).forEach(x => x.disabled = true); }
+  }
+  if(ok) toast('已確認 ' + ok + ' 家發行人，重跑批次後生效');
+}
+
+// ==== PAGES 2 ====
+/* ===== 發行人主檔 ===== */
+async function pgMaster(){
+  const [is, al] = await Promise.all([dbAll('issuers'), dbAll('aliases')]);
+  const by = {}; al.forEach(a => (by[a.key] = by[a.key] || []).push(a.alias || a.aliasN));
+  state.master = {rows:is.sort((a, b) => b.ts - a.ts), alias:by, q:''};
+  main().innerHTML = '<h2>發行人主檔</h2><div class="card"><div class="row"><div class="f" style="flex:2"><label>搜尋（名稱／CUST_ID／別名）</label><input type="search" id="ms_q"></div><div><button class="pri" data-act="msNew">新增發行人</button></div></div>' +
+    '<div class="help">主檔是「已人工覆核」的發行人知識庫，分類時優先於所有規則（信心 100）。可在覆核佇列、結果明細或單筆查詢確認後自動寫入，也可在此手動維護。</div></div><div class="card" id="msTable"></div>';
+  $('#ms_q').addEventListener('input', e => { state.master.q = e.target.value; renderMaster(); });
+  renderMaster();
+}
+function renderMaster(){
+  const m = state.master, q = m.q.trim().toUpperCase();
+  const rows = m.rows.filter(i => !q || (i.name + ' ' + i.custId + ' ' + i.key + ' ' + (m.alias[i.key] || []).join(' ')).toUpperCase().includes(q));
+  $('#msTable').innerHTML = '<div class="muted small" style="margin-bottom:6px">共 ' + fmtN(rows.length) + ' 家</div><div class="tbl-wrap"><table><tr><th>CUST_ID</th><th>發行人</th><th>國別</th><th>暴險類別</th><th class="num">RW 指定</th><th>別名</th><th>理由</th><th>更新</th><th></th></tr>' +
+    (rows.length > 500 ? '<tr><td colspan="9" class="muted">僅顯示前 500 家，請用搜尋縮小範圍</td></tr>' : '') + (rows.slice(0, 500).map(i => '<tr><td>' + esc(i.custId || '—') + '</td><td>' + esc(i.name) + (i.status !== 'confirmed' ? ' <span class="badge b-gray">停用</span>' : '') + '</td><td>' + esc(i.country || '') + '</td><td><b>' + i.expoType + '</b>｜' + CLS[i.expoType] + '</td><td class="num">' + (i.rwOverride == null ? '—' : i.rwOverride + '%') + '</td><td class="small">' + esc((m.alias[i.key] || []).join('、')) + '</td><td class="small">' + esc(i.reason || '') + '</td><td class="small">' + fmtT(i.ts) + '</td><td><button class="sm" data-act="msEdit" data-k="' + esc(i.key) + '">編輯</button> <button class="sm dng" data-act="msDel" data-k="' + esc(i.key) + '">刪除</button></td></tr>').join('') || '<tr><td colspan="9" class="muted">尚無資料</td></tr>') + '</table></div>';
+}
+async function msModal(key){
+  const i = key ? await dbGet('issuers', key) : {key:'', custId:'', name:'', country:'', expoType:'CORP', status:'confirmed', reason:'', rwOverride:null};
+  const al = key ? (await dbByIndex('aliases', 'key', key)).map(a => a.alias || a.aliasN) : [];
+  openModal('<h3>' + (key ? '編輯發行人' : '新增發行人') + '</h3><div class="grid g2">' +
+    '<div><label>CUST_ID（選填；有填則以此為主鍵）</label><input type="text" id="ms_cust" value="' + esc(i.custId) + '"' + (key ? ' disabled' : '') + '></div>' +
+    '<div><label>發行人名稱 *</label><input type="text" id="ms_name" value="' + esc(i.name) + '"></div>' +
+    '<div><label>國別</label><input type="text" id="ms_country" value="' + esc(i.country) + '"></div>' +
+    '<div><label>暴險類別 *</label><select id="ms_cls">' + clsOptions(i.expoType) + '</select></div>' +
+    '<div><label>指定 RW %（選填，覆蓋查表結果）</label><input type="number" step="any" id="ms_rw" value="' + (i.rwOverride == null ? '' : i.rwOverride) + '"></div>' +
+    '<div><label>狀態</label><select id="ms_status"><option value="confirmed"' + (i.status === 'confirmed' ? ' selected' : '') + '>啟用</option><option value="disabled"' + (i.status !== 'confirmed' ? ' selected' : '') + '>停用</option></select></div></div>' +
+    '<label style="margin-top:10px">別名（每行一個；名稱正規化後比對）</label><textarea id="ms_alias">' + esc(al.join('\n')) + '</textarea>' +
+    '<label style="margin-top:10px">理由 *</label><input type="text" id="ms_why" value="' + esc(i.reason) + '">' +
+    '<input type="hidden" id="ms_key" value="' + esc(key || '') + '"><div style="text-align:right;margin-top:14px"><button data-act="closeModal">取消</button> <button class="pri" data-act="msSave">儲存</button></div>');
+}
+async function msSave(){
+  const name = $('#ms_name').value.trim(), why = $('#ms_why').value.trim(), cust = $('#ms_cust').value.trim();
+  if(!name || !why){ toast('名稱與理由為必填', true); return; }
+  const nameN = normName(name), key = $('#ms_key').value || (cust ? cust : 'N:' + nameN);
+  const rw = $('#ms_rw').value.trim();
+  if(rw !== '' && (isNaN(Number(rw)) || Number(rw) < 0 || Number(rw) > 1250)){ toast('指定 RW 需介於 0～1250', true); return; }
+  if(!$('#ms_key').value && await dbGet('issuers', key) && !window.confirm('已存在相同主鍵「' + key + '」的發行人，是否覆蓋？')) return;
+  await dbPut('issuers', {key, custId:cust, name, nameN, country:$('#ms_country').value.trim().toUpperCase(), expoType:$('#ms_cls').value, status:$('#ms_status').value, reason:why, rwOverride:rw === '' ? null : Number(rw), ts:Date.now()});
+  await dbDelByIndex('aliases', 'key', key);
+  const als = [...new Set($('#ms_alias').value.split(/\n+/).map(x => x.trim()).filter(Boolean))];
+  await dbPutMany('aliases', als.map(a => ({aliasN:normName(a), alias:a, key})));
+  await audit('MASTER_SAVE', 'issuer:' + key, name + ' → ' + $('#ms_cls').value);
+  await bumpRev(); closeModal(); toast('已儲存'); pgMaster();
+}
+
+/* ===== 規則與名單 ===== */
+const OPS = ['containsAny','containsAll','equals','in','startsWith','regex','isNull','notNull'];
+const OP_LABEL = {containsAny:'包含任一', containsAll:'包含全部', equals:'等於', in:'屬於', startsWith:'開頭為', regex:'正規表示式', isNull:'為空', notNull:'不為空'};
+const COND_FIELDS = {ISSUER_NAME_N:'發行人名稱（正規化）', ISSUER_NAME:'發行人名稱（原文）', ISSUER_COUNTRY:'國別', BOND_TYPE:'BOND_TYPE', CUST_ID:'CUST_ID'};
+async function pgRules(){
+  const tab = state.rtab || 'rules';
+  const tabs = '<div class="tabs">' + [['rules', '關鍵字規則'], ['lists', '名單（MDB／SOE／GSE…）'], ['test', '規則測試']].map(([k, v]) => '<a class="' + (tab === k ? 'on' : '') + '" data-act="rTab" data-k="' + k + '">' + v + '</a>').join('') + '</div>';
+  let body = '';
+  if(tab === 'rules'){
+    const rules = (await dbAll('rules')).sort((a, b) => b.priority - a.priority);
+    body = '<div class="row" style="margin-bottom:10px"><button class="pri" data-act="ruleEdit" data-id="">新增規則</button><button data-act="rulesReset">還原預設規則與名單</button><span class="spacer"></span><span class="muted small">優先序數字越大越先採用；相差 10 以內且類別不同視為衝突（F05）。</span></div>' +
+      '<div class="card"><div class="tbl-wrap"><table><tr><th>啟用</th><th>規則</th><th class="num">優先序</th><th>結果</th><th class="num">信心</th><th>條件摘要</th><th></th></tr>' +
+      rules.map(r => '<tr><td><input type="checkbox" data-chg="ruleOn" data-id="' + esc(r.ruleId) + '"' + (r.enabled !== false ? ' checked' : '') + '></td><td><b>' + esc(r.ruleId) + '</b><div class="small muted">' + esc(r.name) + '</div></td><td class="num">' + r.priority + '</td><td>' + r.result.expoType + (r.result.tag ? ' <span class="badge b-gray">' + esc(r.result.tag) + '</span>' : '') + '</td><td class="num">' + r.result.confidence + '</td><td class="small">' +
+        r.conditions.map(c => OP_LABEL[c.op] + ' ' + esc((Array.isArray(c.value) ? c.value : [c.value]).slice(0, 5).join('、')) + ((Array.isArray(c.value) && c.value.length > 5) ? '…' : '')).join(' 且 ') + ((r.excludes || []).length ? '<div class="muted">排除：' + r.excludes.map(c => esc((Array.isArray(c.value) ? c.value : [c.value]).slice(0, 4).join('、'))).join(' / ') + '</div>' : '') +
+        '</td><td><button class="sm" data-act="ruleEdit" data-id="' + esc(r.ruleId) + '">編輯</button> <button class="sm dng" data-act="ruleDel" data-id="' + esc(r.ruleId) + '">刪除</button></td></tr>').join('') + '</table></div></div>';
+  }else if(tab === 'lists'){
+    const lists = (await dbAll('lists')).sort((a, b) => (a.order || 0) - (b.order || 0));
+    body = '<div class="row" style="margin-bottom:10px"><button class="pri" data-act="listNew">新增名單</button><span class="spacer"></span><span class="muted small">名單優先於關鍵字規則（信心 95）。每行一個名稱；前綴「=」代表需完全相等（避免縮寫誤中）。tag 決定特殊權數：MDB_ZERO／GNMA／GSE／SOE／CHP。</span></div>' +
+      lists.map(l => '<div class="card" data-list="' + esc(l.listId) + '"><div class="grid g4"><div><label>名單代碼</label><input type="text" class="l_id" value="' + esc(l.listId) + '" disabled></div><div><label>名稱</label><input type="text" class="l_name" value="' + esc(l.name) + '"></div><div><label>暴險類別</label><select class="l_cls">' + clsOptions(l.cls) + '</select></div><div><label>tag／排序</label><div class="row" style="gap:6px"><input type="text" class="l_tag" value="' + esc(l.tag || '') + '" style="flex:2"><input type="number" class="l_ord" value="' + (l.order || 0) + '" style="flex:1"></div></div></div>' +
+        '<label style="margin-top:8px">名單項目（' + l.items.length + '）</label><textarea class="l_items">' + esc(l.items.join('\n')) + '</textarea><div style="text-align:right;margin-top:8px"><button class="sm pri" data-act="listSave" data-id="' + esc(l.listId) + '">儲存</button> <button class="sm dng" data-act="listDel" data-id="' + esc(l.listId) + '">刪除</button></div></div>').join('');
+  }else{
+    body = '<div class="card"><div class="row"><div class="f" style="flex:2"><label>發行人名稱</label><input type="text" id="rt_name" placeholder="STATE OF CALIFORNIA"></div><div class="f"><label>國別</label><input type="text" id="rt_country"></div><div class="f"><label>BOND_TYPE</label><select id="rt_bt"><option value="">（未填）</option>' + ['GOVT','MUNI','AGENCY','CORP','FIN','MBS','CMO','OTHER'].map(x => '<option>' + x + '</option>').join('') + '</select></div><div><button class="pri" data-act="ruleTest">測試</button></div></div><div id="rtOut" style="margin-top:12px"></div></div>';
+  }
+  main().innerHTML = '<h2>規則與名單</h2>' + tabs + body;
+  if(tab === 'test') $('#rt_name').addEventListener('keydown', e => { if(e.key === 'Enter') ruleTest(); });
+}
+async function ruleTest(){
+  const name = $('#rt_name').value.trim(); if(!name){ toast('請輸入名稱', true); return; }
+  const raw = {ISSUER_NAME:name, ISSUER_COUNTRY:$('#rt_country').value, BOND_TYPE:$('#rt_bt').value};
+  const mp = {}; FIELDS.forEach(f => mp[f.k] = f.k);
+  const r = classify(mapRecord(raw, mp, {}), await getCtx());
+  $('#rtOut').innerHTML = '<div class="trace">' + esc(r.trace) + '</div><div style="margin-top:8px"><b>結果：</b>' + r.sugCls + '｜' + CLS[r.sugCls] + '（信心 ' + r.confidence + '／' + r.source + (r.ruleId ? '：' + esc(r.ruleId) : '') + '）</div>';
+}
+function condRow(c, kind){
+  c = c || {field:'ISSUER_NAME_N', op:'containsAny', value:''};
+  const v = Array.isArray(c.value) ? c.value.join('、') : (c.value == null ? '' : c.value);
+  return '<div class="cond ' + kind + '"><select class="cf">' + Object.entries(COND_FIELDS).map(([k, l]) => '<option value="' + k + '"' + (k === c.field ? ' selected' : '') + '>' + l + '</option>').join('') + '</select>' +
+    '<select class="co">' + OPS.map(o => '<option value="' + o + '"' + (o === c.op ? ' selected' : '') + '>' + OP_LABEL[o] + '</option>').join('') + '</select>' +
+    '<input type="text" class="cv" value="' + esc(v) + '" placeholder="多個值以「、」或逗號分隔"><button class="sm" data-act="rmCond">✕</button></div>';
+}
+async function ruleModal(id){
+  const r = id ? await dbGet('rules', id) : {ruleId:'', name:'', priority:50, enabled:true, conditions:[], excludes:[], result:{expoType:'PSE', confidence:80}, note:''};
+  openModal('<h3>' + (id ? '編輯規則' : '新增規則') + '</h3><div class="grid g3"><div><label>規則代碼 *</label><input type="text" id="ru_id" value="' + esc(r.ruleId) + '"' + (id ? ' disabled' : '') + '></div><div style="grid-column:span 2"><label>名稱</label><input type="text" id="ru_name" value="' + esc(r.name) + '"></div>' +
+    '<div><label>優先序 *</label><input type="number" id="ru_pri" value="' + r.priority + '"></div><div><label>結果類別 *</label><select id="ru_cls">' + clsOptions(r.result.expoType) + '</select></div><div><label>信心（0～100）</label><input type="number" id="ru_conf" value="' + r.result.confidence + '"></div>' +
+    '<div><label>tag（特殊權數，選填）</label><input type="text" id="ru_tag" list="tags" value="' + esc(r.result.tag || '') + '"><datalist id="tags"><option>UNIV</option><option>MDB_ZERO</option><option>GNMA</option><option>GSE</option><option>SOE</option><option>CHP</option></datalist></div>' +
+    '<div><label>例外規則（不與其他規則衝突）</label><select id="ru_excl"><option value="0">否</option><option value="1"' + (r.result.exclusive ? ' selected' : '') + '>是</option></select></div><div><label>備註</label><input type="text" id="ru_note" value="' + esc(r.note || '') + '"></div></div>' +
+    '<h3>符合條件（全部成立 AND）</h3><div id="conds">' + (r.conditions.length ? r.conditions : [null]).map(c => condRow(c, 'in')).join('') + '</div><button class="sm" data-act="addCond" data-k="in">＋條件</button>' +
+    '<h3>排除條件（任一成立即不採用）</h3><div id="excls">' + (r.excludes || []).map(c => condRow(c, 'ex')).join('') + '</div><button class="sm" data-act="addCond" data-k="ex">＋排除</button>' +
+    '<input type="hidden" id="ru_old" value="' + esc(id || '') + '"><div style="text-align:right;margin-top:14px"><button data-act="closeModal">取消</button> <button class="pri" data-act="ruleSave">儲存</button></div>');
+}
+function readConds(sel){
+  return $$(sel + ' .cond').map(d => {
+    const op = $('.co', d).value, raw = $('.cv', d).value;
+    return {field:$('.cf', d).value, op, value:op === 'regex' ? raw : raw.split(/[,，、\n]+/).map(x => x.trim()).filter(Boolean)};
+  }).filter(c => ['isNull','notNull'].includes(c.op) || (Array.isArray(c.value) ? c.value.length : c.value));
+}
+async function ruleSave(){
+  const id = $('#ru_old').value || $('#ru_id').value.trim();
+  const conds = readConds('#conds'), pri = Number($('#ru_pri').value), conf = Number($('#ru_conf').value);
+  if(!id){ toast('請輸入規則代碼', true); return; }
+  if(!$('#ru_old').value && await dbGet('rules', id)){ toast('規則代碼已存在', true); return; }
+  if(!conds.length){ toast('至少需要一個條件', true); return; }
+  if(isNaN(pri) || isNaN(conf) || conf < 0 || conf > 100){ toast('優先序／信心數值不正確', true); return; }
+  for(const c of conds.concat(readConds('#excls'))) if(c.op === 'regex'){ try{ new RegExp(c.value); }catch(e){ toast('正規表示式錯誤：' + c.value, true); return; } }
+  const old = await dbGet('rules', id);
+  const result = {expoType:$('#ru_cls').value, confidence:conf};
+  if($('#ru_tag').value.trim()) result.tag = $('#ru_tag').value.trim();
+  if($('#ru_excl').value === '1') result.exclusive = true;
+  await dbPut('rules', {ruleId:id, name:$('#ru_name').value.trim(), priority:pri, enabled:old ? old.enabled : true, conditions:conds, excludes:readConds('#excls'), result, note:$('#ru_note').value.trim()});
+  await audit('RULE_SAVE', 'rule:' + id, '優先序 ' + pri + ' → ' + result.expoType);
+  await bumpRev(); closeModal(); toast('規則已儲存，請至結果清單「重跑本批次」套用'); pgRules();
+}
+
+/* ===== 權數表與評等 ===== */
+const BAND_ROWS = [['SOV','主權國家（外國）'],['PSE','非中央政府公共部門（外國）'],['MDB','多邊開發銀行（非 0% 名單）'],['BANK','銀行（長期）'],['BANK_ST','銀行（短期債權）'],['CORP','企業（境外）'],['CORP_TW','境內民營企業（有評等）']];
+const SPECIAL_LABEL = {SOV_DOM:'本國中央政府／央行',PSE_DOM:'本國地方政府／行政法人',UNIV:'國立大學（無評等）',MDB_ZERO:'MDB 0% 名單',SOE:'國營事業',CHP:'中華郵政',CHP_ST:'中華郵政（短期）',GNMA:'Ginnie Mae',GSE_PT:'Fannie／Freddie 純轉付',GSE_NPT:'Fannie／Freddie 非純轉付',BANK_ST_LOWB:'銀行短期 B+以下',CORP_TW_UN_LOW:'境內無評等（營收≤門檻）',CORP_TW_UN_HIGH:'境內無評等（營收>門檻）',CORP_TW_AA:'境內企業 twAA 以上（本土評等）',CORP_TW_A:'境內企業 twA 以上（本土評等）',CORP_REV_THRESHOLD:'營收門檻（元）'};
+async function pgRW(){
+  const cfg = (await getCtx()).rw, rm = await dbAll('ratingMaps');
+  const nIn = (id, v) => '<input type="number" step="any" id="' + id + '" value="' + (v == null ? '' : v) + '" style="width:80px">';
+  main().innerHTML = '<h2>權數表與評等</h2><div class="card"><div class="row"><div class="f" style="max-width:420px"><label>權數表版本標示</label><input type="text" id="rw_ver" value="' + esc(cfg.version) + '"></div><div><button class="pri" data-act="rwSave">儲存權數表</button> <button data-act="rwReset">還原預設</button></div></div>' +
+    '<div class="help">預設值依「信用風險權數參照教育訓練手冊」整理（114 年 7 月起適用；簡表 2026/3/2 版）。實際適用以主管機關與本行最新公告為準，修改後請重跑批次。</div></div>' +
+    '<div class="card"><h3 style="margin-top:0">評等帶 × 風險權數（%）</h3><div class="tbl-wrap"><table><tr><th>主體</th><th>AAA～AA-</th><th>A+～A-</th><th>BBB+～BBB-</th><th>BB+～B-</th><th>CCC+以下</th><th>未評等</th></tr>' +
+    BAND_ROWS.map(([k, l]) => '<tr><td>' + l + '</td>' + cfg.bands[k].r.map((v, i) => '<td>' + nIn('b_' + k + '_' + i, v) + '</td>').join('') + '<td>' + nIn('b_' + k + '_un', cfg.bands[k].un) + '</td></tr>').join('') + '</table></div>' +
+    '<div class="help">未評等欄位留空代表由其他規則決定：未評等銀行依下方 A／B／C 等級；境內企業依營收門檻。</div>' +
+    '<h3>未評等銀行（資本適足等級）</h3><div class="row">' + ['LT','ST'].map(t => '<div><label>' + (t === 'LT' ? '長期債權' : '短期債權（3個月內）') + '</label>' + ['A','B','C'].map(g => g + ' ' + nIn('bu_' + t + '_' + g, cfg.bankUnrated[t][g])).join(' ') + '</div>').join('') + '</div>' +
+    '<h3>特殊權數</h3><div class="grid g4">' + Object.keys(cfg.specials).map(k => '<div><label>' + (SPECIAL_LABEL[k] || k) + '</label><input type="number" step="any" id="sp_' + k + '" value="' + cfg.specials[k] + '"></div>').join('') + '</div></div>' +
+    '<div class="card"><h3 style="margin-top:0">評等對照（轉為 S&P 評等序位）</h3><div class="help">scale：由高到低的評等順序；map：評等字串 → S&P 序位（0=AAA…21=D）。中華信評／Fitch(台灣) 依手冊分帶對應。</div><textarea id="rm_json" style="min-height:220px">' + esc(JSON.stringify(rm, null, 1)) + '</textarea><div style="margin-top:8px"><button data-act="rmSave">儲存評等對照</button></div></div>';
+}
+async function rwSave(){
+  const cfg = JSON.parse(JSON.stringify((await getCtx()).rw)), num = id => { const v = $('#' + id).value.trim(); return v === '' ? null : Number(v); };
+  cfg.version = $('#rw_ver').value.trim() || cfg.version;
+  BAND_ROWS.forEach(([k]) => { cfg.bands[k].r = cfg.bands[k].r.map((_, i) => num('b_' + k + '_' + i)); cfg.bands[k].un = num('b_' + k + '_un'); });
+  ['LT','ST'].forEach(t => ['A','B','C'].forEach(g => cfg.bankUnrated[t][g] = num('bu_' + t + '_' + g)));
+  Object.keys(cfg.specials).forEach(k => cfg.specials[k] = num('sp_' + k));
+  const bad = BAND_ROWS.some(([k]) => cfg.bands[k].r.some(v => v == null || isNaN(v))) || Object.values(cfg.specials).some(v => v == null || isNaN(v));
+  if(bad){ toast('評等帶與特殊權數不可留空', true); return; }
+  const all = BAND_ROWS.flatMap(([k]) => cfg.bands[k].r.concat(cfg.bands[k].un == null ? [] : [cfg.bands[k].un])).concat(Object.entries(cfg.specials).filter(([k]) => k !== 'CORP_REV_THRESHOLD').map(([, v]) => v), Object.values(cfg.bankUnrated.LT), Object.values(cfg.bankUnrated.ST));
+  if(all.some(v => v == null || isNaN(v) || v < 0 || v > 1250)){ toast('風險權數需介於 0～1250%', true); return; }
+  await dbPut('rwTables', cfg); await audit('RW_SAVE', 'rwTables', cfg.version); await bumpRev(); toast('權數表已儲存'); pgRW();
+}
+
+/* ===== 設定／備份 ===== */
+async function pgSettings(){
+  const S = state.S, logs = (await dbAll('auditLogs')).slice(-150).reverse();
+  main().innerHTML = '<h2>設定／備份</h2><div class="card"><h3 style="margin-top:0">分類設定</h3><div class="grid g4">' +
+    '<div><label>低信心門檻（< 此值產生 F04）</label><input type="number" id="st_thr" value="' + S.confThreshold + '"></div>' +
+    '<div><label>預設 CORP 信心（無任何線索時）</label><input type="number" id="st_def" value="' + S.defaultConf + '"></div>' +
+    '<div><label>每頁筆數</label><select id="st_ps">' + [25, 50, 100, 200].map(x => '<option' + (S.pageSize === x ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></div>' +
+    '<div><label>預設 RPT_RW 單位</label><select id="st_unit"><option value="pct"' + (S.rwUnit === 'pct' ? ' selected' : '') + '>百分比</option><option value="dec"' + (S.rwUnit === 'dec' ? ' selected' : '') + '>小數</option></select></div></div>' +
+    '<label style="margin-top:10px"><input type="checkbox" id="st_skip"' + (S.skipRwWhenNoRating ? ' checked' : '') + '> 資料沒有任何外部評等時，需依評等查定的類別不判斷 RW 高低估（僅產生 F06）</label>' +
+    '<div class="help">預設 CORP 信心 = 門檻時不會單獨觸發 F04。若想把所有「查不到線索」的發行人都丟進覆核，請把門檻調高於預設 CORP 信心。</div>' +
+    '<div style="margin-top:10px"><button class="pri" data-act="stSave">儲存設定</button></div></div>' +
+    '<div class="card"><h3 style="margin-top:0">備份與還原</h3><div class="row"><button data-act="bkLight">匯出設定與主檔（不含批次資料）</button><button data-act="bkFull">匯出完整資料庫</button><button data-act="bkImport">還原備份…</button><input type="file" id="bkFile" accept=".json" style="display:none"></div>' +
+    '<div class="help">備份內容包含發行人主檔、別名、規則、名單、權數表、評等對照、欄位對應與設定。還原會覆蓋現有資料。</div></div>' +
+    '<div class="card"><h3 style="margin-top:0">資料清除</h3><div class="row"><button class="dng" data-act="clrBatches">清除所有批次資料</button><button class="dng" data-act="clrAll">全部重置（含主檔，還原預設規則）</button></div></div>' +
+    '<div class="card"><h3 style="margin-top:0">稽核軌跡（最近 150 筆）</h3><div class="tbl-wrap" style="max-height:320px"><table><tr><th>時間</th><th>動作</th><th>對象</th><th>內容</th></tr>' +
+    (logs.map(l => '<tr><td class="small">' + fmtT(l.ts) + '</td><td>' + esc(l.action) + '</td><td class="small">' + esc(l.entity) + '</td><td class="small">' + esc(l.detail) + '</td></tr>').join('') || '<tr><td colspan="4" class="muted">尚無紀錄</td></tr>') + '</table></div></div>' +
+    '<div class="muted small">Issuer Classifier v' + APP_VERSION + '｜Vanilla JS 單檔 SPA｜資料存於瀏覽器 IndexedDB（' + DB_NAME + '）</div>';
+  $('#bkFile').addEventListener('change', e => e.target.files[0] && bkRestore(e.target.files[0]));
+}
+async function bkExport(full){
+  const names = ['issuers','aliases','rules','lists','rwTables','ratingMaps','mappings','settings'].concat(full ? ['batches','records','results'] : []);
+  const data = {}; for(const n of names) data[n] = await dbAll(n);
+  download('issuer_classifier_' + (full ? 'full' : 'config') + '_' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify({app:'IssuerClassifier', version:APP_VERSION, exportedAt:Date.now(), data}), 'application/json');
+  toast('已匯出備份');
+}
+async function bkRestore(file){
+  try{
+    const j = JSON.parse(await file.text());
+    if(j.app !== 'IssuerClassifier' || !j.data) throw new Error('不是有效的備份檔');
+    if(!confirm('還原會覆蓋備份檔內含的資料表，確定繼續？')) return;
+    for(const [n, rows] of Object.entries(j.data)){
+      if(!db.objectStoreNames.contains(n)) continue;
+      await dbClear(n);
+      for(let i = 0; i < rows.length; i += 2000) await dbPutMany(n, rows.slice(i, i + 2000));
+    }
+    await audit('RESTORE', 'system', file.name);
+    await loadSettings(); state.ctx = null; invalidateResults(); toast('還原完成'); pgSettings();
+  }catch(e){ toast('還原失敗：' + e.message, true); }
+}
+async function resetAll(){
+  for(const n of ['issuers','aliases','rules','lists','rwTables','ratingMaps','batches','records','results','mappings','settings']) await dbClear(n);
+  state.S = {...DEFAULT_SETTINGS}; state.ctx = null; invalidateResults(); state.batchId = null;
+  await seedIfEmpty(); await loadSettings();
+}
+
+// ==== ACTIONS / ROUTER / BOOT ====
+const PAGES = {dashboard:pgDashboard, query:pgQuery, import:pgImport, results:pgResults, review:pgReview, master:pgMaster, rules:pgRules, rw:pgRW, settings:pgSettings};
+const NAV = [['dashboard','總覽 Dashboard'],['query','單筆查詢'],['import','批次匯入'],['results','結果清單'],['review','覆核佇列'],['master','發行人主檔'],['rules','規則與名單'],['rw','權數表與評等'],['settings','設定／備份']];
+const confirmBox = msg => window.confirm(msg);
+
+const actions = {
+  closeModal(){ state.detail = null; closeModal(); },
+  modalBg(el, e){ if(e.target === el){ state.detail = null; closeModal(); } },
+  openRow(el){ const r = (state.cache.results || []).find(x => x.rowNo == el.dataset.row); if(!r) return; state.detail = r; openModal(detailHTML(r)); },
+  async cfSave(){
+    const r = state.detail || state.lastQuery; if(!r) return;
+    if(await confirmIssuer(r, $('#cfCls').value, $('#cfWhy').value)){ toast('已寫入發行人主檔；重跑批次後套用'); if(state.detail){ state.detail = null; closeModal(); } }
+  },
+  pickFile(){ $('#fileIn').click(); },
+  async loadSample(){ try{ await loadImportData('sample_issuers.csv', toCSV(SAMPLE_ROWS[0], SAMPLE_ROWS.slice(1))); }catch(e){ toast(e.message, true); } },
+  dlTemplate(){ dlCSV('issuer_import_template.csv', SAMPLE_ROWS[0], SAMPLE_ROWS.slice(1, 4)); },
+  runImport, qRun, qSample(el){ qFill(el.dataset.k); },
+  sortBy(el){ const k = el.dataset.k; if(state.sort.k === k) state.sort.d *= -1; else state.sort = {k, d:-1}; renderResultsTable(); },
+  pg(el){ state.page += Number(el.dataset.d); renderResultsTable(); },
+  exportResults, defectReport:defectModal,
+  defCopy(){
+    const t = ['序號\t暴險類別\t缺失態樣\t筆數\t發行人數\tΔRWA'].concat((state.defects || []).map(x => [x.no, x.cls, x.text, x.rows, x.issuers, Math.round(x.delta)].join('\t'))).join('\n');
+    (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('已複製'), () => { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('已複製'); });
+  },
+  defCsv(){ dlCSV('defect_report.csv', ['序號','暴險類別','缺失態樣','筆數','發行人數','ΔRWA'], (state.defects || []).map(x => [x.no, x.cls, x.text, x.rows, x.issuers, Math.round(x.delta)])); },
+  async rerun(){
+    if(!state.batchId) return; toast('重跑中…');
+    try{ const diffs = await rerunBatch(state.batchId); diffModal(diffs); route(); }catch(e){ console.error(e); toast('重跑失敗：' + e.message, true); }
+  },
+  async delBatch(){
+    if(!state.batchId || !confirmBox('確定刪除此批次與其所有結果？')) return;
+    const id = state.batchId;
+    await dbDelByIndex('results', 'batchId', id); await dbDelByIndex('records', 'batchId', id); await dbDel('batches', id);
+    await audit('DELETE_BATCH', 'batch:' + id, ''); invalidateResults(); state.batchId = null; toast('已刪除'); route();
+  },
+  rvOpen(el, e){ e.preventDefault(); const o = state.queue[Number(el.dataset.i)]; if(!o) return; state.detail = o.r; openModal(detailHTML(o.r)); },
+  rvOne(el){ rvConfirmRows([Number(el.dataset.i)]); },
+  rvBulk(){
+    const why = $('#bulkWhy').value.trim();
+    if(!why){ toast('請填寫批次確認理由', true); return; }
+    const idx = $$('tr[data-qi]').filter(tr => tr.dataset.qi !== '' && $('.rvck', tr).checked).map(tr => Number(tr.dataset.qi));
+    if(!idx.length){ toast('請先勾選項目', true); return; }
+    rvConfirmRows(idx, why);
+  },
+  msNew(){ msModal(''); }, msEdit(el){ msModal(el.dataset.k); }, msSave,
+  async msDel(el){
+    if(!confirmBox('刪除此發行人（含別名）？')) return;
+    await dbDel('issuers', el.dataset.k); await dbDelByIndex('aliases', 'key', el.dataset.k);
+    await audit('MASTER_DEL', 'issuer:' + el.dataset.k, ''); await bumpRev(); pgMaster();
+  },
+  rTab(el){ state.rtab = el.dataset.k; pgRules(); },
+  ruleEdit(el){ ruleModal(el.dataset.id); }, ruleSave, ruleTest,
+  async ruleDel(el){ if(!confirmBox('刪除規則 ' + el.dataset.id + '？')) return; await dbDel('rules', el.dataset.id); await audit('RULE_DEL', 'rule:' + el.dataset.id, ''); await bumpRev(); pgRules(); },
+  addCond(el){ const box = $(el.dataset.k === 'in' ? '#conds' : '#excls'); box.insertAdjacentHTML('beforeend', condRow(null, el.dataset.k)); },
+  rmCond(el){ el.closest('.cond').remove(); },
+  async rulesReset(){
+    if(!confirmBox('這會以預設值覆蓋所有規則與名單（自訂內容將遺失），確定？')) return;
+    await dbClear('rules'); await dbClear('lists'); await dbPutMany('rules', DEFAULT_RULES); await dbPutMany('lists', DEFAULT_LISTS);
+    await audit('RULES_RESET', 'rules', ''); await bumpRev(); pgRules();
+  },
+  async listSave(el){
+    const c = el.closest('[data-list]'), id = c.dataset.list, old = await dbGet('lists', id);
+    const items = $('.l_items', c).value.split(/\n+/).map(x => x.trim()).filter(Boolean);
+    await dbPut('lists', {...old, name:$('.l_name', c).value.trim(), cls:$('.l_cls', c).value, tag:$('.l_tag', c).value.trim(), order:Number($('.l_ord', c).value) || 0, items});
+    await audit('LIST_SAVE', 'list:' + id, items.length + ' 項'); await bumpRev(); toast('名單已儲存'); pgRules();
+  },
+  async listDel(el){ if(!confirmBox('刪除名單 ' + el.dataset.id + '？')) return; await dbDel('lists', el.dataset.id); await audit('LIST_DEL', 'list:' + el.dataset.id, ''); await bumpRev(); pgRules(); },
+  async listNew(){
+    const id = (prompt('名單代碼（英文，例如 PUBLIC_BANKS）') || '').trim(); if(!id) return;
+    if(await dbGet('lists', id)){ toast('代碼已存在', true); return; }
+    await dbPut('lists', {listId:id, name:id, cls:'BANK', tag:'', order:9, items:[]}); await bumpRev(); pgRules();
+  },
+  rwSave,
+  async rwReset(){ if(!confirmBox('還原預設權數表？')) return; await dbPut('rwTables', DEFAULT_RW); await bumpRev(); pgRW(); },
+  async rmSave(){
+    try{ const j = JSON.parse($('#rm_json').value); if(!Array.isArray(j) || !j.every(x => x.agency && (x.scale || x.map))) throw new Error('格式需為 [{agency, type, scale|map}]'); await dbClear('ratingMaps'); await dbPutMany('ratingMaps', j); await bumpRev(); toast('評等對照已儲存'); }
+    catch(e){ toast('儲存失敗：' + e.message, true); }
+  },
+  async stSave(){
+    const th = Number($('#st_thr').value), df = Number($('#st_def').value);
+    if(isNaN(th) || isNaN(df) || th < 0 || th > 100 || df < 0 || df > 100){ toast('信心門檻與預設信心需介於 0～100', true); return; }
+    Object.assign(state.S, {confThreshold:Number($('#st_thr').value), defaultConf:Number($('#st_def').value), pageSize:Number($('#st_ps').value), rwUnit:$('#st_unit').value, skipRwWhenNoRating:$('#st_skip').checked});
+    await saveSettings(); await audit('SETTINGS', 'settings', JSON.stringify(state.S)); toast('設定已儲存，請重跑批次套用');
+  },
+  bkLight(){ bkExport(false); }, bkFull(){ bkExport(true); }, bkImport(){ $('#bkFile').click(); },
+  async clrBatches(){ if(!confirmBox('清除所有批次、原始資料與結果？（主檔與規則不受影響）')) return; for(const n of ['batches','records','results']) await dbClear(n); invalidateResults(); state.batchId = null; await audit('CLEAR_BATCHES', 'system', ''); toast('已清除'); pgSettings(); },
+  async clrAll(){ if(!confirmBox('這會刪除所有資料並還原預設規則，確定？')) return; await resetAll(); toast('已重置'); pgSettings(); },
+  async applySeed(){
+    if(!confirmBox('這會以新版預設覆蓋「規則、名單、權數表、評等對照」（發行人主檔與批次資料不受影響；自訂的規則與名單將遺失，建議先匯出備份）。確定？')) return;
+    await dbClear('rules'); await dbClear('lists'); await dbClear('ratingMaps');
+    await dbPutMany('rules', DEFAULT_RULES); await dbPutMany('lists', DEFAULT_LISTS); await dbPutMany('ratingMaps', DEFAULT_RMAPS); await dbPut('rwTables', DEFAULT_RW);
+    await dbPut('settings', {key:'seeded', v:SEED_VER}); state.seedStale = false;
+    await audit('SEED_UPGRADE', 'system', '套用預設版本 ' + SEED_VER); await bumpRev(); toast('已套用新版預設，請重跑批次'); route();
+  },
+  dismissSeed(){ state.seedDismissed = true; const b = $('#seedWarn'); if(b) b.remove(); },
+};
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if(!el) return;
+  const fn = actions[el.dataset.act];
+  if(fn){ Promise.resolve(fn(el, e)).catch(err => { console.error(err); toast('發生錯誤：' + err.message, true); }); }
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && $('.modal-bg')) actions.closeModal(); });
+document.addEventListener('change', async e => {
+  const el = e.target.closest('[data-chg]'); if(!el) return;
+  const t = el.dataset.chg;
+  try{
+    if(t === 'pickBatch'){ state.batchId = el.value; state.page = 1; route(); }
+    else if(t === 'rf'){ state.rf[el.dataset.k] = el.value; state.page = 1; renderResultsTable(); }
+    else if(t === 'rfOnly'){ state.rf.only = el.checked; state.page = 1; renderResultsTable(); }
+    else if(t === 'mapSel'){ if(el.value) state.imp.mapping[el.dataset.f] = el.value; else delete state.imp.mapping[el.dataset.f]; }
+    else if(t === 'ruleOn'){ const r = await dbGet('rules', el.dataset.id); r.enabled = el.checked; await dbPut('rules', r); await audit('RULE_TOGGLE', 'rule:' + r.ruleId, String(el.checked)); await bumpRev(); toast(el.checked ? '已啟用' : '已停用'); }
+  }catch(err){ console.error(err); toast(err.message, true); }
+});
+
+async function updateFoot(){
+  try{ const [a, b] = await Promise.all([dbAll('issuers'), dbAll('batches')]); $('#sideFoot').innerHTML = '主檔 ' + a.length + ' 家｜批次 ' + b.length + '<br>' + esc(state.ctx ? state.ctx.rw.version : DEFAULT_RW.version); }catch(e){}
+}
+let routeSeq = 0, routing = Promise.resolve();
+function route(){          // 序列化路由：快速切換頁面時，舊頁面的非同步渲染不會覆蓋新頁面
+  const seq = ++routeSeq;
+  routing = routing.then(() => seq === routeSeq ? doRoute() : null).catch(e => console.error(e));
+  return routing;
+}
+async function doRoute(){
+  const raw = (location.hash || '#/dashboard').replace(/^#\//, '').split('?')[0] || 'dashboard';
+  const name = Object.prototype.hasOwnProperty.call(PAGES, raw) ? raw : 'dashboard';
+  $$('#nav a').forEach(a => a.classList.toggle('active', a.dataset.r === name));
+  try{ main().scrollTop = 0; await PAGES[name](); await getCtx(); }
+  catch(e){ console.error(e); main().innerHTML = '<div class="card"><b>發生錯誤</b><pre class="small">' + esc(e.stack || e.message) + '</pre></div>'; }
+  if(state.seedStale && !state.seedDismissed) main().insertAdjacentHTML('afterbegin', '<div class="warn" id="seedWarn"><b>預設規則已更新（v' + SEED_VER + '）。</b>你的資料庫仍是舊版預設（含中華信評對照與國內企業評等門檻的修正）。 <button class="sm pri" data-act="applySeed">套用新版預設</button> <button class="sm" data-act="dismissSeed">稍後</button></div>');
+  updateFoot();
+}
+(async function boot(){
+  $('#nav').innerHTML = NAV.map(([k, v]) => '<a href="#/' + k + '" data-r="' + k + '">' + v + '</a>').join('');
+  try{
+    db = await openDB(); await seedIfEmpty(); await loadSettings();
+    try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}   // 要求持久化儲存，避免瀏覽器在空間不足時清除資料
+    window.addEventListener('hashchange', route);
+    await route();
+  }catch(e){
+    console.error(e);
+    main().innerHTML = '<div class="card"><h3>無法啟動</h3><p>' + esc(e.message) + '</p><p class="muted">IndexedDB 無法使用。請確認不是無痕／隱私模式，並允許此頁面儲存資料。</p></div>';
+  }
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style></body>
+</html>

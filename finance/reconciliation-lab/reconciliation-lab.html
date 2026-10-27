@@ -1,0 +1,2099 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; worker-src blob:; img-src data: blob:; connect-src 'none'">
+<title>Reconciliation Lab 資料勾稽工作台</title>
+<style>
+:root{
+  --bg:#f5f6f8;--panel:#fff;--panel2:#f0f2f5;--text:#1d2433;--muted:#667085;--line:#d9dee7;
+  --brand:#1f5fbf;--brand-d:#174a96;--ok:#1a7f4b;--warn:#b26a00;--bad:#c62828;--info:#5b4bc4;
+  --ok-bg:#e3f4ea;--warn-bg:#fff2d9;--bad-bg:#fde7e7;--info-bg:#ebe8fb;--gray-bg:#eceff3;
+  --shadow:0 1px 3px rgba(16,24,40,.12);--mono:ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#12151b;--panel:#1b1f27;--panel2:#232833;--text:#e6e9ef;--muted:#9aa4b5;--line:#313846;
+  --brand:#5b9cff;--brand-d:#7fb2ff;--ok:#4cc48a;--warn:#f0b04a;--bad:#ff7b7b;--info:#a99cff;
+  --ok-bg:#16301f;--warn-bg:#33270f;--bad-bg:#3a1b1b;--info-bg:#25214a;--gray-bg:#2a303b;--shadow:none}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.5 "Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit;color:inherit}
+#app{display:grid;grid-template-rows:auto 1fr;height:100vh}
+header{display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:16px;margin:0 8px 0 0;white-space:nowrap}
+header .sp{flex:1}
+.layout{display:grid;grid-template-columns:210px 1fr;min-height:0}
+nav{background:var(--panel);border-right:1px solid var(--line);padding:10px 8px;overflow:auto}
+nav a{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:6px;color:var(--text);text-decoration:none;margin-bottom:2px;cursor:pointer}
+nav a:hover{background:var(--panel2)}
+nav a.active{background:var(--brand);color:#fff}
+nav a .n{width:22px;height:22px;border-radius:50%;background:var(--gray-bg);color:var(--text);display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+nav a.active .n{background:rgba(255,255,255,.25);color:#fff}
+nav a .ck{margin-left:auto;color:var(--ok);font-weight:700}
+nav a.active .ck{color:#fff}
+nav .sep{height:1px;background:var(--line);margin:8px 4px}
+main{padding:16px 20px;overflow:auto;min-width:0}
+h2{font-size:18px;margin:0 0 4px}
+h3{font-size:15px;margin:18px 0 8px}
+.sub{color:var(--muted);margin:0 0 14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card h3:first-child{margin-top:0}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.row.top{align-items:flex-start}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:1100px){.grid2{grid-template-columns:1fr}}
+.btn{border:1px solid var(--line);background:var(--panel);padding:5px 12px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--panel2)}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.pri:hover{background:var(--brand-d)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn.sm{padding:2px 8px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+input[type=text],input[type=number],select,textarea{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 8px;min-width:0}
+input[type=number]{width:90px}
+textarea{width:100%;min-height:70px;resize:vertical}
+label.f{display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--muted)}
+label.inl{display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:middle}
+table.t th{background:var(--panel2);position:sticky;top:0;z-index:1;white-space:nowrap}
+table.t td.num,table.t th.num{text-align:right;font-family:var(--mono)}
+table.t td.mono{font-family:var(--mono)}
+table.t td{white-space:nowrap}
+table.t td.wrap{white-space:normal}
+.tscroll{overflow:auto;max-height:340px;border:1px solid var(--line);border-radius:6px}
+.badge{display:inline-block;padding:0 8px;border-radius:10px;font-size:12px;line-height:20px;font-weight:600;white-space:nowrap}
+.b-MATCH,.b-EQ,.b-Fixed{background:var(--ok-bg);color:var(--ok)}
+.b-DIFF,.b-NE,.b-Open{background:var(--bad-bg);color:var(--bad)}
+.b-TOL,.b-Explained{background:var(--warn-bg);color:var(--warn)}
+.b-A_ONLY,.b-B_ONLY,.b-NULL_A,.b-NULL_B{background:var(--info-bg);color:var(--info)}
+.b-DUP_A,.b-DUP_B,.b-NULL_KEY,.b-Accepted{background:var(--gray-bg);color:var(--text)}
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+.msg{padding:8px 12px;border-radius:6px;margin:8px 0;border:1px solid var(--line);background:var(--panel2)}
+.msg.err{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.msg.okm{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.msg.wn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.drop{border:2px dashed var(--line);border-radius:8px;padding:18px;text-align:center;color:var(--muted);cursor:pointer}
+.drop.over{border-color:var(--brand);background:var(--panel2);color:var(--text)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.kpi{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:var(--panel);cursor:pointer}
+.kpi:hover{border-color:var(--brand)}
+.kpi.sel{outline:2px solid var(--brand)}
+.kpi .v{font-size:22px;font-weight:700;font-family:var(--mono)}
+.kpi .l{font-size:12px;color:var(--muted)}
+.bar{height:10px;background:var(--gray-bg);border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--brand)}
+.vl{border:1px solid var(--line);border-radius:6px;overflow:auto;position:relative;background:var(--panel)}
+.vl .vrow{position:absolute;left:0;right:0;display:flex;align-items:center;border-bottom:1px solid var(--line);padding:0 8px;gap:8px;cursor:pointer;font-size:13px}
+.vl .vrow:hover{background:var(--panel2)}
+.vl .vrow.sel{background:var(--panel2);outline:1px solid var(--brand);outline-offset:-1px}
+.vl .vrow>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vhead{display:flex;gap:8px;padding:5px 8px;background:var(--panel2);border:1px solid var(--line);border-bottom:none;border-radius:6px 6px 0 0;font-weight:600;font-size:12px}
+.vhead+.vl{border-radius:0 0 6px 6px}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:14px;align-items:start}
+@media (max-width:1250px){.split{grid-template-columns:1fr}}
+.drawer{position:sticky;top:0}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:50}
+.modal{background:var(--panel);border-radius:10px;padding:18px;max-width:760px;width:92%;max-height:88vh;overflow:auto;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.toast{white-space:pre-line;position:fixed;right:16px;bottom:16px;background:var(--text);color:var(--bg);padding:8px 14px;border-radius:8px;z-index:60;max-width:420px}
+.chip{display:inline-flex;gap:4px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:1px 10px;background:var(--panel2);font-size:12px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:3px 10px;font-size:13px}
+.kv b{color:var(--muted);font-weight:500}
+pre.code{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px;overflow:auto;font-family:var(--mono);font-size:12px;margin:6px 0}
+.progress{height:14px;background:var(--gray-bg);border-radius:7px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--brand);transition:width .15s}
+.hidden{display:none!important}
+@media print{header,nav,.noprint{display:none!important}.layout{display:block}main{overflow:visible}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+/* ============================================================
+ * ENGINE（純函式，可在 Web Worker 或主執行緒執行）
+ * 重要：此函式會被 toString() 後放進 Blob Worker，內部不可引用外部變數
+ * ============================================================ */
+function makeEngine(){
+  const NUM_RE=/^(\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?$/;
+  const SIMPLE_NUM=/^-?\d+(\.\d+)?$/;
+  const EPS=1e-9;
+  const SEP='\u0001';
+
+  /* ---------- 基礎轉換 ---------- */
+  function toHalf(s){
+    return s.replace(/[\uFF01-\uFF5E]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);}).replace(/\u3000/g,' ');
+  }
+  const TRANSFORMS={
+    trim:function(){return function(s){return s.trim();};},
+    upper:function(){return function(s){return s.toUpperCase();};},
+    lower:function(){return function(s){return s.toLowerCase();};},
+    half:function(){return toHalf;},
+    squash:function(){return function(s){return s.replace(/\s+/g,' ').trim();};},
+    digits:function(){return function(s){return s.replace(/\D+/g,'');};},
+    ltrimZeros:function(){return function(s){var t=s.replace(/^0+/,'');return t===''&&s!==''?'0':t;};},
+    padStart:function(a){var n=parseInt(a[0],10),c=(a[1]===undefined||a[1]==='')?'0':a[1];if(!(n>=0&&n<=64))throw new Error('padStart 長度需為 0~64');return function(s){return s.padStart(n,c);};},
+    padEnd:function(a){var n=parseInt(a[0],10),c=(a[1]===undefined||a[1]==='')?' ':a[1];if(!(n>=0&&n<=64))throw new Error('padEnd 長度需為 0~64');return function(s){return s.padEnd(n,c);};},
+    removeChars:function(a){var set=a.join(':');if(set==='')throw new Error('removeChars 需指定要移除的字元');return function(s){var o='';for(var i=0;i<s.length;i++){if(set.indexOf(s[i])<0)o+=s[i];}return o;};},
+    substr:function(a){var st=parseInt(a[0],10),ln=parseInt(a[1],10);if(isNaN(st)||isNaN(ln))throw new Error('substr 需 start:length');return function(s){return s.substr(st,ln);};},
+    left:function(a){var n=parseInt(a[0],10);if(isNaN(n))throw new Error('left 需長度');return function(s){return s.slice(0,n);};},
+    right:function(a){var n=parseInt(a[0],10);if(isNaN(n)||n<0)throw new Error('right 需長度');return function(s){return n===0?'':s.slice(-n);};}
+  };
+  function compileTransform(spec){
+    var p=String(spec).trim();
+    if(p==='')return null;
+    var parts=p.split(':'),name=parts[0],mk=Object.prototype.hasOwnProperty.call(TRANSFORMS,name)?TRANSFORMS[name]:null;
+    if(!mk)throw new Error('未知的轉換函式：'+name);
+    return mk(parts.slice(1));
+  }
+  function compileTransforms(list){
+    var out=[];
+    for(var i=0;i<(list||[]).length;i++){var f=compileTransform(list[i]);if(f)out.push(f);}
+    return out;
+  }
+  function validateTransform(spec){try{compileTransform(spec);return null;}catch(e){return e.message;}}
+  function applyFns(fns,s){for(var i=0;i<fns.length;i++)s=fns[i](s);return s;}
+  function str(v){return v===null||v===undefined?'':String(v);}
+
+  /* ---------- 型別解析 ---------- */
+  function parseNumber(v){
+    if(typeof v==='number')return isFinite(v)?v:NaN;
+    if(typeof v==='string'&&SIMPLE_NUM.test(v))return parseFloat(v);   // 快速路徑
+    var s=toHalf(str(v)).trim(),neg=false;
+    if(s==='')return NaN;
+    if(/^\(.*\)$/.test(s)){neg=true;s=s.slice(1,-1).trim();}
+    if(s[0]==='-'||s[0]==='+'){if(s[0]==='-')neg=!neg;s=s.slice(1).trim();}
+    s=s.replace(/^(NT\$|NTD|TWD|USD|US\$|RMB|CNY|JPY|EUR|HK\$|\$|¥|￥|€)\s*/i,'');
+    s=s.replace(/,/g,'').replace(/\s/g,'');
+    if(s.slice(-1)==='-'){neg=!neg;s=s.slice(0,-1);}
+    if(s.slice(-1)==='%')s=s.slice(0,-1);
+    if(!NUM_RE.test(s))return NaN;
+    var n=parseFloat(s);
+    return neg?-n:n;
+  }
+  function validYMD(y,m,d){
+    if(!(y>=1&&y<=9999&&m>=1&&m<=12&&d>=1&&d<=31))return null;
+    var dt=new Date(Date.UTC(y,m-1,d));
+    if(dt.getUTCFullYear()!==y||dt.getUTCMonth()!==m-1||dt.getUTCDate()!==d)return null;
+    return String(y).padStart(4,'0')+'-'+String(m).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+  }
+  /* 支援 YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD / YYYYMMDD / 民國 YYY/MM/DD / YYYMMDD / 115年10月27日；年份 ≤3 位視為民國 */
+  function parseDate(v){
+    var s=toHalf(str(v)).trim(),m;
+    if(s==='')return null;
+    s=s.split(/[ T]/)[0];
+    if((m=/^(\d{1,4})[-\/.](\d{1,2})[-\/.](\d{1,2})$/.exec(s))||(m=/^(\d{1,4})年(\d{1,2})月(\d{1,2})日?$/.exec(s))){
+      var y=parseInt(m[1],10);if(m[1].length<=3)y+=1911;
+      return validYMD(y,parseInt(m[2],10),parseInt(m[3],10));
+    }
+    if((m=/^(\d{7})$/.exec(s)))return validYMD(parseInt(s.slice(0,3),10)+1911,parseInt(s.slice(3,5),10),parseInt(s.slice(5,7),10));
+    if((m=/^(\d{8})$/.exec(s)))return validYMD(parseInt(s.slice(0,4),10),parseInt(s.slice(4,6),10),parseInt(s.slice(6,8),10));
+    return null;
+  }
+  var BOOL_T={'y':1,'yes':1,'true':1,'t':1,'1':1,'是':1,'有':1,'真':1};
+  var BOOL_F={'n':1,'no':1,'false':1,'f':1,'0':1,'否':1,'無':1,'假':1};
+  function parseBool(v){
+    var s=toHalf(str(v)).trim().toLowerCase();
+    if(BOOL_T[s])return true;
+    if(BOOL_F[s])return false;
+    return null;
+  }
+  function round(n,d){var k=Math.pow(10,d);return Math.round(n*k)/k;}
+
+  /* ---------- 欄位比對 ---------- */
+  function compileField(f,idx){
+    return {
+      idx:idx,a:f.a,b:f.b,type:f.type||'string',
+      fns:compileTransforms(f.transform||[]),
+      nb:f.nullEqualsBlank!==false,
+      ic:!!f.ignoreCase,half:!!f.half,squash:!!f.squash,
+      dec:(f.decimals===null||f.decimals===undefined||f.decimals==='')?null:parseInt(f.decimals,10),
+      abs:(f.tolerance&&f.tolerance.abs!==null&&f.tolerance.abs!==undefined&&f.tolerance.abs!=='')?Number(f.tolerance.abs):null,
+      pct:(f.tolerance&&f.tolerance.pct!==null&&f.tolerance.pct!==undefined&&f.tolerance.pct!=='')?Number(f.tolerance.pct):null
+    };
+  }
+  function isEmpty(v,nb){
+    if(v===null||v===undefined||v==='')return true;
+    if(typeof v!=='string')v=String(v);
+    var t=v.trim();
+    return nb?(t===''||t==='-'):t==='';
+  }
+  function kindOf(v){if(v===null||v===undefined)return 'null';var t=String(v).trim();return t===''?'blank':(t==='-'?'dash':'v');}
+  function normField(v,f){
+    var t=applyFns(f.fns,str(v));
+    if(f.type==='number'){
+      var n=parseNumber(t);
+      if(isNaN(n))return {bad:'無法解析為數值',p:t,s:t};
+      if(f.dec!==null&&!isNaN(f.dec))n=round(n,f.dec);
+      return {p:n,s:String(n)};
+    }
+    if(f.type==='date'){
+      var d=parseDate(t);
+      if(d===null)return {bad:'無法解析為日期',p:t,s:t};
+      return {p:d,s:d};
+    }
+    if(f.type==='bool'){
+      var b=parseBool(t);
+      if(b===null)return {bad:'無法解析為布林',p:t,s:t};
+      return {p:b,s:b?'TRUE':'FALSE'};
+    }
+    if(f.half)t=toHalf(t);
+    if(f.squash)t=t.replace(/\s+/g,' ').trim();
+    if(f.ic)t=t.toLowerCase();
+    return {p:t,s:t};
+  }
+  /* 數值比較：誤差範圍隨數值大小放大，避免大金額的浮點誤差造成誤判（例如 9876543210.5 − 9876543210.4 ≠ 0.1） */
+  function numOf(v,f){
+    var n=parseNumber(f.fns.length?applyFns(f.fns,str(v)):v);
+    if(n===n&&f.dec!==null&&!isNaN(f.dec))n=round(n,f.dec);
+    return n;
+  }
+  function compareNum(x,y,f){
+    var d=x-y,ad=Math.abs(d),mx=Math.max(Math.abs(x),Math.abs(y)),eps=Math.max(EPS,mx*1e-15);
+    var sx=String(x),sy=String(y);
+    if(ad<=eps)return ['EQ',sx,sy,0,0,''];
+    var pc=y!==0?d/Math.abs(y)*100:null;
+    if(f.abs!==null&&!isNaN(f.abs)&&ad<=f.abs+eps)return ['TOL',sx,sy,d,pc,'差異 '+round(ad,6)+' ≤ 絕對容差 '+f.abs];
+    if(f.pct!==null&&!isNaN(f.pct)){
+      var base=y!==0?Math.abs(y):Math.abs(x);
+      if(ad<=base*f.pct/100+eps)return ['TOL',sx,sy,d,pc,'差異比例 ≤ 相對容差 '+f.pct+'%'];
+    }
+    return ['NE',sx,sy,d,pc,''];
+  }
+  /* 回傳 [level, aNorm, bNorm, diff, pct, note] */
+  function compareValue(av,bv,f){
+    var aE=isEmpty(av,f.nb),bE=isEmpty(bv,f.nb);
+    if(aE&&bE){
+      if(f.nb||kindOf(av)===kindOf(bv))return ['EQ','','',null,null,''];
+      return ['NE','','',null,null,'空值型態不同（null / 空白）'];
+    }
+    if(f.type==='number'&&!aE&&!bE){
+      var x=numOf(av,f),y=numOf(bv,f);
+      if(x===x&&y===y)return compareNum(x,y,f);
+    }
+    var na=aE?null:normField(av,f),nb=bE?null:normField(bv,f);
+    if(aE)return ['NULL_A','',nb.s,null,null,'A 為空值'];
+    if(bE)return ['NULL_B',na.s,'',null,null,'B 為空值'];
+    if(na.bad||nb.bad){
+      var same=String(na.p)===String(nb.p);
+      var note=(na.bad&&nb.bad)?'兩側皆'+na.bad+'，改以字串比對':(na.bad?'A 側'+na.bad:'B 側'+nb.bad);
+      if(na.bad&&nb.bad&&same)return ['EQ',na.s,nb.s,null,null,note];
+      return ['NE',na.s,nb.s,null,null,note];
+    }
+    return [na.p===nb.p?'EQ':'NE',na.s,nb.s,null,null,''];
+  }
+
+  /* ---------- 檔案解析 ---------- */
+  function decodeBuf(buf,enc){
+    var u8=new Uint8Array(buf);
+    if(enc==='auto'){
+      if(u8.length>=2&&u8[0]===0xFF&&u8[1]===0xFE)return {text:new TextDecoder('utf-16le').decode(u8),enc:'utf-16le'};
+      if(u8.length>=2&&u8[0]===0xFE&&u8[1]===0xFF)return {text:new TextDecoder('utf-16be').decode(u8),enc:'utf-16be'};
+      try{return {text:new TextDecoder('utf-8',{fatal:true}).decode(u8),enc:'utf-8'};}
+      catch(e){return {text:new TextDecoder('big5').decode(u8),enc:'big5'};}
+    }
+    return {text:new TextDecoder(enc).decode(u8),enc:enc};
+  }
+  /* 略過前 N 個非空白行之後的文字（用來在「略過標題列」之後再偵測分隔符號） */
+  function afterLines(text,n){
+    var i=0,c=0,len=text.length;
+    while(c<n&&i<len){
+      var j=text.indexOf('\n',i),line=j<0?text.slice(i):text.slice(i,j);
+      if(line.trim()!=='')c++;
+      if(j<0)return '';
+      i=j+1;
+    }
+    return text.slice(i);
+  }
+  function detectDelimiter(text){
+    var cands=[',','\t',';','|'],best=',',bestN=0,q=false,counts={',':0,'\t':0,';':0,'|':0};
+    var lim=Math.min(text.length,20000),i=0;
+    while(i<lim&&(text[i]==='\n'||text[i]==='\r'))i++;
+    for(;i<lim;i++){
+      var c=text[i];
+      if(c==='"')q=!q;
+      else if(!q){if(c==='\n'||c==='\r')break;if(counts[c]!==undefined)counts[c]++;}
+    }
+    for(var k=0;k<cands.length;k++){if(counts[cands[k]]>bestN){bestN=counts[cands[k]];best=cands[k];}}
+    return best;
+  }
+  function parseCSV(text,delim){
+    var rows=[],row=[],i=0,n=text.length,D=delim.charCodeAt(0),f,cc;
+    while(i<n){
+      var c=text.charCodeAt(i);
+      if(c===34){
+        i++;var buf='';
+        for(;;){
+          var j=text.indexOf('"',i);
+          if(j<0){buf+=text.slice(i);i=n;break;}
+          buf+=text.slice(i,j);
+          if(text.charCodeAt(j+1)===34){buf+='"';i=j+2;}else{i=j+1;break;}
+        }
+        while(i<n){cc=text.charCodeAt(i);if(cc===D||cc===10||cc===13)break;buf+=text[i];i++;}
+        f=buf;
+      }else{
+        var s=i;
+        while(i<n){cc=text.charCodeAt(i);if(cc===D||cc===10||cc===13)break;i++;}
+        f=text.slice(s,i);
+      }
+      row.push(f);
+      if(i>=n){rows.push(row);row=null;break;}
+      cc=text.charCodeAt(i);
+      if(cc===D){i++;if(i>=n){row.push('');rows.push(row);row=null;break;}}
+      else{
+        if(cc===13&&text.charCodeAt(i+1)===10)i+=2;else i++;
+        rows.push(row);row=[];
+        if(i>=n){row=null;break;}
+      }
+    }
+    return rows.filter(function(r){return !(r.length===1&&r[0].trim()==='');});
+  }
+  function cellStr(v){
+    if(v===null||v===undefined)return null;
+    if(typeof v==='object')return JSON.stringify(v);
+    return String(v);
+  }
+  function finishTable(raw,hasHeader,skip){
+    raw=raw.slice(skip||0);
+    var headers,rows;
+    if(hasHeader&&raw.length){headers=raw[0].map(function(x){return x===null?'':String(x).trim();});rows=raw.slice(1);}
+    else{headers=[];rows=raw;}
+    var maxc=headers.length;
+    for(var i=0;i<rows.length;i++)if(rows[i].length>maxc)maxc=rows[i].length;
+    var seen={},out=[];
+    for(var c=0;c<maxc;c++){
+      var h=headers[c];
+      if(h===undefined||h==='')h='COL_'+(c+1);
+      if(seen[h]){var k=2;while(seen[h+'_'+k])k++;h=h+'_'+k;}
+      seen[h]=1;out.push(h);
+    }
+    for(var r=0;r<rows.length;r++){while(rows[r].length<maxc)rows[r].push('');}
+    return {headers:out,rows:rows};
+  }
+  function inferTypes(headers,rows){
+    var types=[],lim=Math.min(rows.length,500);
+    for(var c=0;c<headers.length;c++){
+      var vals=[];
+      for(var r=0;r<lim;r++){var v=rows[r][c];if(v!==null&&v!==undefined&&String(v).trim()!==''&&String(v).trim()!=='-')vals.push(String(v));}
+      if(!vals.length){types.push('string');continue;}
+      var nNum=0,nDate=0,nBool=0,lead0=0,d8=0;
+      for(var i=0;i<vals.length;i++){
+        var s=vals[i];
+        if(!isNaN(parseNumber(s))){nNum++;if(/^0\d+$/.test(s.trim()))lead0++;}
+        if(parseDate(s)!==null){nDate++;if(/^\d{7,8}$/.test(s.trim()))d8++;}
+        if(parseBool(s)!==null&&!/^[01]$/.test(s.trim()))nBool++;
+      }
+      var N=vals.length,t='string';
+      var dateHint=/date|dt|日期|時間|_d$/i.test(headers[c]);
+      if(nDate/N>=0.95&&(d8===0||d8/N<0.5||dateHint)&&!(nNum===N&&d8===N&&!dateHint))t='date';
+      else if(nNum/N>=0.95&&lead0/N<0.5)t='number';
+      else if(nBool/N>=0.95)t='bool';
+      if(t==='string'&&nDate/N>=0.95&&d8===N&&dateHint)t='date';
+      types.push(t);
+    }
+    return types;
+  }
+  function parseFile(P){
+    var kind=P.kind,text,enc=P.encoding||'auto',delim=P.delimiter||'auto',raw;
+    var d=decodeBuf(P.buffer,enc);text=d.text;enc=d.enc;
+    if(kind==='json'){
+      var js=JSON.parse(text);
+      if(!Array.isArray(js)&&js&&typeof js==='object'){
+        var ks=Object.keys(js),arrKey=null;
+        for(var i=0;i<ks.length;i++)if(Array.isArray(js[ks[i]])){arrKey=ks[i];break;}
+        if(arrKey===null)throw new Error('JSON 內容需為陣列，或包含一個陣列屬性');
+        js=js[arrKey];
+      }
+      if(!Array.isArray(js))throw new Error('JSON 內容需為陣列');
+      if(js.length&&js[0]!==null&&typeof js[0]==='object'&&!Array.isArray(js[0])){
+        var hs=[],hseen={};
+        for(var r=0;r<js.length;r++){var o=js[r]||{};for(var k in o){if(!hseen[k]){hseen[k]=1;hs.push(k);}}}
+        raw=[hs];
+        for(var r2=0;r2<js.length;r2++){var o2=js[r2]||{};raw.push(hs.map(function(k){return cellStr(o2[k]);}));}
+        var t1=finishTable(raw,true,0);
+        return {headers:t1.headers,rows:t1.rows,types:inferTypes(t1.headers,t1.rows),encoding:enc,delimiter:'json'};
+      }
+      raw=js.map(function(r){return Array.isArray(r)?r.map(cellStr):[cellStr(r)];});
+      delim='json';
+    }else{
+      if(delim==='auto')delim=detectDelimiter((P.skip||0)>0?afterLines(text,P.skip):text);
+      if(delim==='tab')delim='\t';
+      raw=parseCSV(text,delim);
+    }
+    var t=finishTable(raw,P.hasHeader!==false,P.skip||0);
+    return {headers:t.headers,rows:t.rows,types:inferTypes(t.headers,t.rows),encoding:enc,delimiter:delim};
+  }
+
+  /* ---------- 索引 / Key ---------- */
+  function headerMap(headers){var m={};for(var i=0;i<headers.length;i++)if(m[headers[i]]===undefined)m[headers[i]]=i;return m;}
+  function indexSide(S,cols,fnsList){
+    var map=new Map(),nulls=[],rows=S.rows,nc=cols.length;
+    for(var i=0;i<rows.length;i++){
+      var r=rows[i],kk='',bad=false;
+      for(var j=0;j<nc;j++){
+        var v=applyFns(fnsList[j],str(r[cols[j]]));
+        if(v.trim()===''){bad=true;break;}
+        kk+=(j?SEP:'')+v;
+      }
+      if(bad){nulls.push(i+1);continue;}
+      var e=map.get(kk);
+      if(e===undefined)map.set(kk,i);
+      else if(typeof e==='number')map.set(kk,[e,i]);
+      else e.push(i);
+    }
+    return {map:map,nulls:nulls,total:rows.length};
+  }
+  function prepKeys(P){
+    var A=P.A,B=P.B,keys=P.profile.keys||[],hmA=headerMap(A.headers),hmB=headerMap(B.headers),errs=[];
+    if(!keys.length)throw new Error('尚未設定 Key');
+    var ka=[],kb=[],fa=[],fb=[];
+    keys.forEach(function(k,i){
+      if(hmA[k.a]===undefined)errs.push('Key '+(i+1)+'：A 來源找不到欄位「'+k.a+'」');
+      if(hmB[k.b]===undefined)errs.push('Key '+(i+1)+'：B 來源找不到欄位「'+k.b+'」');
+      ka.push(hmA[k.a]);kb.push(hmB[k.b]);
+      try{var fns=compileTransforms(k.transform||[]);fa.push(fns);fb.push(fns);}catch(e){errs.push('Key '+(i+1)+'：'+e.message);}
+    });
+    if(errs.length)throw new Error(errs.join('\n'));
+    return {ka:ka,kb:kb,fa:fa,fb:fb,hmA:hmA,hmB:hmB};
+  }
+  function health(P,progress){
+    var K=prepKeys(P);
+    if(progress)progress({phase:'index A',pct:10});
+    var ia=indexSide(P.A,K.ka,K.fa);
+    if(progress)progress({phase:'index B',pct:50});
+    var ib=indexSide(P.B,K.kb,K.fb);
+    function stat(ix,other){
+      var dupKeys=0,dupRows=0,common=0,only=[];
+      ix.map.forEach(function(e,k){
+        if(typeof e!=='number'){dupKeys++;dupRows+=e.length;}
+        if(other.map.has(k))common++;else if(only.length<5)only.push(k.split(SEP).join(' | '));
+      });
+      return {rows:ix.total,nullKeys:ix.nulls.length,distinct:ix.map.size,dupKeys:dupKeys,dupRows:dupRows,common:common,sampleOnly:only};
+    }
+    var sa=stat(ia,ib),sb=stat(ib,ia);
+    return {A:sa,B:sb,rateA:sa.distinct?sa.common/sa.distinct:0,rateB:sb.distinct?sb.common/sb.distinct:0};
+  }
+
+  /* ---------- 勾稽主流程 ---------- */
+  function run(P,progress){
+    var t0=Date.now(),prof=P.profile,opts=P.opts||{},A=P.A,B=P.B;
+    var K=prepKeys(P),errs=[];
+    var fields=[],fa=[],fb=[];
+    (prof.fields||[]).forEach(function(f,i){
+      if(f.compare===false)return;
+      if(K.hmA[f.a]===undefined)errs.push('欄位對應 '+(i+1)+'：A 來源找不到欄位「'+f.a+'」');
+      if(K.hmB[f.b]===undefined)errs.push('欄位對應 '+(i+1)+'：B 來源找不到欄位「'+f.b+'」');
+      try{fields.push(compileField(f,fields.length));}catch(e){errs.push('欄位對應 '+(i+1)+'：'+e.message);}
+      fa.push(K.hmA[f.a]);fb.push(K.hmB[f.b]);
+    });
+    if(errs.length)throw new Error(errs.join('\n'));
+    var polA=prof.dupPolicyA||prof.duplicatePolicy||'flag',polB=prof.dupPolicyB||prof.duplicatePolicy||'flag';
+    var nf=fields.length;
+    function post(p,pct){if(progress)progress({phase:p,pct:pct});}
+
+    post('建立 A 索引',3);
+    var ia=indexSide(A,K.ka,K.fa);
+    post('建立 B 索引',20);
+    var ib=indexSide(B,K.kb,K.fb);
+    post('比對中',40);
+
+    function rec(S,e,pol,cols){
+      var idxs=typeof e==='number'?[e]:e,out=new Array(nf),k,r;
+      if(idxs.length===1||pol!=='aggregate'){r=S.rows[idxs[0]];for(k=0;k<nf;k++)out[k]=r[cols[k]];return out;}
+      for(k=0;k<nf;k++){
+        if(fields[k].type==='number'){
+          var s=0,any=false;
+          for(var q=0;q<idxs.length;q++){
+            var v=S.rows[idxs[q]][cols[k]];
+            if(v===null||v===undefined||String(v).trim()==='')continue;
+            var n=parseNumber(v);if(!isNaN(n)){s+=n;any=true;}
+          }
+          out[k]=any?String(round(s,6)):'';
+        }else{
+          var val='';
+          for(var q2=0;q2<idxs.length;q2++){var v2=S.rows[idxs[q2]][cols[k]];if(v2!==null&&v2!==undefined&&String(v2).trim()!==''){val=v2;break;}}
+          out[k]=val;
+        }
+      }
+      return out;
+    }
+    function lines(e,cap){var a=typeof e==='number'?[e]:e,o=[];for(var i=0;i<a.length&&i<cap;i++)o.push(a[i]+1);return o;}
+    function cnt(e){return e===undefined?0:(typeof e==='number'?1:e.length);}
+
+    var results=[],counts={MATCH:0,DIFF:0,A_ONLY:0,B_ONLY:0,DUP_A:0,DUP_B:0,NULL_KEY:0},tolMatchRows=0;
+    var heat=fields.map(function(){return {ne:0,nullA:0,nullB:0,tol:0,absSum:0,signed:0};});
+    var commonKeys=0,CODE={EQ:'E',TOL:'T',NE:'N',NULL_A:'A',NULL_B:'B'};
+
+    /* 結果採緊湊格式：lv=每欄判定碼字串（E 相等/T 容差內/N 不等/A A 空/B B 空）、va/vb=兩側原始值陣列；
+       逐欄的正規化值、差異、說明在檢視時才由 compareValue 重新計算，避免大量差異時佔用數百萬個小物件 */
+    function add(st,kk,extra){
+      counts[st]++;
+      var o={rk:st+'\u0002'+kk,kk:kk,ks:kk.split(SEP).join(' | '),st:st,na:0,nb:0,la:null,lb:null,ag:false,lv:null,va:null,vb:null,nd:0,ad:0,tl:0};
+      for(var k in extra)o[k]=extra[k];
+      results.push(o);
+      return o;
+    }
+    function sideOnly(st,kk,S,e,pol,cols,sideKey){
+      var vals=rec(S,e,pol,cols),n=cnt(e);
+      return add(st,kk,{na:sideKey==='A'?n:0,nb:sideKey==='B'?n:0,la:sideKey==='A'?lines(e,10):null,lb:sideKey==='B'?lines(e,10):null,
+        ag:n>1&&pol==='aggregate',va:sideKey==='A'?vals:null,vb:sideKey==='B'?vals:null});
+    }
+
+    var done=0,totalKeys=ia.map.size+ib.map.size;
+    ia.map.forEach(function(ea,kk){
+      var eb=ib.map.get(kk),na=cnt(ea),nb=cnt(eb);
+      done++;if(done%20000===0)post('比對中',40+Math.round(done/totalKeys*45));
+      var dupA=na>1&&polA==='flag',dupB=nb>1&&polB==='flag';
+      if(eb===undefined){
+        if(dupA)add('DUP_A',kk,{na:na,nb:0,la:lines(ea,10)});
+        else sideOnly('A_ONLY',kk,A,ea,polA,fa,'A');
+        return;
+      }
+      commonKeys++;
+      if(dupA||dupB){
+        if(dupA)add('DUP_A',kk,{na:na,nb:nb,la:lines(ea,10),lb:lines(eb,10)});
+        if(dupB)add('DUP_B',kk,{na:na,nb:nb,la:lines(ea,10),lb:lines(eb,10)});
+        return;
+      }
+      var va=rec(A,ea,polA,fa),vb=rec(B,eb,polB,fb),nd=0,ad=0,tl=0,codes=new Array(nf);
+      for(var k=0;k<nf;k++){
+        if(va[k]===vb[k]){codes[k]='E';continue;}   // 原始值完全相同 → 必為 EQ（快速路徑）
+        var c=compareValue(va[k],vb[k],fields[k]);
+        codes[k]=CODE[c[0]];
+        if(c[0]==='NE'){
+          nd++;heat[k].ne++;
+          if(c[3]!==null&&c[3]!==undefined){heat[k].absSum+=Math.abs(c[3]);heat[k].signed+=c[3];ad+=Math.abs(c[3]);}
+        }
+        else if(c[0]==='NULL_A'){nd++;heat[k].nullA++;}
+        else if(c[0]==='NULL_B'){nd++;heat[k].nullB++;}
+        else if(c[0]==='TOL'){tl++;heat[k].tol++;}
+      }
+      var ag=(na>1&&polA==='aggregate')||(nb>1&&polB==='aggregate');
+      if(nd===0){
+        counts.MATCH++;if(tl>0)tolMatchRows++;
+        if(opts.keepMatch)results.push({rk:'MATCH\u0002'+kk,kk:kk,ks:kk.split(SEP).join(' | '),st:'MATCH',na:na,nb:nb,la:lines(ea,10),lb:lines(eb,10),ag:ag,lv:codes.join(''),va:va,vb:vb,nd:0,ad:0,tl:tl});
+      }else{
+        add('DIFF',kk,{na:na,nb:nb,la:lines(ea,10),lb:lines(eb,10),ag:ag,lv:codes.join(''),va:va,vb:vb,nd:nd,ad:ad,tl:tl});
+      }
+    });
+    post('處理僅 B 有的資料',88);
+    ib.map.forEach(function(eb,kk){
+      if(ia.map.has(kk))return;
+      if(cnt(eb)>1&&polB==='flag')add('DUP_B',kk,{na:0,nb:cnt(eb),lb:lines(eb,10)});
+      else sideOnly('B_ONLY',kk,B,eb,polB,fb,'B');
+    });
+    ia.nulls.forEach(function(ln){add('NULL_KEY','A#'+ln,{ks:'（A 第 '+ln+' 筆 Key 為空）',na:1,la:[ln],side:'A'});});
+    ib.nulls.forEach(function(ln){add('NULL_KEY','B#'+ln,{ks:'（B 第 '+ln+' 筆 Key 為空）',nb:1,lb:[ln],side:'B'});});
+
+    post('計算控制總數',94);
+    var controls=[],cfs=[],cmpFields=(prof.fields||[]).filter(function(x){return x.compare!==false;});
+    fields.forEach(function(f,k){if(f.type==='number'&&cmpFields[k].control!==false)cfs.push(k);});
+    var accA=cfs.map(function(){return {s:0,c:0};}),accB=cfs.map(function(){return {s:0,c:0};});
+    function accumulate(S,cols,acc){
+      var rows=S.rows,nc=cfs.length,r,j,v,n,f;
+      for(r=0;r<rows.length;r++){
+        var row=rows[r];
+        for(j=0;j<nc;j++){
+          v=row[cols[cfs[j]]];
+          if(v===null||v===undefined||v==='')continue;
+          f=fields[cfs[j]];
+          if(f.fns.length)v=applyFns(f.fns,str(v));
+          n=(typeof v==='string'&&SIMPLE_NUM.test(v))?+v:parseNumber(v);
+          if(n===n){acc[j].s+=n;acc[j].c++;}
+        }
+      }
+    }
+    accumulate(A,fa,accA);accumulate(B,fb,accB);
+    cfs.forEach(function(k,j){var f=fields[k];controls.push({fi:k,name:f.a+(f.a!==f.b?' / '+f.b:''),sumA:round(accA[j].s,6),sumB:round(accB[j].s,6),cntA:accA[j].c,cntB:accB[j].c});});
+
+    // 自我檢核：結果涵蓋的相異 Key 數 = A、B Key 聯集
+    var union=ia.map.size,resKeys=new Set();
+    ib.map.forEach(function(e,k){if(!ia.map.has(k))union++;});
+    for(var i=0;i<results.length;i++)if(results[i].st!=='NULL_KEY')resKeys.add(results[i].kk);
+    var checkOk;
+    if(opts.keepMatch)checkOk=(resKeys.size===union);
+    else checkOk=(resKeys.size+counts.MATCH===union);
+
+    var summary={
+      counts:counts,tolMatchRows:tolMatchRows,rowsA:A.rows.length,rowsB:B.rows.length,
+      keysA:ia.map.size,keysB:ib.map.size,commonKeys:commonKeys,unionKeys:union,
+      nullKeysA:ia.nulls.length,nullKeysB:ib.nulls.length,
+      controls:controls,heat:heat,
+      fields:fields.map(function(f){return {a:f.a,b:f.b,type:f.type};}),
+      keyNames:(prof.keys||[]).map(function(k){return k.a===k.b?k.a:k.a+' / '+k.b;}),
+      check:{ok:checkOk,union:union,resultKeys:resKeys.size,matchNotStored:!opts.keepMatch},
+      polA:polA,polB:polB,ms:Date.now()-t0
+    };
+    post('完成',100);
+    return {summary:summary,results:results};
+  }
+
+  /* ---------- 自動建議 ---------- */
+  function normName(s){return String(s).toLowerCase().replace(/[\s_\-\.]/g,'');}
+  function suggest(A,B){
+    var pairs=[],usedB={},hmB=headerMap(B.headers),nB={};
+    B.headers.forEach(function(h,i){var n=normName(h);if(nB[n]===undefined)nB[n]=i;});
+    A.headers.forEach(function(h,i){
+      var j=hmB[h];
+      if(j===undefined){var n=normName(h);if(nB[n]!==undefined)j=nB[n];}
+      if(j!==undefined&&!usedB[j]){usedB[j]=1;pairs.push({ai:i,bi:j});}
+    });
+    var hint=/(^|[^a-z])(id|key|no|num|code)([^a-z]|$)|編號|代號|統編|帳號|序號|號碼/i;
+    var lim=Math.min(A.rows.length,5000);
+    function uniq(cols){
+      var s=new Set();
+      for(var r=0;r<lim;r++){var k='';for(var c=0;c<cols.length;c++)k+=String(A.rows[r][cols[c]]===null?'':A.rows[r][cols[c]]).trim()+SEP;s.add(k);}
+      return lim?s.size/lim:0;
+    }
+    var cands=pairs.filter(function(p){return hint.test(A.headers[p.ai]);});
+    var scored=cands.map(function(p){return {p:p,u:uniq([p.ai])};}).sort(function(x,y){return y.u-x.u;});
+    var keys=[];
+    if(scored.length&&scored[0].u>=0.999)keys=[scored[0].p];
+    else{
+      var cs=cands.slice(0,6),found=null;
+      for(var i=0;i<cs.length&&!found;i++)for(var j=i+1;j<cs.length&&!found;j++){if(uniq([cs[i].ai,cs[j].ai])>=0.999)found=[cs[i],cs[j]];}
+      if(found)keys=found;
+      else if(scored.length)keys=[scored[0].p];
+      else if(pairs.length){var all=pairs.map(function(p){return {p:p,u:uniq([p.ai])};}).sort(function(x,y){return y.u-x.u;});keys=[all[0].p];}
+    }
+    return {pairs:pairs,keys:keys};
+  }
+
+  return {run:run,health:health,parseFile:parseFile,parseCSV:parseCSV,detectDelimiter:detectDelimiter,compareValue:compareValue,compileField:compileField,
+    compileTransforms:compileTransforms,validateTransform:validateTransform,applyFns:applyFns,parseNumber:parseNumber,parseDate:parseDate,parseBool:parseBool,
+    inferTypes:inferTypes,suggest:suggest,SEP:SEP,TRANSFORM_NAMES:Object.keys(TRANSFORMS)};
+}
+/* ===== END ENGINE ===== */
+/* ============================================================
+ * CORE：工具、IndexedDB、Worker 橋接
+ * ============================================================ */
+const APP_VERSION='1.1.0';
+const DB_NAME='ReconLabDB',DB_VER=2,CHUNK_ROWS=5000,RES_CHUNK=2000;
+const STATUS_LABEL={MATCH:'完全相符',DIFF:'數值差異',A_ONLY:'僅 A 有',B_ONLY:'僅 B 有',DUP_A:'A 重複 Key',DUP_B:'B 重複 Key',NULL_KEY:'Key 為空'};
+const STATUS_ORDER=['MATCH','DIFF','A_ONLY','B_ONLY','DUP_A','DUP_B','NULL_KEY'];
+const LEVEL_LABEL={EQ:'相等',TOL:'容差內相等',NE:'不相等',NULL_A:'A 為空',NULL_B:'B 為空','-':'—'};
+const ANN_STATUS=['Open','Explained','Accepted','Fixed'];
+const ANN_LABEL={Open:'待處理',Explained:'已說明',Accepted:'接受',Fixed:'已修正'};
+const TYPE_LABEL={string:'文字',number:'數值',date:'日期',bool:'布林'};
+const POLICY_LABEL={flag:'flag：標記為重複，不比對',first:'first：取第一筆',aggregate:'aggregate：數值加總，其餘取第一筆'};
+const ENG=makeEngine();   // 主執行緒副本（預覽、驗證、自我檢測用）
+
+/* ---------- DOM helper（一律以 DOM API 建立節點與文字，不拼接 HTML 字串） ---------- */
+function h(tag,attrs){
+  const e=document.createElement(tag);
+  const kids=Array.prototype.slice.call(arguments,2);
+  if(attrs)for(const k in attrs){
+    const v=attrs[k];
+    if(v===null||v===undefined||v===false||k==='value')continue;
+    if(k==='class')e.className=v;
+    else if(k==='style'&&typeof v==='object')Object.assign(e.style,v);
+    else if(k.slice(0,2)==='on')e.addEventListener(k.slice(2),v);
+    else if(k==='checked'||k==='disabled'||k==='selected'||k==='multiple'||k==='readOnly')e[k]=!!v;
+    else e.setAttribute(k,v===true?'':v);
+  }
+  for(const c of kids.flat(Infinity)){
+    if(c===null||c===undefined||c===false)continue;
+    e.append(c.nodeType?c:document.createTextNode(String(c)));
+  }
+  if(attrs&&attrs.value!==undefined&&attrs.value!==null)e.value=attrs.value;
+  return e;
+}
+function clear(el){el.replaceChildren();return el;}
+function uid(p){return p+Date.now().toString(36)+Math.random().toString(36).slice(2,7);}
+function fmtNum(n,d){
+  if(n===null||n===undefined||isNaN(n))return '';
+  return Number(n).toLocaleString('en-US',{maximumFractionDigits:d===undefined?4:d});
+}
+function fmtDur(ms){return ms<1000?Math.round(ms)+' ms':(ms/1000).toFixed(1)+' 秒';}
+function fmtSigned(n){if(n===null||n===undefined||isNaN(n))return '';return (n>0?'+':'')+fmtNum(n);}
+function fmtTime(ts){const d=new Date(ts),p=x=>String(x).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds());}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg,ms){
+  const n=document.querySelectorAll('.toast').length;
+  const t=h('div',{class:'toast',style:{bottom:(16+n*46)+'px'}},msg);document.body.append(t);
+  setTimeout(()=>t.remove(),ms||2600);
+}
+function download(name,content,mime){
+  const blob=content instanceof Blob?content:new Blob([content],{type:mime||'application/octet-stream'});
+  const a=h('a',{href:URL.createObjectURL(blob),download:name});
+  document.body.append(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+}
+function csvCell(v,guard){
+  let s=v===null||v===undefined?'':String(v);
+  if(guard&&/^([=+@\t\r]|-(?![\d.]))/.test(s))s="'"+s;
+  return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;
+}
+function toCSV(rows,guard){return '\uFEFF'+rows.map(r=>r.map(c=>csvCell(c,guard)).join(',')).join('\r\n');}
+async function sha256(buf){
+  try{
+    if(window.crypto&&crypto.subtle){
+      const d=await crypto.subtle.digest('SHA-256',buf);
+      return Array.from(new Uint8Array(d)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    }
+  }catch(e){}
+  const u=new Uint8Array(buf);let x=0x811c9dc5;
+  for(let i=0;i<u.length;i++){x^=u[i];x=Math.imul(x,16777619)>>>0;}
+  return 'fnv-'+u.length+'-'+x.toString(16).padStart(8,'0');
+}
+function confirmBox(msg,okLabel){
+  /* 不使用 window.confirm：在 SharePoint / Teams 預覽等沙盒 iframe 中 confirm 會被靜默封鎖，導致按鈕看似無反應 */
+  return modal('請確認',h('div',{style:{whiteSpace:'pre-line'}},msg),[{label:'取消',value:false},{label:okLabel||'確定',pri:true,value:true}]).then(v=>v===true);
+}
+function errorBox(title,text){return modal(title,h('div',{class:'msg err',style:{whiteSpace:'pre-line'}},text),[{label:'關閉',value:null}]);}
+function modal(title,body,buttons){
+  return new Promise(resolve=>{
+    const close=v=>{document.removeEventListener('keydown',onKey,true);bg.remove();resolve(v);};
+    const onKey=e=>{if(e.key==='Escape'){e.stopPropagation();close(null);}};
+    document.addEventListener('keydown',onKey,true);
+    const bg=h('div',{class:'modal-bg',onclick:e=>{if(e.target===bg)close(null);}},
+      h('div',{class:'modal'},h('h2',null,title),body,
+        h('div',{class:'row',style:{marginTop:'14px',justifyContent:'flex-end'}},
+          (buttons||[{label:'關閉',value:null}]).map(b=>h('button',{class:'btn'+(b.pri?' pri':''),onclick:()=>close(b.value===undefined?true:(typeof b.value==='function'?b.value():b.value))},b.label)))));
+    document.body.append(bg);
+  });
+}
+function promptModal(title,label,def){
+  const inp=h('input',{type:'text',value:def||'',style:{width:'100%'}});
+  return modal(title,h('label',{class:'f'},label,inp),[{label:'取消',value:null},{label:'確定',pri:true,value:()=>inp.value.trim()}]).then(v=>v||null);
+}
+
+/* ---------- IndexedDB ---------- */
+const DB={
+  db:null,
+  open(){
+    return new Promise((res,rej)=>{
+      const rq=indexedDB.open(DB_NAME,DB_VER);
+      rq.onupgradeneeded=()=>{
+        const d=rq.result;
+        const mk=(n,kp,idx)=>{if(d.objectStoreNames.contains(n))return;const st=d.createObjectStore(n,{keyPath:kp});(idx||[]).forEach(i=>st.createIndex(i[0],i[1]));};
+        mk('projects','id',[['updatedAt','updatedAt']]);
+        mk('datasets','id',[['projectId','projectId'],['hash','hash']]);
+        mk('datasetChunks',['datasetId','seq']);
+        mk('profiles','id',[['projectId','projectId']]);
+        mk('runs','id',[['projectId','projectId'],['createdAt','createdAt']]);
+        mk('results',['runId','rowKey'],[['runId','runId'],['status','status']]);   // v1 舊格式（逐筆），僅保留以相容讀取
+        mk('resultChunks',['runId','seq']);                                          // v2：每 2000 筆一塊，無索引，寫入快 10 倍以上
+        mk('annotations',['profileId','rowKey'],[['status','status']]);
+        mk('settings','key');
+      };
+      rq.onsuccess=()=>{DB.db=rq.result;DB.db.onversionchange=()=>{DB.db.close();toast('資料庫已在其他分頁更新，請重新整理本頁',6000);};res();};
+      rq.onerror=()=>rej(rq.error);
+      rq.onblocked=()=>rej(new Error('資料庫被其他分頁鎖定'));
+    });
+  },
+  _tx(stores,mode,fn){
+    return new Promise((res,rej)=>{
+      const tx=DB.db.transaction(stores,mode);let out;
+      tx.oncomplete=()=>res(out);
+      tx.onerror=()=>rej(tx.error);
+      tx.onabort=()=>rej(tx.error||new Error('交易中止'));
+      out=fn(tx);
+    });
+  },
+  _rq(rq){return new Promise((res,rej)=>{rq.onsuccess=()=>res(rq.result);rq.onerror=()=>rej(rq.error);});},
+  get(store,key){return DB._rq(DB.db.transaction(store).objectStore(store).get(key));},
+  all(store){return DB._rq(DB.db.transaction(store).objectStore(store).getAll());},
+  byIndex(store,index,key){return DB._rq(DB.db.transaction(store).objectStore(store).index(index).getAll(key));},
+  range(store,lo,hi){return DB._rq(DB.db.transaction(store).objectStore(store).getAll(IDBKeyRange.bound(lo,hi)));},
+  put(store,val){return DB._tx(store,'readwrite',tx=>{tx.objectStore(store).put(val);});},
+  putMany(store,arr){return DB._tx(store,'readwrite',tx=>{const s=tx.objectStore(store);for(let i=0;i<arr.length;i++)s.put(arr[i]);});},
+  del(store,key){return DB._tx(store,'readwrite',tx=>{tx.objectStore(store).delete(key);});},
+  delRange(store,lo,hi){return DB._tx(store,'readwrite',tx=>{tx.objectStore(store).delete(IDBKeyRange.bound(lo,hi));});},
+  clear(stores){return DB._tx(stores,'readwrite',tx=>{stores.forEach(s=>tx.objectStore(s).clear());});}
+};
+async function getSetting(k,def){const r=await DB.get('settings',k);return r?r.value:def;}
+function setSetting(k,v){return DB.put('settings',{key:k,value:v});}
+
+/* ---------- Worker 橋接（Blob inline Worker；Worker 無法使用時自動退回主執行緒） ---------- */
+const Bridge={
+  url:null,jobs:new Set(),supported:true,
+  _src(){
+    return 'const makeEngine='+makeEngine.toString()+';const E=makeEngine();'+
+      'onmessage=function(ev){var m=ev.data;try{var r;'+
+      'if(m.cmd==="run")r=E.run(m.payload,function(p){postMessage({progress:p});});'+
+      'else if(m.cmd==="health")r=E.health(m.payload,function(p){postMessage({progress:p});});'+
+      'else if(m.cmd==="parse")r=E.parseFile(m.payload);'+
+      'else throw new Error("unknown cmd");'+
+      'postMessage({done:r});}catch(e){postMessage({error:String(e&&e.message||e)});}};';
+  },
+  _local(cmd,payload,onProgress){
+    return new Promise((resolve,reject)=>setTimeout(()=>{
+      try{resolve((cmd==='run'?ENG.run:(cmd==='health'?ENG.health:ENG.parseFile))(payload,onProgress));}catch(e){reject(e);}
+    },30));
+  },
+  call(cmd,payload,onProgress){
+    return new Promise((resolve,reject)=>{
+      let w=null;
+      if(Bridge.supported){
+        try{
+          if(!Bridge.url)Bridge.url=URL.createObjectURL(new Blob([Bridge._src()],{type:'text/javascript'}));
+          w=new Worker(Bridge.url);
+        }catch(e){Bridge.supported=false;w=null;}
+      }
+      if(!w){Bridge._local(cmd,payload,onProgress).then(resolve,reject);return;}
+      const job={w:w,cmd:cmd,reject:reject,got:false};
+      Bridge.jobs.add(job);
+      const finish=()=>{try{w.terminate();}catch(e){}Bridge.jobs.delete(job);};
+      w.onmessage=ev=>{
+        const m=ev.data;job.got=true;
+        if(m.progress){if(onProgress)onProgress(m.progress);return;}
+        finish();
+        if(m.error)reject(new Error(m.error));else resolve(m.done);
+      };
+      w.onerror=ev=>{
+        finish();
+        if(ev&&ev.preventDefault)ev.preventDefault();
+        if(!job.got&&!job.cancelled){   // Worker 根本沒跑起來（被 CSP / 環境封鎖）→ 改在主執行緒執行
+          Bridge.supported=false;
+          Bridge._local(cmd,payload,onProgress).then(resolve,reject);
+        }else reject(new Error(ev&&ev.message||'Worker 錯誤'));
+      };
+      w.postMessage({cmd:cmd,payload:payload});
+    });
+  },
+  cancel(){
+    Bridge.jobs.forEach(j=>{if(j.cmd==='run'){j.cancelled=true;try{j.w.terminate();}catch(e){}Bridge.jobs.delete(j);j.reject(new Error('已取消'));}});
+  }
+};
+
+/* ---------- 資料集存取 ---------- */
+const DataStore={
+  cache:new Map(),
+  async save(projectId,side,meta,parsed){
+    const id=uid('ds_');
+    const rec=Object.assign({id:id,projectId:projectId,side:side,importedAt:Date.now(),
+      rowCount:parsed.rows.length,headers:parsed.headers,types:parsed.types,chunks:Math.ceil(parsed.rows.length/CHUNK_ROWS)},meta);
+    try{
+      for(let i=0;i*CHUNK_ROWS<parsed.rows.length;i+=10){   // 每 10 塊（5 萬列）一個交易，避免單一交易過大
+        const chunks=[];
+        for(let j=i;j<i+10&&j*CHUNK_ROWS<parsed.rows.length;j++)chunks.push({datasetId:id,seq:j,rows:parsed.rows.slice(j*CHUNK_ROWS,(j+1)*CHUNK_ROWS)});
+        await DB.putMany('datasetChunks',chunks);
+      }
+      await DB.put('datasets',rec);
+    }catch(e){
+      try{await DB.delRange('datasetChunks',[id,0],[id,Infinity]);}catch(e2){}   // 失敗時清掉殘留區塊
+      throw new Error(e&&e.name==='QuotaExceededError'?'瀏覽器儲存空間不足，無法保存這份資料快照（可刪除舊快照或舊的執行紀錄後再試）':(e&&e.message)||'寫入失敗');
+    }
+    DataStore.cache.set(id,{headers:parsed.headers,rows:parsed.rows,types:parsed.types});
+    return rec;
+  },
+  async load(meta){
+    if(DataStore.cache.has(meta.id))return DataStore.cache.get(meta.id);
+    const chunks=await DB.range('datasetChunks',[meta.id,0],[meta.id,Infinity]);
+    chunks.sort((a,b)=>a.seq-b.seq);
+    const rows=[];
+    chunks.forEach(c=>{for(let i=0;i<c.rows.length;i++)rows.push(c.rows[i]);});
+    const d={headers:meta.headers,rows:rows,types:meta.types};
+    DataStore.cache.set(meta.id,d);
+    while(DataStore.cache.size>3)DataStore.cache.delete(DataStore.cache.keys().next().value);   // 最多快取 3 份，避免佔用記憶體
+    return d;
+  },
+  async remove(id){
+    await DB.delRange('datasetChunks',[id,0],[id,Infinity]);
+    await DB.del('datasets',id);
+    DataStore.cache.delete(id);
+  }
+};
+/* ============================================================
+ * APP：狀態、路由、專案 / 範本管理、步驟 ①~④ 畫面
+ * ============================================================ */
+const S={
+  projects:[],project:null,profiles:[],profile:null,datasets:[],A:null,B:null,runs:[],
+  view:'data',runId:null,pending:{A:null,B:null},health:null,healthBusy:false,
+  running:false,sandbox:{type:'number',a:'100.4',b:'101',abs:'1',pct:'',dec:'',nb:true,ic:false,half:false,squash:false,tf:''},
+  keepResults:{}
+};
+const $root=()=>document.getElementById('app');
+let $main=null,$nav=null,$hdr=null;
+
+/* ---------- 範本 ---------- */
+function newProfile(projectId,name){
+  return {id:uid('pf_'),projectId:projectId,name:name||'勾稽範本',createdAt:Date.now(),updatedAt:Date.now(),version:1,
+    keys:[],fields:[],dupPolicyA:'flag',dupPolicyB:'flag',keepMatch:false,
+    defaults:{abs:'',pct:'',nullEqualsBlank:true}};
+}
+function newField(a,b,type,d){
+  d=d||{};
+  return {a:a,b:b,type:type||'string',compare:true,transform:[],tolerance:{abs:d.abs===undefined?'':d.abs,pct:d.pct===undefined?'':d.pct},
+    decimals:'',nullEqualsBlank:d.nullEqualsBlank!==false,ignoreCase:false,half:false,squash:false,control:true};
+}
+async function saveProfile(){
+  S.profile.updatedAt=Date.now();
+  await DB.put('profiles',S.profile);
+}
+async function saveProject(){
+  S.project.updatedAt=Date.now();
+  await DB.put('projects',S.project);
+}
+function sanitizeProfile(p){
+  if(!p||typeof p!=='object')throw new Error('範本格式錯誤');
+  if(!Array.isArray(p.keys)||!Array.isArray(p.fields))throw new Error('範本缺少 keys 或 fields');
+  const types=['string','number','date','bool'],pols=['flag','first','aggregate'];
+  const tf=arr=>{
+    const a=Array.isArray(arr)?arr.map(String):[];
+    a.forEach(x=>{const e=ENG.validateTransform(x);if(e)throw new Error('轉換函式不合法：'+x+'（'+e+'）');});
+    return a;
+  };
+  const out=newProfile(null,String(p.name||'匯入的範本'));
+  out.keys=p.keys.map(k=>({a:String(k.a),b:String(k.b),transform:tf(k.transform)}));
+  out.fields=p.fields.map(f=>({a:String(f.a),b:String(f.b),type:types.includes(f.type)?f.type:'string',compare:f.compare!==false,
+    transform:tf(f.transform),tolerance:{abs:(f.tolerance&&f.tolerance.abs!==undefined&&f.tolerance.abs!==null)?f.tolerance.abs:'',pct:(f.tolerance&&f.tolerance.pct!==undefined&&f.tolerance.pct!==null)?f.tolerance.pct:''},
+    decimals:(f.decimals===undefined||f.decimals===null)?'':f.decimals,nullEqualsBlank:f.nullEqualsBlank!==false,
+    ignoreCase:!!f.ignoreCase,half:!!f.half,squash:!!f.squash,control:f.control!==false}));
+  const pol=p.duplicatePolicy;
+  out.dupPolicyA=pols.includes(p.dupPolicyA)?p.dupPolicyA:(pols.includes(pol)?pol:'flag');
+  out.dupPolicyB=pols.includes(p.dupPolicyB)?p.dupPolicyB:(pols.includes(pol)?pol:'flag');
+  out.keepMatch=!!p.keepMatch;
+  out.defaults=Object.assign({abs:'',pct:'',nullEqualsBlank:true},p.defaults||{});
+  return out;
+}
+
+/* ---------- 專案載入 ---------- */
+async function loadProjects(){
+  S.projects=(await DB.all('projects')).sort((a,b)=>b.updatedAt-a.updatedAt);
+}
+async function createProject(name){
+  const p={id:uid('prj_'),name:name,createdAt:Date.now(),updatedAt:Date.now(),sourceA:null,sourceB:null,profileId:null,labelA:'A 來源',labelB:'B 來源'};
+  const pf=newProfile(p.id,'預設範本');
+  p.profileId=pf.id;
+  await DB.put('profiles',pf);await DB.put('projects',p);
+  await loadProjects();
+  return p;
+}
+async function openProject(id){
+  const p=await DB.get('projects',id);
+  if(!p)return false;
+  S.project=p;S.health=null;S.pending={A:null,B:null};
+  S.profiles=await DB.byIndex('profiles','projectId',id);
+  if(!S.profiles.length){const pf=newProfile(id,'預設範本');await DB.put('profiles',pf);S.profiles=[pf];}
+  S.profile=S.profiles.find(x=>x.id===p.profileId)||S.profiles[0];
+  p.profileId=S.profile.id;
+  S.datasets=(await DB.byIndex('datasets','projectId',id)).sort((a,b)=>b.importedAt-a.importedAt);
+  S.runs=(await DB.byIndex('runs','projectId',id)).sort((a,b)=>b.createdAt-a.createdAt);
+  S.A=null;S.B=null;
+  await loadSources();
+  await setSetting('lastProject',id);
+  return true;
+}
+async function loadSources(){
+  for(const side of ['A','B']){
+    const id=S.project['source'+side],meta=S.datasets.find(d=>d.id===id);
+    if(meta){const d=await DataStore.load(meta);S[side]={meta:meta,headers:d.headers,rows:d.rows,types:d.types};}
+    else S[side]=null;
+  }
+}
+
+/* ---------- 路由 ---------- */
+function parseHash(){
+  const m=location.hash.replace(/^#\/?/,'').split('/');
+  if(m[0]==='p'&&m[1])return {pid:m[1],view:m[2]||'data',runId:m[3]||null};
+  return {pid:null,view:'home',runId:null};
+}
+function go(view,runId,pid){
+  const id=pid||(S.project&&S.project.id);
+  location.hash=view==='home'||!id?'#/home':'#/p/'+id+'/'+view+(runId?'/'+runId:'');
+}
+async function route(){
+  const r=parseHash();
+  if(r.pid&&(!S.project||S.project.id!==r.pid)){
+    const ok=await openProject(r.pid);
+    if(!ok){
+      S.project=null;await loadProjects();
+      location.hash=S.projects.length?'#/p/'+S.projects[0].id+'/data':'#/home';
+      if(location.hash==='#/home'||S.projects.length===0){S.view='home';renderShell();}
+      return;
+    }
+  }
+  S.view=r.view;S.runId=r.runId;
+  renderShell();
+}
+
+/* ---------- 版面 ---------- */
+function stepDone(v){
+  if(v==='data')return !!(S.A&&S.B);
+  if(v==='keys')return S.profile.keys.length>0;
+  if(v==='fields')return S.profile.fields.some(f=>f.compare);
+  if(v==='rules')return S.profile.keys.length>0&&S.profile.fields.some(f=>f.compare);
+  if(v==='runs')return S.runs.length>0;
+  return false;
+}
+const STEPS=[['data','① 資料來源'],['keys','② Key 設定'],['fields','③ 欄位對應'],['rules','④ 比對規則'],['runs','⑤ 執行紀錄'],['result','⑥ 結果']];
+function renderShell(){
+  const app=clear($root());
+  $hdr=h('header',null,
+    h('h1',null,'🧪 Reconciliation Lab'),
+    h('select',{title:'切換專案',onchange:e=>{if(e.target.value==='__new'){newProjectFlow();}else{location.hash='#/p/'+e.target.value+'/data';}},
+      value:S.project?S.project.id:'',style:{minWidth:'160px'}},
+      S.projects.map(p=>h('option',{value:p.id},p.name)),h('option',{value:'__new'},'＋ 新增專案…')),
+    S.project?h('button',{class:'btn sm',onclick:renameProject},'更名'):null,
+    S.project?h('button',{class:'btn sm danger',onclick:deleteProject},'刪除專案'):null,
+    h('span',{class:'sp'}),
+    h('button',{class:'btn sm',onclick:()=>go('home')},'專案總覽'),
+    h('button',{class:'btn sm',onclick:backupFlow},'備份'),
+    h('button',{class:'btn sm',onclick:restoreFlow},'還原'),
+    h('button',{class:'btn sm',onclick:()=>selfTestFlow()},'自我檢測'),
+    h('span',{class:'muted',style:{fontSize:'12px'}},'v'+APP_VERSION+' · 離線 · 無網路請求'));
+  $nav=h('nav',null);
+  $main=h('main',null);
+  app.append($hdr,h('div',{class:'layout'},$nav,$main));
+  renderNav();renderMain();
+}
+function renderNav(){
+  clear($nav);
+  if(!S.project){return;}
+  STEPS.forEach(([v,label],i)=>{
+    const active=S.view===v;
+    const target=v==='result'?(()=>{const r=S.runs[0];return r?()=>go('result',r.id):()=>go('runs');})():()=>go(v);
+    $nav.append(h('a',{class:active?'active':'',onclick:target},h('span',{class:'n'},String(i+1)),label.slice(2).trim(),stepDone(v)?h('span',{class:'ck'},'✓'):null));
+  });
+}
+function renderMain(){
+  renderNav();
+  clear($main);
+  const v=S.view;
+  let el;
+  if(v==='home'||!S.project)el=viewHome();
+  else if(v==='data')el=viewData();
+  else if(v==='keys')el=viewKeys();
+  else if(v==='fields')el=viewFields();
+  else if(v==='rules')el=viewRules();
+  else if(v==='runs')el=viewRuns();
+  else if(v==='result')el=viewResult();
+  else el=h('div',null,'未知頁面');
+  $main.append(el);
+  if(v==='result'&&typeof afterResultMount==='function')afterResultMount();
+}
+function msg(text,kind){return h('div',{class:'msg '+(kind||'')},text);}
+function pageTitle(t,sub){return h('div',null,h('h2',null,t),sub?h('p',{class:'sub'},sub):null);}
+
+/* ---------- 專案 ---------- */
+async function newProjectFlow(){
+  const name=await promptModal('新增專案','專案名稱','勾稽專案 '+(S.projects.length+1));
+  if(!name){renderShell();return;}
+  const p=await createProject(name);
+  location.hash='#/p/'+p.id+'/data';
+}
+async function renameProject(){
+  const n=await promptModal('專案更名','專案名稱',S.project.name);
+  if(!n)return;
+  S.project.name=n;await saveProject();await loadProjects();renderShell();
+}
+async function deleteProject(){
+  if(!await confirmBox('確定刪除專案「'+S.project.name+'」？所有資料、範本、執行結果與註記都會被刪除，且無法復原。'))return;
+  await deleteProjectData(S.project.id);
+  S.project=null;
+  await loadProjects();
+  if(S.projects.length)location.hash='#/p/'+S.projects[0].id+'/data';else{location.hash='#/home';await route();}
+}
+async function deleteProjectData(pid){
+  const ds=await DB.byIndex('datasets','projectId',pid);
+  for(const d of ds)await DataStore.remove(d.id);
+  const runs=await DB.byIndex('runs','projectId',pid);
+  for(const r of runs){await removeResults(r.id);await DB.del('runs',r.id);}
+  const pfs=await DB.byIndex('profiles','projectId',pid);
+  for(const p of pfs){await DB.delRange('annotations',[p.id,''],[p.id,'\uffff']);await DB.del('profiles',p.id);}
+  await DB.del('projects',pid);
+}
+function viewHome(){
+  const box=h('div',null,pageTitle('專案總覽','每個專案可保存多份資料快照、勾稽範本與執行結果；全部資料只存在這個瀏覽器的 IndexedDB。'),
+    h('div',{class:'row',style:{marginBottom:'12px'}},h('button',{class:'btn pri',onclick:newProjectFlow},'＋ 新增專案'),h('button',{class:'btn',onclick:restoreFlow},'從備份還原')));
+  if(!S.projects.length)box.append(msg('目前沒有專案，請先新增一個。'));
+  S.projects.forEach(p=>box.append(h('div',{class:'card'},h('div',{class:'row'},h('b',null,p.name),h('span',{class:'muted'},'更新於 '+fmtTime(p.updatedAt)),h('span',{class:'sp',style:{flex:1}}),
+    h('button',{class:'btn pri',onclick:()=>{location.hash='#/p/'+p.id+'/data';}},'開啟')))));
+  return box;
+}
+
+/* ---------- 範本工具列 ---------- */
+function profileBar(){
+  const sel=h('select',{value:S.profile.id,onchange:async e=>{
+    S.profile=S.profiles.find(x=>x.id===e.target.value);S.project.profileId=S.profile.id;S.health=null;await saveProject();renderMain();}},
+    S.profiles.map(p=>h('option',{value:p.id},p.name)));
+  return h('div',{class:'card noprint'},h('div',{class:'row'},
+    h('b',null,'勾稽範本'),sel,
+    h('button',{class:'btn sm',onclick:async()=>{
+      const n=await promptModal('新增範本','範本名稱','範本 '+(S.profiles.length+1));if(!n)return;
+      const p=newProfile(S.project.id,n);await DB.put('profiles',p);S.profiles.push(p);S.profile=p;S.project.profileId=p.id;await saveProject();renderMain();}},'新增'),
+    h('button',{class:'btn sm',onclick:async()=>{
+      const n=await promptModal('複製範本','新範本名稱',S.profile.name+' 複本');if(!n)return;
+      const p=JSON.parse(JSON.stringify(S.profile));p.id=uid('pf_');p.name=n;p.createdAt=Date.now();await DB.put('profiles',p);S.profiles.push(p);S.profile=p;S.project.profileId=p.id;await saveProject();renderMain();}},'另存'),
+    h('button',{class:'btn sm',onclick:async()=>{
+      const n=await promptModal('範本更名','範本名稱',S.profile.name);if(!n)return;S.profile.name=n;await saveProfile();renderMain();}},'更名'),
+    h('button',{class:'btn sm danger',disabled:S.profiles.length<2,onclick:async()=>{
+      if(!await confirmBox('刪除範本「'+S.profile.name+'」及其人工註記？'))return;
+      await DB.delRange('annotations',[S.profile.id,''],[S.profile.id,'\uffff']);await DB.del('profiles',S.profile.id);
+      S.profiles=S.profiles.filter(x=>x.id!==S.profile.id);S.profile=S.profiles[0];S.project.profileId=S.profile.id;await saveProject();renderMain();}},'刪除'),
+    h('span',{style:{flex:1}}),
+    h('button',{class:'btn sm',onclick:exportProfile},'匯出 JSON'),
+    h('button',{class:'btn sm',onclick:importProfile},'匯入 JSON')));
+}
+function exportProfile(){
+  const p=JSON.parse(JSON.stringify(S.profile));delete p.id;delete p.projectId;
+  download('recon-profile-'+S.profile.name.replace(/[\\/:*?"<>|\s]+/g,'_')+'.json',JSON.stringify({type:'ReconLabProfile',version:1,profile:p},null,2),'application/json');
+}
+function importProfile(){
+  const inp=h('input',{type:'file',accept:'.json,application/json'});
+  inp.onchange=async()=>{
+    const f=inp.files[0];if(!f)return;
+    try{
+      const js=JSON.parse(await f.text());
+      const p=sanitizeProfile(js.profile||js);
+      p.projectId=S.project.id;
+      await DB.put('profiles',p);S.profiles.push(p);S.profile=p;S.project.profileId=p.id;await saveProject();
+      toast('已匯入範本「'+p.name+'」');renderMain();
+    }catch(e){toast('匯入失敗：'+e.message,4500);}
+  };
+  inp.click();
+}
+
+/* ============================================================
+ * ① 資料來源
+ * ============================================================ */
+function previewTable(headers,rows,types,n){
+  const t=h('table',{class:'t'},h('thead',null,h('tr',null,h('th',{class:'num'},'#'),headers.map((c,i)=>h('th',null,c,types?h('div',{class:'muted',style:{fontWeight:400,fontSize:'11px'}},TYPE_LABEL[types[i]]||''):null)))),
+    h('tbody',null,rows.slice(0,n||50).map((r,i)=>h('tr',null,h('td',{class:'num muted'},String(i+1)),headers.map((c,j)=>h('td',{class:'mono'},r[j]===null||r[j]===undefined?h('span',{class:'muted'},'null'):String(r[j])))))));
+  return h('div',{class:'tscroll'},t);
+}
+function guessKind(f){return /\.json$/i.test(f.name)?'json':'csv';}
+async function pickFile(side,file){
+  if(!file)return;
+  const buf=await file.arrayBuffer();
+  S.pending[side]={file:{name:file.name,size:file.size},buf:buf,kind:guessKind(file),enc:'auto',delim:'auto',header:true,skip:0,parsed:null,err:null,busy:false};
+  await parsePending(side);
+}
+async function parsePending(side){
+  const p=S.pending[side];if(!p)return;
+  const seq=(p.seq=(p.seq||0)+1);   // 序號：避免快速切換選項時，較慢的舊解析結果蓋掉新結果
+  p.busy=true;p.err=null;renderMain();
+  let parsed=null,err=null;
+  try{parsed=await Bridge.call('parse',{buffer:p.buf,kind:p.kind,encoding:p.enc,delimiter:p.delim,hasHeader:p.header,skip:p.skip});}
+  catch(e){err=e.message;}
+  if(S.pending[side]!==p||p.seq!==seq)return;
+  p.parsed=parsed;p.err=err;p.busy=false;renderMain();
+}
+async function confirmImport(side){
+  const p=S.pending[side];if(!p||!p.parsed||p.busy)return;
+  try{
+    const hash=await sha256(p.buf),optKey=JSON.stringify({enc:p.enc,delim:p.delim,header:p.header,skip:p.skip});
+    const same=S.datasets.find(d=>d.side===side&&d.hash===hash&&d.sizeBytes===p.file.size&&JSON.stringify(d.options||{})===optKey);
+    if(same){
+      const use=await modal('已有相同內容的快照',h('div',null,'「'+same.fileName+'」（'+fmtTime(same.importedAt)+' 匯入）內容與解析設定完全相同。'),
+        [{label:'重新匯入一份',value:'new'},{label:'直接使用既有快照',pri:true,value:'use'}]);
+      if(use===null)return;
+      if(use==='use'){S.project['source'+side]=same.id;await saveProject();S.pending[side]=null;S.health=null;await loadSources();renderMain();return;}
+    }
+    const meta=await DataStore.save(S.project.id,side,{fileName:p.file.name,sizeBytes:p.file.size,hash:hash,encoding:p.parsed.encoding,delimiter:p.parsed.delimiter,
+      options:{enc:p.enc,delim:p.delim,header:p.header,skip:p.skip}},p.parsed);
+    S.datasets.unshift(meta);
+    S.project['source'+side]=meta.id;await saveProject();
+    S.pending[side]=null;S.health=null;
+    await loadSources();
+    if(S.A&&S.B&&!S.profile.keys.length&&!S.profile.fields.length){
+      autoSetup(true);await saveProfile();
+      toast('已匯入 '+meta.rowCount.toLocaleString()+' 列'+(S.profile.fields.length||S.profile.keys.length?'；並依欄位名稱自動建議 Key 與欄位對應':'；兩邊欄位名稱不同，請到 ② ③ 手動設定，或在 ③ 使用「依欄位順序對應」'),4500);
+    }else toast('已匯入 '+meta.rowCount.toLocaleString()+' 列並存成快照');
+    renderMain();
+  }catch(e){errorBox('匯入失敗',e.message);}
+}
+async function useDataset(side,id){
+  S.project['source'+side]=id||null;await saveProject();S.health=null;await loadSources();renderMain();
+}
+async function removeDataset(d){
+  if(!await confirmBox('刪除快照「'+d.fileName+'」？（不影響已產生的執行結果）'))return;
+  await DataStore.remove(d.id);S.datasets=S.datasets.filter(x=>x.id!==d.id);
+  if(S.project['source'+d.side]===d.id)S.project['source'+d.side]=null;
+  await saveProject();await loadSources();renderMain();
+}
+function sideCard(side){
+  const label=side==='A'?S.project.labelA:S.project.labelB,cur=S[side],pend=S.pending[side];
+  const sets=S.datasets.filter(d=>d.side===side);
+  const inp=h('input',{type:'file',accept:'.csv,.tsv,.txt,.json',class:'hidden',onchange:e=>pickFile(side,e.target.files[0])});
+  const drop=h('div',{class:'drop',
+    onclick:()=>inp.click(),
+    ondragover:e=>{e.preventDefault();drop.classList.add('over');},
+    ondragleave:()=>drop.classList.remove('over'),
+    ondrop:e=>{e.preventDefault();drop.classList.remove('over');pickFile(side,e.dataTransfer.files[0]);}},
+    '把 CSV / TSV / JSON 檔拖放到這裡，或點擊選擇檔案',inp);
+  const card=h('div',{class:'card'},
+    h('div',{class:'row'},h('h3',{style:{margin:0}},'來源 '+side),
+      h('input',{type:'text',value:label,style:{width:'180px'},title:'來源顯示名稱',onchange:async e=>{S.project['label'+side]=e.target.value.trim()||('來源 '+side);await saveProject();}}),
+      h('span',{style:{flex:1}}),
+      sets.length?h('select',{value:S.project['source'+side]||'',onchange:e=>useDataset(side,e.target.value)},
+        h('option',{value:''},'（未選擇）'),sets.map(d=>h('option',{value:d.id},d.fileName+' · '+d.rowCount.toLocaleString()+' 列 · '+fmtTime(d.importedAt)))):null),
+    drop);
+  if(pend){
+    const o=(k,v)=>{pend[k]=v;parsePending(side);};
+    card.append(h('div',{class:'row',style:{marginTop:'10px'}},
+      h('b',null,pend.file.name),h('span',{class:'muted'},(pend.file.size/1024).toFixed(1)+' KB'),
+      pend.kind==='csv'?[
+        h('label',{class:'f'},'編碼',h('select',{value:pend.enc,onchange:e=>o('enc',e.target.value)},h('option',{value:'auto'},'自動（BOM → UTF-8 → Big5）'),h('option',{value:'utf-8'},'UTF-8'),h('option',{value:'big5'},'Big5'),h('option',{value:'utf-16le'},'UTF-16 LE（Excel「Unicode 文字」）'),h('option',{value:'utf-16be'},'UTF-16 BE'))),
+        h('label',{class:'f'},'分隔符號',h('select',{value:pend.delim,onchange:e=>o('delim',e.target.value)},h('option',{value:'auto'},'自動'),h('option',{value:','},'逗號 ,'),h('option',{value:'tab'},'Tab'),h('option',{value:';'},'分號 ;'),h('option',{value:'|'},'直線 |'))),
+        h('label',{class:'f'},'略過前 N 列',h('input',{type:'number',min:0,value:pend.skip,onchange:e=>o('skip',Math.max(0,parseInt(e.target.value,10)||0))})),
+        h('label',{class:'inl',style:{marginTop:'14px'}},h('input',{type:'checkbox',checked:pend.header,onchange:e=>o('header',e.target.checked)}),'第一列為標題列')
+      ]:h('span',{class:'muted'},'JSON（物件陣列或二維陣列）')));
+    if(pend.busy)card.append(msg('解析中…（於背景執行，不會卡住畫面）'));
+    else if(pend.err)card.append(msg('解析失敗：'+pend.err,'err'));
+    else if(pend.parsed){
+      const pr=pend.parsed;
+      card.append(h('div',{class:'row',style:{margin:'8px 0'}},
+        h('span',{class:'chip'},pr.rows.length.toLocaleString()+' 列'),h('span',{class:'chip'},pr.headers.length+' 欄'),
+        h('span',{class:'chip'},'編碼 '+pr.encoding),pr.delimiter!=='json'?h('span',{class:'chip'},'分隔 '+(pr.delimiter==='\t'?'Tab':pr.delimiter)):null,
+        h('span',{style:{flex:1}}),
+        h('button',{class:'btn',onclick:()=>{S.pending[side]=null;renderMain();}},'取消'),
+        h('button',{class:'btn pri',onclick:()=>confirmImport(side)},'確認匯入並存成快照')),
+        h('div',{class:'muted',style:{marginBottom:'4px'}},'預覽前 50 列（型別為自動推斷，可於步驟 ③ 調整）'),
+        previewTable(pr.headers,pr.rows,pr.types,50));
+    }
+  }
+  if(cur){
+    const m=cur.meta;
+    card.append(h('h3',null,'目前使用的快照'),
+      h('div',{class:'kv'},h('b',null,'檔名'),h('span',null,m.fileName),h('b',null,'列數 / 欄數'),h('span',null,m.rowCount.toLocaleString()+' 列 / '+m.headers.length+' 欄'),
+        h('b',null,'SHA-256'),h('span',{class:'mono',style:{wordBreak:'break-all'}},m.hash),h('b',null,'匯入時間'),h('span',null,fmtTime(m.importedAt)+'（編碼 '+m.encoding+'）')),
+      h('div',{style:{margin:'8px 0 4px'}},'前 50 列預覽'),previewTable(cur.headers,cur.rows,cur.types,50),
+      h('div',{style:{marginTop:'8px'}},h('button',{class:'btn sm danger',onclick:()=>removeDataset(m)},'刪除此快照')));
+  }else if(!pend)card.append(msg('尚未選擇來源 '+side+' 的資料。'));
+  return card;
+}
+function viewData(){
+  const box=h('div',null,pageTitle('① 資料來源','匯入 A、B 兩份資料。每次匯入都會保存成快照（含 SHA-256），可隨時切換。'),sideCard('A'),sideCard('B'));
+  if(S.A&&S.B)box.append(h('div',{class:'row'},h('button',{class:'btn pri',onclick:()=>go('keys')},'下一步：設定 Key →')));
+  return box;
+}
+
+/* ============================================================
+ * ② Key 設定
+ * ============================================================ */
+function colSelect(headers,cur,onchange){
+  const opts=headers.slice();
+  if(cur&&!opts.includes(cur))opts.unshift(cur);
+  return h('select',{value:cur||'',onchange:e=>onchange(e.target.value),style:{minWidth:'130px'},class:cur&&!headers.includes(cur)?'bad':''},
+    h('option',{value:''},'（選擇欄位）'),opts.map(c=>h('option',{value:c},headers.includes(c)?c:c+'（不存在）')));
+}
+const TF_TEMPLATES=['trim','upper','lower','half','squash','digits','ltrimZeros','padStart:4:0','padEnd:4:0','removeChars:-','substr:0:4','left:4','right:4'];
+function tfInput(list,onsave){
+  const inp=h('input',{type:'text',value:(list||[]).join(', '),placeholder:'例：trim, upper, padStart:4:0',style:{width:'190px'},
+    onchange:()=>{
+      const arr=inp.value.split(',').map(x=>x.trim()).filter(Boolean);
+      for(const t of arr){const e=ENG.validateTransform(t);if(e){toast('「'+t+'」不合法：'+e,4000);inp.value=(list||[]).join(', ');return;}}
+      onsave(arr);
+    }});
+  const sel=h('select',{style:{width:'46px'},title:'插入常用轉換',onchange:e=>{
+    if(!e.target.value)return;inp.value=(inp.value.trim()?inp.value.trim()+', ':'')+e.target.value;e.target.value='';inp.dispatchEvent(new Event('change'));}},
+    h('option',{value:''},'＋'),TF_TEMPLATES.map(t=>h('option',{value:t},t)));
+  return h('span',{class:'row',style:{gap:'2px',flexWrap:'nowrap'}},inp,sel);
+}
+function sampleKey(side,col,fns){
+  const d=S[side];if(!d||!col)return '';
+  const ci=d.headers.indexOf(col);if(ci<0)return '';
+  const out=[];
+  try{const f=ENG.compileTransforms(fns||[]);
+    for(let i=0;i<d.rows.length&&out.length<2;i++){const v=d.rows[i][ci];const raw=v===null||v===undefined?'':String(v);out.push(JSON.stringify(raw)+' → '+JSON.stringify(ENG.applyFns(f,raw)));}
+  }catch(e){return e.message;}
+  return out.join('；');
+}
+function autoSetup(replaceAll){
+  const sg=ENG.suggest(S.A,S.B);
+  const dflt=S.profile.defaults||{};
+  const keyA=new Set();
+  S.profile.keys=sg.keys.map(p=>{keyA.add(S.A.headers[p.ai]);return {a:S.A.headers[p.ai],b:S.B.headers[p.bi],transform:['trim']};});
+  if(replaceAll){
+    S.profile.fields=sg.pairs.filter(p=>!keyA.has(S.A.headers[p.ai])).map(p=>{
+      const ta=S.A.types[p.ai],tb=S.B.types[p.bi];
+      return newField(S.A.headers[p.ai],S.B.headers[p.bi],ta===tb?ta:'string',dflt);
+    });
+  }
+}
+function viewKeys(){
+  const P=S.profile,box=h('div',null,pageTitle('② Key 設定','Key 決定「A 的哪一筆要對應 B 的哪一筆」。支援複合 Key；兩邊欄位名稱可不同；每個 Key 欄位可套用正規化轉換。'),profileBar());
+  if(!S.A||!S.B){box.append(msg('請先在「① 資料來源」匯入 A、B 兩份資料。','wn'));return box;}
+  const miss=P.keys.filter(k=>!S.A.headers.includes(k.a)||!S.B.headers.includes(k.b));
+  if(miss.length)box.append(msg('範本中有 Key 欄位在目前的資料快照中找不到（紅字），請重新選擇欄位。','err'));
+  const body=h('tbody',null);
+  P.keys.forEach((k,i)=>{
+    body.append(h('tr',null,h('td',null,String(i+1)),
+      h('td',null,colSelect(S.A.headers,k.a,async v=>{k.a=v;await saveProfile();S.health=null;renderMain();})),
+      h('td',null,colSelect(S.B.headers,k.b,async v=>{k.b=v;await saveProfile();S.health=null;renderMain();})),
+      h('td',null,tfInput(k.transform,async arr=>{k.transform=arr;await saveProfile();S.health=null;renderMain();})),
+      h('td',{class:'muted',style:{fontSize:'12px',maxWidth:'340px'}},h('div',null,'A：'+sampleKey('A',k.a,k.transform)),h('div',null,'B：'+sampleKey('B',k.b,k.transform))),
+      h('td',null,h('button',{class:'btn sm danger',onclick:async()=>{P.keys.splice(i,1);await saveProfile();S.health=null;renderMain();}},'移除'))));
+  });
+  box.append(h('div',{class:'card'},h('div',{class:'row',style:{marginBottom:'8px'}},
+    h('button',{class:'btn',onclick:async()=>{P.keys.push({a:'',b:'',transform:['trim']});await saveProfile();renderMain();}},'＋ 新增 Key 欄位'),
+    h('button',{class:'btn',onclick:async()=>{autoSetup(false);await saveProfile();S.health=null;renderMain();toast(P.keys.length?'已建議 '+P.keys.length+' 個 Key 欄位':'找不到合適的 Key，請手動設定');}},'自動建議 Key'),
+    h('span',{class:'muted'},'可用轉換：'+ENG.TRANSFORM_NAMES.join('、'))),
+    P.keys.length?h('div',{class:'tscroll',style:{maxHeight:'none'}},h('table',{class:'t'},h('thead',null,h('tr',null,h('th',null,'#'),h('th',null,'A 欄位（'+S.project.labelA+'）'),h('th',null,'B 欄位（'+S.project.labelB+'）'),h('th',null,'正規化轉換'),h('th',null,'轉換預覽（前 2 筆）'),h('th',null,''))),body)):msg('尚未設定 Key。可按「自動建議 Key」或手動新增。')));
+  // 健康檢查
+  const hc=h('div',{class:'card'},h('h3',null,'Key 健康檢查'),
+    h('p',{class:'muted',style:{marginTop:0}},'執行前先確認：空值 Key、重複 Key、兩邊 Key 的重疊率。重疊率過低通常代表轉換規則或欄位選錯。'),
+    h('button',{class:'btn pri',disabled:!P.keys.length||miss.length>0||S.healthBusy,onclick:runHealth},S.healthBusy?'檢查中…':'執行健康檢查'));
+  if(S.health&&S.health.error)hc.append(msg(S.health.error,'err'));
+  else if(S.health){
+    const r=S.health,rows=[['資料列數','rows'],['Key 為空的列數','nullKeys'],['相異 Key 數','distinct'],['重複 Key 數','dupKeys'],['重複 Key 涉及列數','dupRows'],['與對方重疊的 Key 數','common']];
+    hc.append(h('div',{class:'tscroll',style:{maxHeight:'none',marginTop:'8px'}},h('table',{class:'t'},h('thead',null,h('tr',null,h('th',null,'項目'),h('th',{class:'num'},'A'),h('th',{class:'num'},'B'))),
+      h('tbody',null,rows.map(([l,k])=>h('tr',null,h('td',null,l),h('td',{class:'num'},fmtNum(r.A[k])),h('td',{class:'num'},fmtNum(r.B[k])))),
+        h('tr',null,h('td',null,h('b',null,'重疊率（重疊 Key ÷ 該側相異 Key）')),h('td',{class:'num'},(r.rateA*100).toFixed(2)+'%'),h('td',{class:'num'},(r.rateB*100).toFixed(2)+'%'))))));
+    const low=Math.min(r.rateA,r.rateB)<0.5;
+    hc.append(msg(low?'重疊率偏低（< 50%），請檢查 Key 欄位或正規化轉換（例如大小寫、補零、空白）。':'重疊率正常。',low?'wn':'okm'));
+    if(r.A.sampleOnly.length||r.B.sampleOnly.length)hc.append(h('div',{class:'muted',style:{fontSize:'12px'}},'僅 A 有的 Key 範例：'+(r.A.sampleOnly.join('；')||'—')+'　｜　僅 B 有的 Key 範例：'+(r.B.sampleOnly.join('；')||'—')));
+    if(r.A.nullKeys||r.B.nullKeys||r.A.dupKeys||r.B.dupKeys)hc.append(msg('有空值或重複 Key：可到「④ 比對規則」決定重複 Key 的處理方式（flag / first / aggregate）。','wn'));
+  }
+  box.append(hc);
+  return box;
+}
+function enginePayload(){
+  return {A:{headers:S.A.headers,rows:S.A.rows},B:{headers:S.B.headers,rows:S.B.rows},profile:JSON.parse(JSON.stringify(S.profile)),opts:{keepMatch:!!S.profile.keepMatch}};
+}
+async function runHealth(){
+  S.healthBusy=true;S.health=null;renderMain();
+  try{S.health=await Bridge.call('health',enginePayload());}
+  catch(e){S.health={error:e.message};}
+  S.healthBusy=false;renderMain();
+}
+
+/* ============================================================
+ * ③ 欄位對應
+ * ============================================================ */
+function viewFields(){
+  const P=S.profile,box=h('div',null,pageTitle('③ 欄位對應','設定哪些欄位要比對、型別、轉換與容差。數值容差：差異 ≤ 絕對容差，或 ≤ |B| × 相對容差%，即視為相等（記為「容差內相等」）。'),profileBar());
+  if(!S.A||!S.B){box.append(msg('請先在「① 資料來源」匯入 A、B 兩份資料。','wn'));return box;}
+  const save=async()=>{await saveProfile();};
+  const body=h('tbody',null);
+  P.fields.forEach((f,i)=>{
+    const bad=!S.A.headers.includes(f.a)||!S.B.headers.includes(f.b);
+    const isNum=f.type==='number';
+    body.append(h('tr',{style:bad?{background:'var(--bad-bg)'}:null},
+      h('td',null,h('input',{type:'checkbox',checked:f.compare,title:'列入比對',onchange:async e=>{f.compare=e.target.checked;await save();renderNav();}})),
+      h('td',null,colSelect(S.A.headers,f.a,async v=>{f.a=v;await save();renderMain();})),
+      h('td',null,colSelect(S.B.headers,f.b,async v=>{f.b=v;await save();renderMain();})),
+      h('td',null,h('select',{value:f.type,onchange:async e=>{f.type=e.target.value;await save();renderMain();}},Object.keys(TYPE_LABEL).map(t=>h('option',{value:t},TYPE_LABEL[t])))),
+      h('td',null,tfInput(f.transform,async arr=>{f.transform=arr;await save();})),
+      h('td',null,isNum?h('input',{type:'number',step:'any',min:0,value:f.tolerance.abs,title:'絕對容差（空白＝無）',onchange:async e=>{f.tolerance.abs=e.target.value===''?'':Number(e.target.value);await save();}}):h('span',{class:'muted'},'—')),
+      h('td',null,isNum?h('input',{type:'number',step:'any',min:0,value:f.tolerance.pct,title:'相對容差 %（空白＝無）',onchange:async e=>{f.tolerance.pct=e.target.value===''?'':Number(e.target.value);await save();}}):h('span',{class:'muted'},'—')),
+      h('td',null,isNum?h('input',{type:'number',min:0,max:10,value:f.decimals,title:'比對前先四捨五入到小數 N 位（空白＝不處理）',onchange:async e=>{f.decimals=e.target.value===''?'':parseInt(e.target.value,10);await save();}}):h('span',{class:'muted'},'—')),
+      h('td',null,h('input',{type:'checkbox',checked:f.nullEqualsBlank,title:'null、空白與 "-" 視為相同',onchange:async e=>{f.nullEqualsBlank=e.target.checked;await save();}})),
+      h('td',null,f.type==='string'?h('span',{class:'row',style:{gap:'6px',flexWrap:'nowrap'}},
+        h('label',{class:'inl'},h('input',{type:'checkbox',checked:f.ignoreCase,onchange:async e=>{f.ignoreCase=e.target.checked;await save();}}),'忽略大小寫'),
+        h('label',{class:'inl'},h('input',{type:'checkbox',checked:f.half,onchange:async e=>{f.half=e.target.checked;await save();}}),'全形→半形'),
+        h('label',{class:'inl'},h('input',{type:'checkbox',checked:f.squash,onchange:async e=>{f.squash=e.target.checked;await save();}}),'壓縮空白')):
+        (isNum?h('label',{class:'inl'},h('input',{type:'checkbox',checked:f.control!==false,onchange:async e=>{f.control=e.target.checked;await save();}}),'列入控制總數'):h('span',{class:'muted'},'—'))),
+      h('td',null,h('button',{class:'btn sm danger',onclick:async()=>{P.fields.splice(i,1);await save();renderMain();}},'移除'))));
+  });
+  const usedA=new Set(P.keys.map(k=>k.a).concat(P.fields.map(f=>f.a))),usedB=new Set(P.keys.map(k=>k.b).concat(P.fields.map(f=>f.b)));
+  const freeA=S.A.headers.filter(c=>!usedA.has(c)),freeB=S.B.headers.filter(c=>!usedB.has(c));
+  box.append(h('div',{class:'card'},h('div',{class:'row',style:{marginBottom:'8px'}},
+    h('button',{class:'btn pri',onclick:async()=>{
+      if(P.fields.length&&!await confirmBox('自動對應會取代目前的欄位設定，確定？'))return;
+      const keepKeys=P.keys.slice();autoSetup(true);if(keepKeys.length)P.keys=keepKeys;
+      const ks=new Set(P.keys.map(k=>k.a));P.fields=P.fields.filter(f=>!ks.has(f.a));
+      await save();renderMain();toast('已自動對應 '+P.fields.length+' 組欄位');}},'依欄位名稱自動對應'),
+    h('button',{class:'btn',title:'兩邊欄位名稱不同、但欄位順序相同時使用（Key 欄位會被排除）',onclick:async()=>{
+      if(P.fields.length&&!await confirmBox('依欄位順序對應會取代目前的欄位設定，確定？'))return;
+      const ks=new Set(P.keys.map(k=>k.a)),kb=new Set(P.keys.map(k=>k.b)),n=Math.min(S.A.headers.length,S.B.headers.length),out=[];
+      for(let i=0;i<n;i++){
+        const a=S.A.headers[i],b=S.B.headers[i];if(ks.has(a)||kb.has(b))continue;
+        const ta=S.A.types[i],tb=S.B.types[i];out.push(newField(a,b,ta===tb?ta:'string',P.defaults));
+      }
+      P.fields=out;await save();renderMain();toast('已依順序對應 '+out.length+' 組欄位（請檢查是否正確）');}},'依欄位順序對應'),
+    h('button',{class:'btn',onclick:async()=>{P.fields.push(newField('','','string',P.defaults));await save();renderMain();}},'＋ 新增一列'),
+    h('span',{class:'muted'},'共 '+P.fields.length+' 組，列入比對 '+P.fields.filter(f=>f.compare).length+' 組')),
+    P.fields.length?h('div',{class:'tscroll',style:{maxHeight:'none'}},h('table',{class:'t'},h('thead',null,h('tr',null,
+      h('th',null,'比對'),h('th',null,'A 欄位'),h('th',null,'B 欄位'),h('th',null,'型別'),h('th',null,'轉換'),h('th',null,'絕對容差'),h('th',null,'相對容差%'),h('th',null,'小數位'),h('th',null,'空值=空白'),h('th',null,'選項'),h('th',null,''))),body)):msg('尚未設定欄位對應。可按「依欄位名稱自動對應」。')));
+  if(freeA.length||freeB.length)box.append(h('div',{class:'card'},h('h3',null,'尚未對應的欄位（僅供參考）'),
+    h('div',null,h('b',null,'A：'),freeA.length?freeA.map(c=>h('span',{class:'chip',style:{margin:'2px'}},c)):'—'),
+    h('div',{style:{marginTop:'6px'}},h('b',null,'B：'),freeB.length?freeB.map(c=>h('span',{class:'chip',style:{margin:'2px'}},c)):'—')));
+  box.append(h('div',{class:'row'},h('button',{class:'btn pri',onclick:()=>go('rules')},'下一步：比對規則 →')));
+  return box;
+}
+
+/* ============================================================
+ * ④ 比對規則
+ * ============================================================ */
+function polSelect(cur,onchange){
+  return h('select',{value:cur,onchange:e=>onchange(e.target.value)},Object.keys(POLICY_LABEL).map(k=>h('option',{value:k},POLICY_LABEL[k])));
+}
+function viewRules(){
+  const P=S.profile,box=h('div',null,pageTitle('④ 比對規則','設定重複 Key 的處理方式、新增欄位時的預設容差，並可用沙盒即時測試單一欄位的比對結果。'),profileBar());
+  box.append(h('div',{class:'card'},h('h3',null,'重複 Key 處理（A、B 可分別設定）'),
+    h('div',{class:'row top'},h('label',{class:'f'},'A 來源（'+S.project.labelA+'）',polSelect(P.dupPolicyA,async v=>{P.dupPolicyA=v;await saveProfile();})),
+      h('label',{class:'f'},'B 來源（'+S.project.labelB+'）',polSelect(P.dupPolicyB,async v=>{P.dupPolicyB=v;await saveProfile();}))),
+    h('div',{class:'muted',style:{marginTop:'8px'}},
+      h('div',null,'• flag：同一 Key 出現多筆 → 該 Key 列為 DUP_A / DUP_B，不參與比對。'),
+      h('div',null,'• first：取該 Key 的第一筆。'),
+      h('div',null,'• aggregate：數值欄位加總、其他欄位取第一筆。把 Key 設為「群組欄位」並在兩側都選 aggregate，就是「彙總層級勾稽」；只在 B 側選 aggregate，就是「一對多比對」（例如額度對多筆動撥）。'))));
+  box.append(h('div',{class:'card'},h('h3',null,'預設值與保存方式'),
+    h('div',{class:'row'},
+      h('label',{class:'f'},'新增數值欄位的預設絕對容差',h('input',{type:'number',step:'any',min:0,value:P.defaults.abs,onchange:async e=>{P.defaults.abs=e.target.value===''?'':Number(e.target.value);await saveProfile();}})),
+      h('label',{class:'f'},'預設相對容差 %',h('input',{type:'number',step:'any',min:0,value:P.defaults.pct,onchange:async e=>{P.defaults.pct=e.target.value===''?'':Number(e.target.value);await saveProfile();}})),
+      h('label',{class:'inl',style:{marginTop:'14px'}},h('input',{type:'checkbox',checked:P.defaults.nullEqualsBlank!==false,onchange:async e=>{P.defaults.nullEqualsBlank=e.target.checked;await saveProfile();}}),'預設把 null / 空白 / "-" 視為相同')),
+    h('label',{class:'inl',style:{marginTop:'8px'}},h('input',{type:'checkbox',checked:P.keepMatch,onchange:async e=>{P.keepMatch=e.target.checked;await saveProfile();}}),'同時保存「完全相符」的明細（預設只保存筆數，可省下大量儲存空間）')));
+  box.append(h('div',{class:'card'},h('h3',null,'型別比對規則一覽'),
+    h('div',{class:'tscroll',style:{maxHeight:'none'}},h('table',{class:'t'},h('thead',null,h('tr',null,h('th',null,'型別'),h('th',null,'比對方式'),h('th',null,'可設定項目'))),h('tbody',null,
+      h('tr',null,h('td',null,'文字'),h('td',null,'轉換後完全相等'),h('td',null,'忽略大小寫、全形轉半形、壓縮空白、轉換鏈')),
+      h('tr',null,h('td',null,'數值'),h('td',null,'去除千分位、貨幣符號、括號負數後，差異在容差內即相等'),h('td',null,'絕對容差、相對容差（以 |B| 為基準）、小數位數')),
+      h('tr',null,h('td',null,'日期'),h('td',null,'先轉成 ISO（YYYY-MM-DD）再比'),h('td',null,'接受 YYYY/MM/DD、YYYY-MM-DD、YYYYMMDD、民國 YYY/MM/DD、YYYMMDD、115年10月27日；年份 ≤ 3 位視為民國')),
+      h('tr',null,h('td',null,'布林'),h('td',null,'轉成 TRUE / FALSE 再比'),h('td',null,'Y/N、1/0、true/false、是/否')))))));
+  // 沙盒
+  const sb=S.sandbox,out=h('div',{id:'sbout',style:{marginTop:'8px'}});
+  const calc=()=>{
+    clear(out);
+    try{
+      const tf=sb.tf.split(',').map(x=>x.trim()).filter(Boolean);
+      const f=ENG.compileField({a:'x',b:'x',type:sb.type,transform:tf,tolerance:{abs:sb.abs,pct:sb.pct},decimals:sb.dec,nullEqualsBlank:sb.nb,ignoreCase:sb.ic,half:sb.half,squash:sb.squash},0);
+      const c=ENG.compareValue(sb.a,sb.b,f);
+      out.append(h('div',{class:'row'},h('span',{class:'badge b-'+c[0]},c[0]+' '+LEVEL_LABEL[c[0]]),h('span',{class:'mono'},'A='+JSON.stringify(c[1])+'　B='+JSON.stringify(c[2])),
+        c[3]!==null?h('span',{class:'mono'},'差異(A−B)='+fmtSigned(c[3])+(c[4]!==null?'（'+c[4].toFixed(4)+'%）':'')):null),c[5]?h('div',{class:'muted'},c[5]):null);
+    }catch(e){out.append(msg(e.message,'err'));}
+  };
+  const bind=(k,type)=>e=>{sb[k]=type==='bool'?e.target.checked:e.target.value;calc();};
+  box.append(h('div',{class:'card'},h('h3',null,'規則沙盒'),h('div',{class:'row top'},
+    h('label',{class:'f'},'型別',h('select',{value:sb.type,onchange:e=>{sb.type=e.target.value;calc();}},Object.keys(TYPE_LABEL).map(t=>h('option',{value:t},TYPE_LABEL[t])))),
+    h('label',{class:'f'},'A 值',h('input',{type:'text',value:sb.a,oninput:bind('a')})),
+    h('label',{class:'f'},'B 值',h('input',{type:'text',value:sb.b,oninput:bind('b')})),
+    h('label',{class:'f'},'絕對容差',h('input',{type:'number',step:'any',value:sb.abs,oninput:bind('abs')})),
+    h('label',{class:'f'},'相對容差 %',h('input',{type:'number',step:'any',value:sb.pct,oninput:bind('pct')})),
+    h('label',{class:'f'},'小數位',h('input',{type:'number',value:sb.dec,oninput:bind('dec')})),
+    h('label',{class:'f'},'轉換',h('input',{type:'text',value:sb.tf,placeholder:'padStart:4:0',oninput:bind('tf')}))),
+    h('div',{class:'row'},
+      h('label',{class:'inl'},h('input',{type:'checkbox',checked:sb.nb,onchange:bind('nb','bool')}),'空值=空白'),
+      h('label',{class:'inl'},h('input',{type:'checkbox',checked:sb.ic,onchange:bind('ic','bool')}),'忽略大小寫'),
+      h('label',{class:'inl'},h('input',{type:'checkbox',checked:sb.half,onchange:bind('half','bool')}),'全形→半形'),
+      h('label',{class:'inl'},h('input',{type:'checkbox',checked:sb.squash,onchange:bind('squash','bool')}),'壓縮空白')),out));
+  calc();
+  box.append(h('div',{class:'row'},h('button',{class:'btn pri',onclick:()=>go('runs')},'下一步：執行勾稽 →')));
+  return box;
+}
+/* ============================================================
+ * 共用：虛擬捲動清單
+ * ============================================================ */
+function makeVList(o){
+  const rowH=o.rowH||32;
+  const spacer=h('div',{style:{position:'relative',width:'100%'}});
+  const el=h('div',{class:'vl',style:{height:(o.height||420)+'px'}},spacer);
+  let items=[],raf=0;
+  function paint(){
+    const top=el.scrollTop,hh=el.clientHeight||(o.height||420);
+    const first=Math.max(0,Math.floor(top/rowH)-4),last=Math.min(items.length,Math.ceil((top+hh)/rowH)+4);
+    const frag=document.createDocumentFragment();
+    for(let i=first;i<last;i++){
+      const it=items[i];
+      frag.append(h('div',{class:'vrow'+(o.isSel&&o.isSel(it)?' sel':''),style:{top:(i*rowH)+'px',height:rowH+'px'},onclick:()=>{if(o.onpick)o.onpick(it,i);}},o.render(it,i)));
+    }
+    spacer.replaceChildren(frag);
+  }
+  el.addEventListener('scroll',()=>{if(!raf)raf=requestAnimationFrame(()=>{raf=0;paint();});});
+  return {el:el,set(list){items=list;spacer.style.height=(list.length*rowH)+'px';el.scrollTop=0;paint();},repaint:paint,get length(){return items.length;}};
+}
+function cellSpan(text,w,cls){return h('span',{class:cls||'',style:w?{width:w+'px',flex:'none'}:{flex:1,minWidth:'80px'},title:typeof text==='string'?text:null},text);}
+
+/* ============================================================
+ * ⑤ 執行紀錄
+ * ============================================================ */
+function preflight(){
+  const errors=[],warns=[],P=S.profile;
+  if(!S.A)errors.push('尚未選擇 A 來源資料');
+  if(!S.B)errors.push('尚未選擇 B 來源資料');
+  if(!P.keys.length)errors.push('尚未設定 Key');
+  if(S.A&&S.B){
+    P.keys.forEach((k,i)=>{
+      if(!k.a||!S.A.headers.includes(k.a))errors.push('Key '+(i+1)+'：A 來源找不到欄位「'+(k.a||'未選擇')+'」');
+      if(!k.b||!S.B.headers.includes(k.b))errors.push('Key '+(i+1)+'：B 來源找不到欄位「'+(k.b||'未選擇')+'」');
+    });
+    P.fields.filter(f=>f.compare).forEach((f,i)=>{
+      if(!f.a||!S.A.headers.includes(f.a))errors.push('欄位「'+(f.a||'未選擇')+'」在 A 來源不存在');
+      if(!f.b||!S.B.headers.includes(f.b))errors.push('欄位「'+(f.b||'未選擇')+'」在 B 來源不存在');
+    });
+  }
+  if(!P.fields.some(f=>f.compare))warns.push('沒有任何欄位列入比對：只會檢查 Key 是否存在於兩邊（僅 A 有 / 僅 B 有 / 重複）。');
+  return {errors:errors,warns:warns};
+}
+async function execRun(){
+  const pf=preflight();if(pf.errors.length||S.running)return;
+  S.running=true;renderMain();
+  const setP=p=>{const b=document.getElementById('pgbar'),t=document.getElementById('pgtxt');if(b)b.style.width=p.pct+'%';if(t)t.textContent=p.phase+'（'+p.pct+'%）';};
+  try{
+    const t0=Date.now();
+    const out=await Bridge.call('run',enginePayload(),setP);
+    const run={id:uid('run_'),projectId:S.project.id,profileId:S.profile.id,profileName:S.profile.name,profileSnapshot:JSON.parse(JSON.stringify(S.profile)),
+      datasetA:{id:S.A.meta.id,name:S.A.meta.fileName,rows:S.A.meta.rowCount,hash:S.A.meta.hash},
+      datasetB:{id:S.B.meta.id,name:S.B.meta.fileName,rows:S.B.meta.rowCount,hash:S.B.meta.hash},
+      labelA:S.project.labelA,labelB:S.project.labelB,createdAt:Date.now(),keepMatch:!!S.profile.keepMatch,summary:out.summary,ms:Date.now()-t0};
+    await saveResults(run.id,out.results,(n,tot)=>setP({pct:90+Math.round(n/Math.max(tot,1)*9),phase:'寫入 IndexedDB（'+n.toLocaleString()+' / '+tot.toLocaleString()+'）'}));
+    await DB.put('runs',run);
+    S.runs.unshift(run);
+    S.keepResults={};S.keepResults[run.id]=out.results;
+    // 只保留最新 20 次執行
+    const old=S.runs.slice(20);
+    for(const r of old){await removeResults(r.id);await DB.del('runs',r.id);}
+    S.runs=S.runs.slice(0,20);
+    S.running=false;
+    go('result',run.id);
+  }catch(e){
+    S.running=false;renderMain();
+    if(e.message==='已取消')toast('已取消執行');
+    else errorBox('執行失敗',e&&e.name==='QuotaExceededError'?'瀏覽器儲存空間不足，無法保存結果。請刪除舊的執行紀錄或資料快照後再試。':e.message);
+  }
+}
+/* ---- 結果儲存：每 RES_CHUNK 筆一塊（resultChunks）；舊版逐筆格式（results）仍可讀取 ---- */
+async function saveResults(runId,results,onProg){
+  const tot=results.length;
+  for(let i=0;i<tot;i+=RES_CHUNK*5){   // 每個交易寫 5 塊（1 萬筆）
+    const recs=[];
+    for(let j=i;j<Math.min(tot,i+RES_CHUNK*5);j+=RES_CHUNK)recs.push({runId:runId,seq:j/RES_CHUNK,rows:results.slice(j,j+RES_CHUNK)});
+    await DB.putMany('resultChunks',recs);
+    if(onProg)onProg(Math.min(i+RES_CHUNK*5,tot),tot);
+  }
+}
+function upgradeLegacy(r){
+  /* v1 舊格式：逐欄陣列 f → 轉成緊湊格式 lv / va / vb */
+  if(!r.f||r.lv!==undefined&&r.lv!==null)return r;
+  const CODE={EQ:'E',TOL:'T',NE:'N',NULL_A:'A',NULL_B:'B'};
+  if(r.st==='DIFF'||r.st==='MATCH'){r.lv=r.f.map(x=>CODE[x[1]]||'E').join('');r.va=r.f.map(x=>x[2]);r.vb=r.f.map(x=>x[3]);}
+  else{r.lv=null;r.va=r.st==='A_ONLY'?r.f.map(x=>x[2]):null;r.vb=r.st==='B_ONLY'?r.f.map(x=>x[3]):null;}
+  delete r.f;return r;
+}
+async function readResults(runId){
+  const chunks=await DB.range('resultChunks',[runId,0],[runId,Infinity]);
+  if(chunks.length){
+    chunks.sort((a,b)=>a.seq-b.seq);
+    const out=[];chunks.forEach(c=>{for(let i=0;i<c.rows.length;i++)out.push(c.rows[i]);});
+    return out;
+  }
+  return (await DB.byIndex('results','runId',runId)).map(upgradeLegacy);
+}
+async function removeResults(runId){
+  await DB.delRange('resultChunks',[runId,0],[runId,Infinity]);
+  await DB.delRange('results',[runId,''],[runId,'\uffff']);
+}
+async function loadResults(runId){
+  if(S.keepResults[runId])return S.keepResults[runId];
+  const rows=await readResults(runId);
+  S.keepResults={};S.keepResults[runId]=rows;
+  return rows;
+}
+async function deleteRun(r){
+  if(!await confirmBox('刪除這次執行紀錄與其結果明細？（人工註記會保留）'))return;
+  await removeResults(r.id);await DB.del('runs',r.id);
+  S.runs=S.runs.filter(x=>x.id!==r.id);delete S.keepResults[r.id];renderMain();
+}
+let CMP={oldId:'',newId:'',res:null,busy:false,filter:'all'};
+function viewRuns(){
+  const pf=preflight(),box=h('div',null,pageTitle('⑤ 執行紀錄','確認設定後執行勾稽；比對在背景 Worker 進行，不會卡住畫面。每個專案保留最近 20 次執行。'));
+  const card=h('div',{class:'card'},h('h3',null,'執行前檢查'));
+  const items=[['A 來源',!!S.A,S.A?S.A.meta.fileName+'（'+S.A.meta.rowCount.toLocaleString()+' 列）':'未選擇'],['B 來源',!!S.B,S.B?S.B.meta.fileName+'（'+S.B.meta.rowCount.toLocaleString()+' 列）':'未選擇'],
+    ['Key 設定',S.profile.keys.length>0&&!pf.errors.some(x=>x.startsWith('Key')),S.profile.keys.length+' 個 Key 欄位'],
+    ['欄位對應',!pf.errors.some(x=>x.startsWith('欄位')),S.profile.fields.filter(f=>f.compare).length+' 組列入比對'],
+    ['範本',true,S.profile.name+'；重複 Key：A='+S.profile.dupPolicyA+'、B='+S.profile.dupPolicyB]];
+  card.append(h('div',{class:'kv'},items.map(([k,ok,t])=>[h('b',null,k),h('span',{class:ok?'ok':'bad'},(ok?'✓ ':'✗ ')+t)])));
+  pf.errors.forEach(e=>card.append(msg(e,'err')));pf.warns.forEach(e=>card.append(msg(e,'wn')));
+  const pg=h('div',{class:S.running?'':'hidden',style:{marginTop:'10px'}},h('div',{class:'progress'},h('i',{id:'pgbar'})),h('div',{id:'pgtxt',class:'muted'},'準備中…'));
+  card.append(h('div',{class:'row',style:{marginTop:'10px'}},
+    h('button',{class:'btn pri',disabled:pf.errors.length>0||S.running,onclick:execRun},S.running?'執行中…':'▶ 執行勾稽'),
+    S.running?h('button',{class:'btn danger',onclick:()=>Bridge.cancel()},'取消'):null),pg);
+  box.append(card);
+  const t=h('table',{class:'t'},h('thead',null,h('tr',null,['時間','範本','A 來源','B 來源','相符','差異','僅 A','僅 B','重複/空 Key','耗時',''].map(x=>h('th',null,x)))),
+    h('tbody',null,S.runs.map(r=>{const c=r.summary.counts;return h('tr',null,
+      h('td',null,fmtTime(r.createdAt)),h('td',null,r.profileName),h('td',null,r.datasetA.name+'（'+r.datasetA.rows.toLocaleString()+'）'),h('td',null,r.datasetB.name+'（'+r.datasetB.rows.toLocaleString()+'）'),
+      h('td',{class:'num'},fmtNum(c.MATCH)),h('td',{class:'num'},fmtNum(c.DIFF)),h('td',{class:'num'},fmtNum(c.A_ONLY)),h('td',{class:'num'},fmtNum(c.B_ONLY)),h('td',{class:'num'},fmtNum(c.DUP_A+c.DUP_B+c.NULL_KEY)),
+      h('td',{class:'num'},fmtDur(r.summary.ms)),
+      h('td',null,h('button',{class:'btn sm pri',onclick:()=>go('result',r.id)},'開啟'),' ',h('button',{class:'btn sm danger',onclick:()=>deleteRun(r)},'刪除')));})));
+  box.append(h('div',{class:'card'},h('h3',null,'執行紀錄（'+S.runs.length+'）'),S.runs.length?h('div',{class:'tscroll',style:{maxHeight:'none'}},t):msg('尚無執行紀錄。')));
+  // 兩次執行比較
+  if(S.runs.length>=2){
+    if(!CMP.oldId||!S.runs.find(r=>r.id===CMP.oldId))CMP.oldId=S.runs[1].id;
+    if(!CMP.newId||!S.runs.find(r=>r.id===CMP.newId))CMP.newId=S.runs[0].id;
+    const opt=r=>h('option',{value:r.id},fmtTime(r.createdAt)+'　'+r.profileName);
+    const cb=h('div',{class:'card'},h('h3',null,'兩次執行的結果比較（本月差異 vs 上月差異）'),
+      h('div',{class:'row'},h('label',{class:'f'},'舊（基準）',h('select',{value:CMP.oldId,onchange:e=>{CMP.oldId=e.target.value;CMP.res=null;}},S.runs.map(opt))),
+        h('label',{class:'f'},'新',h('select',{value:CMP.newId,onchange:e=>{CMP.newId=e.target.value;CMP.res=null;}},S.runs.map(opt))),
+        h('button',{class:'btn pri',style:{marginTop:'14px'},disabled:CMP.busy,onclick:doCompare},CMP.busy?'比較中…':'比較')));
+    if(CMP.res)cb.append(renderCompare());
+    box.append(cb);
+  }
+  return box;
+}
+function sigOf(r){
+  /* 簽章：分類 + 各欄判定碼 + 非相等欄位的兩側原始值；用來判斷「持續的差異」內容有沒有變 */
+  if(!r.lv)return r.st+'|'+(r.va?r.va.join('\u0001'):'')+'|'+(r.vb?r.vb.join('\u0001'):'')+'|'+r.na+'|'+r.nb;
+  let t=r.st+'|'+r.lv;
+  for(let i=0;i<r.lv.length;i++)if(r.lv[i]!=='E')t+='|'+i+':'+r.va[i]+'>'+r.vb[i];
+  return t;
+}
+async function doCompare(){
+  if(CMP.oldId===CMP.newId){toast('請選擇兩次不同的執行');return;}
+  CMP.busy=true;renderMain();
+  const [ra,rb]=[await readResults(CMP.oldId),await readResults(CMP.newId)];
+  const pick=(arr)=>{const m=new Map();arr.forEach(r=>{if(r.st==='MATCH'||r.st==='NULL_KEY')return;const k=m.get(r.kk);if(!k||r.st==='DIFF')m.set(r.kk,r);});return m;};
+  const mo=pick(ra),mn=pick(rb),rows=[];
+  mn.forEach((r,k)=>{const o=mo.get(k);
+    if(!o)rows.push({t:'new',ks:r.ks,os:'',ns:r.st,oad:0,nad:r.ad});
+    else rows.push({t:sigOf(o)===sigOf(r)?'same':'changed',ks:r.ks,os:o.st,ns:r.st,oad:o.ad,nad:r.ad});});
+  mo.forEach((o,k)=>{if(!mn.has(k))rows.push({t:'resolved',ks:o.ks,os:o.st,ns:'',oad:o.ad,nad:0});});
+  const ro=S.runs.find(r=>r.id===CMP.oldId),rn=S.runs.find(r=>r.id===CMP.newId);
+  CMP.res={rows:rows,oldRun:ro,newRun:rn,note:(ro.keepMatch&&rn.keepMatch)?'':'（有一次執行未保存「完全相符」明細：已消除＝已相符，或已不在資料中）'};
+  CMP.filter='all';CMP.busy=false;renderMain();
+}
+function renderCompare(){
+  const R=CMP.res,cnt={new:0,resolved:0,same:0,changed:0};R.rows.forEach(r=>cnt[r.t]++);
+  const lab={new:'新增異常',resolved:'已消除',same:'持續（無變化）',changed:'持續（有變化）'};
+  const wrap=h('div',{style:{marginTop:'10px'}});
+  const list=makeVList({height:320,rowH:30,render:r=>[cellSpan(h('span',{class:'badge '+(r.t==='new'?'b-NE':r.t==='resolved'?'b-EQ':'b-TOL')},lab[r.t]),120),cellSpan(r.ks,0,'mono'),
+    cellSpan((r.os?STATUS_LABEL[r.os]:'—')+' → '+(r.ns?STATUS_LABEL[r.ns]:'—'),170),cellSpan(r.t==='resolved'||r.t==='new'?'':fmtSigned(r.nad-r.oad),110,'mono')]});
+  const apply=()=>{list.set(CMP.filter==='all'?R.rows:R.rows.filter(r=>r.t===CMP.filter));};
+  const chips=h('div',{class:'kpis',style:{marginBottom:'8px'}},Object.keys(lab).map(k=>h('div',{class:'kpi'+(CMP.filter===k?' sel':''),onclick:()=>{CMP.filter=CMP.filter===k?'all':k;renderMain();}},h('div',{class:'v'},fmtNum(cnt[k])),h('div',{class:'l'},lab[k]))));
+  wrap.append(h('div',{class:'muted',style:{marginBottom:'6px'}},'舊：'+fmtTime(R.oldRun.createdAt)+'　新：'+fmtTime(R.newRun.createdAt)+' '+R.note),chips,list.el,
+    h('div',{class:'row',style:{marginTop:'8px'}},h('button',{class:'btn sm',onclick:()=>{
+      const rows=[['類型','Key','舊分類','新分類','舊差異金額合計','新差異金額合計']].concat(R.rows.map(r=>[lab[r.t],r.ks,r.os,r.ns,r.oad,r.nad]));
+      download('recon-run-compare.csv',toCSV(rows,true),'text/csv;charset=utf-8');}},'匯出比較 CSV')));
+  setTimeout(apply,0);
+  return wrap;
+}
+
+/* ============================================================
+ * ⑥ 結果
+ * ============================================================ */
+let R=null;  // 結果檢視狀態
+const LV={E:'EQ',T:'TOL',N:'NE',A:'NULL_A',B:'NULL_B'};
+const FC_CACHE=new Map();
+function getFC(run){
+  if(!FC_CACHE.has(run.id)){
+    FC_CACHE.clear();
+    FC_CACHE.set(run.id,(run.profileSnapshot.fields||[]).filter(x=>x.compare!==false).map((f,i)=>ENG.compileField(f,i)));
+  }
+  return FC_CACHE.get(run.id);
+}
+/* 把緊湊的結果還原成逐欄判定：[欄位索引, 判定, A 原值, B 原值, A 正規化, B 正規化, 差異, 差異%, 說明]
+   light=true 時，相等欄位不重算（匯出用，省時間） */
+function fieldRows(r,light){
+  const fc=getFC(R.run),out=[];
+  for(let i=0;i<fc.length;i++){
+    if(!r.lv){out.push([i,'-',r.va?r.va[i]:'',r.vb?r.vb[i]:'','','',null,null,'']);continue;}
+    const a=r.va[i],b=r.vb[i];
+    if(light&&r.lv[i]==='E'){out.push([i,'EQ',a,b,'','',null,null,'']);continue;}
+    const c=ENG.compareValue(a,b,fc[i]);
+    out.push([i,c[0],a,b,c[1],c[2],c[3],c[4],c[5]]);
+  }
+  return out;
+}
+function ruleText(run,fi){
+  const f=(run.profileSnapshot.fields||[]).filter(x=>x.compare!==false)[fi];if(!f)return '';
+  const parts=['型別 '+(TYPE_LABEL[f.type]||f.type)];
+  if(f.type==='number'){
+    const a=f.tolerance&&f.tolerance.abs,p=f.tolerance&&f.tolerance.pct;
+    parts.push('tol: '+((a!==''&&a!==null&&a!==undefined)?'abs='+a:'abs=無')+((p!==''&&p!==null&&p!==undefined)?' pct='+p+'%':''));
+    if(f.decimals!==''&&f.decimals!==null&&f.decimals!==undefined)parts.push('小數 '+f.decimals+' 位');
+  }
+  if(f.transform&&f.transform.length)parts.push('轉換 '+f.transform.join('>'));
+  if(f.type==='string'){if(f.ignoreCase)parts.push('忽略大小寫');if(f.half)parts.push('全形→半形');if(f.squash)parts.push('壓縮空白');}
+  parts.push(f.nullEqualsBlank!==false?'空值=空白':'嚴格空值');
+  return parts.join('；');
+}
+function viewResult(){
+  const box=h('div',null);
+  const rid=S.runId||(S.runs[0]&&S.runs[0].id);
+  if(!rid){box.append(pageTitle('⑥ 結果'),msg('尚無執行結果，請先到「⑤ 執行紀錄」執行勾稽。','wn'),h('button',{class:'btn pri',onclick:()=>go('runs')},'前往執行'));return box;}
+  box.append(msg('載入結果中…'));
+  buildResultView(box,rid);
+  return box;
+}
+let BUILD_TOK=0;
+async function buildResultView(box,rid){
+  const tok=++BUILD_TOK;
+  let run=S.runs.find(r=>r.id===rid)||await DB.get('runs',rid);
+  if(!run){clear(box).append(msg('找不到這次執行。','err'));return;}
+  const rows=await loadResults(rid);
+  const annRecs=await DB.range('annotations',[run.profileId,''],[run.profileId,'\uffff']);
+  if(tok!==BUILD_TOK)return;   // 使用者已切換到別的畫面，丟棄這次載入
+  const ann=new Map();annRecs.forEach(a=>ann.set(a.rowKey,a));
+  const sm=run.summary;
+  R={run:run,rows:rows,ann:ann,status:new Set(),field:null,q:'',annF:'',sort:'default',sel:null,showAll:false,filtered:rows,list:null,drawer:null,countEl:null};
+  clear(box);
+  // 標題
+  box.append(pageTitle('⑥ 結果','執行時間 '+fmtTime(run.createdAt)+'　範本「'+run.profileName+'」　耗時 '+(sm.ms/1000).toFixed(1)+' 秒'),
+    h('div',{class:'row',style:{marginBottom:'10px'}},
+      h('span',{class:'chip'},'A：'+run.datasetA.name+'（'+run.datasetA.rows.toLocaleString()+' 列）'),h('span',{class:'chip'},'B：'+run.datasetB.name+'（'+run.datasetB.rows.toLocaleString()+' 列）'),
+      h('span',{class:'chip'},'重複 Key：A='+sm.polA+' / B='+sm.polB),
+      h('span',{class:'chip '+(sm.check.ok?'ok':'bad')},(sm.check.ok?'✓':'✗')+' 自我檢核：Key 聯集 '+fmtNum(sm.check.union)+' = 結果涵蓋 '+fmtNum(sm.check.resultKeys)+(sm.check.matchNotStored?' + 完全相符 '+fmtNum(sm.counts.MATCH):'')),
+      h('span',{style:{flex:1}}),
+      h('select',{onchange:e=>{if(e.target.value)go('result',e.target.value);},value:rid,title:'切換執行'},S.runs.map(r=>h('option',{value:r.id},fmtTime(r.createdAt)))),
+      h('button',{class:'btn',onclick:exportCSVFlow},'匯出明細 CSV'),h('button',{class:'btn',onclick:()=>exportReport('md')},'報告 .md'),h('button',{class:'btn',onclick:()=>exportReport('html')},'報告 .html（可列印）')));
+  // KPI
+  const total=STATUS_ORDER.reduce((a,k)=>a+sm.counts[k],0)||1;
+  const kp=h('div',{class:'kpis'});
+  STATUS_ORDER.forEach(k=>{
+    const c=sm.counts[k];
+    kp.append(h('div',{class:'kpi',id:'kpi_'+k,onclick:()=>{
+      if(k==='MATCH'&&!run.keepMatch){toast('此次執行未保存「完全相符」明細（可在 ④ 勾選保存）');return;}
+      if(R.status.has(k))R.status.delete(k);else R.status.add(k);applyFilter();},title:STATUS_LABEL[k]},
+      h('div',{class:'v'},fmtNum(c)),h('div',{class:'l'},STATUS_LABEL[k]+'　'+(c/total*100).toFixed(1)+'%'),k==='MATCH'&&sm.tolMatchRows?h('div',{class:'muted',style:{fontSize:'11px'}},'含容差內 '+fmtNum(sm.tolMatchRows)+' 列'):null,
+      h('div',{class:'bar',style:{marginTop:'4px'}},h('i',{style:{width:(c/total*100)+'%'}}))));
+  });
+  box.append(h('div',{class:'card'},h('h3',null,'Summary'),kp));
+  // 控制總數
+  const ctRows=[['資料列數',sm.rowsA,sm.rowsB],['相異 Key 數',sm.keysA,sm.keysB]];
+  sm.controls.forEach(c=>ctRows.push([c.name+'（合計）',c.sumA,c.sumB]));
+  box.append(h('div',{class:'card'},h('h3',null,'Control Total 對帳'),h('div',{class:'tscroll',style:{maxHeight:'none'}},h('table',{class:'t'},
+    h('thead',null,h('tr',null,h('th',null,'項目'),h('th',{class:'num'},'A'),h('th',{class:'num'},'B'),h('th',{class:'num'},'差異（A−B）'))),
+    h('tbody',null,ctRows.map(r=>{const d=Math.round((r[1]-r[2])*1e6)/1e6;return h('tr',null,h('td',null,r[0]),h('td',{class:'num'},fmtNum(r[1])),h('td',{class:'num'},fmtNum(r[2])),h('td',{class:'num '+(d!==0?'bad':'ok')},d===0?'0':fmtSigned(d)));}))))));
+  // 熱度
+  const heat=sm.heat.map((x,i)=>Object.assign({i:i,name:sm.fields[i].a+(sm.fields[i].a!==sm.fields[i].b?' / '+sm.fields[i].b:''),type:sm.fields[i].type},x)).sort((a,b)=>(b.ne+b.nullA+b.nullB)-(a.ne+a.nullA+a.nullB));
+  const hmax=Math.max(1,...heat.map(x=>x.ne+x.nullA+x.nullB));
+  if(heat.length)box.append(h('div',{class:'card'},h('h3',null,'欄位差異熱度表（點欄位可篩選明細；金額只統計「不相等」，不含容差內）'),h('div',{class:'tscroll'},h('table',{class:'t'},
+    h('thead',null,h('tr',null,h('th',null,'欄位'),h('th',null,'分布'),h('th',{class:'num'},'不相等'),h('th',{class:'num'},'A 空值'),h('th',{class:'num'},'B 空值'),h('th',{class:'num'},'容差內'),h('th',{class:'num',title:'只統計「不相等」的欄位，不含容差內'},'差異金額合計(絕對值)'),h('th',{class:'num'},'淨差異(A−B)'))),
+    h('tbody',null,heat.map(x=>h('tr',{style:{cursor:'pointer'},onclick:()=>{R.field=R.field===x.i?null:x.i;R.status=new Set(['DIFF']);renderFilters();applyFilter();}},
+      h('td',null,h('b',null,x.name),' ',h('span',{class:'muted'},TYPE_LABEL[x.type])),h('td',{style:{width:'160px'}},h('div',{class:'bar'},h('i',{style:{width:((x.ne+x.nullA+x.nullB)/hmax*100)+'%',background:'var(--bad)'}}))),
+      h('td',{class:'num'},fmtNum(x.ne)),h('td',{class:'num'},fmtNum(x.nullA)),h('td',{class:'num'},fmtNum(x.nullB)),h('td',{class:'num'},fmtNum(x.tol)),
+      h('td',{class:'num'},x.type==='number'?fmtNum(x.absSum):'—'),h('td',{class:'num'},x.type==='number'?fmtSigned(Math.round(x.signed*1e6)/1e6):'—'))))))));
+  // 篩選 + 明細
+  const filt=h('div',{class:'row',id:'filters',style:{marginBottom:'8px'}});
+  R.filtEl=filt;
+  R.countEl=h('span',{class:'muted'});
+  R.list=makeVList({height:440,rowH:32,isSel:it=>R.sel&&R.sel.rk===it.rk,onpick:it=>{R.sel=it;R.list.repaint();renderDrawer();},render:renderResultRow});
+  R.drawer=h('div',{class:'drawer'});
+  box.append(h('div',{class:'card'},h('h3',null,'明細'),filt,
+    h('div',{class:'split'},h('div',null,h('div',{class:'vhead'},cellSpan('分類',110),cellSpan('Key',0),cellSpan('差異欄位 / 說明',230),cellSpan('差異金額',100),cellSpan('註記',70),cellSpan('A/B 列',60)),R.list.el,h('div',{style:{marginTop:'4px'}},R.countEl)),R.drawer)));
+  renderFilters();applyFilter();renderDrawer();
+}
+function renderResultRow(r){
+  const sm=R.run.summary;
+  let desc='';
+  if(r.lv&&r.st==='DIFF'){const names=[];for(let i=0;i<r.lv.length;i++)if('NAB'.indexOf(r.lv[i])>=0)names.push(sm.fields[i].a);desc=names.slice(0,3).join('、')+(names.length>3?' …+'+(names.length-3):'');}
+  else if(r.st==='DUP_A'||r.st==='DUP_B')desc=(r.st==='DUP_A'?'A':'B')+' 有 '+(r.st==='DUP_A'?r.na:r.nb)+' 筆相同 Key';
+  else if(r.ag)desc='（已彙總 '+Math.max(r.na,r.nb)+' 筆）';
+  const a=R.ann.get(r.kk);
+  return [cellSpan(h('span',{class:'badge b-'+r.st},STATUS_LABEL[r.st]),110),cellSpan(r.ks,0,'mono'),cellSpan(desc,230),cellSpan(r.st==='DIFF'&&r.ad?fmtNum(r.ad):'',100,'mono'),
+    cellSpan(a?h('span',{class:'badge b-'+a.status},ANN_LABEL[a.status]):'',70),cellSpan(r.na+'/'+r.nb,60,'muted')];
+}
+function renderFilters(){
+  const sm=R.run.summary,f=clear(R.filtEl);
+  f.append(h('input',{type:'text',placeholder:'搜尋 Key 或備註…',value:R.q,style:{width:'200px'},oninput:e=>{R.q=e.target.value;clearTimeout(R._t);R._t=setTimeout(applyFilter,200);}}),
+    h('select',{value:R.field===null?'':String(R.field),onchange:e=>{R.field=e.target.value===''?null:parseInt(e.target.value,10);if(R.field!==null)R.status=new Set(['DIFF']);applyFilter();}},
+      h('option',{value:''},'所有欄位'),sm.fields.map((x,i)=>h('option',{value:String(i)},'差異欄位：'+x.a))),
+    h('select',{value:R.annF,onchange:e=>{R.annF=e.target.value;applyFilter();}},h('option',{value:''},'所有註記狀態'),h('option',{value:'none'},'尚未註記'),ANN_STATUS.map(s=>h('option',{value:s},ANN_LABEL[s]))),
+    h('select',{value:R.sort,onchange:e=>{R.sort=e.target.value;applyFilter();}},h('option',{value:'default'},'排序：預設'),h('option',{value:'key'},'排序：Key'),h('option',{value:'diff'},'排序：差異金額大→小')),
+    h('button',{class:'btn sm',onclick:()=>{R.status=new Set();R.field=null;R.q='';R.annF='';R.sort='default';renderFilters();applyFilter();}},'清除篩選'));
+}
+function applyFilter(){
+  let a=R.rows;
+  if(R.status.size)a=a.filter(r=>R.status.has(r.st));
+  if(R.field!==null){const fi=R.field;a=a.filter(r=>r.st==='DIFF'&&r.lv&&'NAB'.indexOf(r.lv[fi])>=0);}
+  if(R.q){const q=R.q.toLowerCase();a=a.filter(r=>r.ks.toLowerCase().includes(q)||((R.ann.get(r.kk)||{}).note||'').toLowerCase().includes(q));}
+  if(R.annF==='none')a=a.filter(r=>!R.ann.has(r.kk));else if(R.annF)a=a.filter(r=>(R.ann.get(r.kk)||{}).status===R.annF);
+  if(R.sort==='key'){a=a.slice().sort((x,y)=>x.ks<y.ks?-1:x.ks>y.ks?1:0);}
+  else if(R.sort==='diff'){a=a.slice().sort((x,y)=>y.ad-x.ad);}
+  R.filtered=a;
+  STATUS_ORDER.forEach(k=>{const e=document.getElementById('kpi_'+k);if(e)e.classList.toggle('sel',R.status.has(k));});
+  R.list.set(a);
+  if(R.countEl)R.countEl.textContent='顯示 '+a.length.toLocaleString()+' / '+R.rows.length.toLocaleString()+' 筆'+(R.run.keepMatch?'':'（完全相符明細未保存）');
+}
+function renderDrawer(){
+  const d=clear(R.drawer),r=R.sel,sm=R.run.summary;
+  if(!r){d.append(h('div',{class:'card'},h('div',{class:'muted'},'點選左側任一筆，可查看兩邊原始值、正規化後的值、使用的規則與判定。')));return;}
+  const parts=r.st==='NULL_KEY'?[r.ks]:r.kk.split(ENG.SEP);
+  const card=h('div',{class:'card'},h('div',{class:'row'},h('span',{class:'badge b-'+r.st},STATUS_LABEL[r.st]),h('b',{class:'mono',style:{wordBreak:'break-all'}},r.ks)),
+    h('div',{class:'kv',style:{marginTop:'8px'}},
+      parts.length===sm.keyNames.length?sm.keyNames.map((n,i)=>[h('b',null,'Key：'+n),h('span',{class:'mono'},parts[i])]):null,
+      h('b',null,'A 筆數'),h('span',null,r.na+(r.la&&r.la.length?'　資料列 #'+r.la.join(', #')+(r.na>r.la.length?' …':''):'')),
+      h('b',null,'B 筆數'),h('span',null,r.nb+(r.lb&&r.lb.length?'　資料列 #'+r.lb.join(', #')+(r.nb>r.lb.length?' …':''):'')),
+      r.ag?[h('b',null,'備註'),h('span',null,'此 Key 有多筆，已依 aggregate 規則彙總後比對')]:null));
+  if(r.lv||r.va||r.vb){
+    const all=fieldRows(r),list=(R.showAll||!r.lv)?all:all.filter(x=>x[1]!=='EQ');
+    card.append(h('div',{class:'row',style:{margin:'10px 0 4px'}},h('b',null,'逐欄判定'),h('label',{class:'inl'},h('input',{type:'checkbox',checked:R.showAll,onchange:e=>{R.showAll=e.target.checked;renderDrawer();}}),'顯示相等欄位')));
+    if(!list.length)card.append(h('div',{class:'muted'},'所有欄位皆相等。'));
+    list.forEach(x=>{
+      const fl=sm.fields[x[0]];
+      const diffTxt=x[6]!==null&&x[6]!==undefined?'　diff(A−B)='+fmtSigned(x[6])+(x[7]!==null&&x[7]!==undefined?' ('+x[7].toFixed(2)+'%)':''):'';
+      card.append(h('div',{style:{borderTop:'1px solid var(--line)',padding:'6px 0'}},
+        h('div',{class:'row'},h('b',null,fl.a+(fl.a!==fl.b?' / '+fl.b:'')),h('span',{class:'badge b-'+x[1]},x[1]==='-'?'—':x[1]+' '+LEVEL_LABEL[x[1]])),
+        h('div',{class:'mono',style:{fontSize:'12px',wordBreak:'break-all'}},'A='+JSON.stringify(x[2])+'　B='+JSON.stringify(x[3])),
+        (x[4]!==''||x[5]!=='')&&(x[4]!==x[2]||x[5]!==x[3])?h('div',{class:'mono muted',style:{fontSize:'12px',wordBreak:'break-all'}},'正規化後：A='+JSON.stringify(x[4])+'　B='+JSON.stringify(x[5])):null,
+        diffTxt?h('div',{class:'mono',style:{fontSize:'12px'}},diffTxt.trim()):null,
+        x[8]?h('div',{class:'muted',style:{fontSize:'12px'}},x[8]):null,
+        h('div',{class:'muted',style:{fontSize:'12px'}},'規則：'+ruleText(R.run,x[0]))));
+    });
+  }
+  // 註記（Key 為空的資料列沒有穩定的識別，不提供註記）
+  if(r.st==='NULL_KEY'){d.append(card);return;}
+  const a=R.ann.get(r.kk)||{status:'Open',note:''};
+  const st=h('select',{value:a.status},ANN_STATUS.map(s=>h('option',{value:s},ANN_LABEL[s]+'（'+s+'）')));
+  const nt=h('textarea',{value:a.note||'',placeholder:'備註：原因、處理方式、佐證…'});
+  card.append(h('div',{style:{borderTop:'2px solid var(--line)',marginTop:'10px',paddingTop:'10px'}},h('b',null,'人工註記'),
+    h('div',{class:'muted',style:{fontSize:'12px'}},'依 Key 保存於範本下，重新執行後仍會保留。'),
+    h('div',{class:'row',style:{margin:'6px 0'}},st),nt,
+    h('div',{class:'row',style:{marginTop:'6px'}},
+      h('button',{class:'btn pri',onclick:async()=>{
+        const rec={profileId:R.run.profileId,rowKey:r.kk,status:st.value,note:nt.value,updatedAt:Date.now()};
+        await DB.put('annotations',rec);R.ann.set(r.kk,rec);R.list.repaint();toast('已儲存註記');}},'儲存註記'),
+      R.ann.has(r.kk)?h('button',{class:'btn danger',onclick:async()=>{await DB.del('annotations',[R.run.profileId,r.kk]);R.ann.delete(r.kk);R.list.repaint();renderDrawer();}},'清除註記'):null)));
+  d.append(card);
+}
+
+/* ---------- 匯出 ---------- */
+function runRowsForExport(rows){
+  const sm=R.run.summary,nk=sm.keyNames.length;
+  const head=['分類','分類說明'].concat(sm.keyNames.map(n=>'Key:'+n),['A 筆數','B 筆數']);
+  sm.fields.forEach(f=>{const n=f.a+(f.a!==f.b?'/'+f.b:'');head.push(n+'_A',n+'_B',n+'_差異(A-B)',n+'_判定');});
+  head.push('註記狀態','備註');
+  const out=[head];
+  rows.forEach(r=>{
+    const parts=r.st==='NULL_KEY'?[r.ks]:r.kk.split(ENG.SEP);
+    while(parts.length<nk)parts.push('');
+    const line=[r.st,STATUS_LABEL[r.st]].concat(parts.slice(0,Math.max(nk,1)),[r.na,r.nb]);
+    const fr=(r.lv||r.va||r.vb)?fieldRows(r,true):null;
+    sm.fields.forEach((_,i)=>{const x=fr?fr[i]:null;line.push(x?x[2]:'',x?x[3]:'',x&&x[6]!==null&&x[6]!==undefined?x[6]:'',x?(x[1]==='-'?'':x[1]):'');});
+    const a=R.ann.get(r.kk);line.push(a?a.status:'',a?a.note:'');
+    out.push(line);
+  });
+  return out;
+}
+async function exportCSVFlow(){
+  const sm=R.run.summary,chosen=new Set(STATUS_ORDER.filter(k=>k!=='MATCH'&&sm.counts[k]>0));
+  const useFilter=h('input',{type:'checkbox'});
+  const guard=h('input',{type:'checkbox',checked:true});
+  const body=h('div',null,h('div',null,'選擇要匯出的分類：'),h('div',{class:'row',style:{margin:'8px 0'}},STATUS_ORDER.map(k=>h('label',{class:'inl'},
+      h('input',{type:'checkbox',checked:chosen.has(k),disabled:k==='MATCH'&&!R.run.keepMatch,onchange:e=>{if(e.target.checked)chosen.add(k);else chosen.delete(k);}}),STATUS_LABEL[k]+'（'+fmtNum(sm.counts[k])+'）'))),
+    h('label',{class:'inl'},useFilter,'只匯出目前篩選結果（'+fmtNum(R.filtered.length)+' 筆）'),h('br'),
+    h('label',{class:'inl'},guard,'防止 CSV 公式注入（文字以 = + @ 開頭時加上單引號）'),
+    h('div',{class:'muted',style:{marginTop:'6px'}},'檔案含 UTF-8 BOM，可直接用 Excel 開啟。差異欄位定義：A − B。'));
+  const ok=await modal('匯出明細 CSV',body,[{label:'取消',value:false},{label:'匯出',pri:true,value:true}]);
+  if(!ok)return;
+  const src=useFilter.checked?R.filtered:R.rows;
+  const rows=src.filter(r=>chosen.has(r.st));
+  download('recon-result-'+fmtTime(R.run.createdAt).replace(/[: ]/g,'-')+'.csv',toCSV(runRowsForExport(rows),guard.checked),'text/csv;charset=utf-8');
+  toast('已匯出 '+rows.length.toLocaleString()+' 筆');
+}
+function reportModel(){
+  const run=R.run,sm=run.summary,c=sm.counts,tot=STATUS_ORDER.reduce((a,k)=>a+c[k],0)||1;
+  const annCount={};ANN_STATUS.forEach(s=>annCount[s]=0);
+  R.rows.forEach(r=>{const a=R.ann.get(r.kk);if(a)annCount[a.status]++;});
+  const tables=[
+    {title:'結果摘要',head:['分類','筆數','占比'],rows:STATUS_ORDER.map(k=>[STATUS_LABEL[k]+'（'+k+'）',fmtNum(c[k]),(c[k]/tot*100).toFixed(2)+'%'])},
+    {title:'Control Total 對帳（差異 = A − B）',head:['項目','A','B','差異'],rows:[['資料列數',fmtNum(sm.rowsA),fmtNum(sm.rowsB),fmtSigned(sm.rowsA-sm.rowsB)||'0'],['相異 Key 數',fmtNum(sm.keysA),fmtNum(sm.keysB),fmtSigned(sm.keysA-sm.keysB)||'0']].concat(sm.controls.map(x=>[x.name,fmtNum(x.sumA),fmtNum(x.sumB),fmtSigned(Math.round((x.sumA-x.sumB)*1e6)/1e6)||'0']))}
+  ];
+  const heat=sm.heat.map((x,i)=>({n:sm.fields[i].a,x:x})).filter(o=>o.x.ne+o.x.nullA+o.x.nullB+o.x.tol>0).sort((a,b)=>(b.x.ne+b.x.nullA+b.x.nullB)-(a.x.ne+a.x.nullA+a.x.nullB));
+  if(heat.length)tables.push({title:'欄位差異熱度',head:['欄位','不相等','A 空值','B 空值','容差內','差異金額合計(不相等,絕對值)','淨差異(A−B,不相等)'],rows:heat.map(o=>[o.n,o.x.ne,o.x.nullA,o.x.nullB,o.x.tol,fmtNum(o.x.absSum),fmtSigned(Math.round(o.x.signed*1e6)/1e6)||'0'])});
+  if(Object.values(annCount).some(v=>v>0))tables.push({title:'人工註記統計',head:['狀態','筆數'],rows:ANN_STATUS.map(s=>[ANN_LABEL[s]+'（'+s+'）',annCount[s]])});
+  return {title:'勾稽報告｜'+S.project.name,meta:[['執行時間',fmtTime(run.createdAt)],['範本',run.profileName],['Key',sm.keyNames.join(' + ')],
+    ['A 來源',run.datasetA.name+'（'+run.datasetA.rows.toLocaleString()+' 列，SHA-256 '+run.datasetA.hash+'）'],['B 來源',run.datasetB.name+'（'+run.datasetB.rows.toLocaleString()+' 列，SHA-256 '+run.datasetB.hash+'）'],
+    ['重複 Key 處理','A='+sm.polA+'、B='+sm.polB],['自我檢核',sm.check.ok?'通過':'未通過'],['完全相符中屬於容差內相等',fmtNum(sm.tolMatchRows)+' 列']],tables:tables};
+}
+function exportReport(kind){
+  const m=reportModel(),stamp=fmtTime(R.run.createdAt).replace(/[: ]/g,'-');
+  if(kind==='md'){
+    let s='# '+m.title+'\n\n'+m.meta.map(x=>'- **'+x[0]+'**：'+x[1]).join('\n')+'\n';
+    m.tables.forEach(t=>{s+='\n## '+t.title+'\n\n| '+t.head.join(' | ')+' |\n|'+t.head.map(()=>'---').join('|')+'|\n'+t.rows.map(r=>'| '+r.map(x=>String(x).replace(/\|/g,'\\|')).join(' | ')+' |').join('\n')+'\n';});
+    download('recon-report-'+stamp+'.md',s,'text/markdown;charset=utf-8');
+  }else{
+    let s='<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><title>'+esc(m.title)+'</title><style>body{font:14px/1.6 "Microsoft JhengHei",sans-serif;max-width:960px;margin:24px auto;padding:0 16px;color:#1d2433}table{border-collapse:collapse;width:100%;margin:8px 0 20px}th,td{border:1px solid #ccd3de;padding:4px 8px;text-align:left}th{background:#eef1f6}td:not(:first-child){text-align:right}h1{font-size:22px}h2{font-size:16px;margin-top:24px}.meta td:first-child{width:160px;font-weight:600;text-align:left}.meta td{text-align:left}@media print{button{display:none}}</style></head><body>';
+    s+='<button onclick="window.print()">列印</button><h1>'+esc(m.title)+'</h1><table class="meta">'+m.meta.map(x=>'<tr><td>'+esc(x[0])+'</td><td>'+esc(x[1])+'</td></tr>').join('')+'</table>';
+    m.tables.forEach(t=>{s+='<h2>'+esc(t.title)+'</h2><table><thead><tr>'+t.head.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+t.rows.map(r=>'<tr>'+r.map(x=>'<td>'+esc(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table>';});
+    s+='</body></html>';
+    download('recon-report-'+stamp+'.html',s,'text/html;charset=utf-8');
+  }
+}
+/* ============================================================
+ * 備份 / 還原
+ * ============================================================ */
+async function backupFlow(){
+  const raw=h('input',{type:'checkbox',checked:true}),res=h('input',{type:'checkbox',checked:true});
+  const ok=await modal('備份全部資料',h('div',null,
+    h('p',null,'將所有專案、範本、執行紀錄與人工註記匯出成單一 JSON。'),
+    h('label',{class:'inl'},raw,'包含原始資料快照（檔案可能很大）'),h('br'),
+    h('label',{class:'inl'},res,'包含執行結果明細'),
+    h('div',{class:'muted',style:{marginTop:'8px'}},'不含原始資料時，還原後需要重新匯入 A、B 資料。')),[{label:'取消',value:false},{label:'匯出備份',pri:true,value:true}]);
+  if(!ok)return;
+  try{
+    const stores=['projects','profiles','runs','annotations','settings'];
+    if(raw.checked)stores.push('datasets','datasetChunks');
+    if(res.checked)stores.push('resultChunks','results');
+    const parts=['{"type":"ReconLabBackup","version":1,"app":'+JSON.stringify(APP_VERSION)+',"createdAt":'+Date.now()+',"stores":{'];
+    for(let si=0;si<stores.length;si++){
+      const name=stores[si];let arr=await DB.all(name);
+      if(name==='projects'&&!raw.checked)arr=arr.map(p=>Object.assign({},p,{sourceA:null,sourceB:null}));
+      parts.push((si?',':'')+JSON.stringify(name)+':[');
+      for(let i=0;i<arr.length;i+=500)parts.push((i?',':'')+arr.slice(i,i+500).map(x=>JSON.stringify(x)).join(','));   // 分段序列化，避免單一超大字串
+      parts.push(']');arr=null;
+    }
+    parts.push('}}');
+    const blob=new Blob(parts,{type:'application/json'});
+    download('reconlab-backup-'+fmtTime(Date.now()).replace(/[: ]/g,'-')+'.json',blob);
+    toast('備份完成（'+(blob.size/1024/1024).toFixed(1)+' MB）');
+  }catch(e){toast('備份失敗：'+e.message,5000);}
+}
+function restoreFlow(){
+  const inp=h('input',{type:'file',accept:'.json,application/json'});
+  inp.onchange=async()=>{
+    const f=inp.files[0];if(!f)return;
+    try{
+      const js=JSON.parse(await f.text());
+      if(js.type!=='ReconLabBackup'||!js.stores)throw new Error('不是 Reconciliation Lab 的備份檔');
+      if(!await confirmBox('還原會「清除並取代」目前瀏覽器中的所有資料，確定要繼續？'))return;
+      const all=['projects','datasets','datasetChunks','profiles','runs','results','resultChunks','annotations','settings'];
+      await DB.clear(all);
+      for(const s of all){
+        const arr=js.stores[s]||[];
+        for(let i=0;i<arr.length;i+=4000)await DB.putMany(s,arr.slice(i,i+4000));
+      }
+      DataStore.cache.clear();S.keepResults={};S.project=null;
+      await loadProjects();
+      if(!S.projects.length)await createProject('我的第一個勾稽專案');
+      toast('還原完成');
+      location.hash='#/p/'+S.projects[0].id+'/data';
+      await route();
+    }catch(e){toast('還原失敗：'+e.message,5000);}
+  };
+  inp.click();
+}
+
+/* ============================================================
+ * 自我檢測（對應驗收條件）
+ * ============================================================ */
+function mkField(o){return ENG.compileField(Object.assign({a:'x',b:'x',type:'number'},o),0);}
+async function runSelfTests(){
+  const T=[];
+  const add=(name,fn)=>T.push({name:name,fn:fn});
+  add('驗收 3：容差 abs=1，100.4 vs 101 → TOL',()=>ENG.compareValue('100.4','101',mkField({tolerance:{abs:1}}))[0]==='TOL');
+  add('驗收 3：容差 abs=1，100 vs 102 → NE',()=>ENG.compareValue('100','102',mkField({tolerance:{abs:1}}))[0]==='NE');
+  add('驗收 4：padStart:4:0 後 "0001" 與 "1" 為相同 Key',()=>{
+    const P={keys:[{a:'k',b:'k',transform:['trim','padStart:4:0']}],fields:[{a:'v',b:'v',type:'string',compare:true}]};
+    const r=ENG.run({A:{headers:['k','v'],rows:[['1','x']]},B:{headers:['k','v'],rows:[['0001','x']]},profile:P,opts:{keepMatch:true}});
+    return r.summary.counts.MATCH===1&&r.summary.counts.A_ONLY===0;});
+  add('驗收 5：民國 115/10/27 與 2026-10-27 相等',()=>ENG.compareValue('115/10/27','2026-10-27',ENG.compileField({a:'d',b:'d',type:'date'},0))[0]==='EQ');
+  add('日期：YYYYMMDD、民國 1151027、115年10月27日 皆為 2026-10-27',()=>['20261027','1151027','115年10月27日','2026.10.27'].every(x=>ENG.parseDate(x)==='2026-10-27')&&ENG.parseDate('2026-02-30')===null);
+  add('數值：千分位、括號負數、貨幣符號',()=>ENG.parseNumber('1,234.5')===1234.5&&ENG.parseNumber('(50)')===-50&&ENG.parseNumber('NT$ 1,000')===1000&&isNaN(ENG.parseNumber('abc')));
+  add('布林：Y / 是 / 1 / true 相同',()=>{const f=ENG.compileField({a:'b',b:'b',type:'bool'},0);return ENG.compareValue('Y','是',f)[0]==='EQ'&&ENG.compareValue('1','true',f)[0]==='EQ'&&ENG.compareValue('Y','N',f)[0]==='NE';});
+  add('驗收 2：分類筆數與 Key 聯集一致（含重複、空 Key）',()=>{
+    const P={keys:[{a:'k',b:'k',transform:['trim']}],dupPolicyA:'flag',dupPolicyB:'flag',fields:[{a:'v',b:'v',type:'number',compare:true,tolerance:{abs:0}}]};
+    const A={headers:['k','v'],rows:[['a','1'],['b','2'],['c','3'],['c','3'],['','9'],['e','5']]};
+    const B={headers:['k','v'],rows:[['a','1'],['b','9'],['d','4'],['e','5'],['e','5']]};
+    const r=ENG.run({A:A,B:B,profile:P,opts:{keepMatch:false}}),c=r.summary.counts;
+    return r.summary.check.ok&&c.MATCH===1&&c.DIFF===1&&c.A_ONLY===0&&c.B_ONLY===1&&c.DUP_A===1&&c.DUP_B===1&&c.NULL_KEY===1&&r.summary.unionKeys===5;});
+  add('重複 Key aggregate（一對多）：A 額度 vs B 多筆動撥加總',()=>{
+    const P={keys:[{a:'k',b:'k',transform:[]}],dupPolicyA:'flag',dupPolicyB:'aggregate',fields:[{a:'v',b:'v',type:'number',compare:true,tolerance:{abs:0}}]};
+    const r=ENG.run({A:{headers:['k','v'],rows:[['a','100']]},B:{headers:['k','v'],rows:[['a','40'],['a','60']]},profile:P,opts:{}});
+    return r.summary.counts.MATCH===1;});
+  add('CSV 解析：引號、跳脫、欄位內換行、CRLF',()=>{
+    const r=ENG.parseCSV('a,b\r\n"x,1","he said ""hi""\nline2"\r\n3,\r\n',',');
+    return r.length===3&&r[1][0]==='x,1'&&r[1][1]==='he said "hi"\nline2'&&r[2][1]==='';});
+  add('Big5 解碼',()=>{
+    const bytes=new Uint8Array([0xA7,0xDA]);  // 「我」
+    return new TextDecoder('big5').decode(bytes)==='我';});
+  add('修正：大金額 + 小容差不因浮點誤差誤判（9876543210.5 vs .4，abs=0.1）',()=>ENG.compareValue('9876543210.5','9876543210.4',mkField({tolerance:{abs:0.1}}))[0]==='TOL'&&ENG.compareValue('1234567890.12','1234567890.11',mkField({tolerance:{abs:0.01}}))[0]==='TOL'&&ENG.compareValue('100','102',mkField({tolerance:{abs:0}}))[0]==='NE');
+  add('修正：TSV 前置標題列時仍能偵測分隔符號',()=>{
+    const r=ENG.parseFile({buffer:new TextEncoder().encode('報表標題\n製表日期：2026/10/27\nid\tamt\n1\t100\n').buffer,kind:'csv',encoding:'utf-8',delimiter:'auto',hasHeader:true,skip:2});
+    return r.headers.join('|')==='id|amt'&&r.rows.length===1;});
+  add('修正：UTF-16LE（BOM）自動偵測',()=>{
+    const u=new Uint8Array(2+2*13);u[0]=0xFF;u[1]=0xFE;const t='id\tamt\n1\t100\n';for(let i=0;i<t.length;i++){u[2+i*2]=t.charCodeAt(i);}
+    const r=ENG.parseFile({buffer:u.buffer.slice(0,2+t.length*2),kind:'csv',encoding:'auto',delimiter:'auto',hasHeader:true,skip:0});
+    return r.encoding==='utf-16le'&&r.headers.join('|')==='id|amt';});
+  add('修正：熱度表差異金額只統計「不相等」，不含容差內',()=>{
+    const P={keys:[{a:'k',b:'k',transform:[]}],fields:[{a:'v',b:'v',type:'number',compare:true,tolerance:{abs:1}}]};
+    const r=ENG.run({A:{headers:['k','v'],rows:[['a','100'],['b','100']]},B:{headers:['k','v'],rows:[['a','100.5'],['b','150']]},profile:P,opts:{}});
+    return r.summary.heat[0].absSum===50&&r.summary.heat[0].tol===1&&r.summary.heat[0].ne===1;});
+  add('結果採緊湊格式：判定碼 lv 與原始值 va / vb',()=>{
+    const P={keys:[{a:'k',b:'k',transform:[]}],fields:[{a:'v',b:'v',type:'number',compare:true,tolerance:{abs:1}},{a:'w',b:'w',type:'string',compare:true}]};
+    const r=ENG.run({A:{headers:['k','v','w'],rows:[['a','100','x']]},B:{headers:['k','v','w'],rows:[['a','100.5','y']]},profile:P,opts:{}});
+    const d=r.results[0];return d.st==='DIFF'&&d.lv==='TN'&&d.va[1]==='x'&&d.vb[1]==='y'&&d.f===undefined;});
+  add('相容：舊版（v1）逐筆結果可轉成緊湊格式',()=>{
+    const old={st:'DIFF',kk:'k',f:[[0,'NE','1','2','1','2',-1,-50,''],[1,'EQ','x','x','x','x',null,null,''],[2,'TOL','5','5.5','5','5.5',-0.5,-9,'']],lv:undefined};
+    const r=upgradeLegacy(old);const a=upgradeLegacy({st:'A_ONLY',f:[[0,'-','7','','','',null,null,'']]});
+    return r.lv==='NET'&&r.va.join()==='1,x,5'&&r.vb.join()==='2,x,5.5'&&r.f===undefined&&a.lv===null&&a.va[0]==='7'&&a.vb===null;});
+  add('結果分塊寫入 / 讀回 / 刪除（resultChunks）',async()=>{
+    const rid='__selftest_run',rows=Array.from({length:4500},(_,i)=>({kk:'k'+i,st:'DIFF',lv:'N',va:['1'],vb:['2']}));
+    await saveResults(rid,rows);const back=await readResults(rid);const ok=back.length===4500&&back[0].kk==='k0'&&back[4499].kk==='k4499';
+    await removeResults(rid);return ok&&(await readResults(rid)).length===0;});
+  add('驗收 8：程式碼不含動態執行、HTML 字串注入與網路 API 的寫法',()=>{
+    const src=Array.from(document.scripts).map(s=>s.textContent).join('\n');
+    const bad=['ev'+'al(','new Fun'+'ction','inner'+'HTML','outer'+'HTML','insertAdjacent'+'HTML','fet'+'ch(','XMLHttp'+'Request','Web'+'Socket','send'+'Beacon','document.wri'+'te'];
+    const hit=bad.filter(t=>src.indexOf(t)>=0);
+    return hit.length===0||('發現：'+hit.join(', '));});
+  add('IndexedDB 讀寫（settings）',async()=>{
+    await setSetting('__selftest',{t:Date.now()});const v=await getSetting('__selftest',null);await DB.del('settings','__selftest');return !!(v&&v.t);});
+  add('Web Worker（Blob inline）可用：解析 + 勾稽往返',async()=>{
+    const buf=new TextEncoder().encode('k,v\n1,2\n').buffer;
+    const r=await Bridge.call('parse',{buffer:buf,kind:'csv',encoding:'utf-8',delimiter:'auto',hasHeader:true,skip:0});
+    return (r.rows.length===1&&r.headers[1]==='v')?(Bridge.supported||'Worker 不可用，已退回主執行緒（功能正常）'):false;});
+  const out=[];
+  for(const t of T){
+    let ok=false,note='';
+    try{const r=await t.fn();ok=(r===true);if(typeof r==='string'){note=r;ok=r.indexOf('不可用')>=0;}}catch(e){ok=false;note=e.message;}
+    out.push({name:t.name,ok:ok,note:note});
+  }
+  return out;
+}
+function genPerfData(n,cols,seed){
+  const rows=new Array(n);
+  for(let i=0;i<n;i++){
+    const r=new Array(cols+1);r[0]='K'+i;
+    for(let c=1;c<=cols;c++)r[c]=String(((i*(c+3))%100000)/100+(seed&&i%17===0&&c===1?1:0));
+    rows[i]=r;
+  }
+  return rows;
+}
+async function perfTest(outEl){
+  const N=50000,C=20;
+  clear(outEl).append(msg('產生測試資料並執行中…'));
+  const hd=['K'].concat(Array.from({length:C},(_,i)=>'c'+(i+1)));
+  const P={keys:[{a:'K',b:'K',transform:['trim']}],dupPolicyA:'flag',dupPolicyB:'flag',fields:hd.slice(1).map(c=>({a:c,b:c,type:'number',compare:true,tolerance:{abs:0}}))};
+  const A={headers:hd,rows:genPerfData(N,C,0)},B={headers:hd,rows:genPerfData(N,C,1)};
+  const t0=performance.now();let ticks=0,lastGap=0,last=performance.now();
+  const timer=setInterval(()=>{const now=performance.now();lastGap=Math.max(lastGap,now-last-50);last=now;ticks++;},50);
+  try{
+    const r=await Bridge.call('run',{A:A,B:B,profile:P,opts:{keepMatch:false}});
+    clearInterval(timer);
+    const ms=performance.now()-t0;
+    clear(outEl).append(msg('完成：A、B 各 '+N.toLocaleString()+' 列 × '+C+' 欄，耗時 '+(ms/1000).toFixed(2)+' 秒（'+(ms<5000?'✓ 達成 < 5 秒目標':'✗ 超過 5 秒目標')+'）；比對期間主執行緒最長停頓約 '+Math.max(0,Math.round(lastGap))+' ms（'+(Bridge.supported?'Worker 執行':'主執行緒執行')+'）。結果：相符 '+fmtNum(r.summary.counts.MATCH)+'、差異 '+fmtNum(r.summary.counts.DIFF)+'。',ms<5000?'okm':'wn'));
+  }catch(e){clearInterval(timer);clear(outEl).append(msg('失敗：'+e.message,'err'));}
+}
+async function selfTestFlow(){
+  const out=h('div',null,msg('檢測中…'));
+  const perf=h('div',{style:{marginTop:'10px'}});
+  const modalP=modal('自我檢測',h('div',null,out,h('div',{class:'row',style:{marginTop:'10px'}},h('button',{class:'btn',onclick:()=>perfTest(perf)},'效能測試（5 萬列 × 20 欄）')),perf),[{label:'關閉',value:null}]);
+  const res=await runSelfTests();
+  const pass=res.filter(r=>r.ok).length;
+  clear(out).append(msg(pass+' / '+res.length+' 項通過',pass===res.length?'okm':'err'),
+    h('table',{class:'t'},h('tbody',null,res.map(r=>h('tr',null,h('td',{style:{width:'30px'}},r.ok?'✅':'❌'),h('td',null,r.name,r.note?h('div',{class:'muted',style:{fontSize:'12px'}},r.note):null))))));
+  await modalP;
+}
+
+/* ============================================================
+ * 啟動
+ * ============================================================ */
+async function boot(){
+  const app=$root();
+  window.addEventListener('unhandledrejection',e=>{e.preventDefault();const r=e.reason;toast('發生錯誤：'+((r&&r.message)||r),6000);});
+  window.addEventListener('error',e=>{toast('發生錯誤：'+(e.message||'未知錯誤'),6000);});
+  if(!window.indexedDB){app.append(msg('此瀏覽器不支援 IndexedDB，無法使用本工具。','err'));return;}
+  try{await DB.open();}
+  catch(e){app.append(msg('無法開啟 IndexedDB：'+e.message+'（請確認不是無痕模式，或未被封鎖網站資料儲存）','err'));return;}
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}   // 盡量避免瀏覽器在空間不足時自動清除資料
+  await loadProjects();
+  if(!S.projects.length)await createProject('我的第一個勾稽專案');
+  if(!/^#\/(p\/[^/]+|home)/.test(location.hash)){
+    const last=await getSetting('lastProject',null);
+    const p=S.projects.find(x=>x.id===last)||S.projects[0];
+    history.replaceState(null,'','#/p/'+p.id+'/data');
+  }
+  window.addEventListener('hashchange',route);
+  await route();
+}
+boot();
+
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style></body>
+</html>

@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Codebook Studio 代碼簿工作台</title>
+<style>
+:root{--bg:#f5f6f8;--panel:#fff;--panel2:#f0f2f5;--bd:#d9dde3;--tx:#1f2430;--mu:#6b7280;--pri:#2563eb;--pri2:#1d4ed8;--ok:#15803d;--warn:#b45309;--err:#b91c1c;--info:#0369a1;--sel:#e8f0fe;--sh:0 8px 30px rgba(0,0,0,.18)}
+[data-theme=dark]{--bg:#12151b;--panel:#1b1f27;--panel2:#242934;--bd:#323846;--tx:#e6e9ef;--mu:#9aa3b2;--pri:#5b8def;--pri2:#7aa2f7;--ok:#4ade80;--warn:#fbbf24;--err:#f87171;--info:#38bdf8;--sel:#25314a;--sh:0 8px 30px rgba(0,0,0,.6)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.5 "Segoe UI","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+button,input,select,textarea{font:inherit;color:inherit}
+#app{display:flex;flex-direction:column;height:100vh}
+header.top{display:flex;gap:10px;align-items:center;padding:8px 14px;background:var(--panel);border-bottom:1px solid var(--bd)}
+header.top h1{font-size:16px;margin:0;white-space:nowrap}
+header.top .sp{flex:1}
+#gsearch{width:300px;max-width:35vw}
+#main{flex:1;display:flex;min-height:0}
+nav#side{width:230px;background:var(--panel);border-right:1px solid var(--bd);overflow:auto;padding:10px;flex-shrink:0}
+nav#side h3{font-size:12px;color:var(--mu);margin:14px 4px 6px;text-transform:uppercase;letter-spacing:.05em}
+.nv{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;cursor:pointer;user-select:none}
+.nv:hover{background:var(--panel2)}
+.nv.on{background:var(--sel);color:var(--pri);font-weight:600}
+.nv .n{margin-left:auto;font-size:11px;color:var(--mu)}
+.nv.arch{opacity:.55}
+section#content{flex:1;overflow:auto;padding:14px 18px;min-width:0}
+.btn{border:1px solid var(--bd);background:var(--panel);border-radius:6px;padding:5px 11px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--panel2)}
+.btn.pri{background:var(--pri);border-color:var(--pri);color:#fff}.btn.pri:hover{background:var(--pri2)}
+.btn.dng{color:var(--err);border-color:var(--err)}
+.btn.sm{padding:2px 8px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+input[type=text],input[type=search],input[type=date],input[type=number],select,textarea{background:var(--panel);border:1px solid var(--bd);border-radius:6px;padding:5px 8px;max-width:100%}
+textarea{width:100%;min-height:60px;font-family:Consolas,monospace}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--pri);outline-offset:-1px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.card{background:var(--panel);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin-bottom:12px}
+.card h2,.card h3{margin:0 0 8px;font-size:15px}
+h2.pg{font-size:18px;margin:0 0 4px}
+.mu{color:var(--mu)}.sm{font-size:12px}
+table.t{border-collapse:collapse;width:100%;background:var(--panel)}
+table.t th,table.t td{border-bottom:1px solid var(--bd);padding:5px 8px;text-align:left;vertical-align:top}
+table.t th{background:var(--panel2);position:sticky;top:0;z-index:1;cursor:default;white-space:nowrap}
+table.t th.s{cursor:pointer}
+table.t tr:hover td{background:var(--sel)}
+table.t tr.sel td{background:var(--sel)}
+.wrap{overflow:auto;border:1px solid var(--bd);border-radius:8px;max-height:62vh}
+.tag{display:inline-block;padding:0 7px;border-radius:10px;font-size:11px;border:1px solid var(--bd);background:var(--panel2);margin:1px}
+.tag.ok{color:var(--ok);border-color:var(--ok)}.tag.warn{color:var(--warn);border-color:var(--warn)}.tag.err{color:var(--err);border-color:var(--err)}.tag.info{color:var(--info);border-color:var(--info)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+.fld{display:flex;flex-direction:column;gap:3px;margin-bottom:8px}
+.fld label{font-size:12px;color:var(--mu)}
+.fld .req::after{content:" *";color:var(--err)}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;justify-content:center;align-items:flex-start;padding:5vh 12px;z-index:50;overflow:auto}
+.mask.drawer{justify-content:flex-end;padding:0;align-items:stretch}
+.modal{background:var(--panel);border-radius:10px;box-shadow:var(--sh);width:min(760px,100%);padding:16px 18px;max-height:90vh;overflow:auto}
+.drawer .modal{border-radius:0;max-height:100vh;height:100%;width:min(560px,100%)}
+.modal h2{margin:0 0 10px;font-size:16px}
+.foot{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+#toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:6px;z-index:99}
+.ts{background:var(--tx);color:var(--bg);padding:8px 14px;border-radius:8px;box-shadow:var(--sh);max-width:420px}
+.ts.err{background:var(--err);color:#fff}
+.banner.err{background:#fdecec;color:#8a1f1f;border-color:#e7a3a3}
+[data-theme=dark] .banner.err{background:#3b1717;color:#fca5a5;border-color:#7f2d2d}
+.banner{background:#fff7e6;color:#7a4b00;border:1px solid #f0c36d;border-radius:8px;padding:8px 12px;margin-bottom:10px;display:flex;gap:10px;align-items:center}
+[data-theme=dark] .banner{background:#3a2d12;color:#fcd98a;border-color:#7a5a1a}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--bd);margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:7px 14px;cursor:pointer;border-bottom:2px solid transparent;color:var(--mu)}
+.tab.on{color:var(--pri);border-color:var(--pri);font-weight:600}
+.tree ul{list-style:none;margin:0;padding-left:20px;border-left:1px dashed var(--bd)}
+.tree>ul{border-left:0;padding-left:0}
+.tree li{padding:2px 0}
+.tree .tg{cursor:pointer;display:inline-block;width:16px;color:var(--mu)}
+.tree .nd{cursor:pointer;padding:1px 6px;border-radius:4px}.tree .nd:hover{background:var(--sel)}
+.pre{font-family:Consolas,monospace;font-size:12px;white-space:pre-wrap;word-break:break-all;background:var(--panel2);padding:6px 8px;border-radius:6px;max-height:240px;overflow:auto}
+.diffold{background:rgba(185,28,28,.12)}.diffnew{background:rgba(21,128,61,.14)}
+.empty{text-align:center;padding:40px 10px;color:var(--mu)}
+.bigstat{display:flex;gap:10px;flex-wrap:wrap}.bigstat div{background:var(--panel2);border-radius:8px;padding:6px 12px;min-width:90px}.bigstat b{font-size:18px;display:block}
+@media(max-width:800px){nav#side{width:150px}#gsearch{width:140px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <h1>📚 Codebook Studio</h1>
+    <input id="gsearch" type="search" placeholder="全域搜尋 代碼／名稱／別名（按 / 聚焦，Enter 查詢）">
+    <span class="sp"></span>
+    <button class="btn" data-act="openImport">匯入</button>
+    <button class="btn" data-act="openExport">匯出</button>
+    <button class="btn" data-act="openSettings">⚙ 設定</button>
+  </header>
+  <div id="main">
+    <nav id="side"></nav>
+    <section id="content"></section>
+  </div>
+</div>
+<div id="toast"></div>
+<div id="modalRoot"></div>
+<script>
+"use strict";
+/*PURE_START*/
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>(crypto.randomUUID?crypto.randomUUID():'id-'+Date.now().toString(36)+Math.random().toString(36).slice(2,10));
+const nowISO=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0'),o=-d.getTimezoneOffset(),a=Math.abs(o);return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+'T'+p(d.getHours())+':'+p(d.getMinutes())+':'+p(d.getSeconds())+(o>=0?'+':'-')+p(Math.floor(a/60))+':'+p(a%60)};
+const todayStr=()=>nowISO().slice(0,10);
+const STATUSES=['ACTIVE','DEPRECATED','INACTIVE'];
+const MAPTYPES=['EXACT','BROADER','NARROWER','APPROX'];
+const SEV={OK:'',EMPTY:'INFO',NOT_FOUND:'ERROR',PATTERN_FAIL:'ERROR',EXPIRED:'WARN',NOT_YET_VALID:'WARN',DEPRECATED:'WARN',ALIAS_HIT:'INFO',NAME_HIT:'INFO',CASE_MISMATCH:'INFO'};
+const RES_LABEL={OK:'合法',EMPTY:'空值',NOT_FOUND:'代碼不存在',PATTERN_FAIL:'格式不符',EXPIRED:'已失效',NOT_YET_VALID:'尚未生效',DEPRECATED:'已停用(建議替代)',ALIAS_HIT:'別名命中',NAME_HIT:'名稱命中',CASE_MISMATCH:'大小寫不一致'};
+
+/* ---------- CSV ---------- */
+function parseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF)text=text.slice(1);
+  const nl=text.search(/\r|\n/),first=nl<0?text:text.slice(0,nl);
+  const cnt=ch=>first.split(ch).length-1;
+  let d=',';const ct=cnt('\t'),cc=cnt(','),cs=cnt(';');
+  if(ct>cc&&ct>=cs)d='\t';else if(cs>cc&&cs>ct)d=';';
+  const rows=[];let row=[],f='',q=false;
+  const push=()=>{row.push(f);f=''};
+  const endRow=()=>{push();if(!(row.length===1&&row[0]===''))rows.push(row);row=[]};
+  for(let i=0,n=text.length;i<n;i++){
+    const c=text[i];
+    if(q){
+      if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}
+      else f+=c;
+    }else if(c==='"'&&f==='')q=true;
+    else if(c===d)push();
+    else if(c==='\n')endRow();
+    else if(c==='\r'){if(text[i+1]==='\n')i++;endRow()}
+    else f+=c;
+  }
+  if(f!==''||row.length)endRow();
+  return rows;
+}
+function toCSV(rows){
+  return rows.map(r=>r.map(v=>{v=v==null?'':String(v);return /[",\r\n]/.test(v)||/^\s|\s$/.test(v)?'"'+v.replace(/"/g,'""')+'"':v}).join(',')).join('\r\n');
+}
+
+/* ---------- Dates / ranges ---------- */
+function normDate(s){
+  if(s==null)return null;s=String(s).trim();if(s==='')return null;
+  let m;
+  if((m=/^(\d{4})(\d{2})(\d{2})$/.exec(s)))s=m[1]+'-'+m[2]+'-'+m[3];
+  else if((m=/^(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})$/.exec(s)))s=m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+  return s;
+}
+function isDate(s){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(s))return false;
+  const d=new Date(s+'T00:00:00Z');return !isNaN(d)&&d.toISOString().slice(0,10)===s;
+}
+const rng=c=>[c.validFrom||'0000-01-01',c.validTo||'9999-12-31'];
+function overlaps(a,b){const [af,at]=rng(a),[bf,bt]=rng(b);return af<=bt&&bf<=at}
+function periodText(c){return (c.validFrom||'…')+' ~ '+(c.validTo||'…')}
+
+/* ---------- Code records ---------- */
+const lc=s=>String(s==null?'':s).toLowerCase();
+function splitList(s){if(Array.isArray(s))return s.map(x=>String(x).trim()).filter(Boolean);return String(s==null?'':s).split(/[|;,、\n]/).map(x=>x.trim()).filter(Boolean)}
+function makeCode(o,cbId){
+  const st=String(o.status||'ACTIVE').trim().toUpperCase();
+  let so=o.sortOrder;so=(so===''||so==null||isNaN(parseInt(so,10)))?null:parseInt(so,10);
+  let attrs=o.attrs,badAttrs=false;
+  if(typeof attrs==='string'){attrs=attrs.trim();if(attrs==='')attrs=null;else{try{attrs=JSON.parse(attrs)}catch(e){badAttrs=true}}}
+  return {id:o.id||uid(),codebookId:cbId||o.codebookId,code:String(o.code==null?'':o.code).trim(),
+    name:String(o.name==null?'':o.name).trim(),nameEn:String(o.nameEn||'').trim(),description:String(o.description||'').trim(),
+    parentCode:String(o.parentCode||'').trim(),level:o.level==null?null:o.level,aliases:splitList(o.aliases),
+    validFrom:normDate(o.validFrom),validTo:normDate(o.validTo),status:STATUSES.includes(st)?st:(st===''?'ACTIVE':st),
+    replacedBy:String(o.replacedBy||'').trim(),sortOrder:so,attrs:badAttrs?undefined:(attrs==null?null:attrs),note:String(o.note||'').trim()};
+}
+const compileRe=(()=>{const c=new Map();return p=>{if(!p)return null;if(c.has(p))return c.get(p);let r=null;try{r=new RegExp(p)}catch(e){r=false}c.set(p,r);return r}})();
+function patternOk(cb,code){const r=compileRe(cb&&cb.codePattern);return !r||r.test(code)}
+const normKey=(s,cs)=>cs?String(s):String(s).toUpperCase();
+function cmpCodes(a,b){
+  const sa=a.sortOrder==null?1e12:a.sortOrder,sb=b.sortOrder==null?1e12:b.sortOrder;
+  return sa-sb||(a.code<b.code?-1:a.code>b.code?1:0)||String(a.validFrom||'').localeCompare(String(b.validFrom||''));
+}
+/* validate a single code record. returns {errors:[],warns:[]} */
+function validateCode(c,cb,all,excludeId){
+  const errors=[],warns=[];
+  if(!c.code)errors.push('代碼不可為空');
+  if(!c.name)errors.push('中文名稱不可為空');
+  if(c.code&&compileRe(cb.codePattern)===false)errors.push('代碼簿的 codePattern 無效');
+  else if(c.code&&!patternOk(cb,c.code))errors.push('代碼不符合 codePattern：'+cb.codePattern);
+  if(c.validFrom&&!isDate(c.validFrom))errors.push('validFrom 不是有效日期（YYYY-MM-DD）');
+  if(c.validTo&&!isDate(c.validTo))errors.push('validTo 不是有效日期（YYYY-MM-DD）');
+  if(c.validFrom&&c.validTo&&isDate(c.validFrom)&&isDate(c.validTo)&&c.validFrom>c.validTo)errors.push('validFrom 不可晚於 validTo');
+  if(!STATUSES.includes(c.status))errors.push('status 必須為 '+STATUSES.join(' / '));
+  if(c.attrs===undefined)errors.push('attrs 不是合法 JSON');
+  else if(c.attrs!=null&&(typeof c.attrs!=='object'||Array.isArray(c.attrs)))errors.push('attrs 必須是 JSON 物件');
+  if(!errors.length){
+    const cs=cb.caseSensitive,k=normKey(c.code,cs);
+    for(const o of all){
+      if(o.id===excludeId||o.id===c.id)continue;
+      if(normKey(o.code,cs)===k&&overlaps(o,c)){errors.push('與既有版本生效期間重疊：'+o.code+'（'+periodText(o)+'）。同一代碼的多段期間不可重疊');break}
+    }
+  }
+  if(c.parentCode&&!all.some(o=>normKey(o.code,cb.caseSensitive)===normKey(c.parentCode,cb.caseSensitive)))warns.push('上層代碼 '+c.parentCode+' 目前不存在');
+  if(c.status!=='ACTIVE'&&c.replacedBy&&!all.some(o=>o.code===c.replacedBy))warns.push('replacedBy '+c.replacedBy+' 不存在');
+  return {errors,warns};
+}
+function recalcLevels(codes){
+  const par=new Map(),lv=new Map();
+  for(const c of codes)if(!par.has(c.code)||c.validTo==null)par.set(c.code,c.parentCode||'');
+  const depth=code=>{
+    if(lv.has(code))return lv.get(code);
+    const seen=new Set();let cur=code,d=1;
+    while(true){
+      if(seen.has(cur)){d=null;break}seen.add(cur);
+      const p=par.get(cur);
+      if(!p||!par.has(p))break;
+      cur=p;d++;
+    }
+    lv.set(code,d);return d;
+  };
+  const changed=[];
+  for(const c of codes){const d=depth(c.code);if(c.level!==d){c.level=d;changed.push(c)}}
+  return changed;
+}
+
+/* ---------- Index / resolve ---------- */
+function buildIndex(codes,cb){
+  const cs=!!cb.caseSensitive,byCode=new Map(),byAlias=new Map(),byName=new Map();
+  const add=(m,k,v)=>{let a=m.get(k);if(!a){a=[];m.set(k,a)}a.push(v)};
+  for(const c of codes){
+    add(byCode,normKey(c.code,cs),c);
+    for(const a of (c.aliases||[]))add(byAlias,normKey(a,cs),c);
+    if(c.name)add(byName,normKey(c.name,cs),c);
+    if(c.nameEn)add(byName,normKey(c.nameEn,cs),c);
+  }
+  return {cs,byCode,byAlias,byName,pattern:cb.codePattern||'',codes};
+}
+function pickVersion(vs,asOf){
+  let valid=null,past=null,fut=null;
+  for(const v of vs){
+    const [f,t]=rng(v);
+    if(asOf>=f&&asOf<=t){if(!valid||(v.validFrom||'')>(valid.validFrom||''))valid=v}
+    else if(asOf>t){if(!past||(v.validTo||'')>(past.validTo||''))past=v}
+    else if(!fut||(v.validFrom||'')<(fut.validFrom||''))fut=v;
+  }
+  return {valid,past,fut};
+}
+function resolve(idx,raw,asOf){
+  const val=String(raw==null?'':raw).trim();
+  if(val==='')return {res:'EMPTY'};
+  const k=normKey(val,idx.cs);
+  let vs=idx.byCode.get(k),via='code',caseMis=false;
+  if(vs){if(!vs.some(v=>v.code===val))caseMis=true}
+  else if((vs=idx.byAlias.get(k)))via='alias';
+  else if((vs=idx.byName.get(k)))via='name';
+  if(!vs){
+    const re=compileRe(idx.pattern);
+    if(re&&!re.test(val))return {res:'PATTERN_FAIL'};
+    return {res:'NOT_FOUND'};
+  }
+  const groups=new Map();
+  for(const v of vs){let a=groups.get(v.code);if(!a){a=[];groups.set(v.code,a)}a.push(v)}
+  let best=null;
+  for(const [code,arr] of groups){
+    const p=pickVersion(arr,asOf);
+    if(p.valid){best={code,p};break}
+    if(!best)best={code,p};
+  }
+  const p=best.p;
+  if(p.valid){
+    const v=p.valid;let res='OK';
+    if(v.status==='DEPRECATED'||v.status==='INACTIVE')res='DEPRECATED';
+    else if(via==='alias')res='ALIAS_HIT';
+    else if(via==='name')res='NAME_HIT';
+    else if(caseMis)res='CASE_MISMATCH';
+    return {res,code:v.code,name:v.name,status:v.status,replacedBy:v.replacedBy||'',via,version:v};
+  }
+  const v=p.past||p.fut;
+  return {res:p.past?'EXPIRED':'NOT_YET_VALID',code:v.code,name:v.name,status:v.status,replacedBy:v.replacedBy||'',via,version:v};
+}
+function lev(a,b){
+  if(Math.abs(a.length-b.length)>2)return 9;
+  const m=a.length,n=b.length;let prev=Array.from({length:n+1},(_,i)=>i);
+  for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur}
+  return prev[n];
+}
+function suggest(idx,raw,max=3){
+  const v=String(raw).trim().toLowerCase();if(!v)return [];
+  const out=[];const seen=new Set();
+  for(const c of idx.codes){
+    if(seen.has(c.code))continue;
+    const cands=[c.code,c.name,c.nameEn,...(c.aliases||[])].filter(Boolean).map(x=>x.toLowerCase());
+    let score=99;
+    for(const x of cands){
+      if(x===v)score=0;
+      else if(v.length>=2&&(x.includes(v)||v.includes(x)))score=Math.min(score,1);
+      else if(v.length>=3){const d=lev(x,v);if(d<=2)score=Math.min(score,1+d)}
+    }
+    if(score<99){out.push([score,c]);seen.add(c.code)}
+  }
+  out.sort((a,b)=>a[0]-b[0]);
+  return out.slice(0,max).map(x=>x[1].code+'（'+x[1].name+'）');
+}
+
+/* ---------- Crosswalk helpers ---------- */
+function buildMapIndex(maps){
+  const m=new Map();
+  for(const x of maps){const k=String(x.sourceCode).trim();let a=m.get(k);if(!a){a=[];m.set(k,a)}a.push(x)}
+  return m;
+}
+function mapLookup(mi,src,asOf){
+  const arr=mi.get(String(src).trim());
+  if(!arr)return {res:'NOT_FOUND'};
+  let past=null,fut=null;const valids=[];
+  for(const x of arr){
+    const [f,t]=rng(x);
+    if(asOf>=f&&asOf<=t)valids.push(x);
+    else if(asOf>t)past=past||x;else fut=fut||x;
+  }
+  if(valids.length){
+    const tg=[...new Set(valids.map(x=>x.targetCode))];
+    if(tg.length>1)return {res:'AMBIGUOUS',m:valids[0],targets:tg};
+    return {res:'OK',m:valids[0]};
+  }
+  if(past)return {res:'EXPIRED',m:past};
+  return {res:'NOT_YET_VALID',m:fut};
+}
+function canonTarget(m,cb,codes){
+  const cs=!!cb.caseSensitive,k=normKey(m.targetCode,cs);
+  for(const c of codes)if(normKey(c.code,cs)===k){m.targetCode=c.code;break}
+  return m;
+}
+function buildReverseIndex(maps){
+  const m=new Map();
+  for(const x of maps){const k=String(x.targetCode);let a=m.get(k);if(!a){a=[];m.set(k,a)}a.push(x)}
+  return m;
+}
+
+/* ---------- Diff ---------- */
+const DIFF_FIELDS=['name','nameEn','description','parentCode','aliases','validTo','status','replacedBy','sortOrder','note','attrs'];
+const dstr=(c,f)=>f==='aliases'?(c.aliases||[]).join('|'):f==='attrs'?(c.attrs?JSON.stringify(c.attrs):''):(c[f]==null?'':String(c[f]));
+function diffCodes(a,b){
+  const key=c=>c.code+'|'+(c.validFrom||'');
+  const A=new Map(a.map(c=>[key(c),c])),B=new Map(b.map(c=>[key(c),c]));
+  const added=[],removed=[],modified=[];let unchanged=0;
+  for(const [k,n] of B){
+    const o=A.get(k);
+    if(!o){added.push(n);continue}
+    const ch=[];
+    for(const f of DIFF_FIELDS){const x=dstr(o,f),y=dstr(n,f);if(x!==y)ch.push({f,o:x,n:y})}
+    if(ch.length)modified.push({key:k,code:n.code,validFrom:n.validFrom,changes:ch});else unchanged++;
+  }
+  for(const [k,o] of A)if(!B.has(k))removed.push(o);
+  return {added,removed,modified,unchanged};
+}
+
+/* ---------- Integrity ---------- */
+function integrity(cb,codes,xws,mapsByXw,today){
+  const out=[];const add=(rule,sev,msg,ref)=>out.push({rule,sev,msg,ref:ref||''});
+  const cs=!!cb.caseSensitive,K=s=>normKey(s,cs);
+  const byCode=new Map();
+  for(const c of codes){const k=K(c.code);let a=byCode.get(k);if(!a){a=[];byCode.set(k,a)}a.push(c)}
+  // IC01 / IC10 / IC06
+  for(const [k,arr] of byCode){
+    for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++)
+      if(overlaps(arr[i],arr[j]))add('IC01','ERROR','代碼 '+arr[i].code+' 生效期間重疊：'+periodText(arr[i])+' 與 '+periodText(arr[j]),arr[i].code);
+  }
+  for(const c of codes){
+    if(c.validFrom&&c.validTo&&c.validFrom>c.validTo)add('IC10','ERROR','代碼 '+c.code+' 的 validFrom('+c.validFrom+') 晚於 validTo('+c.validTo+')',c.code);
+    if(cb.codePattern&&compileRe(cb.codePattern)&&!patternOk(cb,c.code))add('IC06','ERROR','代碼 '+c.code+' 不符合 codePattern '+cb.codePattern,c.code);
+  }
+  // IC02
+  for(const c of codes)if(c.parentCode&&!byCode.has(K(c.parentCode)))add('IC02','WARN','代碼 '+c.code+' 的上層 '+c.parentCode+' 不存在（孤兒節點）',c.code);
+  // IC03
+  const par=new Map();for(const c of codes)if(!par.has(c.code)||!c.validTo)par.set(c.code,c.parentCode||'');
+  const reported=new Set();
+  for(const start of par.keys()){
+    const path=[];const seen=new Map();let cur=start;
+    while(cur&&par.has(cur)&&!seen.has(cur)){seen.set(cur,path.length);path.push(cur);cur=par.get(cur)}
+    if(cur&&seen.has(cur)){
+      const cyc=path.slice(seen.get(cur));const id=[...cyc].sort().join('>');
+      if(!reported.has(id)){reported.add(id);add('IC03','ERROR','階層循環：'+cyc.join(' → ')+' → '+cyc[0],cyc[0])}
+    }
+  }
+  // IC04
+  for(const c of codes){
+    if(!c.replacedBy)continue;
+    const t=byCode.get(K(c.replacedBy));
+    if(!t)add('IC04','WARN','代碼 '+c.code+' 的 replacedBy '+c.replacedBy+' 不存在',c.code);
+    else if(!t.some(x=>x.status==='ACTIVE'))add('IC04','WARN','代碼 '+c.code+' 的 replacedBy '+c.replacedBy+' 已停用',c.code);
+  }
+  // IC05
+  const al=new Map();
+  for(const c of codes)for(const a of (c.aliases||[])){const k=K(a);let s=al.get(k);if(!s){s=new Set();al.set(k,s)}s.add(c.code)}
+  for(const [k,s] of al){
+    if(s.size>1)add('IC05','WARN','別名 '+k+' 同時屬於多個代碼：'+[...s].join('、'),[...s][0]);
+    const own=byCode.get(k);
+    if(own){const others=[...s].filter(x=>K(x)!==k);if(others.length)add('IC05','WARN','別名 '+k+'（'+others.join('、')+'）與代碼 '+own[0].code+' 的 code 衝突',own[0].code)}
+  }
+  // IC11
+  const nm=new Map();
+  for(const c of codes){if(c.status==='INACTIVE'||!c.name)continue;const k=c.name.trim().toLowerCase();let s=nm.get(k);if(!s){s=new Set();nm.set(k,s)}s.add(c.code)}
+  for(const [k,s] of nm)if(s.size>1)add('IC11','INFO','名稱「'+k+'」被多個代碼使用：'+[...s].join('、'),[...s][0]);
+  // crosswalk rules
+  for(const x of xws){
+    const maps=mapsByXw.get(x.id)||[];
+    const tag='【'+x.name+'】';
+    for(const m of maps){
+      const t=byCode.get(K(m.targetCode));
+      if(!t)add('IC07','ERROR',tag+'來源 '+m.sourceCode+' 的 targetCode '+m.targetCode+' 不存在',m.targetCode);
+      else if(!t.some(v=>(!v.validFrom||v.validFrom<=today)&&(!v.validTo||v.validTo>=today)&&v.status!=='INACTIVE'))add('IC07','WARN',tag+'來源 '+m.sourceCode+' 的 targetCode '+m.targetCode+' 目前已失效或停用',m.targetCode);
+    }
+    const bySrc=new Map();for(const m of maps){const k=String(m.sourceCode).trim();let a=bySrc.get(k);if(!a){a=[];bySrc.set(k,a)}a.push(m)}
+    for(const [s,arr] of bySrc)for(let i=0;i<arr.length;i++)for(let j=i+1;j<arr.length;j++)
+      if(arr[i].targetCode!==arr[j].targetCode&&overlaps(arr[i],arr[j]))add('IC08','ERROR',tag+'來源 '+s+' 在重疊期間對應多個標準代碼：'+arr[i].targetCode+'、'+arr[j].targetCode,arr[i].targetCode);
+    const covered=new Set(maps.map(m=>K(m.targetCode)));
+    const miss=[...new Set(codes.filter(c=>c.status==='ACTIVE').map(c=>c.code))].filter(c=>!covered.has(K(c)));
+    if(miss.length)add('IC09','INFO',tag+'有 '+miss.length+' 個有效標準代碼沒有任何來源對應：'+miss.slice(0,20).join('、')+(miss.length>20?' …':''),miss[0]);
+  }
+  return out;
+}
+/*PURE_END*/
+
+/* ---------- IndexedDB ---------- */
+const DB_NAME='codebook-studio';let DB=null;
+const STORE_DEF={
+  codebooks:{kp:'id',idx:[['key','key',{unique:true}],['status','status']]},
+  codes:{kp:'id',idx:[['codebookId','codebookId'],['codebookId_code',['codebookId','code']],['codebookId_status',['codebookId','status']],['parentCode','parentCode']]},
+  crosswalks:{kp:'id',idx:[['targetCodebookId','targetCodebookId'],['sourceSystem','sourceSystem']]},
+  mappings:{kp:'id',idx:[['crosswalkId','crosswalkId'],['crosswalkId_sourceCode',['crosswalkId','sourceCode']],['targetCode','targetCode']]},
+  snapshots:{kp:'id',idx:[['codebookId','codebookId'],['createdAt','createdAt']]},
+  profiles:{kp:'id',idx:[['type','type']]},
+  auditLog:{kp:'id',idx:[['ts','ts'],['entity','entity'],['entity_entityId',['entity','entityId']]]},
+  settings:{kp:'key',idx:[]}
+};
+const BACKUP_STORES=['codebooks','codes','crosswalks','mappings','snapshots','profiles','auditLog'];
+function openDB(){
+  return new Promise((res,rej)=>{
+    if(!window.indexedDB)return rej(new Error('此瀏覽器環境不支援 IndexedDB'));
+    let r;try{r=indexedDB.open(DB_NAME,1)}catch(e){return rej(e)}
+    r.onupgradeneeded=()=>{
+      const db=r.result;
+      for(const [n,d] of Object.entries(STORE_DEF)){
+        if(db.objectStoreNames.contains(n))continue;
+        const s=db.createObjectStore(n,{keyPath:d.kp});
+        for(const [iname,kp,opt] of d.idx)s.createIndex(iname,kp,opt||{});
+      }
+    };
+    r.onsuccess=()=>res(r.result);
+    r.onerror=()=>rej(r.error||new Error('IndexedDB 開啟失敗'));
+    r.onblocked=()=>rej(new Error('IndexedDB 被其他分頁佔用'));
+  });
+}
+const rq=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const txDone=tx=>new Promise((res,rej)=>{tx.oncomplete=()=>res();tx.onerror=()=>rej(tx.error);tx.onabort=()=>rej(tx.error||new Error('交易中止'))});
+const dbAll=n=>rq(DB.transaction(n).objectStore(n).getAll());
+const dbGet=(n,k)=>rq(DB.transaction(n).objectStore(n).get(k));
+const dbByIdx=(n,i,k)=>rq(DB.transaction(n).objectStore(n).index(i).getAll(k));
+const dbKeysByIdx=(n,i,k)=>rq(DB.transaction(n).objectStore(n).index(i).getAllKeys(k));
+const dbPut=async(n,o)=>{const tx=DB.transaction(n,'readwrite');tx.objectStore(n).put(o);await txDone(tx);if(n!=='settings')notifyChange()};
+const dbDel=async(n,k)=>{const tx=DB.transaction(n,'readwrite');tx.objectStore(n).delete(k);await txDone(tx);notifyChange()};
+async function dbBatch(n,puts,dels,onProg){
+  puts=puts||[];dels=dels||[];
+  if(!puts.length&&!dels.length)return;
+  if(puts.length+dels.length<=50000){ // 單一交易：全成功或全失敗
+    const tx=DB.transaction(n,'readwrite'),st=tx.objectStore(n);
+    for(const k of dels)st.delete(k);
+    for(const o of puts)st.put(o);
+    await txDone(tx);notifyChange();return;
+  }
+  const B=5000;
+  for(let i=0;i<dels.length;i+=B){const tx=DB.transaction(n,'readwrite'),st=tx.objectStore(n);for(const k of dels.slice(i,i+B))st.delete(k);await txDone(tx)}
+  for(let i=0;i<puts.length;i+=B){const tx=DB.transaction(n,'readwrite'),st=tx.objectStore(n);for(const o of puts.slice(i,i+B))st.put(o);await txDone(tx);if(onProg)onProg(Math.min(1,(i+B)/puts.length))}
+  notifyChange();
+}
+/* 全庫還原：所有 store 在同一個交易內清空再寫入，任何錯誤都會整體回復 */
+async function dbReplaceAll(data){
+  const tx=DB.transaction(BACKUP_STORES,'readwrite');
+  for(const n of BACKUP_STORES){const st=tx.objectStore(n);st.clear();for(const o of (data[n]||[]))st.put(o)}
+  await txDone(tx);notifyChange();
+}
+const dbClear=async n=>{const tx=DB.transaction(n,'readwrite');tx.objectStore(n).clear();await txDone(tx);notifyChange()};
+async function dbDelByIdx(n,i,k){const keys=await dbKeysByIdx(n,i,k);await dbBatch(n,[],keys)}
+const getSetting=async(k,d)=>{const r=await dbGet('settings',k);return r?r.value:d};
+const setSetting=(k,v)=>dbPut('settings',{key:k,value:v});
+async function audit(entity,entityId,action,before,after,summary,cbId){
+  try{await dbPut('auditLog',{id:uid(),ts:nowISO(),entity,entityId:entityId||'',action,before:before==null?null:before,after:after==null?null:after,summary:summary||'',cbId:cbId||''})}catch(e){console.warn('audit failed',e)}
+}
+
+/* ---------- 多分頁同步 ---------- */
+let BC=null,bcTimer=null;
+try{if(typeof BroadcastChannel!=='undefined')BC=new BroadcastChannel('codebook-studio-sync')}catch(e){BC=null}
+function notifyChange(){
+  if(!BC)return;
+  clearTimeout(bcTimer);bcTimer=setTimeout(()=>{try{BC.postMessage('changed')}catch(e){}},150);
+}
+
+/* ---------- App state & caches ---------- */
+const S={view:'home',tab:'codes',cbId:null,codebooks:[],crosswalks:[],settings:{theme:'light',backupDays:14},
+  f:{q:'',status:'',asOf:'',sort:'sortOrder',dir:1,page:0},sel:new Set(),xwId:null,lk:{tab:'single'},
+  vl:{},tr:{},au:{cb:'',action:'',q:''},snapA:'',snapB:'',integ:null,busy:false};
+const codeCache=new Map(),idxCache=new Map(),mapCache=new Map();
+const cur=()=>S.codebooks.find(c=>c.id===S.cbId)||null;
+const cbById=id=>S.codebooks.find(c=>c.id===id);
+async function getCodes(cbId){
+  if(!codeCache.has(cbId))codeCache.set(cbId,await dbByIdx('codes','codebookId',cbId));
+  return codeCache.get(cbId);
+}
+async function getIdx(cbId){
+  if(!idxCache.has(cbId)){const cb=cbById(cbId);idxCache.set(cbId,buildIndex(await getCodes(cbId),cb))}
+  return idxCache.get(cbId);
+}
+function invalidate(cbId){codeCache.delete(cbId);idxCache.delete(cbId)}
+async function getMaps(xwId){
+  if(!mapCache.has(xwId))mapCache.set(xwId,await dbByIdx('mappings','crosswalkId',xwId));
+  return mapCache.get(xwId);
+}
+const invalidateMaps=id=>mapCache.delete(id);
+async function reloadMeta(){
+  S.codebooks=(await dbAll('codebooks')).sort((a,b)=>(a.status===b.status?0:a.status==='ACTIVE'?-1:1)||a.key.localeCompare(b.key));
+  S.crosswalks=(await dbAll('crosswalks')).sort((a,b)=>a.name.localeCompare(b.name));
+}
+const tick=()=>new Promise(r=>setTimeout(r,0));
+async function withBusy(fn){
+  if(S.busy)return toast('上一個作業仍在執行中，請稍候',true);
+  S.busy=true;
+  try{return await fn()}finally{S.busy=false}
+}
+const debounce=(fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms)}};
+
+/* ---------- UI infra ---------- */
+const $=s=>document.querySelector(s);
+function toast(msg,err){
+  const d=document.createElement('div');d.className='ts'+(err?' err':'');d.textContent=msg;$('#toast').appendChild(d);
+  setTimeout(()=>d.remove(),err?6000:3000);
+}
+function openModal(title,body,opt){
+  opt=opt||{};
+  $('#modalRoot').innerHTML='<div class="mask'+(opt.drawer?' drawer':'')+'" data-mask="1"><div class="modal" role="dialog" aria-modal="true" aria-label="'+esc(title)+'" style="'+(opt.wide?'width:min(1000px,100%)':'')+'"><h2>'+esc(title)+'</h2>'+body+'</div></div>';
+  const f=$('#modalRoot input:not([type=hidden]):not([type=file]),#modalRoot textarea');if(f&&!opt.noFocus)f.focus();
+  return $('#modalRoot .modal');
+}
+const closeModal=()=>{$('#modalRoot').innerHTML=''};
+const errBox=(msgs,max)=>{msgs=[].concat(msgs);max=max||6;return '<div class="banner err">'+msgs.slice(0,max).map(esc).join('<br>')+(msgs.length>max?'<br>…':'')+'</div>'};
+const mv=n=>{const e=$('#modalRoot [name="'+n+'"]');if(!e)return '';return e.type==='checkbox'?e.checked:e.value};
+const fld=(label,inner,req)=>'<div class="fld"><label class="'+(req?'req':'')+'">'+esc(label)+'</label>'+inner+'</div>';
+const inp=(name,val,type,extra)=>'<input type="'+(type||'text')+'" name="'+name+'" value="'+esc(val)+'" '+(extra||'')+'>';
+const sel=(name,opts,val,extra)=>'<select name="'+name+'" '+(extra||'')+'>'+opts.map(o=>{const v=Array.isArray(o)?o[0]:o,l=Array.isArray(o)?o[1]:o;return '<option value="'+esc(v)+'"'+(String(v)===String(val)?' selected':'')+'>'+esc(l)+'</option>'}).join('')+'</select>';
+const tagRes=r=>{const s=SEV[r];return '<span class="tag '+(r==='OK'?'ok':s==='ERROR'?'err':s==='WARN'?'warn':'info')+'" title="'+esc(RES_LABEL[r]||'')+'">'+esc(r)+'</span>'};
+const tagStatus=s=>'<span class="tag '+(s==='ACTIVE'?'ok':s==='DEPRECATED'?'warn':'err')+'">'+esc(s)+'</span>';
+function download(name,text,mime){
+  const b=new Blob([text],{type:mime||'text/plain'}),a=document.createElement('a');
+  a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+const dlCSV=(name,rows)=>download(name,'\uFEFF'+toCSV(rows),'text/csv;charset=utf-8');
+const dlJSON=(name,o)=>download(name,JSON.stringify(o,null,2),'application/json');
+async function readFile(file){
+  const buf=await file.arrayBuffer();
+  try{return {text:new TextDecoder('utf-8',{fatal:true}).decode(buf),enc:'UTF-8'}}
+  catch(e){
+    try{return {text:new TextDecoder('big5').decode(buf),enc:'Big5'}}
+    catch(e2){return {text:new TextDecoder('utf-8').decode(buf),enc:'UTF-8(lossy)'}}
+  }
+}
+async function readCSVFile(file){
+  const {text,enc}=await readFile(file);
+  const rows=parseCSV(text);
+  if(!rows.length)throw new Error('檔案是空的');
+  if(enc==='Big5')toast('偵測到非 UTF-8 編碼，已改用 Big5 解讀，請確認中文是否正常');
+  return {name:file.name,headers:rows[0].map(h=>String(h).trim()),rows:rows.slice(1),enc};
+}
+const fileKB=n=>n>1048576?(n/1048576).toFixed(1)+' MB':Math.round(n/1024)+' KB';
+const fmtTs=t=>String(t||'').replace('T',' ').slice(0,19);
+const A={};  // click actions
+const IN={}; // input/change handlers
+let maskDown=false;
+document.addEventListener('mousedown',e=>{maskDown=!!(e.target.dataset&&e.target.dataset.mask)});
+document.addEventListener('click',e=>{
+  const m=e.target.closest('[data-mask]');
+  if(m&&e.target===m){if(maskDown)closeModal();maskDown=false;return}
+  const el=e.target.closest('[data-act]');
+  if(!el)return;
+  const fn=A[el.dataset.act];
+  if(fn){Promise.resolve(fn(el,e)).catch(err=>{console.error(err);toast('發生錯誤：'+(err&&err.message||err),true)})}
+});
+for(const t of ['input','change']){
+  document.addEventListener(t,e=>{
+    const el=e.target.closest('[data-'+t+']');
+    if(!el)return;
+    const fn=IN[el.dataset[t]];
+    if(fn)Promise.resolve(fn(el,e)).catch(err=>{console.error(err);toast('發生錯誤：'+(err&&err.message||err),true)});
+  });
+}
+document.addEventListener('keydown',e=>{
+  const tag=(e.target.tagName||'').toLowerCase(),typing=tag==='input'||tag==='textarea'||tag==='select';
+  if(e.key==='Escape'){if($('#modalRoot').innerHTML){closeModal();e.preventDefault()}return}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){
+    const b=$('#modalRoot [data-save]');if(b){e.preventDefault();b.click()}return;
+  }
+  if(typing||e.ctrlKey||e.metaKey||e.altKey)return;
+  if(e.key==='/'){e.preventDefault();$('#gsearch').focus()}
+  else if(e.key.toLowerCase()==='n'&&S.view==='cb'&&S.tab==='codes'&&!$('#modalRoot').innerHTML){e.preventDefault();A.newCode()}
+});
+
+/* ================= Navigation & shell ================= */
+function renderNav(){
+  const on=(v,id)=>S.view===v&&(id==null||S.cbId===id);
+  let h='<h3>📚 代碼簿</h3>';
+  if(!S.codebooks.length)h+='<div class="mu sm" style="padding:4px 8px">尚無代碼簿</div>';
+  for(const cb of S.codebooks)h+='<div class="nv'+(S.view==='cb'&&S.cbId===cb.id?' on':'')+(cb.status==='ARCHIVED'?' arch':'')+'" data-act="openCb" data-id="'+esc(cb.id)+'" title="'+esc(cb.name)+'">📘 '+esc(cb.key)+(cb.status==='ARCHIVED'?'<span class="n">封存</span>':'')+'</div>';
+  h+='<div class="nv" data-act="newCb">＋ 新增代碼簿</div>';
+  h+='<h3>工具</h3>'+
+   '<div class="nv'+(S.view==='home'?' on':'')+'" data-act="goHome">🏠 總覽</div>'+
+   '<div class="nv'+(S.view==='lookup'?' on':'')+'" data-act="goLookup">🔍 查詢翻譯</div>'+
+   '<div class="nv'+(S.view==='validate'?' on':'')+'" data-act="goValidate">✅ CSV 驗證</div>'+
+   '<div class="nv'+(S.view==='audit'?' on':'')+'" data-act="goAudit">🧾 異動紀錄</div>';
+  $('#side').innerHTML=h;
+}
+async function backupBanner(){
+  if(!S.codebooks.length)return '';
+  const days=S.settings.backupDays;if(!days||days<=0)return '';
+  const last=S.settings.lastBackupAt||S.settings.firstUseAt;if(!last)return '';
+  const age=(Date.now()-new Date(last).getTime())/864e5;
+  if(age<days)return '';
+  return '<div class="banner" id="bkBanner">⏰ 已超過 '+days+' 天未匯出全庫備份（資料只存在這個瀏覽器）。<button class="btn sm" data-act="backupNow">立即備份</button><button class="btn sm" data-act="snoozeBackup">稍後提醒</button></div>';
+}
+async function render(){
+  renderNav();
+  const c=$('#content');
+  try{
+    const bn=await backupBanner();
+    c.innerHTML=bn+'<div id="view"></div>';
+    const v=$('#view');
+    if(S.view==='cb'){
+      const cb=cur();if(!cb){S.view='home';return render()}
+      await viewCodebook(v,cb);
+    }
+    else if(S.view==='lookup')await viewLookup(v);
+    else if(S.view==='validate')await viewValidate(v);
+    else if(S.view==='audit')await viewAudit(v);
+    else await viewHome(v);
+  }catch(e){console.error(e);c.innerHTML='<div class="card"><b>畫面載入失敗</b><div class="pre">'+esc(e&&e.stack||e)+'</div></div>'}
+}
+A.goHome=()=>{S.view='home';render()};
+A.goLookup=()=>{S.view='lookup';render()};
+A.goValidate=()=>{S.view='validate';render()};
+A.goAudit=()=>{S.view='audit';S.au.cb='';render()};
+function enterCb(id,tab,xwId){
+  S.view='cb';S.cbId=id;S.tab=tab||'codes';S.sel.clear();
+  S.f={q:'',status:'',asOf:'',sort:'sortOrder',dir:1,page:0};S.xwId=xwId||null;S.integ=null;S.snapA='';S.snapB='';S.mq='';S.mxq='';S.mxgap=false;
+}
+A.openCb=el=>{enterCb(el.dataset.id,'codes');render()};
+A.tab=el=>{
+  if(el.dataset.t==='audit'){S.view='audit';S.au.cb=S.cbId;return render()}
+  S.tab=el.dataset.t;render();
+};
+A.snoozeBackup=async()=>{S.settings.lastBackupAt=nowISO();await setSetting('lastBackupAt',S.settings.lastBackupAt);render()};
+A.backupNow=()=>exportBackup();
+
+async function viewHome(v){
+  if(!S.codebooks.length){
+    v.innerHTML='<div class="card"><h2 class="pg">歡迎使用 Codebook Studio</h2><p class="mu">集中管理業務代碼、生效期間、跨系統對照與版本快照。資料只存在這個瀏覽器的 IndexedDB，不會連網。</p>'+
+    '<div class="bar"><button class="btn pri" data-act="loadTemplates">載入預設範本</button><button class="btn" data-act="newCb">建立空白代碼簿</button><button class="btn" data-act="openImport">匯入資料</button></div>'+
+    '<p class="mu sm">範本：collateralType、booleanFlag、currency、industryCode（空白骨架，支援主計四碼與財稅六碼）。範本只提供結構與少量範例，正式代碼表請自行匯入權威來源。</p></div>';
+    return;
+  }
+  let h='<h2 class="pg">總覽</h2><div class="mu" style="margin-bottom:10px">共 '+S.codebooks.length+' 本代碼簿、'+S.crosswalks.length+' 份對照表</div><div class="grid">';
+  for(const cb of S.codebooks){
+    const n=(await getCodes(cb.id)).length;
+    const xs=S.crosswalks.filter(x=>x.targetCodebookId===cb.id).length;
+    h+='<div class="card" style="cursor:pointer" data-act="openCb" data-id="'+esc(cb.id)+'"><h3>'+esc(cb.key)+' '+(cb.status==='ARCHIVED'?'<span class="tag">封存</span>':'')+'</h3><div>'+esc(cb.name)+'</div><div class="mu sm">'+n+' 筆代碼 · '+xs+' 份對照</div>'+(cb.owner?'<div class="mu sm">維護：'+esc(cb.owner)+'</div>':'')+'</div>';
+  }
+  v.innerHTML=h+'</div>';
+}
+
+/* ================= Codebook CRUD ================= */
+function cbForm(cb){
+  const x=cb||{key:'',name:'',description:'',owner:'',codePattern:'',hierarchical:false,caseSensitive:false,tags:[],status:'ACTIVE'};
+  const m=openModal(cb?'編輯代碼簿':'新增代碼簿',
+   '<div id="ferr"></div><input type="hidden" name="id" value="'+esc(cb?cb.id:'')+'">'+
+   '<div class="grid">'+
+   fld('key（唯一識別碼）',inp('key',x.key,'text','placeholder="例如 industryCode"'),1)+
+   fld('名稱',inp('name',x.name),1)+
+   fld('維護人／單位',inp('owner',x.owner||''))+
+   fld('代碼格式 Regex（codePattern）',inp('codePattern',x.codePattern||'','text','placeholder="例如 ^\\d{4}$|^\\d{6}$"'))+
+   fld('標籤（逗號分隔）',inp('tags',(x.tags||[]).join(',')))+
+   fld('狀態',sel('status',['ACTIVE','ARCHIVED'],x.status))+
+   '</div>'+fld('說明','<textarea name="description">'+esc(x.description||'')+'</textarea>')+
+   '<label><input type="checkbox" name="hierarchical" '+(x.hierarchical?'checked':'')+'> 支援階層（parentCode / 樹狀檢視）</label> &nbsp; '+
+   '<label><input type="checkbox" name="caseSensitive" '+(x.caseSensitive?'checked':'')+'> 代碼區分大小寫</label>'+
+   '<div class="foot"><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-save="1" data-act="saveCb">儲存</button></div>');
+}
+A.closeModal=closeModal;
+A.newCb=()=>cbForm(null);
+A.editCb=()=>cbForm(cur());
+A.saveCb=async()=>{
+  const id=mv('id'),old=id?cbById(id):null;
+  const key=String(mv('key')).trim(),err=[];
+  if(!/^[A-Za-z][A-Za-z0-9_]{1,63}$/.test(key))err.push('key 格式須為英文字母開頭，僅含英數與底線，長度 2~64');
+  if(S.codebooks.some(c=>c.key===key&&c.id!==id))err.push('key 已存在');
+  if(!String(mv('name')).trim())err.push('名稱不可為空');
+  const pat=String(mv('codePattern')).trim();
+  if(pat){try{new RegExp(pat)}catch(e){err.push('codePattern 不是有效的 Regex')}}
+  if(err.length){$('#ferr').innerHTML=errBox(err);return}
+  const now=nowISO();
+  const rec={id:id||uid(),key,name:String(mv('name')).trim(),description:String(mv('description')).trim(),owner:String(mv('owner')).trim(),
+    codePattern:pat,hierarchical:!!mv('hierarchical'),caseSensitive:!!mv('caseSensitive'),tags:splitList(String(mv('tags'))),
+    status:mv('status'),createdAt:old?old.createdAt:now,updatedAt:now};
+  await dbPut('codebooks',rec);
+  await audit('codebook',rec.id,old?'UPDATE':'CREATE',old,rec,(old?'修改':'新增')+'代碼簿 '+rec.key,rec.id);
+  idxCache.delete(rec.id);
+  await reloadMeta();closeModal();
+  if(!old)enterCb(rec.id,'codes');
+  toast('已儲存代碼簿');render();
+};
+A.copyCb=async()=>{
+  const cb=cur(),codes=await getCodes(cb.id);
+  let k=cb.key+'_copy',i=2;while(S.codebooks.some(c=>c.key===k))k=cb.key+'_copy'+(i++);
+  const now=nowISO(),n={...cb,id:uid(),key:k,name:cb.name+'（副本）',createdAt:now,updatedAt:now,status:'ACTIVE'};
+  await dbPut('codebooks',n);
+  await dbBatch('codes',codes.map(c=>({...c,id:uid(),codebookId:n.id})));
+  await audit('codebook',n.id,'CREATE',null,n,'複製代碼簿 '+cb.key+' → '+k+'（'+codes.length+' 筆）',n.id);
+  await reloadMeta();S.cbId=n.id;toast('已複製為 '+k);render();
+};
+A.archiveCb=async()=>{
+  const cb=cur(),old={...cb};cb.status=cb.status==='ACTIVE'?'ARCHIVED':'ACTIVE';cb.updatedAt=nowISO();
+  await dbPut('codebooks',cb);await audit('codebook',cb.id,'UPDATE',old,cb,(cb.status==='ARCHIVED'?'封存':'取消封存')+'代碼簿 '+cb.key,cb.id);
+  await reloadMeta();render();
+};
+A.delCb=async()=>{
+  const cb=cur();
+  const xs=S.crosswalks.filter(x=>x.targetCodebookId===cb.id);
+  if(!confirm('確定刪除代碼簿「'+cb.key+'」？\n將一併刪除其所有代碼、快照，以及 '+xs.length+' 份指向它的對照表（含對照明細）。\n此動作無法復原，建議先匯出備份。'))return;
+  if(prompt('請輸入代碼簿 key 以確認刪除：')!==cb.key)return toast('key 不符，已取消');
+  await dbDelByIdx('codes','codebookId',cb.id);
+  await dbDelByIdx('snapshots','codebookId',cb.id);
+  for(const x of xs){await dbDelByIdx('mappings','crosswalkId',x.id);await dbDel('crosswalks',x.id);invalidateMaps(x.id)}
+  await dbDel('codebooks',cb.id);
+  await audit('codebook',cb.id,'DELETE',cb,null,'刪除代碼簿 '+cb.key,cb.id);
+  invalidate(cb.id);await reloadMeta();S.view='home';S.cbId=null;toast('已刪除');render();
+};
+
+/* ================= Codebook shell ================= */
+const TABS=[['codes','代碼'],['tree','樹狀'],['xwalk','對照'],['snap','快照'],['integrity','體檢'],['audit','紀錄']];
+async function viewCodebook(v,cb){
+  const codes=await getCodes(cb.id);
+  const distinct=new Set(codes.map(c=>c.code)).size;
+  const head='<div class="bar" style="margin-bottom:4px"><h2 class="pg" style="margin:0">'+esc(cb.name)+' <span class="mu sm">'+esc(cb.key)+'</span></h2>'+(cb.status==='ARCHIVED'?'<span class="tag">封存</span>':'')+
+   '<span style="flex:1"></span><button class="btn sm" data-act="editCb">編輯</button><button class="btn sm" data-act="copyCb">複製</button><button class="btn sm" data-act="archiveCb">'+(cb.status==='ACTIVE'?'封存':'取消封存')+'</button><button class="btn sm dng" data-act="delCb">刪除</button></div>'+
+   '<div class="mu sm" style="margin-bottom:8px">'+esc(cb.description||'')+' '+(cb.owner?'· 維護：'+esc(cb.owner):'')+' · '+distinct+' 個代碼 / '+codes.length+' 個版本'+(cb.codePattern?' · pattern <code>'+esc(cb.codePattern)+'</code>':'')+(cb.hierarchical?' · 階層':'')+(cb.caseSensitive?' · 區分大小寫':'')+'</div>'+
+   '<div class="tabs">'+TABS.map(t=>'<div class="tab'+(S.tab===t[0]?' on':'')+'" data-act="tab" data-t="'+t[0]+'">'+t[1]+'</div>').join('')+'</div>';
+  v.innerHTML=head+'<div id="tabbody"></div>';
+  const b=$('#tabbody');
+  if(S.tab==='tree')await viewTree(b,cb,codes);
+  else if(S.tab==='xwalk')await viewXwalk(b,cb,codes);
+  else if(S.tab==='snap')await viewSnap(b,cb,codes);
+  else if(S.tab==='integrity')await viewIntegrity(b,cb,codes);
+  else viewCodes(b,cb,codes);
+}
+
+/* ================= Codes table ================= */
+const PAGE=100;
+function viewCodes(b,cb,codes){
+  S.curCodes=codes;
+  b.innerHTML='<div class="bar">'+
+   '<input type="search" id="fq" placeholder="搜尋 code / 名稱 / 別名 / 說明（/ 為全域搜尋）" style="width:300px" value="'+esc(S.f.q)+'" data-input="fq">'+
+   sel('fs',[['','全部狀態'],...STATUSES],S.f.status,'data-change="fs"')+
+   '<label class="mu sm">基準日 <input type="date" id="fa" value="'+esc(S.f.asOf)+'" data-change="fa"></label>'+
+   '<span style="flex:1"></span>'+
+   '<button class="btn pri" data-act="newCode">＋ 新增代碼 (N)</button>'+
+   '<button class="btn" data-act="expCodesCsv">匯出 CSV</button></div><div id="tbl"></div>';
+  renderTable(true);
+}
+const fqRun=debounce(v=>{S.f.q=v;S.f.page=0;renderTable(true)},150);
+IN.fq=el=>fqRun(el.value);
+IN.fs=el=>{S.f.status=el.value;S.f.page=0;renderTable(true)};
+IN.fa=el=>{S.f.asOf=el.value;S.f.page=0;renderTable(true)};
+function filteredCodes(){
+  let a=S.curCodes;const f=S.f,q=lc(f.q).trim();
+  if(q)a=a.filter(c=>lc(c.code+' '+c.name+' '+c.nameEn+' '+c.description+' '+(c.aliases||[]).join(' ')).includes(q));
+  if(f.status)a=a.filter(c=>c.status===f.status);
+  if(f.asOf&&isDate(f.asOf))a=a.filter(c=>{const [x,y]=rng(c);return f.asOf>=x&&f.asOf<=y});
+  a=a.slice();
+  if(f.sort==='sortOrder')a.sort((x,y)=>cmpCodes(x,y)*f.dir);
+  else a.sort((x,y)=>{const p=String(x[f.sort]==null?'':x[f.sort]),q2=String(y[f.sort]==null?'':y[f.sort]);return (p<q2?-1:p>q2?1:cmpCodes(x,y))*f.dir});
+  return a;
+}
+function renderTable(recompute){
+  const t=$('#tbl');if(!t)return;
+  if(recompute||!S.filtered)S.filtered=filteredCodes();
+  const all=S.filtered,pages=Math.max(1,Math.ceil(all.length/PAGE));
+  if(S.f.page>=pages)S.f.page=pages-1;
+  const rows=all.slice(S.f.page*PAGE,(S.f.page+1)*PAGE);
+  const th=(k,l)=>'<th class="s" data-act="sortBy" data-k="'+k+'">'+l+(S.f.sort===k?(S.f.dir>0?' ▲':' ▼'):'')+'</th>';
+  const allSel=all.length&&all.every(c=>S.sel.has(c.id));
+  let h='<div class="bar sm"><span>共 '+all.length+' 筆'+(S.sel.size?'，已選 <b>'+S.sel.size+'</b> 筆':'')+'</span>'+
+   '<button class="btn sm" data-act="batchStatus" data-s="ACTIVE" '+(S.sel.size?'':'disabled')+'>啟用</button>'+
+   '<button class="btn sm" data-act="batchStatus" data-s="INACTIVE" '+(S.sel.size?'':'disabled')+'>停用</button>'+
+   '<button class="btn sm" data-act="batchValidTo" '+(S.sel.size?'':'disabled')+'>設定 validTo</button>'+
+   '<button class="btn sm dng" data-act="batchDelete" '+(S.sel.size?'':'disabled')+'>刪除</button>'+
+   (S.sel.size?'<button class="btn sm" data-act="selClear">取消選取</button>':'')+'</div>';
+  h+='<div class="wrap"><table class="t"><thead><tr><th><input type="checkbox" data-act="selAll" '+(allSel?'checked':'')+' title="選取全部符合條件的筆數"></th>'+
+    th('code','code')+th('name','名稱')+th('parentCode','上層')+'<th>別名</th>'+th('validFrom','生效期間')+th('status','狀態')+'<th>替代</th><th></th></tr></thead><tbody>';
+  if(!rows.length)h+='<tr><td colspan="9" class="empty">'+(S.curCodes.length?'沒有符合條件的代碼':'此代碼簿尚無代碼。可按「＋ 新增代碼」或使用右上角「匯入」。')+'</td></tr>';
+  for(const c of rows)h+='<tr class="'+(S.sel.has(c.id)?'sel':'')+'"><td><input type="checkbox" data-act="selRow" data-id="'+esc(c.id)+'" '+(S.sel.has(c.id)?'checked':'')+'></td>'+
+   '<td><a href="#" data-act="editCode" data-id="'+esc(c.id)+'"><b>'+esc(c.code)+'</b></a></td>'+
+   '<td>'+esc(c.name)+(c.nameEn?'<div class="mu sm">'+esc(c.nameEn)+'</div>':'')+'</td>'+
+   '<td>'+esc(c.parentCode)+'</td><td>'+(c.aliases||[]).map(a=>'<span class="tag">'+esc(a)+'</span>').join('')+'</td>'+
+   '<td class="sm">'+esc(periodText(c))+'</td><td>'+tagStatus(c.status)+'</td><td>'+esc(c.replacedBy)+'</td>'+
+   '<td><button class="btn sm" data-act="editCode" data-id="'+esc(c.id)+'">編輯</button></td></tr>';
+  h+='</tbody></table></div>';
+  if(pages>1)h+='<div class="bar" style="margin-top:8px"><button class="btn sm" data-act="page" data-d="-1" '+(S.f.page?'':'disabled')+'>‹ 上一頁</button><span class="sm">第 '+(S.f.page+1)+' / '+pages+' 頁（每頁 '+PAGE+' 筆）</span><button class="btn sm" data-act="page" data-d="1" '+(S.f.page<pages-1?'':'disabled')+'>下一頁 ›</button></div>';
+  t.innerHTML=h;
+}
+A.sortBy=el=>{const k=el.dataset.k;if(S.f.sort===k)S.f.dir*=-1;else{S.f.sort=k;S.f.dir=1}renderTable(true)};
+A.page=el=>{S.f.page+=parseInt(el.dataset.d,10);renderTable(false)};
+A.selRow=el=>{if(el.checked)S.sel.add(el.dataset.id);else S.sel.delete(el.dataset.id);renderTable(false)};
+A.selAll=el=>{for(const c of S.filtered){if(el.checked)S.sel.add(c.id);else S.sel.delete(c.id)}renderTable(false)};
+A.selClear=()=>{S.sel.clear();renderTable(false)};
+A.expCodesCsv=()=>exportCodesCsv(cur());
+
+async function refreshLevels(cbId){
+  const cb=cbById(cbId);if(!cb||!cb.hierarchical)return;
+  const codes=await getCodes(cbId);const ch=recalcLevels(codes);
+  if(ch.length)await dbBatch('codes',ch);
+}
+async function afterCodeWrite(cbId){invalidate(cbId);await refreshLevels(cbId);invalidate(cbId);S.sel.clear()}
+
+A.batchStatus=async el=>{
+  const cb=cur(),codes=await getCodes(cb.id),st=el.dataset.s;
+  const tg=codes.filter(c=>S.sel.has(c.id));
+  if(!tg.length)return;
+  if(!confirm('將 '+tg.length+' 筆代碼設為 '+st+'？'))return;
+  const upd=tg.map(c=>({...c,status:st}));
+  await dbBatch('codes',upd);
+  await audit('code',cb.id,'BATCH_UPDATE',null,{status:st,ids:tg.map(c=>c.code).slice(0,200)},'批次設定 '+tg.length+' 筆為 '+st,cb.id);
+  invalidate(cb.id);S.sel.clear();toast('已更新 '+tg.length+' 筆');render();
+};
+A.batchValidTo=()=>{
+  openModal('批次設定 validTo','<div id="ferr"></div><p class="mu sm">對已選取的 '+S.sel.size+' 筆代碼設定結束日。留空代表「無結束日」。</p>'+fld('validTo',inp('vt','','date'))+
+    '<div class="foot"><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-save="1" data-act="doBatchValidTo">套用</button></div>');
+};
+A.doBatchValidTo=async()=>{
+  const cb=cur(),codes=await getCodes(cb.id),vt=normDate(mv('vt'));
+  if(vt&&!isDate(vt)){$('#ferr').innerHTML='<div class="banner">日期格式錯誤</div>';return}
+  const tg=codes.filter(c=>S.sel.has(c.id)).map(c=>({...c,validTo:vt}));
+  const bad=[];
+  for(const n of tg){
+    const r=validateCode(n,cb,codes,n.id);
+    if(r.errors.length)bad.push(n.code+'：'+r.errors[0]);
+  }
+  if(bad.length){$('#ferr').innerHTML=errBox(['未寫入。以下 '+bad.length+' 筆有問題：',...bad]);return}
+  await dbBatch('codes',tg);
+  await audit('code',cb.id,'BATCH_UPDATE',null,{validTo:vt},'批次設定 '+tg.length+' 筆 validTo='+(vt||'(空)'),cb.id);
+  invalidate(cb.id);closeModal();S.sel.clear();toast('已更新 '+tg.length+' 筆');render();
+};
+A.batchDelete=async()=>{
+  const cb=cur(),codes=await getCodes(cb.id),tg=codes.filter(c=>S.sel.has(c.id));
+  if(!tg.length)return;
+  if(!confirm('確定刪除 '+tg.length+' 筆代碼？（建議先建立快照）'))return;
+  await dbBatch('codes',[],tg.map(c=>c.id));
+  await audit('code',cb.id,'BATCH_DELETE',{codes:tg.map(c=>c.code+'|'+(c.validFrom||'')).slice(0,500)},null,'批次刪除 '+tg.length+' 筆',cb.id);
+  await afterCodeWrite(cb.id);S.sel.clear();toast('已刪除 '+tg.length+' 筆');render();
+};
+
+/* ---------- code form (drawer) ---------- */
+function codeForm(c,isNew){
+  const cb=cur(),codes=S.curCodes||[];
+  const dl=cb.hierarchical?'<datalist id="pdl">'+[...new Set(codes.map(x=>x.code))].slice(0,5000).map(x=>'<option value="'+esc(x)+'">').join('')+'</datalist>':'';
+  openModal(isNew?'新增代碼':'編輯代碼 '+c.code,
+   '<div id="ferr"></div><input type="hidden" name="id" value="'+esc(isNew?'':c.id)+'">'+
+   '<div class="grid">'+fld('code',inp('code',c.code),1)+fld('中文名稱 name',inp('name',c.name),1)+fld('英文名稱 nameEn',inp('nameEn',c.nameEn))+
+   fld('上層代碼 parentCode',inp('parentCode',c.parentCode,'text',cb.hierarchical?'list="pdl"':'')+dl)+
+   fld('別名 aliases（以 | 分隔）',inp('aliases',(c.aliases||[]).join('|')))+
+   fld('狀態 status',sel('status',STATUSES,c.status))+
+   fld('validFrom',inp('validFrom',c.validFrom||'','date'))+fld('validTo',inp('validTo',c.validTo||'','date'))+
+   fld('替代代碼 replacedBy',inp('replacedBy',c.replacedBy))+fld('顯示順序 sortOrder',inp('sortOrder',c.sortOrder==null?'':c.sortOrder,'number','step="1"'))+'</div>'+
+   fld('定義說明 description','<textarea name="description">'+esc(c.description)+'</textarea>')+
+   fld('自訂屬性 attrs（JSON 物件）','<textarea name="attrs" placeholder=\'{"riskWeight":0.2}\'>'+esc(c.attrs?JSON.stringify(c.attrs,null,1):'')+'</textarea>')+
+   fld('備註 note',inp('note',c.note))+
+   '<div class="foot">'+(isNew?'':'<button class="btn" data-act="dupCode" data-id="'+esc(c.id)+'">複製為新版本</button><button class="btn dng" data-act="delCode" data-id="'+esc(c.id)+'">刪除</button>')+
+   '<span style="flex:1"></span><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-save="1" data-act="saveCode">儲存 (Ctrl+S)</button></div>',{drawer:true});
+}
+const blankCode=()=>makeCode({code:'',name:'',status:'ACTIVE'},S.cbId);
+A.newCode=()=>codeForm(blankCode(),true);
+A.editCode=(el,e)=>{
+  if(e&&e.preventDefault)e.preventDefault();
+  const id=el.dataset.id;
+  const find=()=>(S.curCodes||[]).find(c=>c.id===id);
+  let c=find();
+  if(c)return codeForm(c,false);
+  return getCodes(S.cbId).then(l=>{S.curCodes=l;c=find();if(c)codeForm(c,false)});
+};
+A.dupCode=()=>{
+  const c=(S.curCodes||[]).find(x=>x.id===mv('id'));if(!c)return;
+  const n={...c,id:uid(),validFrom:c.validTo?(()=>{const d=new Date(c.validTo+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+1);return d.toISOString().slice(0,10)})():null,validTo:null,status:'ACTIVE'};
+  codeForm(n,true);toast('已複製，請調整生效期間後儲存（期間不可與原版本重疊）');
+};
+A.saveCode=async()=>{
+  const cb=cur(),codes=await getCodes(cb.id),id=mv('id'),old=id?codes.find(c=>c.id===id):null;
+  const rec=makeCode({id:id||undefined,code:mv('code'),name:mv('name'),nameEn:mv('nameEn'),description:mv('description'),parentCode:mv('parentCode'),
+    aliases:mv('aliases'),validFrom:mv('validFrom'),validTo:mv('validTo'),status:mv('status'),replacedBy:mv('replacedBy'),sortOrder:mv('sortOrder'),attrs:mv('attrs'),note:mv('note')},cb.id);
+  if(old)rec.level=old.level;
+  const r=validateCode(rec,cb,codes,id);
+  if(r.errors.length){$('#ferr').innerHTML=errBox(r.errors);return}
+  await dbPut('codes',rec);
+  await audit('code',rec.id,old?'UPDATE':'CREATE',old,rec,(old?'修改':'新增')+'代碼 '+rec.code+' '+rec.name,cb.id);
+  await afterCodeWrite(cb.id);closeModal();
+  toast('已儲存'+(r.warns.length?'（注意：'+r.warns.join('；')+'）':''));render();
+};
+A.delCode=async el=>{
+  const cb=cur(),codes=await getCodes(cb.id),c=codes.find(x=>x.id===el.dataset.id);if(!c)return;
+  if(!confirm('確定刪除代碼 '+c.code+'（'+periodText(c)+'）？'))return;
+  await dbDel('codes',c.id);
+  await audit('code',c.id,'DELETE',c,null,'刪除代碼 '+c.code,cb.id);
+  await afterCodeWrite(cb.id);closeModal();toast('已刪除');render();
+};
+
+/* ================= Tree ================= */
+async function viewTree(b,cb,codes){
+  if(!cb.hierarchical){b.innerHTML='<div class="card empty">此代碼簿未啟用「支援階層」。可在「編輯」中勾選後使用樹狀檢視。</div>';return}
+  S.curCodes=codes;
+  const t=todayStr(),groups=new Map();
+  for(const c of codes){let a=groups.get(c.code);if(!a){a=[];groups.set(c.code,a)}a.push(c)}
+  const rep=new Map();
+  for(const [k,arr] of groups){const p=pickVersion(arr,t);rep.set(k,p.valid||p.fut||p.past||arr[0])}
+  const children=new Map(),roots=[];
+  for(const r of rep.values()){
+    if(r.parentCode&&rep.has(r.parentCode)&&r.parentCode!==r.code){let a=children.get(r.parentCode);if(!a){a=[];children.set(r.parentCode,a)}a.push(r)}
+    else roots.push(r);
+  }
+  const seen=new Set();const stack=[...roots];
+  while(stack.length){const r=stack.pop();if(seen.has(r.code))continue;seen.add(r.code);for(const k of (children.get(r.code)||[]))stack.push(k)}
+  const lost=[...rep.values()].filter(r=>!seen.has(r.code));
+  S.tree={children,rep};
+  b.innerHTML='<div class="mu sm" style="margin-bottom:6px">以今日（'+t+'）有效版本顯示；點擊代碼可編輯，點三角形展開。孤兒節點（上層不存在）顯示於根層並標示 ⚠。</div><div class="card tree">'+(roots.length?treeList(roots,true):'<div class="empty">尚無代碼</div>')+'</div>'+
+    (lost.length?'<div class="card"><h3>⚠ 無法從根節點到達（可能有階層循環）</h3>'+lost.map(r=>'<span class="tag" data-act="editCode" data-id="'+esc(r.id)+'" style="cursor:pointer">'+esc(r.code)+' → '+esc(r.parentCode)+'</span>').join('')+'</div>':'');
+}
+function treeList(list,isRoot){
+  list=list.slice().sort(cmpCodes);
+  return '<ul>'+list.map(r=>{
+    const kids=S.tree.children.get(r.code)||[];
+    const orphan=isRoot&&r.parentCode&&!S.tree.rep.has(r.parentCode);
+    const label='<span class="nd" data-act="editCode" data-id="'+esc(r.id)+'"><b>'+esc(r.code)+'</b> '+esc(r.name)+'</span>'+(r.status!=='ACTIVE'?' '+tagStatus(r.status):'')+(orphan?' <span class="tag warn" title="上層 '+esc(r.parentCode)+' 不存在">⚠ 孤兒</span>':'')+(kids.length?' <span class="mu sm">('+kids.length+')</span>':'');
+    return kids.length?'<li><details data-tree="'+esc(r.code)+'"><summary>'+label+'</summary><ul></ul></details></li>':'<li><span class="tg"></span>'+label+'</li>';
+  }).join('')+'</ul>';
+}
+document.addEventListener('toggle',e=>{
+  const d=e.target;
+  if(!d||!d.dataset||d.dataset.tree===undefined||!d.open||d.dataset.done||!S.tree)return;
+  d.dataset.done='1';
+  const kids=S.tree.children.get(d.dataset.tree)||[];
+  const holder=document.createElement('div');holder.innerHTML=treeList(kids,false);
+  d.querySelector('ul').replaceWith(holder.firstChild);
+},true);
+
+/* ================= Crosswalk (對照) ================= */
+const makeMap=(o,xwId)=>({id:o.id||uid(),crosswalkId:xwId,sourceCode:String(o.sourceCode==null?'':o.sourceCode).trim(),sourceName:String(o.sourceName||'').trim(),
+  targetCode:String(o.targetCode==null?'':o.targetCode).trim(),mappingType:String(o.mappingType||'EXACT').trim().toUpperCase(),
+  validFrom:normDate(o.validFrom),validTo:normDate(o.validTo),note:String(o.note||'').trim()});
+function validateMap(m,cb,codes){
+  const e=[];
+  if(!m.sourceCode)e.push('sourceCode 不可為空');
+  if(!m.targetCode)e.push('targetCode 不可為空');
+  else if(!codes.some(c=>normKey(c.code,cb.caseSensitive)===normKey(m.targetCode,cb.caseSensitive)))e.push('targetCode「'+m.targetCode+'」不存在於 '+cb.key);
+  if(!MAPTYPES.includes(m.mappingType))e.push('mappingType 必須為 '+MAPTYPES.join(' / '));
+  if(m.validFrom&&!isDate(m.validFrom))e.push('validFrom 日期格式錯誤');
+  if(m.validTo&&!isDate(m.validTo))e.push('validTo 日期格式錯誤');
+  if(m.validFrom&&m.validTo&&isDate(m.validFrom)&&isDate(m.validTo)&&m.validFrom>m.validTo)e.push('validFrom 不可晚於 validTo');
+  return e;
+}
+async function viewXwalk(b,cb,codes){
+  S.curCodes=codes;
+  const xws=S.crosswalks.filter(x=>x.targetCodebookId===cb.id);
+  if(S.xwId&&!xws.some(x=>x.id===S.xwId))S.xwId=null;
+  const counts={};for(const x of xws)counts[x.id]=(await getMaps(x.id)).length;
+  let h='<div class="bar"><button class="btn pri" data-act="newXw">＋ 新增對照表</button><span class="mu sm">對照表：「來源系統代碼」→「'+esc(cb.key)+'」標準代碼</span></div>';
+  if(!xws.length)h+='<div class="card empty">尚無指向此代碼簿的對照表。</div>';
+  else h+='<div class="grid">'+xws.map(x=>'<div class="card" style="'+(S.xwId===x.id?'border-color:var(--pri)':'')+'"><h3>'+esc(x.name)+'</h3><div class="mu sm">來源系統：'+esc(x.sourceSystem)+' · '+counts[x.id]+' 筆對照</div>'+(x.description?'<div class="sm">'+esc(x.description)+'</div>':'')+
+    '<div class="bar" style="margin:8px 0 0"><button class="btn sm pri" data-act="openXw" data-id="'+esc(x.id)+'">'+(S.xwId===x.id?'檢視中':'開啟明細')+'</button><button class="btn sm" data-act="editXw" data-id="'+esc(x.id)+'">編輯</button><button class="btn sm dng" data-act="delXw" data-id="'+esc(x.id)+'">刪除</button></div></div>').join('')+'</div>';
+  h+='<div id="mpWrap"></div>';
+  if(xws.length)h+='<div class="card"><h3>多系統矩陣檢視</h3><div class="bar"><input type="search" placeholder="篩選標準代碼 / 名稱 / 來源代碼" data-input="mxq" value="'+esc(S.mxq||'')+'" style="width:300px"><label class="sm"><input type="checkbox" data-change="mxgap" '+(S.mxgap?'checked':'')+'> 只顯示缺口（至少一個系統沒有對應）</label></div><div id="mx"></div></div>';
+  b.innerHTML=h;
+  if(S.xwId)await renderMappings();
+  if(xws.length)await renderMatrix(xws,codes);
+}
+IN.mxq=el=>{S.mxq=el.value;renderMatrix()};
+IN.mxgap=el=>{S.mxgap=el.checked;renderMatrix()};
+async function renderMatrix(xws,codes){
+  const cb=cur();xws=xws||S.crosswalks.filter(x=>x.targetCodebookId===cb.id);codes=codes||await getCodes(cb.id);
+  const box=$('#mx');if(!box)return;
+  const cols=[];
+  for(const x of xws){const m=await getMaps(x.id);const rev=new Map();for(const r of m){const k=normKey(r.targetCode,cb.caseSensitive);let a=rev.get(k);if(!a){a=[];rev.set(k,a)}a.push(r.sourceCode)}cols.push({x,rev})}
+  const t=todayStr(),reps=new Map();
+  for(const c of codes){const k=c.code;const o=reps.get(k);if(!o||(c.status==='ACTIVE'&&o.status!=='ACTIVE'))reps.set(k,c)}
+  let rows=[...reps.values()].sort(cmpCodes).map(c=>({c,cells:cols.map(o=>o.rev.get(normKey(c.code,cb.caseSensitive))||[])}));
+  const q=lc(S.mxq||'').trim();
+  if(q)rows=rows.filter(r=>lc(r.c.code+' '+r.c.name).includes(q)||r.cells.some(a=>a.some(s=>lc(s).includes(q))));
+  if(S.mxgap)rows=rows.filter(r=>r.c.status==='ACTIVE'&&r.cells.some(a=>!a.length));
+  const total=rows.length;rows=rows.slice(0,300);
+  box.innerHTML='<div class="wrap"><table class="t"><thead><tr><th>標準代碼</th><th>名稱</th>'+cols.map(o=>'<th>'+esc(o.x.name)+'</th>').join('')+'</tr></thead><tbody>'+
+   (rows.length?rows.map(r=>'<tr><td><b>'+esc(r.c.code)+'</b></td><td>'+esc(r.c.name)+(r.c.status!=='ACTIVE'?' '+tagStatus(r.c.status):'')+'</td>'+r.cells.map(a=>'<td>'+(a.length?a.map(esc).join(' / '):'<span class="mu">—</span>')+'</td>').join('')+'</tr>').join(''):'<tr><td colspan="'+(2+cols.length)+'" class="empty">沒有資料</td></tr>')+
+   '</tbody></table></div><div class="mu sm">'+(total>300?'顯示前 300 / 共 '+total+' 列，請用篩選縮小範圍':'共 '+total+' 列')+'</div>';
+}
+function xwForm(x){
+  const v=x||{name:'',sourceSystem:'',description:''};
+  openModal(x?'編輯對照表':'新增對照表','<div id="ferr"></div><input type="hidden" name="id" value="'+esc(x?x.id:'')+'">'+
+   fld('名稱',inp('name',v.name,'text','placeholder="例如 SYS_A → collateralType"'),1)+fld('來源系統 sourceSystem',inp('sourceSystem',v.sourceSystem,'text','placeholder="例如 SYS_A"'),1)+
+   fld('說明','<textarea name="description">'+esc(v.description||'')+'</textarea>')+
+   '<div class="foot"><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-save="1" data-act="saveXw">儲存</button></div>');
+}
+A.newXw=()=>xwForm(null);
+A.editXw=el=>xwForm(S.crosswalks.find(x=>x.id===el.dataset.id));
+A.saveXw=async()=>{
+  const id=mv('id'),old=id?S.crosswalks.find(x=>x.id===id):null,name=String(mv('name')).trim(),ss=String(mv('sourceSystem')).trim();
+  if(!name||!ss){$('#ferr').innerHTML=errBox('名稱與來源系統必填');return}
+  if(S.crosswalks.some(x=>x.id!==id&&x.targetCodebookId===(old?old.targetCodebookId:S.cbId)&&x.sourceSystem===ss&&x.name===name)){$('#ferr').innerHTML=errBox('已有同名同來源系統的對照表');return}
+  const rec={id:id||uid(),name,sourceSystem:ss,description:String(mv('description')).trim(),targetCodebookId:old?old.targetCodebookId:S.cbId,createdAt:old?old.createdAt:nowISO(),updatedAt:nowISO()};
+  await dbPut('crosswalks',rec);await audit('crosswalk',rec.id,old?'UPDATE':'CREATE',old,rec,(old?'修改':'新增')+'對照表 '+name,rec.targetCodebookId);
+  await reloadMeta();closeModal();if(!old)S.xwId=rec.id;render();
+};
+A.delXw=async el=>{
+  const x=S.crosswalks.find(c=>c.id===el.dataset.id);if(!x)return;
+  if(!confirm('確定刪除對照表「'+x.name+'」及其所有對照明細？'))return;
+  await dbDelByIdx('mappings','crosswalkId',x.id);await dbDel('crosswalks',x.id);invalidateMaps(x.id);
+  await audit('crosswalk',x.id,'DELETE',x,null,'刪除對照表 '+x.name,x.targetCodebookId);
+  await reloadMeta();if(S.xwId===x.id)S.xwId=null;render();
+};
+A.openXw=el=>{S.xwId=el.dataset.id;S.mq='';render()};
+async function renderMappings(){
+  const w=$('#mpWrap');if(!w)return;
+  const x=S.crosswalks.find(c=>c.id===S.xwId);if(!x){w.innerHTML='';return}
+  w.innerHTML='<div class="card"><h3>對照明細：'+esc(x.name)+'</h3><div class="bar"><input type="search" placeholder="搜尋來源／目標代碼" data-input="mq" value="'+esc(S.mq||'')+'" style="width:260px">'+
+   '<button class="btn pri sm" data-act="newMap">＋ 新增對照</button><button class="btn sm" data-act="expMapCsv">匯出 CSV</button><button class="btn sm" data-act="impMap">匯入 CSV</button></div><div id="mpTbl"></div></div>';
+  await renderMapTable();
+}
+IN.mq=el=>{S.mq=el.value;renderMapTable()};
+async function renderMapTable(){
+  const t=$('#mpTbl');if(!t)return;
+  const cb=cur();let m=await getMaps(S.xwId);const q=lc(S.mq||'').trim();
+  if(q)m=m.filter(r=>lc(r.sourceCode+' '+r.sourceName+' '+r.targetCode+' '+r.note).includes(q));
+  m=m.slice().sort((a,b)=>a.sourceCode<b.sourceCode?-1:a.sourceCode>b.sourceCode?1:0);
+  const total=m.length;m=m.slice(0,300);
+  t.innerHTML='<div class="wrap"><table class="t"><thead><tr><th>sourceCode</th><th>sourceName</th><th>→ targetCode</th><th>類型</th><th>生效期間</th><th>備註</th><th></th></tr></thead><tbody>'+
+   (m.length?m.map(r=>'<tr><td><b>'+esc(r.sourceCode)+'</b></td><td>'+esc(r.sourceName)+'</td><td>'+esc(r.targetCode)+'</td><td><span class="tag">'+esc(r.mappingType)+'</span></td><td class="sm">'+esc(periodText(r))+'</td><td>'+esc(r.note)+'</td><td><button class="btn sm" data-act="editMap" data-id="'+esc(r.id)+'">編輯</button> <button class="btn sm dng" data-act="delMap" data-id="'+esc(r.id)+'">刪</button></td></tr>').join(''):'<tr><td colspan="7" class="empty">尚無對照</td></tr>')+
+   '</tbody></table></div><div class="mu sm">'+(total>300?'顯示前 300 / 共 '+total+' 筆':'共 '+total+' 筆')+'</div>';
+}
+function mapForm(r){
+  const v=r||{sourceCode:'',sourceName:'',targetCode:'',mappingType:'EXACT',validFrom:'',validTo:'',note:''},codes=S.curCodes||[];
+  openModal(r?'編輯對照':'新增對照','<div id="ferr"></div><input type="hidden" name="id" value="'+esc(r?r.id:'')+'">'+
+   '<datalist id="tdl">'+[...new Set(codes.map(c=>c.code))].slice(0,5000).map(c=>'<option value="'+esc(c)+'">').join('')+'</datalist>'+
+   '<div class="grid">'+fld('sourceCode',inp('sourceCode',v.sourceCode),1)+fld('sourceName',inp('sourceName',v.sourceName))+
+   fld('targetCode（標準代碼）',inp('targetCode',v.targetCode,'text','list="tdl"'),1)+fld('mappingType',sel('mappingType',MAPTYPES,v.mappingType))+
+   fld('validFrom',inp('validFrom',v.validFrom||'','date'))+fld('validTo',inp('validTo',v.validTo||'','date'))+'</div>'+fld('備註',inp('note',v.note))+
+   '<div class="foot"><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-save="1" data-act="saveMap">儲存</button></div>');
+}
+A.newMap=()=>mapForm(null);
+A.editMap=async el=>mapForm((await getMaps(S.xwId)).find(m=>m.id===el.dataset.id));
+A.saveMap=async()=>{
+  const cb=cur(),codes=await getCodes(cb.id),maps=await getMaps(S.xwId),id=mv('id'),old=id?maps.find(m=>m.id===id):null;
+  const rec=canonTarget(makeMap({id:id||undefined,sourceCode:mv('sourceCode'),sourceName:mv('sourceName'),targetCode:mv('targetCode'),mappingType:mv('mappingType'),validFrom:mv('validFrom'),validTo:mv('validTo'),note:mv('note')},S.xwId),cb,codes);
+  const er=validateMap(rec,cb,codes);
+  if(!er.length&&maps.some(m=>m.id!==rec.id&&m.sourceCode===rec.sourceCode&&m.targetCode===rec.targetCode&&(m.validFrom||'')===(rec.validFrom||'')))er.push('已有相同的 sourceCode + targetCode + validFrom 對照');
+  if(er.length){$('#ferr').innerHTML=errBox(er);return}
+  const clash=maps.find(m=>m.id!==rec.id&&m.sourceCode===rec.sourceCode&&m.targetCode!==rec.targetCode&&overlaps(m,rec));
+  await dbPut('mappings',rec);invalidateMaps(S.xwId);
+  await audit('mapping',rec.id,old?'UPDATE':'CREATE',old,rec,(old?'修改':'新增')+'對照 '+rec.sourceCode+' → '+rec.targetCode,cb.id);
+  closeModal();toast('已儲存'+(clash?'（注意：同一來源在重疊期間對應到另一個標準代碼 '+clash.targetCode+'）':''));render();
+};
+A.delMap=async el=>{
+  const m=(await getMaps(S.xwId)).find(x=>x.id===el.dataset.id);if(!m||!confirm('刪除對照 '+m.sourceCode+' → '+m.targetCode+'？'))return;
+  await dbDel('mappings',m.id);invalidateMaps(S.xwId);await audit('mapping',m.id,'DELETE',m,null,'刪除對照 '+m.sourceCode+' → '+m.targetCode,S.cbId);render();
+};
+A.expMapCsv=async()=>exportMapCsv(S.xwId);
+
+/* ================= Snapshots ================= */
+const clone=o=>typeof structuredClone==='function'?structuredClone(o):JSON.parse(JSON.stringify(o));
+async function createSnapshot(cb,label,note,auto){
+  const codes=await getCodes(cb.id);
+  const s={id:uid(),codebookId:cb.id,label,note:note||'',createdAt:nowISO(),auto:!!auto,count:codes.length,payload:clone(codes)};
+  await dbPut('snapshots',s);
+  await audit('snapshot',s.id,'CREATE',null,{label,count:codes.length},(auto?'自動':'手動')+'建立快照「'+label+'」（'+codes.length+' 筆）',cb.id);
+  return s;
+}
+async function viewSnap(b,cb,codes){
+  const snaps=(await dbByIdx('snapshots','codebookId',cb.id)).sort((a,c)=>a.createdAt<c.createdAt?1:-1);
+  const opts=[['__cur__','目前狀態'],...snaps.map(s=>[s.id,s.label+'（'+fmtTs(s.createdAt)+'）'])];
+  if(!S.snapA||!opts.some(o=>o[0]===S.snapA))S.snapA=snaps[0]?snaps[0].id:'__cur__';
+  if(!S.snapB||!opts.some(o=>o[0]===S.snapB))S.snapB='__cur__';
+  b.innerHTML='<div class="bar"><button class="btn pri" data-act="newSnap">＋ 建立快照</button><span class="mu sm">快照會凍結此代碼簿所有代碼版本；匯入 REPLACE／還原前也會自動建立。</span></div>'+
+   '<div class="wrap" style="max-height:34vh"><table class="t"><thead><tr><th>標籤</th><th>建立時間</th><th>筆數</th><th>備註</th><th></th></tr></thead><tbody>'+
+   (snaps.length?snaps.map(s=>'<tr><td><b>'+esc(s.label)+'</b> '+(s.auto?'<span class="tag">自動</span>':'')+'</td><td>'+esc(fmtTs(s.createdAt))+'</td><td>'+s.count+'</td><td>'+esc(s.note)+'</td><td><button class="btn sm" data-act="restoreSnap" data-id="'+esc(s.id)+'">還原</button> <button class="btn sm dng" data-act="delSnap" data-id="'+esc(s.id)+'">刪</button></td></tr>').join(''):'<tr><td colspan="5" class="empty">尚無快照</td></tr>')+
+   '</tbody></table></div>'+
+   '<div class="card" style="margin-top:12px"><h3>差異比較</h3><div class="bar"><span>A（舊）</span>'+sel('snapA',opts,S.snapA,'data-change="snapSel"')+'<span>→ B（新）</span>'+sel('snapB',opts,S.snapB,'data-change="snapSel"')+'<button class="btn pri" data-act="runDiff">比較</button></div><div id="diffOut"></div></div>';
+}
+IN.snapSel=el=>{if(el.name==='snapA')S.snapA=el.value;else S.snapB=el.value};
+A.newSnap=()=>openModal('建立快照','<div id="ferr"></div>'+fld('標籤',inp('label',todayStr()+' 手動快照'),1)+fld('備註','<textarea name="note"></textarea>')+
+  '<div class="foot"><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-save="1" data-act="saveSnap">建立</button></div>');
+A.saveSnap=async()=>{
+  const label=String(mv('label')).trim();if(!label){$('#ferr').innerHTML=errBox('標籤必填');return}
+  await createSnapshot(cur(),label,String(mv('note')).trim(),false);closeModal();toast('快照已建立');render();
+};
+A.delSnap=async el=>{if(!confirm('刪除此快照？'))return;await dbDel('snapshots',el.dataset.id);await audit('snapshot',el.dataset.id,'DELETE',null,null,'刪除快照',S.cbId);render()};
+async function restoreSnapshot(cb,snap){
+  await createSnapshot(cb,'還原前自動備份 '+fmtTs(nowISO()),'還原到「'+snap.label+'」之前',true);
+  const old=await getCodes(cb.id);
+  await dbBatch('codes',snap.payload.map(c=>({...clone(c),codebookId:cb.id})),old.map(c=>c.id));
+  await audit('code',cb.id,'RESTORE',{count:old.length},{count:snap.payload.length},'還原快照「'+snap.label+'」（'+snap.payload.length+' 筆）',cb.id);
+  await afterCodeWrite(cb.id);
+}
+A.restoreSnap=async el=>{
+  const cb=cur(),snap=await dbGet('snapshots',el.dataset.id);if(!snap)return;
+  if(!confirm('將代碼簿還原到快照「'+snap.label+'」（'+snap.count+' 筆）？\n目前狀態會先自動建立備份快照。'))return;
+  await restoreSnapshot(cb,snap);toast('已還原');render();
+};
+async function snapCodes(id,cb){return id==='__cur__'?await getCodes(cb.id):((await dbGet('snapshots',id))||{payload:[]}).payload}
+A.runDiff=async()=>{
+  const cb=cur(),a=await snapCodes(S.snapA,cb),b=await snapCodes(S.snapB,cb),d=diffCodes(a,b),L=200;
+  const lim=(arr,fn)=>arr.slice(0,L).map(fn).join('')+(arr.length>L?'<tr><td colspan="4" class="mu">… 其餘 '+(arr.length-L)+' 筆未顯示</td></tr>':'');
+  let h='<div class="bigstat" style="margin:8px 0"><div><b style="color:var(--ok)">'+d.added.length+'</b>ADDED</div><div><b style="color:var(--err)">'+d.removed.length+'</b>REMOVED</div><div><b style="color:var(--warn)">'+d.modified.length+'</b>MODIFIED</div><div><b>'+d.unchanged+'</b>UNCHANGED</div></div>';
+  const tbl=(title,arr,fn)=>arr.length?'<h4>'+title+'</h4><div class="wrap" style="max-height:30vh"><table class="t"><tbody>'+lim(arr,fn)+'</tbody></table></div>':'';
+  h+=tbl('新增',d.added,c=>'<tr><td><b>'+esc(c.code)+'</b></td><td>'+esc(c.name)+'</td><td>'+esc(periodText(c))+'</td><td>'+tagStatus(c.status)+'</td></tr>');
+  h+=tbl('移除',d.removed,c=>'<tr><td><b>'+esc(c.code)+'</b></td><td>'+esc(c.name)+'</td><td>'+esc(periodText(c))+'</td><td>'+tagStatus(c.status)+'</td></tr>');
+  h+=tbl('修改',d.modified,m=>'<tr><td><b>'+esc(m.code)+'</b><div class="mu sm">'+esc(m.validFrom||'…')+'</div></td><td colspan="3">'+m.changes.map(c=>'<div><span class="tag">'+esc(c.f)+'</span> <span class="diffold">'+esc(c.o||'(空)')+'</span> → <span class="diffnew">'+esc(c.n||'(空)')+'</span></div>').join('')+'</td></tr>');
+  $('#diffOut').innerHTML=h;
+};
+
+/* ================= Integrity ================= */
+const IC_DESC={IC01:'生效期間重疊',IC02:'孤兒節點',IC03:'階層循環',IC04:'replacedBy 無效',IC05:'別名衝突',IC06:'不符 codePattern',IC07:'對照 targetCode 無效',IC08:'同來源多重對應',IC09:'覆蓋率缺口',IC10:'日期顛倒',IC11:'名稱重複'};
+async function viewIntegrity(b,cb,codes){
+  S.curCodes=codes;
+  const xws=S.crosswalks.filter(x=>x.targetCodebookId===cb.id),mb=new Map();
+  for(const x of xws)mb.set(x.id,await getMaps(x.id));
+  const res=integrity(cb,codes,xws,mb,todayStr());
+  S.integ=res;
+  const cnt=s=>res.filter(r=>r.sev===s).length;
+  const byRule=new Map();for(const r of res){let a=byRule.get(r.rule);if(!a){a=[];byRule.set(r.rule,a)}a.push(r)}
+  let h='<div class="bar"><div class="bigstat"><div><b style="color:var(--err)">'+cnt('ERROR')+'</b>ERROR</div><div><b style="color:var(--warn)">'+cnt('WARN')+'</b>WARN</div><div><b style="color:var(--info)">'+cnt('INFO')+'</b>INFO</div></div><span style="flex:1"></span><button class="btn" data-act="viewIntegRerun">重新檢查</button><button class="btn" data-act="expInteg" '+(res.length?'':'disabled')+'>匯出 CSV</button></div>';
+  if(!res.length)h+='<div class="card"><b style="color:var(--ok)">✔ 11 項檢查全數通過</b><div class="mu sm">檢查範圍：'+codes.length+' 個代碼版本、'+xws.length+' 份對照表。</div></div>';
+  for(const r of Object.keys(IC_DESC)){
+    const a=byRule.get(r);if(!a)continue;
+    h+='<div class="card"><h3>'+r+' '+esc(IC_DESC[r])+' <span class="tag '+(a[0].sev==='ERROR'?'err':a[0].sev==='WARN'?'warn':'info')+'">'+a[0].sev+'</span> <span class="mu sm">'+a.length+' 項</span></h3>'+
+     a.slice(0,100).map(x=>'<div class="sm" style="padding:2px 0">• '+esc(x.msg)+(x.ref&&codes.some(c=>c.code===x.ref)?' <a href="#" data-act="editCodeByCode" data-code="'+esc(x.ref)+'">開啟</a>':'')+'</div>').join('')+(a.length>100?'<div class="mu sm">… 其餘 '+(a.length-100)+' 項（請匯出 CSV）</div>':'')+'</div>';
+  }
+  b.innerHTML=h;
+}
+A.viewIntegRerun=()=>render();
+A.editCodeByCode=(el,e)=>{e.preventDefault();const c=(S.curCodes||[]).find(x=>x.code===el.dataset.code);if(c)codeForm(c,false)};
+A.expInteg=()=>{const cb=cur();dlCSV('integrity_'+cb.key+'_'+todayStr()+'.csv',[['rule','說明','severity','message','ref'],...(S.integ||[]).map(r=>[r.rule,IC_DESC[r.rule],r.sev,r.msg,r.ref])])};
+
+/* ================= Audit ================= */
+async function viewAudit(v){
+  const logs=(await dbAll('auditLog')).sort((a,b)=>a.ts<b.ts?1:-1);
+  S.auLogs=logs;
+  const acts=[...new Set(logs.map(l=>l.action))].sort();
+  v.innerHTML='<h2 class="pg">異動紀錄</h2><div class="bar">'+sel('au_cb',[['','全部代碼簿'],...S.codebooks.map(c=>[c.id,c.key])],S.au.cb,'data-change="auf"')+sel('au_act',[['','全部動作'],...acts],S.au.action,'data-change="auf"')+
+   '<input type="search" placeholder="搜尋摘要" value="'+esc(S.au.q)+'" data-input="auq" style="width:240px"><span style="flex:1"></span><button class="btn" data-act="expAudit">匯出 CSV</button></div><div id="auTbl"></div>';
+  renderAudit();
+}
+IN.auf=el=>{if(el.name==='au_cb')S.au.cb=el.value;else S.au.action=el.value;renderAudit()};
+IN.auq=el=>{S.au.q=el.value;renderAudit()};
+function auFiltered(){
+  const q=lc(S.au.q).trim();
+  return (S.auLogs||[]).filter(l=>(!S.au.cb||l.cbId===S.au.cb)&&(!S.au.action||l.action===S.au.action)&&(!q||lc(l.summary+' '+l.entity).includes(q)));
+}
+function renderAudit(){
+  const t=$('#auTbl');if(!t)return;const a=auFiltered(),shown=a.slice(0,300);
+  const js=o=>{if(o==null)return '';let s=JSON.stringify(o,null,1);return s.length>1500?s.slice(0,1500)+'\n…(已截斷)':s};
+  t.innerHTML='<div class="wrap"><table class="t"><thead><tr><th>時間</th><th>代碼簿</th><th>物件</th><th>動作</th><th>摘要</th></tr></thead><tbody>'+
+   (shown.length?shown.map(l=>{const cb=cbById(l.cbId);return '<tr><td class="sm" style="white-space:nowrap">'+esc(fmtTs(l.ts))+'</td><td>'+esc(cb?cb.key:(l.cbId?'(已刪除)':''))+'</td><td>'+esc(l.entity)+'</td><td><span class="tag">'+esc(l.action)+'</span></td><td>'+esc(l.summary)+
+     ((l.before||l.after)?'<details><summary class="mu sm">內容</summary><div class="pre">'+(l.before?'before: '+esc(js(l.before))+'\n':'')+(l.after?'after: '+esc(js(l.after)):'')+'</div></details>':'')+'</td></tr>'}).join(''):'<tr><td colspan="5" class="empty">沒有紀錄</td></tr>')+
+   '</tbody></table></div><div class="mu sm">'+(a.length>300?'顯示最新 300 / 共 '+a.length+' 筆，匯出 CSV 可取得全部':'共 '+a.length+' 筆')+'</div>';
+}
+A.expAudit=()=>dlCSV('audit_'+todayStr()+'.csv',[['ts','codebook','entity','entityId','action','summary'],...auFiltered().map(l=>{const cb=cbById(l.cbId);return [l.ts,cb?cb.key:'',l.entity,l.entityId,l.action,l.summary]})]);
+
+/* ================= Shared CSV tool helpers ================= */
+const csvHint=(c)=>c?'<div class="mu sm">已載入 <b>'+esc(c.name)+'</b>：'+c.rows.length+' 列 × '+c.headers.length+' 欄（編碼 '+esc(c.enc)+'）</div>':'';
+async function loadProfiles(type){return (await dbByIdx('profiles','type',type)).sort((a,b)=>a.name.localeCompare(b.name))}
+async function profileBar(type,prefix){
+  const ps=await loadProfiles(type);
+  return '<div class="bar">'+sel(prefix+'Prof',[['','（選擇已儲存的設定）'],...ps.map(p=>[p.id,p.name])],S[prefix].prof||'','data-change="profSel" data-pfx="'+prefix+'"')+
+   '<button class="btn sm" data-act="profApply" data-pfx="'+prefix+'">套用</button><button class="btn sm" data-act="profSave" data-pfx="'+prefix+'" data-type="'+type+'">儲存目前設定</button><button class="btn sm dng" data-act="profDel" data-pfx="'+prefix+'">刪除</button></div>';
+}
+IN.profSel=el=>{S[el.dataset.pfx].prof=el.value};
+A.profSave=el=>{
+  const pfx=el.dataset.pfx,type=el.dataset.type;
+  openModal('儲存設定','<div id="ferr"></div>'+fld('設定名稱',inp('pname','')) +'<input type="hidden" name="ptype" value="'+type+'"><input type="hidden" name="ppfx" value="'+pfx+'">'+
+   '<div class="foot"><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-save="1" data-act="profSaveDo">儲存</button></div>');
+};
+A.profSaveDo=async()=>{
+  const name=String(mv('pname')).trim(),type=mv('ptype'),pfx=mv('ppfx');
+  if(!name){$('#ferr').innerHTML=errBox('請輸入名稱');return}
+  const st=S[pfx];
+  const config=type==='validation'?{map:st.map||{},asOf:st.asOf||'',asOfCol:st.asOfCol||'',emptyErr:!!st.emptyErr}:{col:st.col||'',mode:st.mode||'codebook',target:st.target||'',target2:st.target2||'',asOf:st.asOf||'',asOfCol:st.asOfCol||''};
+  const ex=(await loadProfiles(type)).find(p=>p.name===name);
+  const rec={id:ex?ex.id:uid(),type,name,config,createdAt:ex?ex.createdAt:nowISO(),updatedAt:nowISO()};
+  await dbPut('profiles',rec);closeModal();st.prof=rec.id;toast('設定已儲存');await render();
+};
+A.profApply=async el=>{
+  const pfx=el.dataset.pfx,st=S[pfx],p=st.prof?await dbGet('profiles',st.prof):null;
+  if(!p)return toast('請先選擇設定',true);
+  Object.assign(st,p.config);
+  if(pfx==='vl'&&st.csv){const m={};for(const h of st.csv.headers)if(p.config.map[h])m[h]=p.config.map[h];st.map=m;if(!st.csv.headers.includes(st.asOfCol))st.asOfCol=''}
+  if(pfx==='tr'&&st.csv){if(!st.csv.headers.includes(st.col))st.col='';if(!st.csv.headers.includes(st.asOfCol))st.asOfCol=''}
+  toast('已套用設定「'+p.name+'」');render();
+};
+A.profDel=async el=>{const st=S[el.dataset.pfx];if(!st.prof||!confirm('刪除此設定？'))return;await dbDel('profiles',st.prof);st.prof='';render()};
+
+/* ================= Lookup & Translate ================= */
+async function viewLookup(v){
+  v.innerHTML='<h2 class="pg">查詢翻譯</h2><div class="tabs"><div class="tab'+(S.lk.tab==='single'?' on':'')+'" data-act="lkTab" data-t="single">單筆查詢</div><div class="tab'+(S.lk.tab==='batch'?' on':'')+'" data-act="lkTab" data-t="batch">CSV 批次翻譯</div></div><div id="lkBody"></div>';
+  if(S.lk.tab==='single')await renderLookup();else await renderTranslate();
+}
+A.lkTab=el=>{S.lk.tab=el.dataset.t;render()};
+async function renderLookup(){
+  const b=$('#lkBody'),xws=S.crosswalks;
+  const xo=[['','（選擇）'],...xws.map(x=>[x.id,x.name+' ['+x.sourceSystem+'→'+(cbById(x.targetCodebookId)||{key:'?'}).key+']'])];
+  b.innerHTML='<div class="card"><div class="bar"><input type="search" id="lkq" placeholder="輸入代碼、名稱或別名" style="width:320px" value="'+esc(S.lk.q||'')+'">'+
+   '<label class="mu sm">基準日 <input type="date" id="lka" value="'+esc(S.lk.asOf||'')+'"></label><button class="btn pri" data-act="lkRun">查詢</button></div>'+
+   '<div class="mu sm">比對順序：code → 別名 → 名稱（完全相符）；「部分相符」僅供參考，不會用於自動翻譯。基準日留空＝今日。</div></div><div id="lkOut"></div>'+
+   '<div class="card"><h3>系統對照串接（來源系統 A → 標準代碼 → 系統 B）</h3><div class="bar">'+inp('cA',S.lk.cA||'','text','placeholder="系統 A 的代碼" id="lkca"')+sel('xA',xo,S.lk.xA||'','id="lkxa"')+'<span>→</span>'+sel('xB',xo,S.lk.xB||'','id="lkxb"')+'<button class="btn" data-act="lkChain">轉換</button></div><div id="lkChainOut"></div></div>';
+  $('#lkq').addEventListener('keydown',e=>{if(e.key==='Enter')A.lkRun()});
+  if(S.lk.auto){S.lk.auto=false;await A.lkRun()}
+}
+A.lkRun=async()=>{
+  const val=String($('#lkq').value).trim(),asOf=normDate($('#lka').value)||todayStr();
+  S.lk.q=val;S.lk.asOf=$('#lka').value;
+  const out=$('#lkOut');
+  if(!val){out.innerHTML='';return}
+  const lv=lc(val);let hits='',part='',maps='';
+  for(const cb of S.codebooks){
+    const idx=await getIdx(cb.id),r=resolve(idx,val,asOf);
+    if(!['NOT_FOUND','PATTERN_FAIL','EMPTY'].includes(r.res))
+      hits+='<tr><td>'+esc(cb.key)+(cb.status==='ARCHIVED'?' <span class="tag">封存</span>':'')+'</td><td>'+tagRes(r.res)+'</td><td><b>'+esc(r.code)+'</b></td><td>'+esc(r.name)+'</td><td>'+tagStatus(r.status)+'</td><td>'+esc(r.replacedBy)+'</td><td class="sm">'+esc(r.via==='code'?'code':r.via==='alias'?'別名':'名稱')+'</td></tr>';
+    if(lv.length>=1){
+      const seen=new Set();let n=0;
+      for(const c of idx.codes){
+        if(seen.has(c.code))continue;
+        if(lc(c.code+' '+c.name+' '+c.nameEn+' '+(c.aliases||[]).join(' ')).includes(lv)){seen.add(c.code);part+='<tr><td>'+esc(cb.key)+'</td><td><b>'+esc(c.code)+'</b></td><td>'+esc(c.name)+'</td><td>'+tagStatus(c.status)+'</td><td class="sm">'+esc(periodText(c))+'</td></tr>';if(++n>=30)break}
+      }
+    }
+  }
+  for(const x of S.crosswalks){
+    const ms=await getMaps(x.id),cb=cbById(x.targetCodebookId),tidx=cb?await getIdx(cb.id):null;
+    for(const m of ms){
+      if(m.sourceCode===val||m.sourceCode.toLowerCase()===lv){
+        const tr=tidx?resolve(tidx,m.targetCode,asOf):{};
+        maps+='<tr><td>'+esc(x.name)+'</td><td>來源→標準</td><td>'+esc(m.sourceCode)+(m.sourceName?'（'+esc(m.sourceName)+'）':'')+'</td><td><b>'+esc(m.targetCode)+'</b> '+esc(tr.name||'')+'</td><td><span class="tag">'+esc(m.mappingType)+'</span></td><td class="sm">'+esc(periodText(m))+'</td></tr>';
+      }else if(m.targetCode===val){
+        maps+='<tr><td>'+esc(x.name)+'</td><td>標準→來源</td><td><b>'+esc(m.targetCode)+'</b></td><td>'+esc(m.sourceCode)+(m.sourceName?'（'+esc(m.sourceName)+'）':'')+'</td><td><span class="tag">'+esc(m.mappingType)+'</span></td><td class="sm">'+esc(periodText(m))+'</td></tr>';
+      }
+    }
+  }
+  const T=(title,head,body)=>'<div class="card"><h3>'+title+'</h3>'+(body?'<div class="wrap" style="max-height:36vh"><table class="t"><thead><tr>'+head.map(x=>'<th>'+x+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div>':'<div class="mu">無</div>')+'</div>';
+  out.innerHTML='<div class="mu sm" style="margin-bottom:6px">基準日 '+asOf+'</div>'+T('完全相符',['代碼簿','結果','code','名稱','狀態','替代','命中方式'],hits)+T('對照表命中',['對照表','方向','來源','目標','類型','期間'],maps)+T('部分相符（參考）',['代碼簿','code','名稱','狀態','期間'],part);
+};
+A.lkChain=async()=>{
+  const out=$('#lkChainOut'),src=String($('#lkca').value).trim(),a=$('#lkxa').value,b=$('#lkxb').value,asOf=normDate($('#lka')&&$('#lka').value)||todayStr();
+  S.lk.cA=src;S.lk.xA=a;S.lk.xB=b;
+  if(!src||!a||!b){out.innerHTML='<div class="mu sm">請輸入代碼並選擇系統 A、系統 B 對照表</div>';return}
+  const xa=S.crosswalks.find(x=>x.id===a),xb=S.crosswalks.find(x=>x.id===b);
+  if(xa.targetCodebookId!==xb.targetCodebookId){out.innerHTML='<div class="banner">兩份對照表的標準代碼簿不同，無法串接</div>';return}
+  const r=mapLookup(buildMapIndex(await getMaps(a)),src,asOf);
+  if(r.res!=='OK'){out.innerHTML='<div class="banner">'+esc(src)+' 在系統 A 對照表中：'+tagRes(r.res)+'</div>';return}
+  const std=r.m.targetCode,idx=await getIdx(xa.targetCodebookId),sr=resolve(idx,std,asOf);
+  const back=(await getMaps(b)).filter(m=>m.targetCode===std&&asOf>=rng(m)[0]&&asOf<=rng(m)[1]);
+  out.innerHTML='<div class="sm">'+esc(src)+' <b>→</b> 標準 <b>'+esc(std)+'</b> '+esc(sr.name||'')+' ['+esc(r.m.mappingType)+'] <b>→</b> '+(back.length?back.map(m=>'<b>'+esc(m.sourceCode)+'</b>'+(m.sourceName?'（'+esc(m.sourceName)+'）':'')+' ['+esc(m.mappingType)+']').join('、'):'<span class="tag warn">系統 B 沒有對應</span>')+'</div>';
+};
+
+async function renderTranslate(){
+  const t=S.tr,b=$('#lkBody');t.mode=t.mode||'codebook';
+  const tgtOpts=t.mode==='codebook'?S.codebooks.map(c=>[c.id,c.key+' '+c.name]):S.crosswalks.map(x=>[x.id,x.name+' ['+x.sourceSystem+'→'+(cbById(x.targetCodebookId)||{key:'?'}).key+']']);
+  const hd=t.csv?t.csv.headers:[];
+  if(!tgtOpts.find(o=>o[0]===t.target))t.target=tgtOpts[0]?tgtOpts[0][0]:'';
+  b.innerHTML='<div class="card"><div class="bar"><input type="file" accept=".csv,.tsv,.txt" data-change="trFile">'+csvHint(t.csv)+'</div>'+(t.csv?
+   '<div class="grid">'+
+   fld('要翻譯的欄位',sel('trcol',[['','（選擇）'],...hd],t.col||'','data-change="trSet" data-k="col"'))+
+   fld('翻譯方式',sel('trmode',[['codebook','代碼簿（code→別名→名稱）'],['xwalk','對照表（來源→標準）'],['chain','串接（來源A→標準→系統B）']],t.mode,'data-change="trMode"'))+
+   fld(t.mode==='codebook'?'目標代碼簿':'對照表（來源 A）',sel('trtarget',tgtOpts,t.target,'data-change="trSet" data-k="target"'))+
+   (t.mode==='chain'?fld('對照表（目標系統 B）',sel('trtarget2',[['','（選擇）'],...tgtOpts],t.target2||'','data-change="trSet" data-k="target2"')):'')+
+   fld('基準日（固定）',inp('trasof',t.asOf||'','date','id="trAsOf" data-change="trSet" data-k="asOf"'))+
+   fld('或取自日期欄位',sel('trasofcol',[['','（使用固定基準日／今日）'],...hd],t.asOfCol||'','data-change="trSet" data-k="asOfCol"'))+'</div>'+
+   await profileBar('translate','tr')+'<div class="bar"><button class="btn pri" data-act="trRun">執行翻譯</button></div>':'<div class="mu sm">請先選擇 CSV 檔（UTF-8 或 Big5，逗號／Tab／分號分隔）。輸出新增欄位 {欄位}_std、{欄位}_name、{欄位}_status。</div>')+'</div><div id="trOut"></div>';
+  if(t.out)showTrOut();
+}
+IN.trFile=async el=>{const f=el.files[0];if(!f)return;try{S.tr.csv=await readCSVFile(f);S.tr.out=null;S.tr.col='';render()}catch(e){toast(e.message,true)}};
+IN.trSet=el=>{S.tr[el.dataset.k]=el.value};
+IN.trMode=el=>{S.tr.mode=el.value;S.tr.target='';S.tr.target2='';render()};
+A.trRun=()=>withBusy(trRunImpl);
+async function trRunImpl(){
+  const t=S.tr,csv=t.csv;if(!csv)return;
+  const ci=csv.headers.indexOf(t.col);if(ci<0)return toast('請選擇要翻譯的欄位',true);
+  const fixed=normDate(t.asOf)||todayStr(),ai=t.asOfCol?csv.headers.indexOf(t.asOfCol):-1;
+  let idx,mi,rev,tidx;
+  if(t.mode==='codebook'){if(!t.target)return toast('請選擇代碼簿',true);idx=await getIdx(t.target)}
+  else{
+    const x=S.crosswalks.find(c=>c.id===t.target);if(!x)return toast('請選擇對照表',true);
+    mi=buildMapIndex(await getMaps(x.id));tidx=await getIdx(x.targetCodebookId);
+    if(t.mode==='chain'){
+      const y=S.crosswalks.find(c=>c.id===t.target2);if(!y)return toast('請選擇目標系統 B 的對照表',true);
+      if(y.targetCodebookId!==x.targetCodebookId)return toast('兩份對照表的標準代碼簿不同',true);
+      rev=buildReverseIndex(await getMaps(y.id));
+    }
+  }
+  const out=[[...csv.headers,t.col+'_std',t.col+'_name',t.col+'_status']],stat={},n=csv.rows.length;
+  const box=$('#trOut');
+  for(let i=0;i<n;i++){
+    const row=csv.rows[i],val=row[ci]==null?'':row[ci];
+    let asOf=fixed;if(ai>=0){const d=normDate(row[ai]);if(d&&isDate(d))asOf=d}
+    let std='',name='',st='';
+    if(String(val).trim()==='')st='EMPTY';
+    else if(t.mode==='codebook'){const r=resolve(idx,val,asOf);std=r.code||'';name=r.name||'';st=r.res}
+    else{
+      const ml=mapLookup(mi,val,asOf);
+      if(ml.res==='AMBIGUOUS'){st='AMBIGUOUS';std=ml.targets.join('|')}
+      else if(ml.res!=='OK'){st=ml.res;std=ml.m?ml.m.targetCode:''}
+      else{
+        const tr=resolve(tidx,ml.m.targetCode,asOf);name=tr.name||'';std=ml.m.targetCode;
+        st=(tr.res==='OK'||tr.res==='CASE_MISMATCH')?'OK':tr.res;
+        if(t.mode==='chain'){
+          const srcs=[...new Set((rev.get(std)||[]).filter(m=>asOf>=rng(m)[0]&&asOf<=rng(m)[1]).map(m=>m.sourceCode))];
+          std=srcs.join('|');if(!srcs.length)st='NO_TARGET_MAPPING';
+        }
+      }
+    }
+    stat[st]=(stat[st]||0)+1;
+    const r2=row.slice(0,csv.headers.length);while(r2.length<csv.headers.length)r2.push('');
+    out.push([...r2,std,name,st]);
+    if(i%5000===4999){box.innerHTML='<div class="card">處理中… '+Math.round((i+1)/n*100)+'%</div>';await tick()}
+  }
+  t.out={rows:out,stat};showTrOut();
+}
+function showTrOut(){
+  const o=S.tr.out,box=$('#trOut');if(!box||!o)return;
+  const total=o.rows.length-1,pre=o.rows.slice(0,21);
+  box.innerHTML='<div class="card"><h3>翻譯結果</h3><div class="bigstat">'+Object.entries(o.stat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<div><b>'+v+'</b>'+esc(k)+'</div>').join('')+'</div>'+
+   '<div class="bar" style="margin-top:8px"><button class="btn pri" data-act="trDl">下載完整 CSV（'+total+' 列）</button></div>'+
+   '<div class="wrap" style="max-height:34vh"><table class="t"><thead><tr>'+pre[0].map(h=>'<th>'+esc(h)+'</th>').join('')+'</tr></thead><tbody>'+pre.slice(1).map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div><div class="mu sm">僅預覽前 20 列</div></div>';
+}
+A.trDl=()=>dlCSV((S.tr.csv.name||'data').replace(/\.\w+$/,'')+'_translated.csv',S.tr.out.rows);
+
+/* ================= CSV Validate ================= */
+async function viewValidate(v){
+  const t=S.vl,hd=t.csv?t.csv.headers:[];t.map=t.map||{};
+  const cbo=[['','（不驗證）'],...S.codebooks.map(c=>[c.id,c.key+' '+c.name])];
+  v.innerHTML='<h2 class="pg">CSV 代碼驗證</h2><div class="card"><div class="bar"><input type="file" accept=".csv,.tsv,.txt" data-change="vlFile">'+csvHint(t.csv)+'</div>'+
+   (t.csv?'<h3 style="margin-top:8px">欄位 ↔ 代碼簿</h3><div class="wrap" style="max-height:30vh"><table class="t"><thead><tr><th>CSV 欄位</th><th>範例值</th><th>驗證用代碼簿</th></tr></thead><tbody>'+
+     hd.map(h=>{const i=hd.indexOf(h);return '<tr><td><b>'+esc(h)+'</b></td><td class="sm mu">'+esc(t.csv.rows.slice(0,3).map(r=>r[i]).join(' , '))+'</td><td>'+sel('vm',cbo,t.map[h]||'','data-change="vlMap" data-h="'+esc(h)+'"')+'</td></tr>'}).join('')+'</tbody></table></div>'+
+     '<div class="grid" style="margin-top:10px">'+fld('基準日（固定，留空＝今日）',inp('vlasof',t.asOf||'','date','data-change="vlSet" data-k="asOf"'))+
+     fld('或取自日期欄位',sel('vlasofcol',[['','（使用固定基準日）'],...hd],t.asOfCol||'','data-change="vlSet" data-k="asOfCol"'))+
+     '<div class="fld"><label>空值處理</label><label><input type="checkbox" data-change="vlEmpty" '+(t.emptyErr?'checked':'')+'> 將空值視為錯誤</label></div></div>'+
+     await profileBar('validation','vl')+'<div class="bar"><button class="btn pri" data-act="vlRun">執行驗證</button></div>':'<div class="mu sm">選擇 CSV 檔後，指定哪些欄位要用哪一本代碼簿驗證。結果碼：OK / EMPTY / NOT_FOUND / PATTERN_FAIL / EXPIRED / NOT_YET_VALID / DEPRECATED / ALIAS_HIT / CASE_MISMATCH（名稱命中另標 NAME_HIT）。</div>')+'</div><div id="vlOut"></div>';
+  if(t.res)showVlOut();
+}
+IN.vlFile=async el=>{const f=el.files[0];if(!f)return;try{S.vl.csv=await readCSVFile(f);S.vl.res=null;S.vl.map={};
+  for(const h of S.vl.csv.headers){const cb=S.codebooks.find(c=>c.key.toLowerCase()===h.toLowerCase());if(cb)S.vl.map[h]=cb.id}
+  render()}catch(e){toast(e.message,true)}};
+IN.vlMap=el=>{if(el.value)S.vl.map[el.dataset.h]=el.value;else delete S.vl.map[el.dataset.h]};
+IN.vlSet=el=>{S.vl[el.dataset.k]=el.value};
+IN.vlEmpty=el=>{S.vl.emptyErr=el.checked};
+A.vlRun=()=>withBusy(vlRunImpl);
+async function vlRunImpl(){
+  const t=S.vl,csv=t.csv;if(!csv)return;
+  const cols=csv.headers.map((h,i)=>({h,i,cb:t.map[h]?cbById(t.map[h]):null})).filter(c=>c.cb);
+  if(!cols.length)return toast('請至少為一個欄位指定代碼簿',true);
+  for(const c of cols)c.idx=await getIdx(c.cb.id),c.stat={},c.bad=new Map();
+  const fixed=normDate(t.asOf)||todayStr(),ai=t.asOfCol?csv.headers.indexOf(t.asOfCol):-1,n=csv.rows.length,box=$('#vlOut');
+  const detail=[[...csv.headers,...cols.flatMap(c=>[c.h+'__result',c.h+'__std'])]],abn=[detail[0]];
+  for(let i=0;i<n;i++){
+    const row=csv.rows[i];let asOf=fixed;
+    if(ai>=0){const d=normDate(row[ai]);if(d&&isDate(d))asOf=d}
+    const r2=row.slice(0,csv.headers.length);while(r2.length<csv.headers.length)r2.push('');
+    const add=[];let bad=false;
+    for(const c of cols){
+      const val=row[c.i]==null?'':row[c.i],r=resolve(c.idx,val,asOf);
+      c.stat[r.res]=(c.stat[r.res]||0)+1;
+      const sev=SEV[r.res],isBad=sev==='ERROR'||sev==='WARN'||(r.res==='EMPTY'&&t.emptyErr),isNote=r.res==='ALIAS_HIT'||r.res==='NAME_HIT'||r.res==='CASE_MISMATCH';
+      if(isBad)bad=true;
+      if(isBad||isNote){const k=r.res+'\u0001'+String(val).trim();const o=c.bad.get(k);if(o)o.n++;else c.bad.set(k,{res:r.res,val:String(val).trim(),n:1,r})}
+      add.push(r.res,r.code||'');
+    }
+    const line=[...r2,...add];detail.push(line);if(bad)abn.push(line);
+    if(i%5000===4999){box.innerHTML='<div class="card">驗證中… '+Math.round((i+1)/n*100)+'%</div>';await tick()}
+  }
+  t.res={cols:cols.map(c=>({h:c.h,cb:c.cb,stat:c.stat,bad:[...c.bad.values()].sort((a,b)=>b.n-a.n).slice(0,20).map(o=>({...o,hint:(o.res==='NOT_FOUND'||o.res==='PATTERN_FAIL')?suggest(c.idx,o.val).join('、'):(o.res==='DEPRECATED'&&o.r.replacedBy)?'替代：'+o.r.replacedBy:(o.res==='ALIAS_HIT'||o.res==='NAME_HIT'||o.res==='CASE_MISMATCH')?'標準：'+o.r.code:''}))})),detail,abn,n};
+  showVlOut();
+}
+function showVlOut(){
+  const r=S.vl.res,box=$('#vlOut');if(!r||!box)return;
+  let h='<div class="card"><div class="bar"><h3 style="margin:0">驗證結果（'+r.n+' 列）</h3><span style="flex:1"></span><button class="btn sm" data-act="vlDl" data-k="detail">下載明細 CSV</button><button class="btn sm" data-act="vlDl" data-k="abn">下載異常列 CSV（'+(r.abn.length-1)+'）</button></div></div>';
+  for(const c of r.cols){
+    const bs=Object.entries(c.stat).sort((a,b)=>b[1]-a[1]);
+    h+='<div class="card"><h3>'+esc(c.h)+' <span class="mu sm">→ '+esc(c.cb.key)+'</span></h3><div class="bigstat">'+bs.map(([k,v])=>'<div>'+tagRes(k)+'<b>'+v+'</b><span class="mu sm">'+(v/r.n*100).toFixed(1)+'%</span></div>').join('')+'</div>';
+    if(c.bad.length)h+='<h4>問題值 Top '+c.bad.length+'</h4><div class="wrap" style="max-height:32vh"><table class="t"><thead><tr><th>值</th><th>結果</th><th>次數</th><th>建議</th></tr></thead><tbody>'+c.bad.map(o=>'<tr><td><b>'+esc(o.val===''?'(空白)':o.val)+'</b></td><td>'+tagRes(o.res)+'</td><td>'+o.n+'</td><td class="sm">'+esc(o.hint)+'</td></tr>').join('')+'</tbody></table></div>';
+    h+='</div>';
+  }
+  box.innerHTML=h;
+}
+A.vlDl=el=>{const r=S.vl.res;dlCSV((S.vl.csv.name||'data').replace(/\.\w+$/,'')+(el.dataset.k==='abn'?'_issues':'_validated')+'.csv',el.dataset.k==='abn'?r.abn:r.detail)};
+
+/* ================= Import planning ================= */
+const CODE_FIELDS=['code','name','nameEn','description','parentCode','aliases','validFrom','validTo','status','replacedBy','sortOrder','note','attrs'];
+const MAP_FIELDS=['sourceCode','sourceName','targetCode','mappingType','validFrom','validTo','note'];
+const SYN={code:['代碼','代碼值','編碼'],name:['名稱','中文名稱','代碼名稱'],nameEn:['英文名稱','english'],description:['說明','定義','定義說明'],parentCode:['上層','上層代碼','parent'],aliases:['別名','alias'],
+  validFrom:['生效日','起日','生效起日','from','validfrom'],validTo:['失效日','迄日','生效迄日','to','validto'],status:['狀態'],replacedBy:['替代','替代代碼'],sortOrder:['順序','排序','顯示順序'],note:['備註'],attrs:['屬性','自訂屬性'],
+  sourceCode:['來源代碼','來源'],sourceName:['來源名稱'],targetCode:['標準代碼','目標代碼','target'],mappingType:['對照類型','類型']};
+function autoMap(headers,fields){
+  const m={},norm=s=>String(s).toLowerCase().replace(/[\s_\-]/g,'');
+  for(const f of fields){
+    const cands=[f,...(SYN[f]||[])].map(norm);
+    const h=headers.find(x=>cands.includes(norm(x)));if(h)m[f]=h;
+  }
+  return m;
+}
+function csvToObjs(csv,map){
+  const hi={};for(const [f,h] of Object.entries(map))hi[f]=csv.headers.indexOf(h);
+  return csv.rows.map((r,i)=>{const o={_line:i+2};for(const f in hi)if(hi[f]>=0)o[f]=r[hi[f]];return o});
+}
+function planCodes(cb,existing,objs,mode){
+  const cs=!!cb.caseSensitive,K=s=>normKey(s,cs);
+  const byCode=new Map(),byKey=new Map();
+  const reg=c=>{const k=K(c.code);let a=byCode.get(k);if(!a){a=[];byCode.set(k,a)}const j=a.findIndex(x=>x.id===c.id);if(j>=0)a[j]=c;else a.push(c);byKey.set(K(c.code)+'|'+(c.validFrom||''),c)};
+  if(mode!=='REPLACE')for(const c of existing)reg(c);
+  const puts=[],errors=[],fileKeys=new Set();let add=0,upd=0;
+  for(const o of objs){
+    const rec=makeCode(o,cb.id),k=K(rec.code)+'|'+(rec.validFrom||''),line=o._line||0;
+    const fail=m=>errors.push({line,code:rec.code,msg:m});
+    if(rec.code&&fileKeys.has(k)){fail('檔案內 code + validFrom 重複');continue}
+    const ex=byKey.get(k);
+    if(ex&&mode==='APPEND'){fail('已存在（APPEND 模式不覆蓋）');continue}
+    if(ex&&mode==='UPSERT'){rec.id=ex.id;rec.level=ex.level}
+    const v=validateCode(rec,cb,byCode.get(K(rec.code))||[],rec.id);
+    if(v.errors.length){fail(v.errors[0]);continue}
+    if(rec.code)fileKeys.add(k);
+    reg(rec);puts.push(rec);if(ex&&mode==='UPSERT')upd++;else add++;
+  }
+  return {puts,errors,add,upd,dels:mode==='REPLACE'?existing.map(c=>c.id):[]};
+}
+function planMaps(cb,codes,existing,objs,mode,xwId){
+  const key=m=>m.sourceCode+'|'+m.targetCode+'|'+(m.validFrom||'');
+  const byKey=new Map();if(mode!=='REPLACE')for(const m of existing)byKey.set(key(m),m);
+  const puts=[],errors=[],seen=new Set();let add=0,upd=0;
+  for(const o of objs){
+    const m=canonTarget(makeMap(o,xwId),cb,codes),k=key(m),line=o._line||0,e=validateMap(m,cb,codes);
+    if(e.length){errors.push({line,code:m.sourceCode,msg:e[0]});continue}
+    if(seen.has(k)){errors.push({line,code:m.sourceCode,msg:'檔案內重複'});continue}
+    const ex=byKey.get(k);
+    if(ex&&mode==='APPEND'){errors.push({line,code:m.sourceCode,msg:'已存在（APPEND 模式不覆蓋）'});continue}
+    if(ex&&mode==='UPSERT'){m.id=ex.id;upd++}else add++;
+    seen.add(k);byKey.set(k,m);puts.push(m);
+  }
+  return {puts,errors,add,upd,dels:mode==='REPLACE'?existing.map(m=>m.id):[]};
+}
+const errTbl=errs=>errs.length?'<div class="wrap" style="max-height:24vh;margin-top:6px"><table class="t"><thead><tr><th>列</th><th>代碼</th><th>問題</th></tr></thead><tbody>'+errs.slice(0,50).map(e=>'<tr><td>'+e.line+'</td><td>'+esc(e.code)+'</td><td>'+esc(e.msg)+'</td></tr>').join('')+'</tbody></table></div>'+(errs.length>50?'<div class="mu sm">… 其餘 '+(errs.length-50)+' 筆</div>':''):'';
+
+/* ================= Import UI ================= */
+S.imp={};
+A.openImport=()=>{S.imp={kind:'codes',cbId:S.cbId||(S.codebooks[0]&&S.codebooks[0].id)||'',xwId:S.xwId||'',mode:'UPSERT'};openImportModal()};
+A.impMap=()=>{S.imp={kind:'maps',cbId:S.cbId,xwId:S.xwId||'',mode:'UPSERT'};openImportModal()};
+function openImportModal(){
+  openModal('匯入','<div class="bar">'+sel('ikind',[['codes','代碼 CSV'],['maps','對照 CSV'],['json','JSON（全庫備份／單一代碼簿／Codebook Pack）']],S.imp.kind,'data-change="impKind"')+'<input type="file" id="impFile" accept=".csv,.tsv,.txt,.json" data-change="impFile"></div><div id="impBox"></div>',{wide:true,noFocus:true});
+  renderImport();
+}
+IN.impKind=el=>{S.imp={...S.imp,kind:el.value,csv:null,json:null,plan:null};openImportModal()};
+IN.impFile=async el=>{
+  const f=el.files[0];if(!f)return;const I=S.imp;I.plan=null;
+  try{
+    if(I.kind==='json'){
+      const {text}=await readFile(f);let o;
+      try{o=JSON.parse(text)}catch(e){return toast('不是有效的 JSON：'+e.message,true)}
+      I.json=o;I.jname=f.name;
+    }else{
+      I.csv=await readCSVFile(f);I.map=autoMap(I.csv.headers,I.kind==='codes'?CODE_FIELDS:MAP_FIELDS);
+    }
+    renderImport();
+  }catch(e){toast(e.message,true)}
+};
+function renderImport(){
+  const I=S.imp,box=$('#impBox');if(!box)return;
+  if(I.kind==='json'){box.innerHTML=jsonImportHtml();return}
+  const cbo=S.codebooks.map(c=>[c.id,c.key+' '+c.name]);
+  let h='';
+  if(!S.codebooks.length){box.innerHTML='<div class="banner">請先建立代碼簿</div>';return}
+  if(I.kind==='codes')h+='<div class="grid">'+fld('目標代碼簿',sel('icb',cbo,I.cbId,'data-change="impSet" data-k="cbId"'))+
+    fld('匯入模式',sel('imode',[['APPEND','APPEND：只新增，已存在者列為錯誤'],['UPSERT','UPSERT：以 code + validFrom 更新或新增'],['REPLACE','REPLACE：整本取代（先自動快照）']],I.mode,'data-change="impSet" data-k="mode"'))+'</div>';
+  else{
+    const xo=S.crosswalks.map(x=>[x.id,x.name+' → '+(cbById(x.targetCodebookId)||{key:'?'}).key]);
+    if(!xo.length){box.innerHTML='<div class="banner">請先在代碼簿的「對照」頁建立對照表</div>';return}
+    if(!xo.some(o=>o[0]===I.xwId))I.xwId=xo[0][0];
+    h+='<div class="grid">'+fld('目標對照表',sel('ixw',xo,I.xwId,'data-change="impSet" data-k="xwId"'))+
+     fld('匯入模式',sel('imode',[['APPEND','APPEND：只新增'],['UPSERT','UPSERT：以 sourceCode + targetCode + validFrom 更新'],['REPLACE','REPLACE：整份取代']],I.mode,'data-change="impSet" data-k="mode"'))+'</div>';
+  }
+  if(!I.csv){box.innerHTML=h+'<div class="mu sm">請選擇 CSV 檔。支援 UTF-8（含 BOM）／Big5，欄位順序不限，可在下一步對應欄位。'+(I.kind==='codes'?'aliases 以 | 分隔；attrs 為 JSON 物件字串；日期支援 YYYY-MM-DD、YYYY/MM/DD、YYYYMMDD。':'')+'</div>';return}
+  const fields=I.kind==='codes'?CODE_FIELDS:MAP_FIELDS,req=I.kind==='codes'?['code','name']:['sourceCode','targetCode'];
+  h+=csvHint(I.csv)+'<h4>欄位對應</h4><div class="grid">'+fields.map(f=>fld(f+(req.includes(f)?' *':''),sel('m_'+f,[['','（不匯入）'],...I.csv.headers],I.map[f]||'','data-change="impMapSet" data-f="'+f+'"'))).join('')+'</div>'+
+   '<div class="foot"><button class="btn pri" data-act="impPreview">預覽</button></div><div id="impPrev"></div>';
+  box.innerHTML=h;
+  if(I.plan)showPlan();
+}
+IN.impSet=el=>{S.imp[el.dataset.k]=el.value;S.imp.plan=null;renderImport()};
+IN.impMapSet=el=>{if(el.value)S.imp.map[el.dataset.f]=el.value;else delete S.imp.map[el.dataset.f];S.imp.plan=null;const p=$('#impPrev');if(p)p.innerHTML=''};
+A.impPreview=async()=>{
+  const I=S.imp,req=I.kind==='codes'?['code','name']:['sourceCode','targetCode'];
+  for(const f of req)if(!I.map[f])return toast('必須對應欄位：'+f,true);
+  const objs=csvToObjs(I.csv,I.map);
+  if(I.kind==='codes'){
+    const cb=cbById(I.cbId),ex=await getCodes(cb.id);
+    I.plan=planCodes(cb,ex,objs,I.mode);I.plan.cb=cb;
+  }else{
+    const x=S.crosswalks.find(c=>c.id===I.xwId),cb=cbById(x.targetCodebookId);
+    I.plan=planMaps(cb,await getCodes(cb.id),await getMaps(x.id),objs,I.mode,x.id);I.plan.cb=cb;I.plan.x=x;
+  }
+  I.plan.total=objs.length;showPlan();
+};
+function showPlan(){
+  const I=S.imp,p=I.plan,box=$('#impPrev');if(!box||!p)return;
+  box.innerHTML='<div class="card"><div class="bigstat"><div><b>'+p.total+'</b>檔案列數</div><div><b style="color:var(--ok)">'+p.add+'</b>新增</div><div><b style="color:var(--warn)">'+p.upd+'</b>更新</div><div><b style="color:var(--err)">'+p.errors.length+'</b>錯誤（略過）</div>'+(p.dels.length?'<div><b style="color:var(--err)">'+p.dels.length+'</b>將刪除舊資料</div>':'')+'</div>'+
+   (I.mode==='REPLACE'&&I.kind==='codes'?'<div class="banner" style="margin-top:8px">REPLACE 會先自動建立「還原前」快照，再以檔案內容取代整本代碼簿。</div>':'')+errTbl(p.errors)+
+   '<div class="foot"><button class="btn pri" data-act="impCommit" '+(p.puts.length||p.dels.length?'':'disabled')+'>'+(p.errors.length?'略過錯誤列並寫入 '+p.puts.length+' 筆':'確認寫入 '+p.puts.length+' 筆')+'</button></div></div>';
+}
+A.impCommit=async()=>{
+  const I=S.imp,p=I.plan;if(!p)return;
+  const btn=$('[data-act=impCommit]');if(btn){btn.disabled=true;btn.textContent='寫入中…'}
+  try{
+    if(I.kind==='codes'){
+      const cb=p.cb;
+      if(I.mode==='REPLACE')await createSnapshot(cb,'REPLACE 匯入前自動備份 '+fmtTs(nowISO()),'匯入檔：'+(I.csv.name||''),true);
+      await dbBatch('codes',p.puts,p.dels);
+      await audit('code',cb.id,'IMPORT_'+I.mode,null,{file:I.csv.name,add:p.add,update:p.upd,errors:p.errors.length},'匯入代碼 CSV '+(I.csv.name||'')+'：新增 '+p.add+'、更新 '+p.upd+'、錯誤 '+p.errors.length+'（'+I.mode+'）',cb.id);
+      await afterCodeWrite(cb.id);
+      enterCb(cb.id,'codes');
+    }else{
+      await dbBatch('mappings',p.puts,p.dels);invalidateMaps(p.x.id);
+      await audit('mapping',p.x.id,'IMPORT_'+I.mode,null,{file:I.csv.name,add:p.add,update:p.upd,errors:p.errors.length},'匯入對照 CSV '+(I.csv.name||'')+'：新增 '+p.add+'、更新 '+p.upd+'、錯誤 '+p.errors.length,p.cb.id);
+      enterCb(p.cb.id,'xwalk',p.x.id);
+    }
+  }catch(e){
+    console.error(e);toast('匯入失敗：'+(e&&e.message||e),true);
+    if(btn){btn.disabled=false;btn.textContent='重試寫入'}
+    return;
+  }
+  closeModal();toast('匯入完成：寫入 '+p.puts.length+' 筆');I.plan=null;await reloadMeta();render();
+};
+
+/* ---------- JSON import ---------- */
+function jsonKind(o){
+  if(!o||typeof o!=='object')return null;
+  if(o.format==='codebook-studio-backup')return 'backup';
+  if(o.format==='codebook-studio-codebook')return 'codebook';
+  if(o.format==='codebook-pack')return 'pack';
+  return null;
+}
+function validateBackup(o){
+  const e=[];if(!o.stores||typeof o.stores!=='object')return ['缺少 stores'];
+  const need={codebooks:['id','key'],codes:['id','codebookId','code'],crosswalks:['id','targetCodebookId'],mappings:['id','crosswalkId','sourceCode','targetCode'],snapshots:['id','codebookId'],profiles:['id'],auditLog:['id']};
+  for(const [s,keys] of Object.entries(need)){
+    const a=o.stores[s];if(a===undefined)continue;
+    if(!Array.isArray(a)){e.push(s+' 不是陣列');continue}
+    for(let i=0;i<a.length;i++){const r=a[i];if(!r||typeof r!=='object'){e.push(s+'['+i+'] 不是物件');break}const m=keys.find(k=>typeof r[k]!=='string');if(m){e.push(s+'['+i+'] 缺少或型別錯誤：'+m);break}}
+  }
+  const cbs=Array.isArray(o.stores.codebooks)?o.stores.codebooks:[];
+  const keys=new Set();
+  for(const c of cbs){
+    if(typeof c.key!=='string'||!/^[A-Za-z][A-Za-z0-9_]{1,63}$/.test(c.key)){e.push('codebooks 含無效的 key：'+String(c.key).slice(0,40));break}
+    if(keys.has(c.key)){e.push('codebooks 含重複的 key：'+c.key);break}keys.add(c.key);
+  }
+  return e;
+}
+function validatePack(o){
+  const e=[];
+  if(!Array.isArray(o.codebooks))return ['codebooks 必須是陣列'];
+  o.codebooks.forEach((c,i)=>{
+    if(!c||typeof c.key!=='string'||!/^[A-Za-z][A-Za-z0-9_]{1,63}$/.test(c.key))e.push('codebooks['+i+'].key 無效');
+    else if(!Array.isArray(c.codes))e.push(c.key+'.codes 必須是陣列');
+    else if(c.codes.some(x=>!x||typeof x!=='object'))e.push(c.key+'.codes 含非物件項目');
+    else if(c.codePattern){try{new RegExp(c.codePattern)}catch(x){e.push(c.key+'.codePattern 不是有效的 Regex')}}
+    if(c&&Array.isArray(o.codebooks)&&o.codebooks.filter(y=>y&&y.key===c.key).length>1)e.push('codebooks 含重複的 key：'+c.key);
+  });
+  if(o.crosswalks!==undefined&&!Array.isArray(o.crosswalks))e.push('crosswalks 必須是陣列');
+  return e;
+}
+function validateOneCb(o){
+  const e=[];
+  if(!o.codebook||typeof o.codebook!=='object')return ['缺少 codebook'];
+  if(typeof o.codebook.key!=='string'||!/^[A-Za-z][A-Za-z0-9_]{1,63}$/.test(o.codebook.key))e.push('codebook.key 無效');
+  if(!Array.isArray(o.codes))e.push('codes 必須是陣列');
+  else if(o.codes.some(x=>!x||typeof x!=='object'))e.push('codes 含非物件項目');
+  if(o.codebook.codePattern){try{new RegExp(o.codebook.codePattern)}catch(x){e.push('codePattern 不是有效的 Regex')}}
+  if(o.crosswalks!==undefined&&!Array.isArray(o.crosswalks))e.push('crosswalks 必須是陣列');
+  return e;
+}
+function jsonImportHtml(){
+  const I=S.imp;if(!I.json)return '<div class="mu sm">請選擇 JSON 檔。可匯入：全庫備份（codebook-studio-backup）、單一代碼簿（codebook-studio-codebook）、Codebook Pack（codebook-pack）。</div>';
+  const o=I.json,k=jsonKind(o);
+  if(!k)return errBox('無法辨識的 JSON 格式（缺少或不支援的 format 欄位）。');
+  const errs=k==='backup'?validateBackup(o):k==='pack'?validatePack(o):validateOneCb(o);
+  if(errs.length)return errBox(['結構驗證失敗：',...errs],9);
+  let sum='';
+  if(k==='backup')sum='全庫備份（匯出於 '+esc(fmtTs(o.exportedAt))+'）：'+Object.entries(o.stores).map(([s,a])=>esc(s)+' '+(Array.isArray(a)?a.length:0)).join('、')+'。<div class="banner" style="margin-top:8px">⚠ 匯入會<b>取代</b>目前瀏覽器中的所有代碼簿、代碼、對照、快照、設定檔與紀錄。</div>';
+  else if(k==='codebook')sum='單一代碼簿：<b>'+esc(o.codebook.key)+'</b>，'+o.codes.length+' 筆代碼，'+(o.crosswalks||[]).length+' 份對照表。'+(S.codebooks.some(c=>c.key===o.codebook.key)?'<div class="banner" style="margin-top:8px">⚠ 已有相同 key 的代碼簿，匯入會取代其代碼（先自動快照）。</div>':'將建立為新代碼簿。');
+  else sum='Codebook Pack：'+o.codebooks.map(c=>'<b>'+esc(c.key)+'</b>（'+c.codes.length+'）').join('、')+'；'+(o.crosswalks||[]).length+' 份對照。已存在的代碼簿以 UPSERT 合併，對照表以來源系統取代其明細。';
+  return '<div class="card">'+sum+'<div class="foot"><button class="btn pri" data-act="impJsonCommit">確認匯入</button></div></div>';
+}
+A.impJsonCommit=async()=>{
+  const I=S.imp,o=I.json,k=jsonKind(o);
+  const btn=$('[data-act=impJsonCommit]');if(btn){btn.disabled=true;btn.textContent='匯入中…'}
+  let msg='',warn=false,nav=null;
+  try{
+    if(k==='backup'){
+      if(!confirm('確定以備份內容取代目前所有資料？'))return renderImport();
+      const data={};for(const s2 of BACKUP_STORES)data[s2]=Array.isArray(o.stores[s2])?o.stores[s2]:[];
+      await dbReplaceAll(data);  // 單一交易，失敗會整體回復，原資料不受影響
+      codeCache.clear();idxCache.clear();mapCache.clear();
+      await audit('system','','RESTORE_BACKUP',null,null,'匯入全庫備份（'+fmtTs(o.exportedAt)+'）','');
+      msg='已還原全庫備份';nav='home';
+    }else if(k==='codebook'){
+      const ex=S.codebooks.find(c=>c.key===o.codebook.key),now=nowISO(),m=o.codebook;
+      const meta={key:m.key,name:String(m.name||m.key),description:String(m.description||''),owner:String(m.owner||''),codePattern:String(m.codePattern||''),
+        hierarchical:!!m.hierarchical,caseSensitive:!!m.caseSensitive,tags:splitList(m.tags),status:m.status==='ARCHIVED'?'ARCHIVED':'ACTIVE'};
+      const cb=ex?{...ex,...meta,id:ex.id,updatedAt:now,createdAt:ex.createdAt}:{...meta,id:uid(),createdAt:now,updatedAt:now};
+      const plan=planCodes(cb,[],o.codes.map((c,i)=>({...c,id:undefined,_line:i+1})),'REPLACE');
+      if(!plan.puts.length&&o.codes.length){toast('所有代碼都未通過驗證（例如：'+plan.errors[0].msg+'），未匯入',true);return renderImport()}
+      if(ex)await createSnapshot(ex,'JSON 匯入前自動備份 '+fmtTs(now),'',true);
+      const old=ex?await getCodes(cb.id):[];
+      await dbPut('codebooks',cb);
+      await dbBatch('codes',plan.puts,old.map(c=>c.id));
+      await reloadMeta();
+      for(const x of (o.crosswalks||[])){
+        if(!x||typeof x!=='object')continue;
+        let xw=S.crosswalks.find(y=>y.targetCodebookId===cb.id&&y.sourceSystem===x.sourceSystem&&y.name===x.name);
+        if(xw)await dbDelByIdx('mappings','crosswalkId',xw.id);
+        else{xw={id:uid(),name:x.name||x.sourceSystem||'(未命名)',sourceSystem:x.sourceSystem||'',description:x.description||'',targetCodebookId:cb.id,createdAt:now,updatedAt:now};await dbPut('crosswalks',xw)}
+        invalidateMaps(xw.id);
+        const mp=planMaps(cb,plan.puts,[],(Array.isArray(x.mappings)?x.mappings:[]).map((mm,i)=>({...mm,id:undefined,_line:i+1})),'REPLACE',xw.id);
+        await dbBatch('mappings',mp.puts);
+        plan.errors.push(...mp.errors.map(e=>({...e,msg:'對照 '+xw.sourceSystem+'：'+e.msg})));
+      }
+      await audit('codebook',cb.id,'IMPORT_JSON',null,{codes:plan.puts.length,errors:plan.errors.length},'匯入單一代碼簿 JSON '+cb.key+'（'+plan.puts.length+' 筆，略過 '+plan.errors.length+' 筆錯誤）',cb.id);
+      await reloadMeta();await afterCodeWrite(cb.id);nav={cb:cb.id};
+      msg='已匯入代碼簿 '+cb.key+'（'+plan.puts.length+' 筆）'+(plan.errors.length?'，略過 '+plan.errors.length+' 筆錯誤（首筆：'+plan.errors[0].msg+'）':'');warn=plan.errors.length>0;
+    }else{
+      const totalErr=[],now=nowISO(),touched=[];
+      for(const pc of o.codebooks){
+        let cb=S.codebooks.find(c=>c.key===pc.key);
+        if(!cb){cb={id:uid(),key:pc.key,name:pc.name||pc.key,description:pc.description||'',owner:pc.owner||'',codePattern:pc.codePattern||'',hierarchical:!!pc.hierarchical,caseSensitive:!!pc.caseSensitive,tags:splitList(pc.tags),status:'ACTIVE',createdAt:now,updatedAt:now};await dbPut('codebooks',cb);await reloadMeta();cb=cbById(cb.id)}
+        const plan=planCodes(cb,await getCodes(cb.id),pc.codes.map((c,i)=>({...c,_line:i+1})),'UPSERT');
+        await dbBatch('codes',plan.puts);
+        totalErr.push(...plan.errors.map(e=>({...e,msg:pc.key+'：'+e.msg})));
+        await audit('codebook',cb.id,'IMPORT_PACK',null,{add:plan.add,update:plan.upd,errors:plan.errors.length},'匯入 Pack：'+pc.key+' 新增 '+plan.add+'、更新 '+plan.upd+'、錯誤 '+plan.errors.length,cb.id);
+        await afterCodeWrite(cb.id);touched.push(cb.id);
+      }
+      await reloadMeta();
+      for(const x of (o.crosswalks||[])){
+        const cb=S.codebooks.find(c=>c.key===x.targetCodebook);if(!cb){totalErr.push({line:0,code:x.sourceSystem,msg:'找不到標準代碼簿 '+x.targetCodebook});continue}
+        let xw=S.crosswalks.find(y=>y.targetCodebookId===cb.id&&y.sourceSystem===x.sourceSystem);
+        if(!xw){xw={id:uid(),name:x.name||x.sourceSystem,sourceSystem:x.sourceSystem,description:x.description||'',targetCodebookId:cb.id,createdAt:now,updatedAt:now};await dbPut('crosswalks',xw);S.crosswalks.push(xw)}
+        const plan=planMaps(cb,await getCodes(cb.id),[],(Array.isArray(x.mappings)?x.mappings:[]).map((m,i)=>({...m,_line:i+1})),'REPLACE',xw.id);
+        await dbDelByIdx('mappings','crosswalkId',xw.id);await dbBatch('mappings',plan.puts);invalidateMaps(xw.id);
+        totalErr.push(...plan.errors.map(e=>({...e,msg:x.sourceSystem+'：'+e.msg})));
+        await audit('crosswalk',xw.id,'IMPORT_PACK',null,{count:plan.puts.length},'匯入 Pack 對照 '+x.sourceSystem+'（'+plan.puts.length+' 筆）',cb.id);
+      }
+      msg='Pack 匯入完成'+(totalErr.length?'，有 '+totalErr.length+' 筆錯誤列被略過（首筆：'+totalErr[0].msg+'）':'');warn=totalErr.length>0;
+      if(touched.length)nav={cb:touched[0]};
+    }
+  }catch(e){
+    console.error(e);toast('匯入失敗：'+(e&&e.message||e),true);
+    if(btn){btn.disabled=false;btn.textContent='重試匯入'}
+    return;
+  }
+  await reloadMeta();
+  if(nav==='home'){S.cbId=null;S.view='home'}
+  else if(nav&&nav.cb)enterCb(nav.cb,'codes');
+  closeModal();toast(msg,warn);I.json=null;render();
+};
+
+/* ================= Export ================= */
+const CODE_COLS=['code','name','nameEn','description','parentCode','aliases','validFrom','validTo','status','replacedBy','sortOrder','note','attrs'];
+const codeRow=c=>[c.code,c.name,c.nameEn,c.description,c.parentCode,(c.aliases||[]).join('|'),c.validFrom||'',c.validTo||'',c.status,c.replacedBy,c.sortOrder==null?'':c.sortOrder,c.note,c.attrs?JSON.stringify(c.attrs):''];
+async function exportCodesCsv(cb){const codes=(await getCodes(cb.id)).slice().sort(cmpCodes);dlCSV('codes_'+cb.key+'_'+todayStr()+'.csv',[CODE_COLS,...codes.map(codeRow)]);toast('已匯出 '+codes.length+' 筆')}
+async function exportMapCsv(xwId){
+  const x=S.crosswalks.find(c=>c.id===xwId);if(!x)return toast('請先選擇對照表',true);
+  const m=(await getMaps(xwId)).slice().sort((a,b)=>a.sourceCode<b.sourceCode?-1:1);
+  dlCSV('mappings_'+x.sourceSystem+'_'+todayStr()+'.csv',[MAP_FIELDS,...m.map(r=>[r.sourceCode,r.sourceName,r.targetCode,r.mappingType,r.validFrom||'',r.validTo||'',r.note])]);toast('已匯出 '+m.length+' 筆');
+}
+async function exportBackup(){
+  const stores={};for(const s of BACKUP_STORES)stores[s]=await dbAll(s);
+  dlJSON('codebook-studio-backup_'+todayStr()+'.json',{format:'codebook-studio-backup',version:1,exportedAt:nowISO(),stores});
+  S.settings.lastBackupAt=nowISO();await setSetting('lastBackupAt',S.settings.lastBackupAt);toast('已匯出全庫備份');
+  const b=$('#bkBanner');if(b)b.remove();
+}
+async function exportCodebookJson(cb){
+  const codes=await getCodes(cb.id),xws=S.crosswalks.filter(x=>x.targetCodebookId===cb.id),cws=[];
+  for(const x of xws){const {id,targetCodebookId,createdAt,updatedAt,...rest}=x;cws.push({...rest,mappings:(await getMaps(x.id)).map(({id,crosswalkId,...m})=>m)})}
+  const {id,...meta}=cb;
+  dlJSON('codebook_'+cb.key+'_'+todayStr()+'.json',{format:'codebook-studio-codebook',version:1,exportedAt:nowISO(),codebook:meta,codes:codes.map(({id,codebookId,...c})=>c),crosswalks:cws});
+}
+function packCode(c){
+  const o={code:c.code,name:c.name};
+  if(c.nameEn)o.nameEn=c.nameEn;if(c.description)o.description=c.description;if(c.parentCode)o.parentCode=c.parentCode;
+  if(c.aliases&&c.aliases.length)o.aliases=c.aliases;o.validFrom=c.validFrom||null;o.validTo=c.validTo||null;o.status=c.status;
+  if(c.replacedBy)o.replacedBy=c.replacedBy;if(c.sortOrder!=null)o.sortOrder=c.sortOrder;if(c.attrs)o.attrs=c.attrs;if(c.note)o.note=c.note;
+  return o;
+}
+async function exportPack(ids){
+  const cbs=S.codebooks.filter(c=>ids.includes(c.id)),out={format:'codebook-pack',version:'1.0',exportedAt:nowISO(),codebooks:[],crosswalks:[]};
+  for(const cb of cbs){
+    out.codebooks.push({key:cb.key,name:cb.name,description:cb.description||undefined,codePattern:cb.codePattern||undefined,hierarchical:cb.hierarchical||undefined,caseSensitive:cb.caseSensitive||undefined,codes:(await getCodes(cb.id)).slice().sort(cmpCodes).map(packCode)});
+    for(const x of S.crosswalks.filter(x=>x.targetCodebookId===cb.id))
+      out.crosswalks.push({sourceSystem:x.sourceSystem,name:x.name,targetCodebook:cb.key,mappings:(await getMaps(x.id)).map(m=>{const r={sourceCode:m.sourceCode,targetCode:m.targetCode,mappingType:m.mappingType};if(m.sourceName)r.sourceName=m.sourceName;if(m.validFrom)r.validFrom=m.validFrom;if(m.validTo)r.validTo=m.validTo;if(m.note)r.note=m.note;return r})});
+  }
+  dlJSON('codebook-pack_'+todayStr()+'.json',out);
+}
+async function currentCodeNameList(cb){
+  const t=todayStr(),groups=new Map();
+  for(const c of await getCodes(cb.id)){let a=groups.get(c.code);if(!a){a=[];groups.set(c.code,a)}a.push(c)}
+  const out=[];for(const [k,a] of groups){const p=pickVersion(a,t);if(p.valid&&p.valid.status==='ACTIVE')out.push(p.valid)}
+  return out.sort(cmpCodes);
+}
+async function exportJsConst(cb){
+  const list=await currentCodeNameList(cb),nm=cb.key.replace(/[^A-Za-z0-9_]/g,'_').toUpperCase();
+  const al={};for(const c of list)for(const a of (c.aliases||[]))al[a]=c.code;
+  let s='// Generated by Codebook Studio '+todayStr()+' — '+cb.key+'（僅含今日有效且 ACTIVE 的代碼）\nconst '+nm+' = Object.freeze('+JSON.stringify(Object.fromEntries(list.map(c=>[c.code,c.name])),null,2)+');\n';
+  if(Object.keys(al).length)s+='const '+nm+'_ALIAS = Object.freeze('+JSON.stringify(al,null,2)+');\n';
+  download(cb.key+'_codes.js',s,'text/javascript');
+}
+async function exportSqlCase(cb){
+  const list=await currentCodeNameList(cb),q=s=>"'"+String(s).replace(/'/g,"''")+"'";
+  let s='-- Generated by Codebook Studio '+todayStr()+' — '+cb.key+'（僅含今日有效且 ACTIVE 的代碼）\nCASE <column>\n';
+  for(const c of list){s+='  WHEN '+q(c.code)+' THEN '+q(c.name)+'\n';for(const a of (c.aliases||[]))s+='  WHEN '+q(a)+' THEN '+q(c.name)+'  -- alias of '+c.code.replace(/[\r\n]/g,' ')+'\n'}
+  s+='  ELSE NULL\nEND\n';download(cb.key+'_case.sql',s,'text/plain');
+}
+A.openExport=()=>{
+  const cbo=S.codebooks.map(c=>[c.id,c.key+' '+c.name]),xo=S.crosswalks.map(x=>[x.id,x.name]);
+  const dis=S.codebooks.length?'':'disabled';
+  openModal('匯出','<div class="grid">'+fld('代碼簿',sel('ecb',cbo,S.cbId||(cbo[0]&&cbo[0][0])||''))+fld('對照表',sel('exw',xo,S.xwId||(xo[0]&&xo[0][0])||''))+'</div>'+
+   '<div class="grid">'+
+   '<button class="btn" '+dis+' data-act="ex" data-k="codesCsv">代碼 CSV</button>'+
+   '<button class="btn" '+(xo.length?'':'disabled')+' data-act="ex" data-k="mapCsv">對照 CSV</button>'+
+   '<button class="btn" '+dis+' data-act="ex" data-k="cbJson">單一代碼簿 JSON</button>'+
+   '<button class="btn" '+dis+' data-act="ex" data-k="pack">Codebook Pack（全部未封存代碼簿）</button>'+
+   '<button class="btn" '+dis+' data-act="ex" data-k="packOne">Codebook Pack（僅所選代碼簿）</button>'+
+   '<button class="btn" '+dis+' data-act="ex" data-k="js">JS 常數（.js）</button>'+
+   '<button class="btn" '+dis+' data-act="ex" data-k="sql">SQL CASE（.sql）</button>'+
+   '<button class="btn pri" data-act="ex" data-k="backup">全庫備份 JSON</button></div>'+
+   '<div class="mu sm" style="margin-top:8px">Codebook Pack 為給其他 SPA 讀取的精簡格式；JS／SQL 輸出僅含「今日有效且 ACTIVE」的代碼。</div><div class="foot"><button class="btn" data-act="closeModal">關閉</button></div>');
+};
+A.ex=async el=>{
+  const k=el.dataset.k,cb=cbById(mv('ecb'));
+  if(k==='codesCsv')await exportCodesCsv(cb);
+  else if(k==='mapCsv')await exportMapCsv(mv('exw'));
+  else if(k==='cbJson')await exportCodebookJson(cb);
+  else if(k==='pack')await exportPack(S.codebooks.filter(c=>c.status==='ACTIVE').map(c=>c.id));
+  else if(k==='packOne')await exportPack([cb.id]);
+  else if(k==='js')await exportJsConst(cb);
+  else if(k==='sql')await exportSqlCase(cb);
+  else if(k==='backup')await exportBackup();
+};
+
+/* ================= Templates & Settings ================= */
+const TEMPLATES=[
+  {key:'collateralType',name:'擔保品類型',description:'授信擔保品分類範例',codePattern:'^[A-Z_]+$',codes:[['RE','不動產','Real Estate',['REAL_ESTATE']],['DEPOSIT','存款','Deposit',['CASH']],['SECURITIES','有價證券','Securities',[]],['GUARANTEE','保證','Guarantee',[]],['NONE','無擔保','None',['UNSECURED']]]},
+  {key:'booleanFlag',name:'布林旗標',description:'是／否旗標，含常見別名',codePattern:'^[YN]$',codes:[['Y','是','Yes',['1','TRUE','是']],['N','否','No',['0','FALSE','否']]]},
+  {key:'currency',name:'幣別',description:'常用幣別範例（ISO 4217）',codePattern:'^[A-Z]{3}$',codes:[['TWD','新台幣','New Taiwan Dollar',[]],['USD','美元','US Dollar',[]],['JPY','日圓','Japanese Yen',[]],['EUR','歐元','Euro',[]],['CNY','人民幣','Chinese Yuan',[]],['HKD','港幣','Hong Kong Dollar',[]],['GBP','英鎊','Pound Sterling',[]],['AUD','澳幣','Australian Dollar',[]]]},
+  {key:'industryCode',name:'行業別',description:'空白骨架：同時支援主計四碼與財稅六碼，請自行匯入權威來源代碼表',codePattern:'^\\d{4}$|^\\d{6}$',hierarchical:true,codes:[]}
+];
+A.loadTemplates=async()=>{
+  let n=0;const now=nowISO();
+  for(const t of TEMPLATES){
+    if(S.codebooks.some(c=>c.key===t.key))continue;
+    const cb={id:uid(),key:t.key,name:t.name,description:t.description,owner:'',codePattern:t.codePattern,hierarchical:!!t.hierarchical,caseSensitive:false,tags:['template'],status:'ACTIVE',createdAt:now,updatedAt:now};
+    await dbPut('codebooks',cb);
+    await dbBatch('codes',t.codes.map(([code,name,en,al],i)=>makeCode({code,name,nameEn:en,aliases:al,sortOrder:i+1,status:'ACTIVE'},cb.id)));
+    await audit('codebook',cb.id,'CREATE',null,{template:true},'載入範本 '+t.key,cb.id);n++;
+  }
+  await reloadMeta();closeModal();toast(n?'已載入 '+n+' 個範本':'範本都已存在');
+  if(n&&!S.cbId)S.cbId=S.codebooks[0].id;
+  render();
+};
+A.openSettings=()=>{
+  const s=S.settings;
+  openModal('設定','<div class="grid">'+fld('主題',sel('theme',[['light','淺色'],['dark','深色']],s.theme))+fld('備份提醒（天，0＝關閉）',inp('backupDays',s.backupDays,'number','min="0" step="1"'))+'</div>'+
+   '<div class="card"><b>儲存空間</b><div id="stor" class="mu sm">讀取中…</div></div>'+
+   '<div class="bar"><button class="btn" data-act="loadTemplates">載入預設範本</button><button class="btn dng" data-act="wipeAll">清除全部資料</button></div>'+
+   '<div class="mu sm">快捷鍵：<kbd>/</kbd> 全域搜尋、<kbd>N</kbd> 新增代碼、<kbd>Ctrl+S</kbd> 儲存、<kbd>Esc</kbd> 關閉視窗。</div>'+
+   '<div class="foot"><button class="btn" data-act="closeModal">取消</button><button class="btn pri" data-save="1" data-act="saveSettings">儲存</button></div>');
+  (async()=>{
+    const el=$('#stor');if(!el)return;
+    try{
+      const e=navigator.storage&&navigator.storage.estimate?await navigator.storage.estimate():null,p=navigator.storage&&navigator.storage.persisted?await navigator.storage.persisted():null;
+      el.textContent=(e?'已使用 '+fileKB(e.usage||0)+' / 配額約 '+fileKB(e.quota||0):'此瀏覽器未提供用量資訊')+'；持久化儲存：'+(p===true?'已啟用':p===false?'未啟用（瀏覽器可能在空間不足時清除資料，請定期備份）':'未知');
+    }catch(e){el.textContent='無法取得用量資訊'}
+  })();
+};
+A.saveSettings=async()=>{
+  S.settings.theme=mv('theme');S.settings.backupDays=Math.max(0,parseInt(mv('backupDays'),10)||0);
+  await setSetting('theme',S.settings.theme);await setSetting('backupDays',S.settings.backupDays);
+  document.documentElement.dataset.theme=S.settings.theme;closeModal();toast('設定已儲存');render();
+};
+A.wipeAll=async()=>{
+  if(!confirm('這會刪除此瀏覽器中 Codebook Studio 的所有資料，且無法復原。建議先匯出全庫備份。確定繼續？'))return;
+  if(prompt('請輸入 DELETE 確認：')!=='DELETE')return toast('已取消');
+  await dbReplaceAll({});
+  codeCache.clear();idxCache.clear();mapCache.clear();S.cbId=null;S.view='home';await reloadMeta();closeModal();toast('已清除全部資料');render();
+};
+
+/* ================= Boot ================= */
+$('#gsearch').addEventListener('keydown',e=>{
+  if(e.key!=='Enter')return;
+  const v=e.target.value.trim();if(!v)return;
+  S.view='lookup';S.lk.tab='single';S.lk.q=v;S.lk.auto=true;e.target.blur();render();
+});
+async function init(){
+  try{DB=await openDB()}
+  catch(e){
+    $('#content').innerHTML='<div class="card"><h2>無法使用 IndexedDB</h2><p>'+esc(e&&e.message||e)+'</p><p class="mu">Codebook Studio 需要 IndexedDB 才能儲存資料。請確認未使用會封鎖儲存空間的無痕／隱私模式，或改用 Chrome／Edge 並以一般視窗開啟（建議用 http(s) 或 file 協定直接開啟，不要放在沙箱 iframe 中）。</p></div>';return;
+  }
+  DB.onversionchange=()=>{DB.close();toast('資料庫已在其他分頁升級，請重新整理',true)};
+  try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{})}catch(e){}
+  S.settings.theme=await getSetting('theme','light');
+  S.settings.backupDays=await getSetting('backupDays',14);
+  S.settings.lastBackupAt=await getSetting('lastBackupAt','');
+  let fu=await getSetting('firstUseAt','');if(!fu){fu=nowISO();await setSetting('firstUseAt',fu)}S.settings.firstUseAt=fu;
+  document.documentElement.dataset.theme=S.settings.theme;
+  await reloadMeta();
+  if(BC)BC.onmessage=async()=>{
+    codeCache.clear();idxCache.clear();mapCache.clear();
+    try{await reloadMeta()}catch(e){return}
+    if(S.cbId&&!cbById(S.cbId)){S.cbId=null;if(S.view==='cb')S.view='home'}
+    if(!$('#modalRoot').innerHTML&&!S.busy)render();
+  };
+  render();
+}
+init();
+window.addEventListener('unhandledrejection',e=>{console.error(e.reason);toast('發生錯誤：'+(e.reason&&e.reason.message||e.reason),true)});
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style></body>
+</html>

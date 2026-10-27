@@ -1,0 +1,1870 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' blob:; connect-src 'none'; img-src 'self' data: blob:; worker-src blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+<title>企金壓測沙盒 Corporate Stress Lab</title>
+<style>
+:root{--bg:#f4f6f9;--panel:#fff;--panel2:#f8fafc;--fg:#1b2430;--muted:#5c6b7d;--border:#d9e0e8;--accent:#0f6cbd;--accent-fg:#fff;--danger:#c4314b;--good:#0e7a3b;--warn:#a85d00;--warn-bg:#fff4d6;--chip:#e8eef5;--shadow:0 1px 3px rgba(20,30,50,.08);--nav:#14263d;--navfg:#d5deea;--navact:#0f6cbd}
+[data-theme=dark]{--bg:#0f141b;--panel:#171f29;--panel2:#1b2530;--fg:#e6ebf1;--muted:#9aa8b8;--border:#2a3644;--accent:#4aa3f0;--accent-fg:#06121f;--danger:#ff7b8f;--good:#4cc17f;--warn:#f2b45a;--warn-bg:#3a2d12;--chip:#243142;--shadow:none;--nav:#0b1119;--navfg:#b9c6d6;--navact:#1f5f99}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.5 "Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;background:var(--bg);color:var(--fg)}
+#app{display:flex;min-height:100vh}
+#nav{width:208px;flex:0 0 208px;background:var(--nav);color:var(--navfg);display:flex;flex-direction:column;padding:12px 0;position:sticky;top:0;height:100vh;overflow:auto}
+#nav .brand{padding:6px 16px 14px;font-weight:700;color:#fff;font-size:15px;line-height:1.3}
+#nav .brand small{display:block;font-weight:400;color:var(--navfg);font-size:11px;opacity:.8}
+#nav a{display:block;padding:8px 16px;color:var(--navfg);text-decoration:none;border-left:3px solid transparent}
+#nav a:hover{background:rgba(255,255,255,.07)}
+#nav a.active{background:var(--navact);color:#fff;border-left-color:#fff}
+#nav a.disabled{opacity:.4;pointer-events:none}
+#nav .sep{margin:10px 16px 4px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.6}
+#main{flex:1;min-width:0;display:flex;flex-direction:column}
+#topbar{display:flex;gap:12px;align-items:center;padding:8px 20px;background:var(--panel);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+#topbar .grow{flex:1}
+#topbar .status{color:var(--muted);font-size:12px}
+#view{padding:20px;flex:1;max-width:1500px;width:100%;margin:0 auto}
+#disclaimer{padding:10px 20px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);background:var(--panel)}
+h1{font-size:20px;margin:0 0 12px}h2{font-size:16px;margin:18px 0 8px}h3{font-size:14px;margin:12px 0 6px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:14px;box-shadow:var(--shadow);margin-bottom:14px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+.grow{flex:1}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(420px,1fr))}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.kpi .l{font-size:12px;color:var(--muted)}.kpi .v{font-size:19px;font-weight:600;margin-top:2px;white-space:nowrap;font-variant-numeric:tabular-nums}.kpi .s{font-size:12px;color:var(--muted)}
+.up{color:var(--danger)}.down{color:var(--good)}
+label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+input,select,textarea,button{font:inherit;color:var(--fg)}
+input,select,textarea{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:6px 8px;min-width:0}
+input[type=checkbox],input[type=radio]{padding:0}
+textarea{width:100%;min-height:90px;font-family:Consolas,monospace;font-size:12px}
+button{background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:6px 12px;cursor:pointer}
+button:hover{background:var(--chip)}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+button.primary:hover{filter:brightness(1.08)}
+button.danger{color:var(--danger);border-color:var(--danger)}
+button.sm{padding:2px 8px;font-size:12px}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+table{border-collapse:collapse;width:100%}
+th,td{padding:6px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{font-size:12px;color:var(--muted);font-weight:600;background:var(--panel2);position:sticky;top:0}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.tablewrap{overflow:auto;max-height:520px;border:1px solid var(--border);border-radius:6px}
+.chip{display:inline-block;padding:1px 8px;border-radius:10px;background:var(--chip);font-size:12px}
+.chip.err{background:var(--danger);color:#fff}.chip.warn{background:var(--warn-bg);color:var(--warn)}.chip.info{background:var(--chip)}.chip.demo{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+.muted{color:var(--muted)}.unk{color:var(--muted);font-style:italic}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin-bottom:12px}
+.tabs button{border:none;border-bottom:3px solid transparent;border-radius:0;background:none;padding:8px 14px}
+.tabs button.on{border-bottom-color:var(--accent);font-weight:600}
+.banner{padding:8px 12px;border-radius:6px;background:var(--warn-bg);color:var(--warn);margin-bottom:12px;border:1px solid var(--warn)}
+.banner.info{background:var(--chip);color:var(--fg);border-color:var(--border)}
+.empty{padding:36px;text-align:center;color:var(--muted);border:2px dashed var(--border);border-radius:10px}
+.empty h2{color:var(--fg)}
+dialog{border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--fg);padding:0;max-width:min(920px,94vw);width:100%;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog .dh{padding:12px 16px;border-bottom:1px solid var(--border);font-weight:600;display:flex;justify-content:space-between}
+dialog .db{padding:14px 16px;max-height:72vh;overflow:auto}
+dialog .df{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end}
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:50}
+.toast{background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:6px;max-width:420px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.toast.err{background:var(--danger);color:#fff}
+.bar{height:10px;background:var(--chip);border-radius:5px;overflow:hidden}.bar>i{display:block;height:100%;background:var(--accent);width:0}
+.vt{border:1px solid var(--border);border-radius:6px;overflow:auto;position:relative;background:var(--panel)}
+.vt .vh,.vt .vr{display:flex;position:absolute;left:0;right:0}
+.vt .vh{position:sticky;top:0;z-index:2;background:var(--panel2);border-bottom:1px solid var(--border)}
+.vt .vc{padding:4px 8px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;flex:0 0 auto;border-bottom:1px solid var(--border);height:28px;line-height:20px}
+.vt .vh .vc{font-weight:600;font-size:12px;color:var(--muted);cursor:pointer;user-select:none}
+.vt .vr:hover{background:var(--chip)}
+.vt .vr.ex{opacity:.55}
+.charts svg{width:100%;max-width:760px;height:auto;display:block;margin:0 auto}
+details.dt{margin-top:6px;font-size:12px}details.dt summary{cursor:pointer;color:var(--muted)}
+.heat td{text-align:center;font-size:12px;padding:4px}
+.rulelist li{display:flex;gap:8px;align-items:center;padding:6px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;background:var(--panel2)}
+.rulelist li.drag{opacity:.4}
+ul{padding-left:18px;margin:4px 0}.rulelist{list-style:none;padding:0}
+.cols2{display:grid;grid-template-columns:260px 1fr;gap:14px}
+@media(max-width:900px){#nav{display:none}.cols2{grid-template-columns:1fr}}
+@media print{:root[data-theme]{--bg:#fff;--panel:#fff;--panel2:#f8fafc;--fg:#1b2430;--muted:#5c6b7d;--border:#d9e0e8;--accent:#0f6cbd;--danger:#c4314b;--good:#0e7a3b;--chip:#e8eef5;--warn:#a85d00;--warn-bg:#fff4d6}#nav,#topbar,button,.tabs{display:none!important}#view{max-width:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav id="nav" aria-label="主要導覽"></nav>
+  <div id="main">
+    <header id="topbar"></header>
+    <main id="view" tabindex="-1"></main>
+    <footer id="disclaimer">本結果為情境模擬，取決於輸入資料、參數與簡化假設，非監理申報結果或正式財務預測。</footer>
+  </div>
+</div>
+<dialog id="dlg"></dialog>
+<div id="toasts" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+/* =====================================================================
+ * 企金壓測沙盒 Corporate Stress Lab  v1.2.1
+ * 單檔 SPA｜Vanilla JS｜無外部請求｜資料僅存於本機 IndexedDB
+ * ===================================================================== */
+const APP_VERSION = '1.2.1';
+const DB_NAME = 'CorporateStressLabDB';
+const DB_VERSION = 1;
+const DISCLAIMER = '本結果為情境模擬，取決於輸入資料、參數與簡化假設，非監理申報結果或正式財務預測。';
+
+/* ---------- 基礎工具 ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tick = () => new Promise(r => setTimeout(r, 0));
+const nowISO = () => new Date().toISOString();
+function uid() {
+  if (globalThis.crypto && crypto.randomUUID) { try { return crypto.randomUUID(); } catch (e) {} }
+  const b = new Uint8Array(16); crypto.getRandomValues(b); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+  const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
+const isNum = v => typeof v === 'number' && isFinite(v);
+const fmtInt = v => v == null || !isFinite(v) ? '—' : (Math.round(v) || 0).toLocaleString('en-US');   // 避免顯示「-0」
+const fmtNum = (v, d = 2) => v == null || !isFinite(v) ? '—' : Number(v).toLocaleString('en-US', {minimumFractionDigits: d, maximumFractionDigits: d});
+const fmtPct = (v, d = 2) => v == null || !isFinite(v) ? '—' : (v * 100).toFixed(d) + '%';
+const p2 = n => String(n).padStart(2, '0');
+const fmtDT = s => { if (!s) return '—'; const d = new Date(s); return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`; };
+const unk = '<span class="unk">未知</span>';
+const showV = (v, f) => v == null || v === '' ? unk : (f ? f(v) : esc(v));
+const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`; };   // 本地日期（UTC 會在台灣 00:00–08:00 差一天）
+const deepClone = o => JSON.parse(JSON.stringify(o));
+const pushAll = (dst, src) => { for (let i = 0; i < src.length; i++) dst.push(src[i]); };   // 不用 push(...arr)：大陣列會超出引數上限
+
+function toast(msg, kind) {
+  const d = document.createElement('div'); d.className = 'toast' + (kind === 'err' ? ' err' : ''); d.textContent = msg;
+  $('#toasts').appendChild(d); setTimeout(() => d.remove(), kind === 'err' ? 7000 : 3500);
+}
+
+/* ---------- SHA-256（純 JS，離線可用）---------- */
+const SHA = (() => {
+  const primes = []; for (let n = 2; primes.length < 64; n++) { let ok = true; for (const p of primes) { if (p * p > n) break; if (n % p === 0) { ok = false; break; } } if (ok) primes.push(n); }
+  const K = primes.map(p => Math.floor((Math.cbrt(p) % 1) * 4294967296) >>> 0);
+  const H0 = primes.slice(0, 8).map(p => Math.floor((Math.sqrt(p) % 1) * 4294967296) >>> 0);
+  const rotr = (x, n) => (x >>> n) | (x << (32 - n));
+  function hex(bytes) {
+    const l = bytes.length, nb = ((l + 9 + 63) >> 6) << 6, m = new Uint8Array(nb); m.set(bytes); m[l] = 0x80;
+    const dv = new DataView(m.buffer); dv.setUint32(nb - 8, Math.floor(l / 5368709123)); dv.setUint32(nb - 4, (l << 3) >>> 0);
+    const h = H0.slice(), w = new Uint32Array(64);
+    for (let o = 0; o < nb; o += 64) {
+      for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
+      for (let i = 16; i < 64; i++) { const s0 = rotr(w[i-15],7) ^ rotr(w[i-15],18) ^ (w[i-15] >>> 3), s1 = rotr(w[i-2],17) ^ rotr(w[i-2],19) ^ (w[i-2] >>> 10); w[i] = (w[i-16] + s0 + w[i-7] + s1) >>> 0; }
+      let [a,b,c,d,e,f,g,hh] = h;
+      for (let i = 0; i < 64; i++) {
+        const S1 = rotr(e,6) ^ rotr(e,11) ^ rotr(e,25), ch = (e & f) ^ (~e & g), t1 = (hh + S1 + ch + K[i] + w[i]) >>> 0;
+        const S0 = rotr(a,2) ^ rotr(a,13) ^ rotr(a,22), mj = (a & b) ^ (a & c) ^ (b & c), t2 = (S0 + mj) >>> 0;
+        hh = g; g = f; f = e; e = (d + t1) >>> 0; d = c; c = b; b = a; a = (t1 + t2) >>> 0;
+      }
+      h[0] = (h[0]+a)>>>0; h[1] = (h[1]+b)>>>0; h[2] = (h[2]+c)>>>0; h[3] = (h[3]+d)>>>0; h[4] = (h[4]+e)>>>0; h[5] = (h[5]+f)>>>0; h[6] = (h[6]+g)>>>0; h[7] = (h[7]+hh)>>>0;
+    }
+    return h.map(x => x.toString(16).padStart(8, '0')).join('');
+  }
+  return { hexOfString: s => hex(new TextEncoder().encode(s)) };
+})();
+async function sha256Hex(str) {
+  try { if (globalThis.crypto && crypto.subtle) { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str)); return Array.from(new Uint8Array(buf), b => b.toString(16).padStart(2, '0')).join(''); } } catch (e) {}
+  return SHA.hexOfString(str);
+}
+
+/* ---------- IndexedDB 封裝 ---------- */
+const STORE_DEFS = {
+  projects: { kp: 'id', idx: { updatedAt: 'updatedAt' } },
+  // 主鍵用 [projectId, rowNo]：不需任何二級索引，10 萬筆寫入與整專案刪除（範圍刪除）都最快；產業／評等／集團等維度皆載入後在記憶體內彙總。
+  exposures: { kp: ['projectId', 'rowNo'], idx: {} },
+  fieldMappings: { kp: 'id', idx: {} },
+  industryCodebooks: { kp: ['version', 'code'], idx: { version: 'version', level: 'level', parentCode: 'parentCode' } },
+  scenarios: { kp: 'id', idx: { projectId: 'projectId' } },
+  scenarioRules: { kp: 'id', idx: { scenarioId: 'scenarioId' } },
+  modelDefinitions: { kp: 'id', idx: { projectId: 'projectId', version: 'version' } },
+  simulationRuns: { kp: 'id', idx: { projectId: 'projectId', scenarioId: 'scenarioId', startedAt: 'startedAt' } },
+  simulationResults: { kp: ['runId', 'block'], idx: { runId: 'runId' } },   // 每個 block 存 2,000 筆單戶結果，避免 10 萬筆逐筆寫入過慢
+  validationIssues: { kp: 'id', idx: { projectId: 'projectId', code: 'code' } },
+  auditLogs: { kp: 'id', auto: true, idx: { projectId: 'projectId', ts: 'ts' } },
+  meta: { kp: 'key', idx: {} }
+};
+const migrations = {
+  1(db) {
+    for (const [name, d] of Object.entries(STORE_DEFS)) {
+      const st = db.createObjectStore(name, d.auto ? { keyPath: d.kp, autoIncrement: true } : { keyPath: d.kp });
+      for (const [iname, kp] of Object.entries(d.idx)) st.createIndex(iname, kp, { unique: false });
+    }
+  }
+};
+const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const txDone = tx => new Promise((res, rej) => { tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error || new Error('交易中止')); });
+const DB = {
+  db: null,
+  open() {
+    return new Promise((res, rej) => {
+      if (!globalThis.indexedDB) return rej(new Error('此瀏覽器不支援 IndexedDB'));
+      const r = indexedDB.open(DB_NAME, DB_VERSION);
+      r.onupgradeneeded = e => { for (let v = e.oldVersion + 1; v <= e.newVersion; v++) migrations[v] && migrations[v](r.result, r.transaction); };
+      r.onsuccess = () => { DB.db = r.result; DB.db.onversionchange = () => { try { DB.db.close(); } catch (e) {} }; res(DB.db); };
+      r.onerror = () => rej(r.error);
+      r.onblocked = () => rej(new Error('資料庫被其他分頁佔用，請關閉其他分頁後重試'));
+    });
+  },
+  store(name, mode = 'readonly') { return DB.db.transaction(name, mode).objectStore(name); },
+  get: (s, k) => reqP(DB.store(s).get(k)),
+  getAll: s => reqP(DB.store(s).getAll()),
+  byIndex: (s, i, k) => reqP(DB.store(s).index(i).getAll(IDBKeyRange.only(k))),
+  exposuresOf: pid => reqP(DB.store('exposures').getAll(IDBKeyRange.bound([pid, -Infinity], [pid, Infinity]))),
+  async delExposures(pid) { const tx = DB.db.transaction('exposures', 'readwrite'); tx.objectStore('exposures').delete(IDBKeyRange.bound([pid, -Infinity], [pid, Infinity])); await txDone(tx); },
+  async put(s, v) { const tx = DB.db.transaction(s, 'readwrite'); tx.objectStore(s).put(v); await txDone(tx); },
+  async del(s, k) { const tx = DB.db.transaction(s, 'readwrite'); tx.objectStore(s).delete(k); await txDone(tx); },
+  async putMany(s, arr, onProgress, chunk = 2000) {
+    for (let i = 0; i < arr.length; i += chunk) {
+      const tx = DB.db.transaction(s, 'readwrite'), st = tx.objectStore(s), end = Math.min(arr.length, i + chunk);
+      for (let j = i; j < end; j++) st.put(arr[j]);
+      await txDone(tx);
+      if (onProgress) onProgress(end, arr.length);
+    }
+  },
+  async delByIndex(s, i, k) {
+    const tx = DB.db.transaction(s, 'readwrite'), st = tx.objectStore(s);
+    await new Promise((res, rej) => {
+      const c = st.index(i).openKeyCursor(IDBKeyRange.only(k));
+      c.onsuccess = () => { const cur = c.result; if (cur) { st.delete(cur.primaryKey); cur.continue(); } else res(); };
+      c.onerror = () => rej(c.error);
+    });
+    await txDone(tx);
+  }
+};
+
+/* ---------- 稽核紀錄 ---------- */
+async function audit(action, entity, entityId, before, after, note, projectId) {
+  try {
+    const pid = projectId === undefined ? (App.pid || null) : projectId;
+    await DB.put('auditLogs', { ts: nowISO(), projectId: pid, action, entity: entity || '', entityId: entityId || '', before: before ?? null, after: after ?? null, note: note || '' });
+  } catch (e) { console.warn('audit failed', e); }
+}
+
+/* ---------- 對話框 ---------- */
+function openDialog(title, bodyHtml, buttons, onMount) {
+  const dlg = $('#dlg');
+  dlg.innerHTML = `<div class="dh"><span>${esc(title)}</span><button class="sm" data-x aria-label="關閉">✕</button></div><div class="db">${bodyHtml}</div><div class="df"></div>`;
+  const df = $('.df', dlg);
+  return new Promise(resolve => {
+    let done = false;
+    const close = v => { if (done) return; done = true; if (dlg.open) dlg.close(); resolve(v); };
+    (buttons || []).forEach(b => { const el = document.createElement('button'); el.textContent = b.label; if (b.cls) el.className = b.cls; el.onclick = async () => { if (b.action) { const r = await b.action(dlg); if (r === false) return; close(r === undefined ? b.value : r); } else close(b.value); }; df.appendChild(el); });
+    $('[data-x]', dlg).onclick = () => close(null);
+    dlg.onclose = () => close(null); dlg.oncancel = () => close(null);
+    if (!dlg.open) dlg.showModal();
+    onMount && onMount(dlg, close);
+  });
+}
+async function confirmDlg(title, msg, opts = {}) {
+  const typed = opts.typed;
+  const body = `<p>${msg}</p>` + (typed ? `<label>請輸入「${esc(typed)}」以確認<input id="cf-typed" autocomplete="off"></label>` : '');
+  const r = await openDialog(title, body, [{ label: '取消', value: false }, { label: opts.okLabel || '確認', cls: opts.danger === false ? 'primary' : 'danger', value: true, action: d => { if (typed && $('#cf-typed', d).value !== typed) { toast('輸入內容不符', 'err'); return false; } } }]);
+  return r === true;
+}
+
+/* =====================================================================
+ * 欄位、代碼表、行業別正規化、匯入、檢核
+ * ===================================================================== */
+const FIELDS = [
+  { key: 'borrowerId', label: '授信戶代號', req: true, syn: ['授信戶代號', '客戶代號', '客戶編號', '統編', '統一編號', '戶號', 'borrowerid', 'customerid', 'id'] },
+  { key: 'borrowerName', label: '名稱', syn: ['名稱', '客戶名稱', '授信戶名稱', '戶名', 'name', 'borrowername'] },
+  { key: 'industryCode', label: '行業別代碼', req: true, syn: ['行業別代碼', '行業別', '產業別', '行業代碼', '產業代碼', 'industrycode', 'industry'] },
+  { key: 'region', label: '地區', syn: ['地區', '區域', '縣市', 'region'] },
+  { key: 'rating', label: '內部評等', req: true, syn: ['內部評等', '評等', '信用評等', '風險等級', 'rating'] },
+  { key: 'drawn', label: '已動用金額', req: true, syn: ['已動用金額', '動用金額', '放款餘額', '餘額', '已動用', 'drawn', 'outstanding'] },
+  { key: 'limit', label: '核准額度', req: true, syn: ['核准額度', '額度', '授信額度', 'limit'] },
+  { key: 'ccf', label: '信用轉換係數', syn: ['信用轉換係數', 'ccf'] },
+  { key: 'pd', label: '基準 PD', req: true, syn: ['基準pd', 'pd', '違約機率'] },
+  { key: 'lgd', label: '基準 LGD', syn: ['基準lgd', 'lgd', '違約損失率'] },
+  { key: 'collateralType', label: '擔保品類型', syn: ['擔保品類型', '擔保品種類', '擔保品別', 'collateraltype'] },
+  { key: 'collateralValue', label: '擔保品價值', syn: ['擔保品價值', '擔保品金額', '擔保品鑑價', 'collateralvalue'] },
+  { key: 'maturityMonths', label: '剩餘期間（月）', syn: ['剩餘期間', '剩餘期間月', '剩餘月數', '剩餘到期月數', 'maturitymonths'] },
+  { key: 'overdue', label: '逾期註記', syn: ['逾期註記', '逾期', 'overdue'] },
+  { key: 'relatedParty', label: '利害關係人', syn: ['利害關係人', '關係人', 'relatedparty'] },
+  { key: 'groupId', label: '集團代號', syn: ['集團代號', '集團', '集團編號', 'groupid'] }
+];
+const FIELD_LABEL = Object.fromEntries(FIELDS.map(f => [f.key, f.label]));
+const NULL_TOKENS = new Set(['', '-', '－', 'n/a', 'na', 'null', '#n/a', 'nan']);
+const REAL_CT = ['RE', 'DEPOSIT', 'SECURITIES', 'GUARANTEE'];
+const CT_LABEL = { RE: '不動產', DEPOSIT: '存款', SECURITIES: '有價證券', GUARANTEE: '保證', NONE: '無擔保', UNKNOWN: '未知' };
+
+const VCODES = {
+  V001: ['error', '必填欄位空白'], V002: ['error', '數值欄位無法解析或為負'], V003: ['error', '授信戶代號重複'], V004: ['error', 'PD／LGD／CCF 不在 0–1'],
+  V005: ['warn', '已動用金額大於核准額度'], V006: ['warn', 'PD 等於 0 或 1'], V007: ['warn', '有擔保類型，但擔保品價值為 0'], V008: ['error', '行業別代碼含非數字字元'],
+  V009: ['info', '單戶 EAD 超過總 EAD 的 5%'], V010: ['info', '評等與 PD 區間不一致'], V011: ['error', '行業別代碼長度不是 4 或 6（或與強制制度不符）'], V012: ['warn', '行業別代碼已補前導 0'],
+  V013: ['warn', '中類查不到大類（空碼或代碼表未涵蓋），歸入「未分類」'], V014: ['warn', '細類不在已匯入的代碼表'], V015: ['info', '6 碼不在子類代碼表，或尚未匯入子類代碼表'], V016: ['warn', '同一專案混用不同代碼版本'],
+  V017: ['info', '同一集團成員的行業中類全都不同'], V018: ['warn', '擔保品類型與價值都空白'], V019: ['warn', '擔保品價值有值，類型空白（改用 UNKNOWN）'], V020: ['error', '類型為 NONE，價值卻大於 0（價值不採用，列不排除）'],
+  V021: ['warn', '有擔保類型，價值空白'], V022: ['info', '剩餘期間空白'], V023: ['warn', '布林欄位的值無法辨識'], V024: ['info', 'relatedParty 空白'],
+  V025: ['info', 'groupId 空白'], V026: ['warn', '專案中所有 groupId 都是空白，集團集中度等於單戶集中度'], V027: ['info', 'PD／LGD／CCF 以百分比輸入，已除以 100'],
+  V028: ['warn', '擔保品類型無法辨識，視為空白'], V029: ['info', '剩餘期間為小數，已四捨五入']
+};
+
+/* ---------- 行業別代碼表（內建：大類名稱＋中類→大類範圍）----------
+ * 依據：
+ *  - DGBAS_11：主計總處「行業統計分類第 11 次修正」。中類編碼與 ISIC 不同（食品製造為 08、製造業 C 為 08–34），
+ *    本表以「第 12 次修正草案」總說明所附中類編碼一覽表及第 11 次修正對照表交叉整理；空碼為 04、07、40、44、57、89。
+ *  - DGBAS_12：第 12 次修正（115/1/1 生效）。內建值取自 114/8/18 草案總說明（20 大類、88 中類）；正式版請以匯入官方代碼表覆蓋。
+ *  - 財稅 6 碼（MOF_9）的前 4 碼對應 DGBAS_11。
+ *  G 大類範圍 45–48 內，46、47 是否為使用中的中類無法由取得的資料確認，一律歸入 G。 */
+const SECTION_NAMES = {
+  DGBAS_11: { A: '農、林、漁、牧業', B: '礦業及土石採取業', C: '製造業', D: '電力及燃氣供應業', E: '用水供應及污染整治業', F: '營建工程業', G: '批發及零售業', H: '運輸及倉儲業', I: '住宿及餐飲業', J: '出版影音及資通訊業', K: '金融及保險業', L: '不動產業', M: '專業、科學及技術服務業', N: '支援服務業', O: '公共行政及國防；強制性社會安全', P: '教育業', Q: '醫療保健及社會工作服務業', R: '藝術、娛樂及休閒服務業', S: '其他服務業' },
+  DGBAS_12: { A: '農、林、漁、牧業', B: '礦業及土石採取業', C: '製造業', D: '電力及燃氣供應業', E: '用水供應及污染整治業', F: '營建工程業', G: '批發及零售業', H: '運輸及倉儲業', I: '住宿及餐飲業', J: '出版及影音等內容傳播業', K: '電信及資訊服務業', L: '金融及保險業', M: '不動產業', N: '專業、科學及技術服務業', O: '支援服務業', P: '公共行政及國防；強制性社會安全', Q: '教育業', R: '醫療保健及社會工作服務業', S: '藝術、運動及休閒服務業', T: '其他服務業' }
+};
+const DIV_RANGES = {
+  DGBAS_11: [['A',1,3],['B',5,6],['C',8,34],['D',35,35],['E',36,39],['F',41,43],['G',45,48],['H',49,54],['I',55,56],['J',58,63],['K',64,66],['L',67,68],['M',69,76],['N',77,82],['O',83,84],['P',85,85],['Q',86,88],['R',90,93],['S',94,96]],
+  DGBAS_12: [['A',1,3],['B',5,6],['C',8,34],['D',35,35],['E',36,39],['F',41,43],['G',45,48],['H',49,54],['I',55,56],['J',58,60],['K',61,63],['L',64,66],['M',67,68],['N',69,76],['O',77,82],['P',83,84],['Q',85,85],['R',86,88],['S',90,93],['T',94,96]]
+};
+const BUILTIN_CB_VERSION = 'builtin-2';
+const CB = { div: {}, name: {}, has: {}, counts: {}, userStamp: 0 };
+const cbStamp = () => `${BUILTIN_CB_VERSION}|${CB.userStamp || 0}`;
+const baseVer = v => v === 'MOF_9' ? 'DGBAS_11' : v;
+const secName = (letter, ver) => { if (!letter) return '未分類'; const b = baseVer(ver || 'DGBAS_11'); return CB.name[b]?.['SECTION' + letter] || SECTION_NAMES[b]?.[letter] || SECTION_NAMES.DGBAS_11[letter] || ''; };
+function builtinEntries() {
+  const out = [];
+  for (const [ver, names] of Object.entries(SECTION_NAMES)) for (const [k, n] of Object.entries(names)) out.push({ version: ver, code: k, level: 'SECTION', name: n, parentCode: null, source: 'BUILTIN' });
+  for (const [ver, ranges] of Object.entries(DIV_RANGES)) for (const [sec, a, b] of ranges) for (let d = a; d <= b; d++) out.push({ version: ver, code: p2(d), level: 'DIV', name: null, parentCode: sec, source: 'BUILTIN' });
+  return out;
+}
+async function ensureBuiltinCodebook() {
+  const m = await DB.get('meta', 'builtinCodebookVersion');
+  if (!m || m.value !== BUILTIN_CB_VERSION) {
+    const existing = await DB.getAll('industryCodebooks');
+    const keep = new Set(existing.filter(e => e.source === 'USER_IMPORT').map(e => e.version + '|' + e.code));
+    const tx = DB.db.transaction('industryCodebooks', 'readwrite'), st = tx.objectStore('industryCodebooks');
+    for (const e of existing) if (e.source === 'BUILTIN') st.delete([e.version, e.code]);   // 先清掉舊版內建項目（舊版 builtin-1 的中類範圍有誤）
+    await txDone(tx);
+    await DB.putMany('industryCodebooks', builtinEntries().filter(e => !keep.has(e.version + '|' + e.code)));
+    await DB.put('meta', { key: 'builtinCodebookVersion', value: BUILTIN_CB_VERSION });
+    await DB.put('meta', { key: 'appVersion', value: APP_VERSION });
+  }
+}
+async function loadCodebooks() {
+  const all = await DB.getAll('industryCodebooks'), u = await DB.get('meta', 'userCbStamp');
+  CB.userStamp = u ? u.value : 0; CB.div = {}; CB.name = {}; CB.has = {}; CB.counts = {};
+  for (const e of all) {
+    const v = e.version; CB.name[v] ??= {}; CB.has[v] ??= {}; CB.div[v] ??= {};
+    const ck = `${v}|${e.level}|${e.source}`; CB.counts[ck] = (CB.counts[ck] || 0) + 1;
+    if (e.level === 'DIV' && e.parentCode) CB.div[v][e.code] = e.parentCode;
+    if (e.name) CB.name[v][e.level + e.code] = e.name;
+    if (e.level === 'DETAIL' || e.level === 'SUB') CB.has[v][e.level] = true;
+  }
+}
+
+const toHalf = s => s.replace(/[\uFF01-\uFF5E]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/\u3000/g, ' ');
+function normalizeIndustry(rawIn, st) {
+  const out = { industryCodeRaw: rawIn == null ? null : String(rawIn), industryCode: null, industryScheme: 'UNKNOWN', industryVersion: null, industrySub6: null, industryDetail4: null, industryGroup3: null, industryDiv2: null, industrySection: null, industryName: null, industryStatus: 'INVALID' };
+  const issues = []; const add = (code, msg) => issues.push({ code, field: 'industryCode', msg, level: VCODES[code][0] });
+  let s = toHalf(String(rawIn ?? '')).trim();
+  if (NULL_TOKENS.has(s.toLowerCase())) { add('V001', '行業別代碼空白'); return { out, issues }; }
+  s = s.replace(/[\s\-.\/‐–—．]/g, '');
+  if (!s) { add('V001', '行業別代碼空白'); return { out, issues }; }
+  if (!/^\d+$/.test(s)) { add('V008', `行業別代碼含非數字字元：${rawIn}`); return { out, issues }; }
+  let padded = false;
+  if (s.length === 3 || s.length === 5) {
+    if (st.padZero) { s = '0' + s; padded = true; } else { add('V011', `行業別代碼長度為 ${s.length}，可能被 Excel 吃掉前導 0（專案未啟用補位）：${rawIn}`); return { out, issues }; }
+  }
+  const sch = s.length === 4 ? 'DGBAS' : s.length === 6 ? 'MOF_TAX' : null;
+  if (!sch) { add('V011', `行業別代碼長度不是 4 或 6：${rawIn}`); return { out, issues }; }
+  const force = st.scheme || 'AUTO';
+  if (force !== 'AUTO' && force !== sch) { add('V011', `專案強制使用 ${force}，但代碼為 ${s.length} 碼：${rawIn}`); return { out, issues }; }
+  const version = sch === 'MOF_TAX' ? 'MOF_9' : (st.dgbasVersion || 'DGBAS_11'), base = baseVer(version);
+  out.industryCode = s; out.industryScheme = sch; out.industryVersion = version;
+  out.industrySub6 = sch === 'MOF_TAX' ? s : null; out.industryDetail4 = s.slice(0, 4); out.industryGroup3 = s.slice(0, 3); out.industryDiv2 = s.slice(0, 2);
+  out.industrySection = CB.div[base]?.[out.industryDiv2] ?? null;   // 大類一律查表
+  out.industryName = (sch === 'MOF_TAX' ? CB.name['MOF_9']?.['SUB' + s] : null) ?? CB.name[base]?.['DETAIL' + out.industryDetail4] ?? null;
+  out.industryStatus = padded ? 'PADDED' : 'OK';
+  if (padded) add('V012', `行業別代碼已補前導 0：${rawIn} → ${s}`);
+  let notFound = false;
+  if (!out.industrySection) { add('V013', `中類 ${out.industryDiv2} 在 ${base} 代碼表中查不到大類`); notFound = true; }
+  if (CB.has[base]?.DETAIL && !CB.name[base]?.['DETAIL' + out.industryDetail4]) { add('V014', `細類 ${out.industryDetail4} 不在 ${base} 細類代碼表`); notFound = true; }
+  if (sch === 'MOF_TAX' && !(CB.has['MOF_9']?.SUB && CB.name['MOF_9']?.['SUB' + s])) add('V015', CB.has['MOF_9']?.SUB ? `子類 ${s} 不在財稅子類代碼表` : '尚未匯入財稅 6 碼子類代碼表');
+  if (notFound && !padded) out.industryStatus = 'NOT_FOUND';
+  return { out, issues };
+}
+
+/* ---------- 值正規化 ---------- */
+function parseNumber(s) {
+  if (s == null) return { v: null };
+  let t = toHalf(String(s)).trim();
+  if (NULL_TOKENS.has(t.toLowerCase())) return { v: null };
+  let pct = false; if (t.endsWith('%')) { pct = true; t = t.slice(0, -1); }
+  t = t.replace(/[,\s]/g, '');
+  if (!/^[-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?$/i.test(t)) return { v: null, err: true };
+  let v = Number(t); if (pct) v /= 100; return { v };
+}
+const YES = new Set(['y', 'yes', '是', '1', 'true', 'v', 't', '✔', '有']), NO = new Set(['n', 'no', '否', '0', 'false', 'f', '無', '沒有']);
+function parseBool(s) {
+  if (s == null) return { v: null };
+  const t = toHalf(String(s)).trim().toLowerCase();
+  if (NULL_TOKENS.has(t)) return { v: null };
+  if (YES.has(t)) return { v: true }; if (NO.has(t)) return { v: false };
+  return { v: null, bad: true };
+}
+function parseCT(s) {
+  if (s == null) return { v: null };
+  const t = toHalf(String(s)).trim(), l = t.toLowerCase().replace(/\s/g, '');
+  if (NULL_TOKENS.has(l)) return { v: null };
+  if (['unknown', '未知', 'unk'].includes(l)) return { v: null };
+  if (['re', 'deposit', 'securities', 'guarantee', 'none'].includes(l)) return { v: l.toUpperCase() };
+  if (['無', '無擔保', '信用', '信用放款', '純信用', '免擔保'].includes(t)) return { v: 'NONE' };
+  if (/不動產|房地|房屋|土地|建物|廠房/.test(t)) return { v: 'RE' };
+  if (/存款|定存|存單/.test(t)) return { v: 'DEPOSIT' };
+  if (/有價證券|股票|債券|證券|基金/.test(t) && !/保證/.test(t)) return { v: 'SECURITIES' };
+  if (/保證|信保/.test(t)) return { v: 'GUARANTEE' };
+  return { v: null, bad: true };
+}
+
+function normalizeRow(raw, rowNo, opts) {
+  const iss = []; const add = (code, field, msg) => iss.push({ code, field, msg, level: VCODES[code][0] });
+  const S = v => { if (v == null) return null; const t = String(v).trim(); return NULL_TOKENS.has(t.toLowerCase()) ? null : t; };
+  const num = (key, o = {}) => {
+    const lab = FIELD_LABEL[key], r = parseNumber(raw[key]);
+    if (r.err) { add('V002', key, `${lab} 無法解析：${raw[key]}`); return null; }
+    if (r.v == null) { if (o.req) add('V001', key, `${lab} 空白`); return null; }
+    let v = r.v;
+    if (o.prob) {
+      if (v > 1 && v <= 100) { v = v / 100; add('V027', key, `${lab} 以百分比輸入：${raw[key]} → ${v}`); }
+      if (v < 0 || v > 1) { add('V004', key, `${lab} 不在 0–1：${raw[key]}`); return v; }
+    } else if (v < 0) { add('V002', key, `${lab} 不可為負：${raw[key]}`); return v; }
+    if (o.int && !Number.isInteger(v)) { v = Math.round(v); add('V029', key, `${lab} 四捨五入為 ${v}`); }
+    return v;
+  };
+  let borrowerId = S(raw.borrowerId); if (borrowerId == null) add('V001', 'borrowerId', '授信戶代號空白');
+  let borrowerName = S(raw.borrowerName);
+  if (opts.hashId && borrowerId) borrowerId = 'h:' + SHA.hexOfString(borrowerId).slice(0, 16);
+  if (opts.hashName && borrowerName) borrowerName = 'h:' + SHA.hexOfString(borrowerName).slice(0, 16);
+  const ind = normalizeIndustry(raw.industryCode, opts.industry); ind.issues.forEach(i => iss.push(i));
+  const rating = S(raw.rating); if (rating == null) add('V001', 'rating', '內部評等空白');
+  const drawn = num('drawn', { req: true }), limit = num('limit', { req: true }), ccf = num('ccf', { prob: true });
+  const pd = num('pd', { req: true, prob: true }), lgd = num('lgd', { prob: true });
+  const ct = parseCT(raw.collateralType); if (ct.bad) add('V028', 'collateralType', `擔保品類型無法辨識：${raw.collateralType}`);
+  const collateralValue = num('collateralValue'), maturityMonths = num('maturityMonths', { int: true });
+  const bo = parseBool(raw.overdue); if (bo.bad) add('V023', 'overdue', `逾期註記無法辨識：${raw.overdue}`);
+  const br = parseBool(raw.relatedParty); if (br.bad) add('V023', 'relatedParty', `利害關係人無法辨識：${raw.relatedParty}`);
+  let groupId = S(raw.groupId); if (groupId) groupId = toHalf(groupId).toUpperCase();
+  const collateralType = ct.v;
+  return {
+    rowNo, borrowerId, borrowerName, ...ind.out, region: S(raw.region), rating, drawn, limit, ccf, pd, lgd,
+    collateralType, collateralTypeEffective: collateralType || 'UNKNOWN', collateralValue, maturityMonths,
+    overdue: bo.v, relatedParty: br.v, groupId, concentrationKey: groupId ?? ('SOLO:' + borrowerId),
+    excluded: false, excludeReason: null, manualExcluded: false, parseIssues: iss
+  };
+}
+
+/* ---------- 檢核 ---------- */
+function validateAll(recs, ctx) {
+  const M = ctx.model, used = ctx.usedFields || new Set(), issues = [];
+  let seq = 0; const pid = ctx.projectId;
+  const push = (r, code, field, msg, level) => issues.push({ id: `${pid}:${++seq}`, projectId: pid, exposureId: r ? r.id : null, rowNo: r ? r.rowNo : null, borrowerId: r ? r.borrowerId : '(專案)', code, level: level || VCODES[code][0], field: field || '', message: msg });
+  const seen = new Map(); let totalEad = 0;
+  const eadOf = r => (isNum(r.drawn) && isNum(r.limit)) ? r.drawn + (r.ccf ?? M.defaultCCF) * Math.max(0, r.limit - r.drawn) : 0;
+  for (const r of recs) totalEad += eadOf(r);
+  const rpm = M.ratingPdMap || {};
+  const bases = new Set(); const groups = new Map(); let anyGroup = false;
+  for (const r of recs) {
+    for (const i of r.parseIssues || []) push(r, i.code, i.field, i.msg, i.level);
+    if (r.borrowerId != null) { const n = (seen.get(r.borrowerId) || 0) + 1; seen.set(r.borrowerId, n); if (n > 1) push(r, 'V003', 'borrowerId', `授信戶代號重複（第 ${n} 次出現）：${r.borrowerId}`); }
+    if (isNum(r.drawn) && isNum(r.limit) && r.drawn > r.limit) push(r, 'V005', 'drawn', `已動用 ${r.drawn} > 核准額度 ${r.limit}`);
+    if (r.pd === 0 || r.pd === 1) push(r, 'V006', 'pd', `PD = ${r.pd}`);
+    const real = REAL_CT.includes(r.collateralType), cv = r.collateralValue;
+    if (real && cv === 0) push(r, 'V007', 'collateralValue', '有擔保類型但價值為 0');
+    if (r.collateralType == null && cv == null) push(r, 'V018', 'collateralType', '擔保品類型與價值都空白');
+    if (r.collateralType == null && isNum(cv) && cv > 0) push(r, 'V019', 'collateralType', '擔保品價值有值，類型空白');
+    if (r.collateralType === 'NONE' && isNum(cv) && cv > 0) push(r, 'V020', 'collateralValue', '類型為 NONE，價值大於 0');
+    if (real && cv == null) push(r, 'V021', 'collateralValue', '有擔保類型，價值空白');
+    if (r.maturityMonths == null) push(r, 'V022', 'maturityMonths', '剩餘期間空白', used.has('maturityMonths') ? 'warn' : 'info');
+    if (r.relatedParty == null) push(r, 'V024', 'relatedParty', 'relatedParty 空白', used.has('relatedParty') ? 'warn' : 'info');
+    if (r.groupId == null) push(r, 'V025', 'groupId', 'groupId 空白'); else anyGroup = true;
+    if (r.rating != null && isNum(r.pd) && Array.isArray(rpm[r.rating]) && (r.pd < rpm[r.rating][0] || r.pd > rpm[r.rating][1])) push(r, 'V010', 'rating', `評等 ${r.rating} 的 PD 區間為 ${rpm[r.rating][0]}–${rpm[r.rating][1]}，PD = ${r.pd}`);
+    if (totalEad > 0 && eadOf(r) / totalEad > 0.05) push(r, 'V009', 'drawn', `EAD 占總額 ${(eadOf(r) / totalEad * 100).toFixed(1)}%`);
+    if (r.industryVersion) bases.add(baseVer(r.industryVersion));
+    if (r.groupId && r.industryDiv2) { if (!groups.has(r.groupId)) groups.set(r.groupId, []); groups.get(r.groupId).push(r.industryDiv2); }
+  }
+  if (bases.size > 1) push(null, 'V016', 'industryCode', `同一專案混用代碼版本：${[...bases].join('、')}`);
+  for (const [g, arr] of groups) if (arr.length >= 2 && new Set(arr).size === arr.length) push(null, 'V017', 'groupId', `集團 ${g} 的 ${arr.length} 個成員行業中類全都不同`);
+  if (recs.length && !anyGroup) push(null, 'V026', 'groupId', '所有 groupId 都是空白，集團集中度等於單戶集中度');
+  const blocking = new Map();
+  for (const i of issues) if (i.level === 'error' && i.code !== 'V020' && i.exposureId) { if (!blocking.has(i.exposureId)) blocking.set(i.exposureId, new Set()); blocking.get(i.exposureId).add(i.code); }
+  for (const r of recs) {
+    const b = blocking.get(r.id);
+    r.blockCodes = b ? [...b].sort() : [];
+    if (b) { r.excluded = true; r.excludeReason = [...b].sort().join(','); }
+    else if (r.manualExcluded) { r.excluded = true; r.excludeReason = 'MANUAL'; }
+    else { r.excluded = false; r.excludeReason = null; }
+  }
+  return issues;
+}
+/* 檢核問題以「代碼」為單位彙整成一筆紀錄，避免 10 萬筆資料產生數十萬筆 IndexedDB 紀錄；每個代碼最多保留 20,000 筆明細（count 仍為完整筆數） */
+const ISSUE_ITEM_CAP = 20000;
+function groupIssues(issues, pid) {
+  const m = new Map();
+  for (const i of issues) {
+    let g = m.get(i.code); if (!g) { g = { id: `${pid}:${i.code}`, projectId: pid, code: i.code, level: i.level, count: 0, rowSet: new Set(), items: [], truncated: false }; m.set(i.code, g); }
+    g.count++; if (i.exposureId) g.rowSet.add(i.exposureId);
+    if (g.items.length < ISSUE_ITEM_CAP) g.items.push([i.rowNo, i.borrowerId, i.field, i.message]); else g.truncated = true;
+  }
+  return [...m.values()].map(g => { g.rows = g.rowSet.size; delete g.rowSet; return g; });
+}
+
+/* ---------- CSV / 貼上 ---------- */
+function detectDelim(t) { const l = t.slice(0, t.indexOf('\n') < 0 ? t.length : t.indexOf('\n')); const c = { '\t': 0, ',': 0, ';': 0 }; for (const ch of l) if (ch in c) c[ch]++; const top = Object.entries(c).sort((a, b) => b[1] - a[1])[0]; return top[1] ? top[0] : ','; }
+function parseDelimited(text, delim) {
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  delim = delim || detectDelim(text);
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"' && cur === '') q = true;
+    else if (c === delim) { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); cur = ''; if (row.length > 1 || row[0] !== '') rows.push(row); row = []; }
+    else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); if (row.length > 1 || row[0] !== '') rows.push(row); }
+  return rows;
+}
+function decodeBuffer(buf, enc) {
+  const u = new Uint8Array(buf), bom = (u[0] === 0xFF && u[1] === 0xFE) ? 'utf-16le' : (u[0] === 0xFE && u[1] === 0xFF) ? 'utf-16be' : null;   // Excel「Unicode 文字」為 UTF-16
+  const tryDec = (e, fatal) => new TextDecoder(e, { fatal }).decode(buf);
+  if (enc === 'auto') {
+    if (bom) return { text: tryDec(bom, false), enc: bom };
+    try { return { text: tryDec('utf-8', true), enc: 'utf-8' }; } catch (e) { try { return { text: tryDec('big5', false), enc: 'big5' }; } catch (e2) { return { text: tryDec('utf-8', false), enc: 'utf-8' }; } }
+  }
+  try { return { text: tryDec(enc, false), enc }; } catch (e) { return { text: tryDec('utf-8', false), enc: 'utf-8' }; }
+}
+const normHdr = h => toHalf(String(h ?? '')).toLowerCase().replace(/[\s_\-()（）\[\]【】]/g, '');
+function autoMap(headers) {
+  const map = {}, used = new Set(), nh = headers.map(normHdr);
+  for (const f of FIELDS) {
+    const syns = [...f.syn, f.label].map(normHdr);
+    let idx = nh.findIndex((h, i) => !used.has(i) && syns.includes(h));
+    if (idx < 0) idx = nh.findIndex((h, i) => !used.has(i) && h && syns.some(s => s.length >= 3 && h.includes(s)));
+    if (idx >= 0) { map[f.key] = idx; used.add(idx); }
+  }
+  return map;
+}
+
+/* ---------- 示範資料（虛擬）---------- */
+function demoCSV() {
+  let a = 20261027; const rnd = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  const pick = arr => arr[Math.floor(rnd() * arr.length)];
+  const wpick = pairs => { const tot = pairs.reduce((s, p) => s + p[1], 0); let x = rnd() * tot; for (const [v, w] of pairs) { if ((x -= w) < 0) return v; } return pairs[0][0]; };
+  const codes = ['0111','0311','0811','0911','1011','1311','2011','2611','2711','2811','2911','3011','3510','3811','4111','4111','4211','4311','4511','4611','4811','4911','5011','5111','5411','5511','5611','5811','6111','6411','6711','6811','6911','7111','7711','8211','8311','8511','8611','9011','9511'];
+  const regions = ['台北市', '新北市', '桃園市', '新竹縣市', '台中市', '台南市', '高雄市', '其他'];
+  const rpd = { 1: [0.0003, 0.001], 2: [0.001, 0.003], 3: [0.003, 0.008], 4: [0.008, 0.02], 5: [0.02, 0.05], 6: [0.05, 0.1], 7: [0.1, 0.2], 8: [0.2, 0.5], 9: [0.5, 0.9] };
+  const lines = ['授信戶代號,授信戶名稱,行業別代碼,地區,內部評等,已動用金額,核准額度,信用轉換係數,基準PD,基準LGD,擔保品類型,擔保品價值,剩餘期間（月）,逾期註記,利害關係人,集團代號'];
+  const n = 197;
+  for (let i = 1; i <= n; i++) {
+    const id = 'C' + String(i).padStart(4, '0'), code = pick(codes);
+    const codeStr = rnd() < 0.3 ? code + '11' : (rnd() < 0.15 ? code.slice(0, 2) + '-' + code.slice(2) : code);
+    const rating = wpick([[1, 6], [2, 16], [3, 26], [4, 24], [5, 14], [6, 8], [7, 4], [8, 1.5], [9, 0.5]]);
+    const [lo, hi] = rpd[rating], pd = lo * Math.pow(hi / lo, rnd());
+    const drawn = Math.round(Math.exp(Math.log(5e6) + rnd() * Math.log(100)) / 1e5) * 1e5;
+    const limit = Math.round(drawn * (1 + rnd() * 0.6) / 1e5) * 1e5;
+    const lgd = rnd() < 0.6 ? (0.25 + rnd() * 0.35).toFixed(3) : '';
+    const ct = wpick([['不動產', 40], ['存款', 5], ['有價證券', 8], ['保證', 10], ['無擔保', 22], ['', 15]]);
+    const cv = ct && ct !== '無擔保' ? (rnd() < 0.9 ? Math.round(drawn * (0.4 + rnd()) / 1e5) * 1e5 : '') : (ct === '' && rnd() < 0.3 ? Math.round(drawn * 0.5 / 1e5) * 1e5 : '');
+    const mat = rnd() < 0.92 ? Math.ceil(rnd() * 120) : '';
+    const rp = wpick([['Y', 5], ['N', 80], ['', 15]]);
+    const g = rnd() < 0.45 ? 'G' + String(1 + Math.floor(rnd() * 25)).padStart(2, '0') : '';
+    lines.push([id, '虛擬公司' + id, codeStr, pick(regions), rating, drawn, limit, rnd() < 0.5 ? '' : pick(['0.5', '0.4', '0.75', '1']), pd.toFixed(5), lgd, ct, cv, mat, rnd() < 0.03 ? 'Y' : 'N', rp, g].join(','));
+  }
+  lines.push('C0001,重複的授信戶,4111,台北市,4,10000000,12000000,,0.012,,不動產,12000000,36,N,N,');
+  lines.push('C0198,PD 異常示範,2611,新竹縣市,5,8000000,9000000,,150,,無擔保,,24,N,N,G03');
+  lines.push('C0199,行業別含字母示範,F4111,台中市,3,6000000,7000000,,0.004,0.4,存款,6000000,12,N,N,');
+  return lines.join('\n');
+}
+
+/* =====================================================================
+ * 計算引擎（EngineModule 為自包含函式，同時供 Web Worker 與主執行緒使用）
+ * ===================================================================== */
+function EngineModule() {
+  const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+  const toArr = v => Array.isArray(v) ? v : String(v ?? '').split(/[,，;；、]/).map(s => s.trim()).filter(s => s !== '');
+  const eqv = (a, b) => {
+    if (typeof a === 'boolean') return a === (b === true || b === 'true' || b === '1' || b === 1 || b === '是');
+    const sa = String(a).trim(), sb = String(b).trim();
+    if (sa === sb || sa.toLowerCase() === sb.toLowerCase()) return true;   // 代碼比對不分大小寫（集團代號、大類字母）
+    const na = Number(sa), nb = Number(sb);
+    return sa !== '' && sb !== '' && isFinite(na) && isFinite(nb) && na === nb;
+  };
+  const cmp = (a, b) => { const na = Number(a), nb = Number(b); if (isFinite(na) && isFinite(nb) && String(a).trim() !== '' && String(b).trim() !== '') return na - nb; const sa = String(a), sb = String(b); return sa < sb ? -1 : sa > sb ? 1 : 0; };
+  function matchCond(c, get) {
+    let v = get(c.field);
+    if (v === undefined || v === null || v === '') {
+      if (c.op === 'isEmpty') return true;
+      if (c.unknownAs === 'true' || c.unknownAs === 'false') v = (c.unknownAs === 'true'); else return false;
+    } else if (c.op === 'isEmpty') return false;
+    const val = c.value;
+    switch (c.op) {
+      case 'eq': return eqv(v, val);
+      case 'ne': return !eqv(v, val);
+      case 'in': return toArr(val).some(x => eqv(v, x));
+      case 'nin': return !toArr(val).some(x => eqv(v, x));
+      case 'gt': return cmp(v, val) > 0;
+      case 'gte': return cmp(v, val) >= 0;
+      case 'lt': return cmp(v, val) < 0;
+      case 'lte': return cmp(v, val) <= 0;
+      case 'between': { const [a, b] = toArr(val); return cmp(v, a) >= 0 && cmp(v, b) <= 0; }
+      case 'startsWith': return String(v).startsWith(String(val));
+      case 'inPrefix': return toArr(val).some(p => String(v).startsWith(String(p)));
+    }
+    return false;
+  }
+  function matchFilter(f, get) {
+    if (!f) return true;
+    const all = f.all || [], any = f.any || [];
+    for (const c of all) if (!matchCond(c, get)) return false;
+    if (any.length) { let ok = false; for (const c of any) if (matchCond(c, get)) { ok = true; break; } if (!ok) return false; }
+    return true;
+  }
+  function recov(cv, type, M) {
+    if (cv == null || cv <= 0) return 0;
+    const hc = M.collateralHaircutByType ? M.collateralHaircutByType[type] : 0;
+    return cv * (1 - (hc == null ? 0 : hc)) * (1 - M.recoveryCost);
+  }
+  const impliedLgd = (cv, type, ead, M) => ead <= 0 ? 0 : clamp(1 - recov(cv, type, M) / ead, 0, 1);
+  const applyM = (m, x, v) => m === 'multiply' ? x * v : m === 'add' ? x + v : m === 'set' ? v : m === 'haircut' ? x * (1 - v) : x;
+
+  function computeOne(rec, rules, M, trace) {
+    const type = rec.collateralTypeEffective || 'UNKNOWN';
+    const cv = type === 'NONE' ? null : (rec.collateralValue == null ? null : rec.collateralValue);
+    const ccf0 = rec.ccf == null ? M.defaultCCF : rec.ccf;
+    const drawn0 = rec.drawn, limit = rec.limit;
+    const ead0 = drawn0 + ccf0 * Math.max(0, limit - drawn0);
+    let lgd0, lgdSource;
+    if (rec.lgd != null) { lgd0 = rec.lgd; lgdSource = 'INPUT'; }
+    else if (cv != null && cv > 0) { lgd0 = Math.max(M.lgdFloor, impliedLgd(cv, type, ead0, M)); lgdSource = 'COLLATERAL'; }
+    else if (type === 'NONE') { lgd0 = M.defaultLgdUnsecured; lgdSource = 'DEFAULT_UNSECURED'; }
+    else { lgd0 = M.defaultLgdUnknownCollateral; lgdSource = 'DEFAULT_UNKNOWN'; }
+    const pd0 = rec.pd;
+    const get = f => f === 'ead' ? ead0 : f === 'lgdSource' ? lgdSource : f === 'collateralTypeEffective' ? type : rec[f];
+    const cur = { pd: pd0, lgd: lgd0, ccf: ccf0, collateralValue: cv, drawn: drawn0 };
+    const applied = []; let skipped = 0;
+    for (let i = 0; i < rules.length; i++) {
+      const r = rules[i];
+      if (r.enabled === false) continue;
+      if (!matchFilter(r.filter, get)) continue;
+      const x = cur[r.target];
+      if (x == null) { skipped++; if (trace) trace.push({ ruleId: r.id, name: r.name, target: r.target, method: r.method, value: r.value, skipped: '目標欄位為空值，不套用' }); continue; }
+      let y = applyM(r.method, x, Number(r.value));
+      if (r.floor != null && r.floor !== '') y = Math.max(y, Number(r.floor));
+      if (r.cap != null && r.cap !== '') y = Math.min(y, Number(r.cap));
+      cur[r.target] = y; applied.push(r.id);
+      if (trace) trace.push({ ruleId: r.id, name: r.name, target: r.target, method: r.method, value: r.value, before: x, after: y });
+    }
+    const pd1 = cur.pd === pd0 ? pd0 : clamp(cur.pd, Math.min(M.pdFloor, pd0), 1);
+    const ccf1 = clamp(cur.ccf, 0, 1), drawn1 = Math.max(0, cur.drawn);
+    const ead1 = drawn1 + ccf1 * Math.max(0, limit - drawn1);
+    const coll1 = cv == null ? null : Math.max(0, cur.collateralValue);
+    let delta = 0;
+    if (cv != null && cv > 0) { delta = impliedLgd(coll1, type, ead1, M) - impliedLgd(cv, type, ead0, M); if (lgdSource !== 'COLLATERAL') delta = Math.max(0, delta); }
+    let lgd1 = cur.lgd + delta;
+    lgd1 = lgd1 === lgd0 ? lgd0 : clamp(lgd1, Math.min(M.lgdFloor, lgd0), 1);
+    const el0 = pd0 * lgd0 * ead0, el1 = pd1 * lgd1 * ead1;
+    const rc0 = Math.min(ead0, recov(cv, type, M)), rc1 = coll1 == null ? 0 : Math.min(ead1, recov(coll1, type, M));
+    return {
+      exposureId: rec.id, rowNo: rec.rowNo, borrowerId: rec.borrowerId, section: rec.industrySection || '', div2: rec.industryDiv2 || '', detail4: rec.industryDetail4 || '',
+      rating: rec.rating, region: rec.region || '', grp: rec.concentrationKey, lgdSource, collType: type,
+      ead0, ead1, pd0, pd1, lgd0, lgd1, el0, el1, dEL: el1 - el0,
+      aPD: (pd1 - pd0) * lgd0 * ead0, aLGD: pd1 * (lgd1 - lgd0) * ead0, aEAD: pd1 * lgd1 * (ead1 - ead0),
+      rc0, rc1, rules: applied, skipped,
+      aff: (el1 !== el0 || pd1 !== pd0 || lgd1 !== lgd0 || ead1 !== ead0) ? 1 : 0,
+      fCollUnk: (cv == null && type !== 'NONE') ? 1 : 0, fLgdDef: lgdSource.startsWith('DEFAULT') ? 1 : 0,
+      fRelUnk: rec.relatedParty == null ? 1 : 0, fGrpNone: rec.groupId == null ? 1 : 0, fSecNone: rec.industrySection ? 0 : 1
+    };
+  }
+  function runBatch(recs, rules, M, a, b) { const out = []; for (let i = a; i < b; i++) out.push(computeOne(recs[i], rules, M)); return out; }
+  function totals(recs, rules, M) {
+    const t = { n: 0, ead0: 0, ead1: 0, el0: 0, el1: 0, rc0: 0, rc1: 0, aPD: 0, aLGD: 0, aEAD: 0 };
+    for (let i = 0; i < recs.length; i++) { const r = computeOne(recs[i], rules, M); t.n++; t.ead0 += r.ead0; t.ead1 += r.ead1; t.el0 += r.el0; t.el1 += r.el1; t.rc0 += r.rc0; t.rc1 += r.rc1; t.aPD += r.aPD; t.aLGD += r.aLGD; t.aEAD += r.aEAD; }
+    t.dEL = t.el1 - t.el0; t.cov0 = t.ead0 ? t.rc0 / t.ead0 : 0; t.cov1 = t.ead1 ? t.rc1 / t.ead1 : 0; return t;
+  }
+  return { computeOne, runBatch, totals, matchFilter, matchCond, recov, impliedLgd };
+}
+const ENGINE = EngineModule();
+const WORKER_SRC = `const E=(${EngineModule.toString()})();self.onmessage=function(e){const d=e.data,out=[],n=d.recs.length,B=4000;try{for(let i=0;i<n;i+=B){const end=Math.min(n,i+B),part=E.runBatch(d.recs,d.rules,d.model,i,end);for(let j=0;j<part.length;j++)out.push(part[j]);self.postMessage({t:'p',done:end,total:n});}self.postMessage({t:'d',results:out});}catch(err){self.postMessage({t:'e',msg:String(err&&err.message||err)});}};`;
+
+const DEFAULT_MODEL = {
+  defaultCCF: 0.5, pdFloor: 0.0003, lgdFloor: 0.10, recoveryCost: 0.10, defaultLgdUnknownCollateral: 0.45, defaultLgdUnsecured: 0.45,
+  collateralHaircutByType: { RE: 0.3, DEPOSIT: 0, SECURITIES: 0.4, GUARANTEE: 0.2, UNKNOWN: 0.5 },
+  ratingPdMap: { '1': [0, 0.001], '2': [0.001, 0.003], '3': [0.003, 0.008], '4': [0.008, 0.02], '5': [0.02, 0.05], '6': [0.05, 0.1], '7': [0.1, 0.2], '8': [0.2, 0.5], '9': [0.5, 1] }
+};
+
+/* ---------- 執行器（Worker 優先，失敗時退回主執行緒分批）---------- */
+const Runner = {
+  worker: null,
+  cancel() { this.cancelled = true; if (this.worker) { this.worker.terminate(); this.worker = null; } if (this._rej) this._rej(new Error('已取消')); },
+  async run(recs, rules, model, onProgress) {
+    this.cancelled = false;
+    let w = null;
+    try { w = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }))); } catch (e) { w = null; }
+    if (w) {
+      this.worker = w;
+      try {
+        return await new Promise((res, rej) => {
+          this._rej = rej;
+          w.onmessage = e => { const d = e.data; if (d.t === 'p') onProgress && onProgress(d.done, d.total); else if (d.t === 'd') res(d.results); else if (d.t === 'e') rej(new Error(d.msg)); };
+          w.onerror = e => rej(new Error('Worker 失敗：' + (e.message || '')));
+          w.postMessage({ recs, rules, model });
+        });
+      } catch (err) {
+        if (this.cancelled) throw new Error('已取消');
+        console.warn('Worker 不可用，改用主執行緒', err);
+      } finally { try { w.terminate(); } catch (e) {} this.worker = null; this._rej = null; }
+    }
+    const out = [], n = recs.length;
+    for (let i = 0; i < n; i += 4000) {
+      if (this.cancelled) throw new Error('已取消');
+      const end = Math.min(n, i + 4000);
+      pushAll(out, ENGINE.runBatch(recs, rules, model, i, end));
+      onProgress && onProgress(end, n); await tick();
+    }
+    return out;
+  }
+};
+
+/* ---------- 彙總 ---------- */
+function sumResults(rs) {
+  const t = { n: rs.length, ead0: 0, ead1: 0, el0: 0, el1: 0, pdw0: 0, pdw1: 0, lgdw0: 0, lgdw1: 0, aPD: 0, aLGD: 0, aEAD: 0, rc0: 0, rc1: 0, aff: 0, fCollUnk: 0, fLgdDef: 0, fRelUnk: 0, fGrpNone: 0, fSecNone: 0, eCollUnk: 0, eLgdDef: 0, eRelUnk: 0, eGrpNone: 0, eSecNone: 0 };
+  for (const r of rs) {
+    t.ead0 += r.ead0; t.ead1 += r.ead1; t.el0 += r.el0; t.el1 += r.el1; t.pdw0 += r.pd0 * r.ead0; t.pdw1 += r.pd1 * r.ead1; t.lgdw0 += r.lgd0 * r.ead0; t.lgdw1 += r.lgd1 * r.ead1;
+    t.aPD += r.aPD; t.aLGD += r.aLGD; t.aEAD += r.aEAD; t.rc0 += r.rc0; t.rc1 += r.rc1; t.aff += r.aff;
+    if (r.fCollUnk) { t.fCollUnk++; t.eCollUnk += r.ead0; } if (r.fLgdDef) { t.fLgdDef++; t.eLgdDef += r.ead0; } if (r.fRelUnk) { t.fRelUnk++; t.eRelUnk += r.ead0; }
+    if (r.fGrpNone) { t.fGrpNone++; t.eGrpNone += r.ead0; } if (r.fSecNone) { t.fSecNone++; t.eSecNone += r.ead0; }
+  }
+  t.dEL = t.el1 - t.el0; t.wPD0 = t.ead0 ? t.pdw0 / t.ead0 : 0; t.wPD1 = t.ead1 ? t.pdw1 / t.ead1 : 0; t.wLGD0 = t.ead0 ? t.lgdw0 / t.ead0 : 0; t.wLGD1 = t.ead1 ? t.lgdw1 / t.ead1 : 0;
+  t.cov0 = t.ead0 ? t.rc0 / t.ead0 : 0; t.cov1 = t.ead1 ? t.rc1 / t.ead1 : 0; t.attrErr = Math.abs(t.aPD + t.aLGD + t.aEAD - t.dEL);
+  return t;
+}
+function groupSum(rs, keyFn) {
+  const m = new Map();
+  for (const r of rs) { const k = keyFn(r); let g = m.get(k); if (!g) { g = { key: k, n: 0, ead0: 0, ead1: 0, el0: 0, el1: 0, pd0: 0, pd1: 0, lgd0: 0, lgd1: 0 }; m.set(k, g); } g.n++; g.ead0 += r.ead0; g.ead1 += r.ead1; g.el0 += r.el0; g.el1 += r.el1; g.pd0 += r.pd0 * r.ead0; g.pd1 += r.pd1 * r.ead1; g.lgd0 += r.lgd0 * r.ead0; g.lgd1 += r.lgd1 * r.ead1; }
+  const out = [...m.values()]; for (const g of out) { g.dEL = g.el1 - g.el0; g.wPD0 = g.ead0 ? g.pd0 / g.ead0 : 0; g.wPD1 = g.ead1 ? g.pd1 / g.ead1 : 0; g.wLGD0 = g.ead0 ? g.lgd0 / g.ead0 : 0; g.wLGD1 = g.ead1 ? g.lgd1 / g.ead1 : 0; }
+  return out;
+}
+const hhi = (vals) => { const t = vals.reduce((s, v) => s + v, 0); return t ? vals.reduce((s, v) => s + (v / t) ** 2, 0) * 10000 : 0; };
+function pdToRating(pd, map) { if (!map) return '未對應'; const ks = Object.keys(map).sort((a, b) => (Number(a) - Number(b)) || a.localeCompare(b)); for (const k of ks) { const [lo, hi] = map[k]; if (pd >= lo && pd < hi) return k; } const last = ks[ks.length - 1]; return last && pd >= map[last][0] ? last : '未對應'; }
+
+/* ---------- 反向壓測搜尋（純函式）---------- */
+async function reverseSearch(evalFn, lo, hi, threshold, opt = {}) {
+  const tol = opt.tol ?? 0.001, maxIter = opt.maxIter ?? 40, path = [], warn = [];
+  const f = async x => { const v = await evalFn(x); path.push({ x, v }); return v; };
+  const flo = await f(lo), fhi = await f(hi);
+  const inc = fhi >= flo;
+  const reach = inc ? (fhi >= threshold && flo <= threshold) : (fhi <= threshold && flo >= threshold);
+  if (!reach) {
+    const already = inc ? flo > threshold : flo < threshold;
+    return { found: false, path, warn: [`在區間 [${lo}, ${hi}] 內，指標 ${flo.toPrecision(6)} → ${fhi.toPrecision(6)} 無法穿越門檻 ${threshold}` + (already ? '（搜尋下限處指標已經越過門檻，請放寬下限或調整門檻／基準情境）' : '（請放寬搜尋上限或調整門檻）')] };
+  }
+  // 單調性檢查：9 點格點
+  let mono = true, prev = flo; const grid = [];
+  for (let i = 1; i <= 8; i++) { const x = lo + (hi - lo) * i / 8, v = await f(x); grid.push({ x, v }); if (inc ? v < prev - 1e-9 * Math.abs(prev) : v > prev + 1e-9 * Math.abs(prev)) mono = false; prev = v; }
+  if (!mono) {
+    warn.push('指標對該變數不是單調，改用格點掃描（取第一個穿越門檻的位置，精度受格點限制）');
+    const pts = [{ x: lo, v: flo }, ...grid, { x: hi, v: fhi }];
+    for (let i = 1; i < pts.length; i++) { const a = pts[i - 1], b = pts[i]; if ((a.v - threshold) * (b.v - threshold) <= 0) { const x = b.v === a.v ? a.x : a.x + (threshold - a.v) * (b.x - a.x) / (b.v - a.v); return { found: true, x, v: await f(x), path, warn, mode: 'grid' }; } }
+    return { found: false, path, warn };
+  }
+  let a = lo, b = hi, x = lo, v = flo;
+  for (let i = 0; i < maxIter; i++) {
+    x = (a + b) / 2; v = await f(x);
+    if (Math.abs(v - threshold) <= Math.abs(threshold) * tol || Math.abs(b - a) < 1e-12) break;
+    if ((v < threshold) === inc) a = x; else b = x;
+    if (opt.yield) await tick();
+  }
+  return { found: true, x, v, path, warn, mode: 'bisect' };
+}
+
+/* =====================================================================
+ * 圖表（原生 SVG）、虛擬捲動表格、匯出入
+ * ===================================================================== */
+const PAL = () => { const cs = getComputedStyle(document.documentElement), g = n => cs.getPropertyValue(n).trim(); return { fg: g('--fg') || '#1b2430', muted: g('--muted') || '#5c6b7d', border: g('--border') || '#d9e0e8', accent: g('--accent') || '#0f6cbd', danger: g('--danger') || '#c4314b', good: g('--good') || '#0e7a3b', panel: g('--panel') || '#fff' }; };
+const compactFmt = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 2 });
+const fmtC = v => v == null || !isFinite(v) ? '—' : compactFmt.format(v);
+function niceTicks(min, max, n = 5) {
+  if (min === max) { max = min + 1; }
+  const span = max - min, step0 = span / n, mag = Math.pow(10, Math.floor(Math.log10(step0))), r = step0 / mag;
+  const step = (r >= 5 ? 10 : r >= 2 ? 5 : r >= 1 ? 2 : 1) * mag, start = Math.floor(min / step) * step, ticks = [];
+  for (let v = start; v <= max + step * 0.5; v += step) ticks.push(+v.toPrecision(12));
+  return ticks;
+}
+const svgOpen = (W, H, P) => `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Segoe UI, Microsoft JhengHei, sans-serif" font-size="11"><rect width="${W}" height="${H}" fill="${P.panel}"/>`;
+const trunc = (s, n) => { s = String(s); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
+
+function svgWaterfall(items) {
+  const P = PAL(), W = 640, H = 300, m = { l: 64, r: 12, t: 22, b: 52 };
+  let run = 0; const bars = [];
+  for (const it of items) {
+    if (it.kind === 'total') { bars.push({ ...it, y0: 0, y1: it.value }); run = it.value; }
+    else { bars.push({ ...it, y0: run, y1: run + it.value }); run += it.value; }
+  }
+  const lo = Math.min(0, ...bars.map(b => Math.min(b.y0, b.y1))), hi = Math.max(...bars.map(b => Math.max(b.y0, b.y1)), 1e-9);
+  const ticks = niceTicks(lo, hi), tmin = Math.min(lo, ticks[0]), tmax = Math.max(hi, ticks[ticks.length - 1]);
+  const sy = v => m.t + (H - m.t - m.b) * (1 - (v - tmin) / (tmax - tmin)), bw = (W - m.l - m.r) / bars.length;
+  let s = svgOpen(W, H, P);
+  for (const t of ticks) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(t)}" y2="${sy(t)}" stroke="${P.border}"/><text x="${m.l - 6}" y="${sy(t) + 4}" text-anchor="end" fill="${P.muted}">${fmtC(t)}</text>`;
+  bars.forEach((b, i) => {
+    const x = m.l + i * bw + bw * 0.15, w = bw * 0.7, ya = sy(Math.max(b.y0, b.y1)), yb = sy(Math.min(b.y0, b.y1));
+    const col = b.kind === 'total' ? P.accent : (b.value >= 0 ? P.danger : P.good);
+    s += `<rect x="${x}" y="${ya}" width="${w}" height="${Math.max(1, yb - ya)}" fill="${col}"><title>${esc(b.label)}：${fmtInt(b.value)}</title></rect>`;
+    s += `<text x="${x + w / 2}" y="${ya - 4}" text-anchor="middle" fill="${P.fg}">${b.kind === 'total' ? fmtC(b.value) : (b.value >= 0 ? '+' : '') + fmtC(b.value)}</text>`;
+    s += `<text x="${x + w / 2}" y="${H - m.b + 16}" text-anchor="middle" fill="${P.fg}">${esc(trunc(b.label, 10))}</text>`;
+  });
+  return s + '</svg>';
+}
+function svgHBar(items, opt = {}) {
+  const P = PAL(), W = 640, rowH = 22, m = { l: 150, r: 70, t: 8, b: 8 }, H = m.t + m.b + Math.max(1, items.length) * rowH;
+  const mx = Math.max(1e-9, ...items.map(i => Math.abs(i.value)));
+  let s = svgOpen(W, H, P);
+  items.forEach((it, i) => {
+    const y = m.t + i * rowH, w = (W - m.l - m.r) * Math.abs(it.value) / mx;
+    s += `<g data-key="${esc(it.key ?? '')}" style="cursor:${opt.click ? 'pointer' : 'default'}"><text x="${m.l - 6}" y="${y + 14}" text-anchor="end" fill="${P.fg}">${esc(trunc(it.label, 18))}</text><rect x="${m.l}" y="${y + 3}" width="${Math.max(1, w)}" height="${rowH - 8}" fill="${it.value >= 0 ? (opt.color || P.danger) : P.good}"><title>${esc(it.label)}：${fmtInt(it.value)}</title></rect><text x="${m.l + w + 4}" y="${y + 14}" fill="${P.muted}">${fmtC(it.value)}</text></g>`;
+  });
+  return s + '</svg>';
+}
+function svgBubble(items, xl, yl) {
+  const P = PAL(), W = 640, H = 340, m = { l: 58, r: 20, t: 20, b: 46 };
+  if (!items.length) return svgOpen(W, 60, P) + `<text x="12" y="30" fill="${P.muted}">無資料</text></svg>`;
+  const xs = items.map(i => i.x), ys = items.map(i => i.y);
+  let x0 = Math.min(0, ...xs), x1 = Math.max(0.0001, ...xs), y0 = Math.min(0, ...ys), y1 = Math.max(0.0001, ...ys);
+  const px = (x1 - x0) * 0.1, py = (y1 - y0) * 0.1; x0 -= px; x1 += px; y0 -= py; y1 += py;
+  const sx = v => m.l + (W - m.l - m.r) * (v - x0) / (x1 - x0), sy = v => m.t + (H - m.t - m.b) * (1 - (v - y0) / (y1 - y0));
+  const maxE = Math.max(...items.map(i => i.r)), maxD = Math.max(1e-9, ...items.map(i => Math.abs(i.c)));
+  let s = svgOpen(W, H, P);
+  for (const t of niceTicks(x0, x1, 5)) s += `<line x1="${sx(t)}" x2="${sx(t)}" y1="${m.t}" y2="${H - m.b}" stroke="${P.border}"/><text x="${sx(t)}" y="${H - m.b + 14}" text-anchor="middle" fill="${P.muted}">${(t * 100).toFixed(1)}</text>`;
+  for (const t of niceTicks(y0, y1, 5)) s += `<line y1="${sy(t)}" y2="${sy(t)}" x1="${m.l}" x2="${W - m.r}" stroke="${P.border}"/><text y="${sy(t) + 4}" x="${m.l - 6}" text-anchor="end" fill="${P.muted}">${(t * 100).toFixed(1)}</text>`;
+  s += `<text x="${(W + m.l) / 2}" y="${H - 8}" text-anchor="middle" fill="${P.fg}">${esc(xl)}</text><text transform="translate(14 ${(H - m.b + m.t) / 2}) rotate(-90)" text-anchor="middle" fill="${P.fg}">${esc(yl)}</text>`;
+  for (const it of items.slice().sort((a, b) => b.r - a.r)) {
+    const r = 5 + 24 * Math.sqrt(it.r / maxE), a = 0.25 + 0.6 * Math.min(1, Math.abs(it.c) / maxD);
+    s += `<circle cx="${sx(it.x)}" cy="${sy(it.y)}" r="${r}" fill="${it.c >= 0 ? P.danger : P.good}" fill-opacity="${a}" stroke="${P.fg}" stroke-opacity=".35" data-key="${esc(it.key)}" style="cursor:pointer"><title>${esc(it.label)}\nEAD ${fmtInt(it.r)}｜ΔEL ${fmtInt(it.c)}\nΔPD ${(it.x * 100).toFixed(2)}pp｜ΔLGD ${(it.y * 100).toFixed(2)}pp</title></circle>`;
+    if (r > 14) s += `<text x="${sx(it.x)}" y="${sy(it.y) + 4}" text-anchor="middle" fill="${P.fg}" pointer-events="none">${esc(trunc(it.short || it.key, 5))}</text>`;
+  }
+  return s + '</svg>';
+}
+function svgLine(points, xl, yl, xfmt, yfmt) {
+  const P = PAL(), W = 640, H = 280, m = { l: 66, r: 16, t: 16, b: 44 };
+  const xs = points.map(p => p.x), ys = points.map(p => p.y), x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const yt = niceTicks(Math.min(...ys), Math.max(...ys)), y0 = yt[0], y1 = yt[yt.length - 1];
+  const sx = v => m.l + (W - m.l - m.r) * (x1 === x0 ? 0.5 : (v - x0) / (x1 - x0)), sy = v => m.t + (H - m.t - m.b) * (1 - (v - y0) / ((y1 - y0) || 1));
+  let s = svgOpen(W, H, P);
+  for (const t of yt) s += `<line x1="${m.l}" x2="${W - m.r}" y1="${sy(t)}" y2="${sy(t)}" stroke="${P.border}"/><text x="${m.l - 6}" y="${sy(t) + 4}" text-anchor="end" fill="${P.muted}">${(yfmt || fmtC)(t)}</text>`;
+  s += `<polyline fill="none" stroke="${P.accent}" stroke-width="2.5" points="${points.map(p => sx(p.x) + ',' + sy(p.y)).join(' ')}"/>`;
+  for (const p of points) s += `<circle cx="${sx(p.x)}" cy="${sy(p.y)}" r="4" fill="${P.accent}"><title>${(xfmt || String)(p.x)}：${fmtInt(p.y)}</title></circle><text x="${sx(p.x)}" y="${H - m.b + 16}" text-anchor="middle" fill="${P.muted}">${(xfmt || String)(p.x)}</text>`;
+  s += `<text x="${(W + m.l) / 2}" y="${H - 6}" text-anchor="middle" fill="${P.fg}">${esc(xl)}</text><text transform="translate(14 ${(H - m.b + m.t) / 2}) rotate(-90)" text-anchor="middle" fill="${P.fg}">${esc(yl)}</text>`;
+  return s + '</svg>';
+}
+function dataTable(headers, rows) { return `<details class="dt"><summary>資料表檢視</summary><div class="tablewrap"><table><thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div></details>`; }
+function chartCard(id, title, svg, extra = '') { return `<div class="card charts" id="${id}"><div class="row"><h3 class="grow" style="margin:0">${esc(title)}</h3><button class="sm" data-dl="svg">SVG</button><button class="sm" data-dl="png">PNG</button></div>${svg}${extra}</div>`; }
+function bindChartDownloads(root) {
+  $$('.charts', root).forEach(card => $$('[data-dl]', card).forEach(b => b.onclick = () => {
+    const svg = $('svg', card); if (!svg) return; const name = (card.id || 'chart') + '_' + todayStr();
+    const xml = new XMLSerializer().serializeToString(svg);
+    if (b.dataset.dl === 'svg') return download(name + '.svg', xml, 'image/svg+xml');
+    const img = new Image(), url = URL.createObjectURL(new Blob([xml], { type: 'image/svg+xml' }));
+    img.onload = () => { const c = document.createElement('canvas'); c.width = svg.viewBox.baseVal.width * 2; c.height = svg.viewBox.baseVal.height * 2; const g = c.getContext('2d'); g.scale(2, 2); g.drawImage(img, 0, 0); URL.revokeObjectURL(url); c.toBlob(bl => downloadBlob(name + '.png', bl)); };
+    img.src = url;
+  }));
+}
+/* 以淺色主題產生圖表（供匯出報告使用，避免深色模式下匯出深色圖） */
+function withLightTheme(fn) {
+  const el = document.documentElement, prev = el.dataset.theme;
+  el.dataset.theme = 'light';
+  try { return fn(); } finally { el.dataset.theme = prev; }
+}
+
+/* ---------- 虛擬捲動表格 ---------- */
+function VTable(root, o) {
+  const rowH = 28, cols = o.cols, totalW = cols.reduce((s, c) => s + c.w, 0);
+  let rows = o.rows || [], sortKey = null, sortDir = 1, view = rows;
+  root.className = 'vt'; root.style.height = (o.height || 420) + 'px'; root.innerHTML = '';
+  const head = document.createElement('div'); head.className = 'vh'; head.style.width = totalW + 'px';
+  head.innerHTML = cols.map(c => `<div class="vc ${c.n ? 'n' : ''}" data-k="${c.key}" style="width:${c.w}px;${c.n ? 'text-align:right' : ''}">${esc(c.label)}<span class="so"></span></div>`).join('');
+  const sz = document.createElement('div'); sz.style.cssText = 'position:relative;width:' + totalW + 'px';
+  root.append(head, sz);
+  function paint() {
+    const top = root.scrollTop, h = root.clientHeight, a = Math.max(0, Math.floor(top / rowH) - 6), b = Math.min(view.length, Math.ceil((top + h) / rowH) + 6);
+    sz.style.height = view.length * rowH + 'px'; sz.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    for (let i = a; i < b; i++) {
+      const r = view[i], d = document.createElement('div'); d.className = 'vr' + (o.rowClass && o.rowClass(r) ? ' ' + o.rowClass(r) : ''); d.style.cssText = `top:${i * rowH}px;width:${totalW}px;position:absolute;left:0`; d.dataset.i = i;
+      d.innerHTML = cols.map(c => { const v = c.get ? c.get(r) : r[c.key]; return `<div class="vc" data-k="${c.key}" style="width:${c.w}px;${c.n ? 'text-align:right;font-variant-numeric:tabular-nums' : ''}">${c.html ? c.html(r, v) : (c.fmt ? esc(c.fmt(v, r)) : esc(v ?? ''))}</div>`; }).join('');
+      frag.appendChild(d);
+    }
+    sz.appendChild(frag);
+  }
+  function applySort() {
+    if (!sortKey) { view = rows; return; }
+    const c = cols.find(x => x.key === sortKey), g = c.get || (r => r[c.key]);
+    view = rows.slice().sort((x, y) => { const a = g(x), b = g(y); if (a == null && b == null) return 0; if (a == null) return 1; if (b == null) return -1; return (a < b ? -1 : a > b ? 1 : 0) * sortDir; });
+  }
+  head.onclick = e => { const k = e.target.closest('[data-k]')?.dataset.k; if (!k) return; if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = 1; } $$('.so', head).forEach(s => s.textContent = ''); $(`[data-k="${k}"] .so`, head).textContent = sortDir > 0 ? ' ▲' : ' ▼'; applySort(); root.scrollTop = 0; paint(); };
+  root.addEventListener('scroll', () => requestAnimationFrame(paint));
+  sz.onclick = e => { const row = e.target.closest('.vr'); if (!row || !o.onCell) return; o.onCell(view[+row.dataset.i], e.target.closest('.vc')?.dataset.k, row); };
+  paint();
+  return { setRows(r) { rows = r; applySort(); root.scrollTop = 0; paint(); }, count: () => view.length, refresh: paint, view: () => view };
+}
+
+/* ---------- 下載 / CSV ---------- */
+function downloadBlob(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }
+function download(name, content, mime) { downloadBlob(name, new Blob([content], { type: mime || 'text/plain' })); }
+const csvCell = v => { if (v == null) return ''; const s = String(v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+function downloadCSV(name, headers, rows) { download(name, '\uFEFF' + [headers.map(csvCell).join(','), ...rows.map(r => r.map(csvCell).join(','))].join('\r\n'), 'text/csv;charset=utf-8'); }
+
+/* ---------- 專案備份 / 還原 ---------- */
+function invalidateCaches() { App.exposures = null; App.expPid = null; }
+async function collectProject(pid, opt) {
+  const o = Object.assign({ exposures: true, scenarios: true, runs: true }, opt || {});
+  const p = await DB.get('projects', pid);
+  const d = { projects: [p], exposures: [], validationIssues: [], scenarios: [], scenarioRules: [], modelDefinitions: await DB.byIndex('modelDefinitions', 'projectId', pid), simulationRuns: [], simulationResults: [], auditLogs: await DB.byIndex('auditLogs', 'projectId', pid) };
+  if (o.exposures) { d.exposures = await DB.exposuresOf(pid); d.validationIssues = await DB.byIndex('validationIssues', 'projectId', pid); }
+  if (o.scenarios) { d.scenarios = await DB.byIndex('scenarios', 'projectId', pid); for (const s of d.scenarios) pushAll(d.scenarioRules, await DB.byIndex('scenarioRules', 'scenarioId', s.id)); }
+  if (o.runs) { d.simulationRuns = await DB.byIndex('simulationRuns', 'projectId', pid); for (const r of d.simulationRuns) pushAll(d.simulationResults, await DB.byIndex('simulationResults', 'runId', r.id)); }
+  return d;
+}
+async function exportBackup(pids, opt, filename) {
+  const all = { app: 'CorporateStressLab', schema: DB_VERSION, appVersion: APP_VERSION, exportedAt: nowISO(), type: pids.length === 1 ? 'project' : 'all', projects: [], exposures: [], validationIssues: [], scenarios: [], scenarioRules: [], modelDefinitions: [], simulationRuns: [], simulationResults: [], auditLogs: [], codebooks: (await DB.getAll('industryCodebooks')).filter(e => e.source === 'USER_IMPORT') };
+  for (const pid of pids) { const d = await collectProject(pid, opt); for (const k of Object.keys(d)) pushAll(all[k], d[k]); }
+  download(filename, JSON.stringify(all), 'application/json');
+  return all;
+}
+function validateBackup(d) {
+  if (!d || d.app !== 'CorporateStressLab') throw new Error('不是 Corporate Stress Lab 備份檔');
+  if (typeof d.schema !== 'number' || d.schema > DB_VERSION) throw new Error(`備份檔 schema 版本 ${d.schema} 高於本程式支援的 ${DB_VERSION}`);
+  for (const k of ['projects', 'exposures', 'scenarios', 'scenarioRules', 'modelDefinitions', 'simulationRuns', 'simulationResults']) if (!Array.isArray(d[k])) throw new Error('備份檔缺少必要區段：' + k);
+  return true;
+}
+async function deleteProjectData(pid, keepProject) {
+  invalidateCaches();
+  for (const r of await DB.byIndex('simulationRuns', 'projectId', pid)) await DB.delByIndex('simulationResults', 'runId', r.id);
+  for (const s of await DB.byIndex('scenarios', 'projectId', pid)) await DB.delByIndex('scenarioRules', 'scenarioId', s.id);
+  await DB.delExposures(pid);
+  for (const st of ['scenarios', 'modelDefinitions', 'simulationRuns', 'validationIssues', 'auditLogs']) await DB.delByIndex(st, 'projectId', pid);
+  if (!keepProject) await DB.del('projects', pid);
+}
+async function importBackup(d, mode, nameSuffix) {
+  validateBackup(d);
+  invalidateCaches();
+  const map = new Map(), nid = o => { if (!map.has(o)) map.set(o, uid()); return map.get(o); };
+  const R = mode === 'new' ? nid : (x => x);
+  if (mode !== 'new') for (const p of d.projects) if (await DB.get('projects', p.id)) await deleteProjectData(p.id);
+  await DB.putMany('projects', d.projects.map(p => ({ ...p, id: R(p.id), name: mode === 'new' ? p.name + (nameSuffix === undefined ? '（還原）' : nameSuffix) : p.name, updatedAt: nowISO() })));
+  await DB.putMany('exposures', d.exposures.map(e => ({ ...e, id: R(e.id), projectId: R(e.projectId) })));
+  await DB.putMany('validationIssues', d.validationIssues.map(i => ({ ...i, id: mode === 'new' ? `${R(i.projectId)}:${i.code}` : i.id, projectId: R(i.projectId) })));
+  await DB.putMany('scenarios', d.scenarios.map(s => ({ ...s, id: R(s.id), projectId: R(s.projectId) })));
+  await DB.putMany('scenarioRules', d.scenarioRules.map(r => ({ ...r, id: R(r.id), scenarioId: R(r.scenarioId) })));
+  await DB.putMany('modelDefinitions', d.modelDefinitions.map(m => ({ ...m, id: R(m.id), projectId: R(m.projectId) })));
+  await DB.putMany('simulationRuns', d.simulationRuns.map(r => ({ ...r, id: R(r.id), projectId: R(r.projectId), scenarioId: r.scenarioId ? R(r.scenarioId) : null })));
+  await DB.putMany('simulationResults', d.simulationResults.map(b => ({ ...b, runId: R(b.runId), rows: mode === 'new' ? b.rows.map(r => ({ ...r, exposureId: R(r.exposureId) })) : b.rows })), null, 20);
+  for (const a of d.auditLogs || []) { const { id, ...rest } = a; await DB.put('auditLogs', { ...rest, projectId: a.projectId ? R(a.projectId) : null }); }
+  if (Array.isArray(d.codebooks) && d.codebooks.length) { await DB.putMany('industryCodebooks', d.codebooks); await DB.put('meta', { key: 'userCbStamp', value: Date.now() }); await loadCodebooks(); }
+  return d.projects.length;
+}
+
+/* =====================================================================
+ * 應用程式狀態、服務、路由
+ * ===================================================================== */
+const App = { pid: null, project: null, exposures: null, expPid: null, tab: {}, token: 0 };
+const V = () => $('#view');
+const hashOf = (page, extra) => `#/p/${App.pid}/${page}${extra ? '/' + extra : ''}`;
+
+async function getExposures(pid, force) {
+  if (!force && App.expPid === pid && App.exposures) return App.exposures;
+  const r = await DB.exposuresOf(pid);
+  App.exposures = r; App.expPid = pid; return r;
+}
+async function getModels(pid) { const m = await DB.byIndex('modelDefinitions', 'projectId', pid); m.sort((a, b) => a.version - b.version); return m; }
+async function latestModel(pid) { const m = await getModels(pid); return m[m.length - 1]; }
+async function getScenarios(pid) { const s = await DB.byIndex('scenarios', 'projectId', pid); s.sort((a, b) => a.createdAt.localeCompare(b.createdAt)); return s; }
+async function getRules(sid) { const r = await DB.byIndex('scenarioRules', 'scenarioId', sid); r.sort((a, b) => a.priority - b.priority); return r; }
+async function usedFieldsOf(pid) {
+  const set = new Set();
+  for (const s of await getScenarios(pid)) for (const r of await getRules(s.id)) for (const c of [...(r.filter?.all || []), ...(r.filter?.any || [])]) set.add(c.field);
+  return set;
+}
+const statsOf = recs => ({ total: recs.length, included: recs.filter(r => !r.excluded).length, excluded: recs.filter(r => r.excluded).length, validatedAt: nowISO() });
+async function updateProject(patch) {
+  App.project = { ...App.project, ...patch, updatedAt: nowISO() }; await DB.put('projects', App.project); renderChrome();
+}
+async function revalidate(pid, recsIn) {
+  const recs = recsIn || await getExposures(pid, true), m = await latestModel(pid);
+  const issues = validateAll(recs, { projectId: pid, model: m.params, usedFields: await usedFieldsOf(pid) });
+  await DB.delByIndex('validationIssues', 'projectId', pid);
+  await DB.putMany('exposures', recs); await DB.putMany('validationIssues', groupIssues(issues, pid));
+  await updateProject({ stats: statsOf(recs) });
+  return issues;
+}
+async function renormalizeIndustry(pid) {
+  const recs = await getExposures(pid, true), st = App.project.industrySettings;
+  for (const r of recs) { const { out, issues } = normalizeIndustry(r.industryCodeRaw, st); Object.assign(r, out); r.parseIssues = (r.parseIssues || []).filter(i => i.field !== 'industryCode').concat(issues); }
+  return revalidate(pid, recs);
+}
+/* 代碼表（內建或使用者匯入）有變動時，已存在的曝險資料需重新歸類大類 */
+async function syncIndustryIfStale(pid) {
+  if (!App.project.stats?.total || App.project.cbStamp === cbStamp()) return false;
+  toast('行業別代碼表已更新，重新正規化中…');
+  await renormalizeIndustry(pid);
+  await updateProject({ cbStamp: cbStamp() });
+  toast('已依最新代碼表重新歸類行業別並重新檢核');
+  return true;
+}
+async function createProject(v) {
+  const p = { id: uid(), name: v.name, description: v.description, reportingDate: v.reportingDate, currency: 'TWD', amountUnit: v.amountUnit, industrySettings: v.industrySettings, stats: { total: 0, included: 0, excluded: 0, validatedAt: null }, cbStamp: cbStamp(), createdAt: nowISO(), updatedAt: nowISO() };
+  await DB.put('projects', p);
+  await DB.put('modelDefinitions', { id: uid(), projectId: p.id, version: 1, params: deepClone(DEFAULT_MODEL), note: '預設參數（示範值）', createdAt: nowISO() });
+  await audit('PROJECT_CREATE', 'project', p.id, null, { name: p.name }, '', p.id);
+  return p;
+}
+
+/* ---------- 主題 / 外框 ---------- */
+function applyTheme(t) { document.documentElement.dataset.theme = t; try { localStorage.setItem('csl-theme', t); } catch (e) {} }
+function initTheme() { let t = null; try { t = localStorage.getItem('csl-theme'); } catch (e) {} if (!t) t = matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; applyTheme(t); }
+const NAV = [['data', '資料工作台'], ['scenarios', '情境設計器'], ['run', '執行壓測'], ['results', '結果儀表板'], ['compare', '情境比較'], ['reverse', '反向壓測'], ['mitigation', '抵減模擬'], ['audit', '稽核紀錄']];
+async function renderChrome() {
+  const h = location.hash || '#/projects', cur = (h.match(/^#\/p\/[^/]+\/([^/]+)/) || [])[1] || (h.startsWith('#/settings') ? 'settings' : 'projects');
+  let nav = `<div class="brand">企金壓測沙盒<small>Corporate Stress Lab v${APP_VERSION}</small></div><a href="#/projects" class="${cur === 'projects' ? 'active' : ''}">專案清單</a>`;
+  nav += `<div class="sep">${App.project ? esc(trunc(App.project.name, 16)) : '請先開啟專案'}</div>`;
+  for (const [k, l] of NAV) nav += `<a href="${App.pid ? hashOf(k) : '#/projects'}" class="${cur === k ? 'active' : ''} ${App.pid ? '' : 'disabled'}">${l}</a>`;
+  nav += `<div class="sep">系統</div><a href="#/settings" class="${cur === 'settings' ? 'active' : ''}">設定</a>`;
+  $('#nav').innerHTML = nav;
+  const ps = DB.db ? (await DB.getAll('projects')).sort((a, b) => a.name.localeCompare(b.name)) : [];
+  const st = App.project?.stats;
+  $('#topbar').innerHTML = `<label style="flex-direction:row;align-items:center;gap:6px">專案<select id="tb-proj"><option value="">（未選擇）</option>${ps.map(p => `<option value="${p.id}" ${p.id === App.pid ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label>
+    <span class="status">${App.project ? `基準日 ${esc(App.project.reportingDate || '—')}｜單位：${esc(App.project.amountUnit)}｜${st && st.total ? `有效 ${fmtInt(st.included)}／${fmtInt(st.total)} 筆，排除 ${fmtInt(st.excluded)}｜最後檢核 ${fmtDT(st.validatedAt)}` : '尚未匯入資料'}` : ''}</span><span class="grow"></span>
+    <button class="sm" id="tb-theme">${document.documentElement.dataset.theme === 'dark' ? '☀ 淺色' : '🌙 深色'}</button>`;
+  $('#tb-proj').onchange = e => { location.hash = e.target.value ? `#/p/${e.target.value}/${['data', 'scenarios', 'run', 'compare', 'reverse', 'mitigation', 'audit'].includes(cur) ? cur : 'data'}` : '#/projects'; };
+  $('#tb-theme').onclick = () => { applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'); render(); };
+}
+const emptyState = (title, msg, btns = '') => `<div class="empty"><h2>${esc(title)}</h2><p>${msg}</p>${btns}</div>`;
+
+/* ---------- 路由 ---------- */
+const PAGES = {};
+async function render() {
+  const my = ++App.token, h = location.hash || '#/projects';
+  V().onclick = null;
+  try {
+    const m = h.match(/^#\/p\/([^/]+)\/([a-z]+)(?:\/([^/]+))?$/);
+    if (m) {
+      const pid = m[1];
+      if (App.pid !== pid || !App.project) { const p = await DB.get('projects', pid); if (!p) { location.hash = '#/projects'; return; } App.pid = pid; App.project = p; App.exposures = null; App.expPid = null; }
+      else { App.project = await DB.get('projects', pid) || App.project; }
+      await syncIndustryIfStale(pid);
+      if (my !== App.token) return;
+      await renderChrome();
+      if (my !== App.token) return;
+      const fn = PAGES[m[2]]; if (!fn) { location.hash = '#/projects'; return; }
+      await fn(m[3]);
+    } else {
+      await renderChrome();
+      if (my !== App.token) return;
+      await (h.startsWith('#/settings') ? PAGES.settings() : PAGES.projects());
+    }
+  } catch (e) { console.error(e); if (my === App.token) V().innerHTML = `<div class="banner">發生錯誤：${esc(e.message || e)}</div>`; toast('發生錯誤：' + (e.message || e), 'err'); }
+  if (my === App.token) window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', render);
+
+/* =====================================================================
+ * 頁面：專案清單
+ * ===================================================================== */
+async function projectForm(p) {
+  const s = p?.industrySettings || { scheme: 'AUTO', dgbasVersion: 'DGBAS_11', padZero: false };
+  const body = `<div class="grid" style="grid-template-columns:1fr 1fr">
+    <label style="grid-column:1/-1">專案名稱（必填）<input id="pf-name" value="${esc(p?.name || '')}"></label>
+    <label>基準日<input type="date" id="pf-date" value="${esc(p?.reportingDate || todayStr())}"></label>
+    <label>金額單位（匯入資料的單位，不做換算）<select id="pf-unit">${['元', '千元', '百萬元'].map(u => `<option ${p?.amountUnit === u ? 'selected' : ''}>${u}</option>`).join('')}</select></label>
+    <label style="grid-column:1/-1">說明<textarea id="pf-desc" style="min-height:50px">${esc(p?.description || '')}</textarea></label>
+    <label>行業別代碼制度<select id="pf-scheme">${[['AUTO', '自動判斷（4 碼＝主計、6 碼＝財稅）'], ['DGBAS', '強制 DGBAS（僅接受 4 碼）'], ['MOF_TAX', '強制 MOF_TAX（僅接受 6 碼）']].map(([v, l]) => `<option value="${v}" ${s.scheme === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    <label>主計 4 碼版本<select id="pf-ver"><option value="DGBAS_11" ${s.dgbasVersion === 'DGBAS_11' ? 'selected' : ''}>第 11 次修正（110/1/1 起；19 大類）</option><option value="DGBAS_12" ${s.dgbasVersion === 'DGBAS_12' ? 'selected' : ''}>第 12 次修正（115/1/1 起；20 大類，依草案整理）</option></select></label>
+    <label>前導 0 補位（3→4 碼、5→6 碼）<select id="pf-pad"><option value="0">不補位（預設）</option><option value="1" ${s.padZero ? 'selected' : ''}>補位並警告</option></select></label>
+    <div class="muted" style="align-self:end;font-size:12px">財稅 6 碼（稅務行業標準分類第 9 次修訂）的前 4 碼對應主計第 11 次修正；兩版大類字母不同（例如金融業第 11 次為 K、第 12 次為 L），請依資料實際版本選擇。</div></div>`;
+  return openDialog(p ? '專案設定' : '新增專案', body, [{ label: '取消', value: null }, { label: '儲存', cls: 'primary', action: d => {
+    const name = $('#pf-name', d).value.trim(); if (!name) { toast('請輸入專案名稱', 'err'); return false; }
+    return { name, reportingDate: $('#pf-date', d).value, amountUnit: $('#pf-unit', d).value, description: $('#pf-desc', d).value, industrySettings: { scheme: $('#pf-scheme', d).value, dgbasVersion: $('#pf-ver', d).value, padZero: $('#pf-pad', d).value === '1' } };
+  } }]);
+}
+PAGES.projects = async function () {
+  const tk = App.token, ps = (await DB.getAll('projects')).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  if (tk !== App.token) return;
+  V().innerHTML = `<h1>專案清單</h1><div class="row" style="margin-bottom:12px"><button class="primary" id="np">＋ 新增專案</button><button id="ib">匯入備份（.cslab.json）</button><input type="file" id="ibf" accept=".json,.cslab.json" hidden><span class="grow"></span><span class="muted">資料只存在這台電腦的瀏覽器（IndexedDB），不會上傳。</span></div>` +
+    (ps.length ? `<div class="card"><table><thead><tr><th>專案</th><th>基準日</th><th>單位</th><th class="n">授信筆數</th><th>更新時間</th><th></th></tr></thead><tbody>${ps.map(p => `<tr><td><a href="#/p/${p.id}/data"><b>${esc(p.name)}</b></a><div class="muted" style="font-size:12px">${esc(p.description || '')}</div></td><td>${esc(p.reportingDate || '—')}</td><td>${esc(p.amountUnit)}</td><td class="n">${fmtInt(p.stats?.total || 0)}</td><td>${fmtDT(p.updatedAt)}</td><td style="white-space:nowrap"><button class="sm" data-a="open" data-id="${p.id}">開啟</button> <button class="sm" data-a="copy" data-id="${p.id}">複製</button> <button class="sm" data-a="exp" data-id="${p.id}">匯出</button> <button class="sm danger" data-a="del" data-id="${p.id}">刪除</button></td></tr>`).join('')}</tbody></table></div>`
+      : emptyState('還沒有任何專案', '建立專案後，匯入授信資料、設計情境並執行壓力測試。', '<p><button class="primary" id="np2">＋ 新增專案</button></p>'));
+  const newP = async () => { const v = await projectForm(); if (!v) return; const p = await createProject(v); location.hash = `#/p/${p.id}/data`; };
+  $('#np').onclick = newP; $('#np2') && ($('#np2').onclick = newP);
+  $('#ib').onclick = () => $('#ibf').click();
+  $('#ibf').onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const d = JSON.parse(await f.text()); validateBackup(d);
+      const mode = await openDialog('還原備份', `<p>備份檔含 ${d.projects.length} 個專案（${fmtInt(d.exposures.length)} 筆授信、${d.simulationRuns.length} 個 Run）。</p><p>「覆蓋」會先清除同 ID 的既有專案；「另存為新專案」不會動到現有資料。</p>`, [{ label: '取消', value: null }, { label: '覆蓋', cls: 'danger', value: 'overwrite' }, { label: '另存為新專案', cls: 'primary', value: 'new' }]);
+      if (!mode) return;
+      await importBackup(d, mode); await audit('BACKUP_RESTORE', 'backup', '', null, { projects: d.projects.length, mode }, f.name, null); toast('還原完成'); render();
+    } catch (err) { toast('還原失敗：' + err.message, 'err'); }
+  };
+  V().onclick = async e => {
+    const b = e.target.closest('[data-a]'); if (!b) return; const id = b.dataset.id, p = ps.find(x => x.id === id);
+    if (b.dataset.a === 'open') location.hash = `#/p/${id}/data`;
+    if (b.dataset.a === 'exp') { await exportBackup([id], {}, `${p.name}_${todayStr()}.cslab.json`); toast('已匯出專案備份'); }
+    if (b.dataset.a === 'copy') {
+      const o = await openDialog('複製專案', `<label>新專案名稱<input id="cp-n" value="${esc(p.name)}（複本）"></label><div class="row" style="margin-top:8px"><label style="flex-direction:row;gap:6px"><input type="checkbox" id="cp-e" checked>曝險資料</label><label style="flex-direction:row;gap:6px"><input type="checkbox" id="cp-s" checked>情境</label><label style="flex-direction:row;gap:6px"><input type="checkbox" id="cp-r">執行結果（Run）</label></div>`, [{ label: '取消', value: null }, { label: '複製', cls: 'primary', action: d => ({ name: $('#cp-n', d).value.trim() || p.name + '（複本）', exposures: $('#cp-e', d).checked, scenarios: $('#cp-s', d).checked, runs: $('#cp-r', d).checked }) }]);
+      if (!o) return;
+      const d = await collectProject(id, o); d.projects[0].name = o.name;
+      if (!o.exposures) d.projects[0].stats = { total: 0, included: 0, excluded: 0, validatedAt: null };   // 未複製曝險資料時，筆數統計要歸零
+      await importBackup({ app: 'CorporateStressLab', schema: DB_VERSION, ...d }, 'new', ''); toast('已複製專案'); render();
+    }
+    if (b.dataset.a === 'del') {
+      if (await confirmDlg('刪除專案', `將永久刪除專案「${esc(p.name)}」及其所有授信、情境、Run 與稽核資料，無法復原。`, { typed: p.name, okLabel: '永久刪除' })) {
+        await deleteProjectData(id); await audit('PROJECT_DELETE', 'project', id, { name: p.name }, null, '', null);
+        if (App.pid === id) { App.pid = null; App.project = null; App.exposures = null; } toast('已刪除'); render();
+      }
+    }
+  };
+};
+
+/* =====================================================================
+ * 頁面：資料工作台
+ * ===================================================================== */
+let IMP = null;
+PAGES.data = async function () {
+  const pid = App.pid, p = App.project;
+  V().innerHTML = `<div class="row"><h1 class="grow">資料工作台</h1><button id="d-set">專案設定</button><button id="d-clear" class="danger">清空曝險資料</button></div><div id="d-banner"></div><div class="tabs" id="d-tabs"></div><div id="d-body"></div>`;
+  const tabs = [['import', '匯入'], ['detail', '明細'], ['check', '檢核']];
+  const setTab = t => { App.tab.data = t; $$('#d-tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t)); ({ import: renderImport, detail: renderDetail, check: renderCheck })[t]($('#d-body')); };
+  $('#d-tabs').innerHTML = tabs.map(([k, l]) => `<button data-t="${k}">${l}</button>`).join(''); $('#d-tabs').onclick = e => { const t = e.target.dataset.t; if (t) setTab(t); };
+  $('#d-set').onclick = async () => {
+    const v = await projectForm(p); if (!v) return;
+    const changed = JSON.stringify(v.industrySettings) !== JSON.stringify(p.industrySettings);
+    await updateProject({ name: v.name, reportingDate: v.reportingDate, amountUnit: v.amountUnit, description: v.description, industrySettings: v.industrySettings });
+    await audit('PROJECT_UPDATE', 'project', pid, { industrySettings: p.industrySettings }, { industrySettings: v.industrySettings }, '');
+    if (changed && App.project.stats?.total) { toast('行業別設定已變更，重新正規化中…'); await renormalizeIndustry(pid); await updateProject({ cbStamp: cbStamp() }); toast('已重新正規化並檢核'); }
+    render();
+  };
+  $('#d-clear').onclick = async () => {
+    if (!(await confirmDlg('清空曝險資料', '將刪除本專案所有授信明細與檢核結果（情境、既有 Run 不受影響）。', { typed: '清空' }))) return;
+    await DB.delExposures(pid); await DB.delByIndex('validationIssues', 'projectId', pid); App.exposures = []; App.expPid = pid;
+    await updateProject({ stats: { total: 0, included: 0, excluded: 0, validatedAt: nowISO() } }); await audit('EXPOSURES_CLEAR', 'exposures', pid, null, null, ''); render();
+  };
+  const st = p.stats; $('#d-banner').innerHTML = st && st.total ? '' : `<div class="banner info">尚未匯入資料。可匯入 CSV、從 Excel 貼上，或載入 200 筆虛擬示範資料。</div>`;
+  setTab(App.tab.data || (st && st.total ? 'detail' : 'import'));
+};
+
+function renderImport(box) {
+  box.innerHTML = `<div class="card"><h3>1. 選擇資料來源</h3><div class="row"><label>CSV / TSV 檔<input type="file" id="i-file" accept=".csv,.tsv,.txt"></label><label>編碼<select id="i-enc"><option value="auto">自動偵測（UTF-8／Big5／UTF-16）</option><option value="utf-8">UTF-8</option><option value="big5">Big5</option><option value="utf-16le">UTF-16 LE（Excel「Unicode 文字」）</option></select></label><button id="i-demo">載入示範資料（200 筆虛擬授信戶）</button></div>
+    <label style="margin-top:10px">或從 Excel 複製後貼上（含標題列，Tab 分隔）<textarea id="i-paste" placeholder="貼上資料…"></textarea></label><button id="i-parse" style="margin-top:6px">解析貼上內容</button></div><div id="i-map"></div>`;
+  const setImp = (text, name) => {
+    const rows = parseDelimited(text); if (rows.length < 2) return toast('找不到資料列（至少需要標題列與一筆資料）', 'err');
+    IMP = { name, headers: rows[0].map(s => s.trim()), rows: rows.slice(1), text }; IMP.map = autoMap(IMP.headers); renderMap();
+  };
+  $('#i-file').onchange = async e => { const f = e.target.files[0]; if (!f) return; const buf = await f.arrayBuffer(); const d = decodeBuffer(buf, $('#i-enc').value); setImp(d.text, `${f.name}（${d.enc}）`); if (IMP) { IMP.buf = buf; IMP.fileName = f.name; } };
+  $('#i-enc').onchange = () => { if (IMP?.buf) { const d = decodeBuffer(IMP.buf, $('#i-enc').value), b = IMP.buf, fn = IMP.fileName; setImp(d.text, `${fn}（${d.enc}）`); if (IMP) { IMP.buf = b; IMP.fileName = fn; } } };
+  $('#i-parse').onclick = () => { const t = $('#i-paste').value; if (!t.trim()) return toast('請先貼上內容', 'err'); setImp(t, '貼上內容'); };
+  $('#i-demo').onclick = () => setImp(demoCSV(), '示範資料（虛擬）');
+  if (IMP && IMP.rows) renderMap();
+  async function renderMap() {
+    const maps = await DB.getAll('fieldMappings'), req = FIELDS.filter(f => f.req), miss = () => req.filter(f => IMP.map[f.key] == null);
+    $('#i-map').innerHTML = `<div class="card"><h3>2. 欄位對應　<span class="muted" style="font-weight:400">${esc(IMP.name)}｜${fmtInt(IMP.rows.length)} 列</span></h3>
+      <div class="row" style="margin-bottom:8px"><label>套用對應範本<select id="m-tpl"><option value="">—</option>${maps.map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('')}</select></label><button class="sm" id="m-save">將目前對應存成範本</button></div>
+      <div class="tablewrap" style="max-height:none"><table><thead><tr><th>系統欄位</th><th>來源欄位</th><th>範例值</th></tr></thead><tbody>${FIELDS.map(f => `<tr><td>${esc(f.label)}${f.req ? ' <span class="up">*</span>' : ''}<div class="muted" style="font-size:11px">${f.key}</div></td><td><select data-f="${f.key}"><option value="">— 未對應 —</option>${IMP.headers.map((h, i) => `<option value="${i}" ${IMP.map[f.key] === i ? 'selected' : ''}>${esc(h)}</option>`).join('')}</select></td><td class="muted" data-s="${f.key}"></td></tr>`).join('')}</tbody></table></div>
+      <h3>3. 匯入選項</h3><div class="row"><label>匯入模式<select id="o-mode"><option value="replace">取代既有資料</option><option value="append">附加到既有資料</option></select></label>
+      <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="o-hn" checked>名稱轉成 SHA-256 雜湊，不存原始值</label><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="o-hi">授信戶代號也轉成雜湊</label></div>
+      <p id="m-warn" class="up"></p><button class="primary" id="m-go">匯入並檢核</button><div id="m-prog" style="margin-top:8px"></div></div>`;
+    const refresh = () => { $$('[data-s]').forEach(td => { const i = IMP.map[td.dataset.s]; td.textContent = i == null ? '' : IMP.rows.slice(0, 3).map(r => r[i] ?? '').join(' ｜ '); }); const m = miss(); $('#m-warn').textContent = m.length ? '必填欄位尚未對應：' + m.map(f => f.label).join('、') : ''; $('#m-go').disabled = m.length > 0; };
+    $$('[data-f]').forEach(s => s.onchange = () => { IMP.map[s.dataset.f] = s.value === '' ? null : +s.value; refresh(); });
+    $('#m-tpl').onchange = e => { const t = maps.find(m => m.id === e.target.value); if (!t) return; const nh = IMP.headers.map(normHdr); IMP.map = {}; for (const [k, h] of Object.entries(t.map)) { const i = nh.indexOf(normHdr(h)); if (i >= 0) IMP.map[k] = i; } renderMap(); };
+    $('#m-save').onclick = async () => { const name = (await openDialog('儲存對應範本', '<label>範本名稱<input id="tn"></label>', [{ label: '取消', value: null }, { label: '儲存', cls: 'primary', action: d => $('#tn', d).value.trim() || false }])); if (!name) return; const map = {}; for (const [k, i] of Object.entries(IMP.map)) if (i != null) map[k] = IMP.headers[i]; await DB.put('fieldMappings', { id: uid(), name, map, createdAt: nowISO() }); toast('已儲存範本'); renderMap(); };
+    $('#m-go').onclick = () => doImport();
+    refresh();
+  }
+  async function doImport() {
+    const pid = App.pid, p = App.project, mode = $('#o-mode').value, prog = $('#m-prog'); $('#m-go').disabled = true;
+    const setP = (t, pct) => prog.innerHTML = `<div>${esc(t)}</div><div class="bar"><i style="width:${pct}%"></i></div>`;
+    try {
+      const opts = { industry: p.industrySettings, hashName: $('#o-hn').checked, hashId: $('#o-hi').checked };
+      const existing = mode === 'append' ? await getExposures(pid, true) : [];
+      let offset = existing.reduce((m, r) => Math.max(m, r.rowNo), 0); const recs = [], n = IMP.rows.length, keys = FIELDS.map(f => f.key);
+      for (let i = 0; i < n; i++) {
+        const row = IMP.rows[i], raw = {}; for (const k of keys) { const ix = IMP.map[k]; raw[k] = ix == null ? null : row[ix]; }
+        const r = normalizeRow(raw, offset + i + 1, opts); r.id = uid(); r.projectId = pid; recs.push(r);
+        if (i % 4000 === 3999) { setP(`正規化 ${i + 1}／${n}`, (i / n) * 40); await tick(); }
+      }
+      const all = existing.concat(recs), m = await latestModel(pid);
+      setP('檢核中…', 45); await tick();
+      const issues = validateAll(all, { projectId: pid, model: m.params, usedFields: await usedFieldsOf(pid) });
+      setP('寫入資料庫…', 55); await tick();
+      if (mode === 'replace') await DB.delExposures(pid);
+      await DB.delByIndex('validationIssues', 'projectId', pid);
+      await DB.putMany('exposures', all, (d, t) => setP(`寫入授信明細 ${d}／${t}`, 55 + 35 * d / t));
+      await DB.putMany('validationIssues', groupIssues(issues, pid));
+      App.exposures = all.sort((a, b) => a.rowNo - b.rowNo); App.expPid = pid;
+      const hash = await sha256Hex(IMP.text || IMP.name + n);
+      await updateProject({ stats: statsOf(all), cbStamp: cbStamp() });
+      await audit('IMPORT', 'exposures', pid, null, { source: IMP.name, rows: n, mode, hashedName: opts.hashName, hashedId: opts.hashId, fileHash: hash.slice(0, 16), errorRows: all.filter(r => r.excluded).length }, '');
+      await audit('FIELD_MAPPING', 'mapping', pid, null, Object.fromEntries(Object.entries(IMP.map).filter(([, i]) => i != null).map(([k, i]) => [k, IMP.headers[i]])), '');
+      toast(`匯入完成：${fmtInt(n)} 筆，排除 ${fmtInt(all.filter(r => r.excluded).length)} 筆`); IMP = null; App.tab.data = 'check'; render();
+    } catch (e) { console.error(e); toast('匯入失敗：' + e.message, 'err'); $('#m-go').disabled = false; }
+  }
+}
+
+async function renderDetail(box) {
+  const tk = App.token, recs = await getExposures(App.pid);
+  if (tk !== App.token) return;
+  if (!recs.length) { box.innerHTML = emptyState('尚未匯入資料', '請先到「匯入」頁籤匯入資料或載入示範資料。'); return; }
+  const u = App.project.amountUnit;
+  box.innerHTML = `<div class="row" style="margin-bottom:8px"><label>搜尋（授信戶／行業碼／集團）<input id="q" placeholder="輸入關鍵字"></label><label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="qe">只看被排除的列</label><span class="muted" id="qc"></span><span class="grow"></span><span class="muted" style="font-size:12px">點「排除」欄可手動排除／納入（有 Error 的列無法納入）。金額單位：${esc(u)}</span></div><div id="vt"></div>`;
+  const unkc = v => v == null ? unk : esc(v);
+  const vt = VTable($('#vt'), {
+    rows: recs, height: 480, rowClass: r => r.excluded ? 'ex' : '',
+    cols: [
+      { key: 'rowNo', label: '列', w: 56, n: true },
+      { key: 'borrowerId', label: '授信戶', w: 110 },
+      { key: 'industryCode', label: '行業別（碼·大類）', w: 150, get: r => r.industryCode || '', html: r => r.industryCode ? esc(`${r.industryCode}${r.industryScheme === 'MOF_TAX' ? ' (6碼)' : ''}·${r.industrySection || '未分類'}`) : `<span class="up">✗ ${esc(r.industryCodeRaw ?? '')}</span>` },
+      { key: 'rating', label: '評等', w: 56, html: r => unkc(r.rating) },
+      { key: 'drawn', label: '已動用', w: 110, n: true, html: (r, v) => v == null ? unk : fmtInt(v) },
+      { key: 'limit', label: '額度', w: 110, n: true, html: (r, v) => v == null ? unk : fmtInt(v) },
+      { key: 'pd', label: 'PD', w: 80, n: true, html: (r, v) => v == null ? unk : fmtPct(v, 3) },
+      { key: 'lgd', label: 'LGD', w: 80, n: true, html: (r, v) => v == null ? unk : fmtPct(v, 1) },
+      { key: 'collateralType', label: '擔保類型', w: 90, html: r => r.collateralType ? esc(CT_LABEL[r.collateralType]) : unk },
+      { key: 'collateralValue', label: '擔保品價值', w: 110, n: true, html: (r, v) => v == null ? unk : fmtInt(v) },
+      { key: 'maturityMonths', label: '剩餘月', w: 70, n: true, html: (r, v) => v == null ? unk : v },
+      { key: 'relatedParty', label: '關係人', w: 70, html: r => r.relatedParty == null ? unk : r.relatedParty ? '是' : '否' },
+      { key: 'groupId', label: '集團', w: 80, html: r => r.groupId ? esc(r.groupId) : unk },
+      { key: 'excluded', label: '排除', w: 150, get: r => r.excluded ? 1 : 0, html: r => r.excluded ? `<span class="chip err" title="${esc(r.excludeReason)}">${r.excludeReason === 'MANUAL' ? '手動排除' : esc(trunc(r.excludeReason, 14))}</span>` : '<span class="muted">納入</span>' }
+    ],
+    onCell: async (r, k) => {
+      if (k !== 'excluded') return;
+      if (r.blockCodes?.length) return toast('此列有 Error（' + r.blockCodes.join('、') + '），無法納入', 'err');
+      r.manualExcluded = !r.manualExcluded; r.excluded = r.manualExcluded; r.excludeReason = r.manualExcluded ? 'MANUAL' : null;
+      await DB.put('exposures', r); await updateProject({ stats: statsOf(recs) }); await audit('EXCLUDE_TOGGLE', 'exposure', r.id, null, { borrowerId: r.borrowerId, excluded: r.excluded }, ''); vt.refresh();
+    }
+  });
+  const f = () => { const q = $('#q').value.trim().toLowerCase(), ex = $('#qe').checked; const rows = recs.filter(r => (!ex || r.excluded) && (!q || [r.borrowerId, r.industryCode, r.industryCodeRaw, r.groupId, r.industrySection].some(x => x && String(x).toLowerCase().includes(q)))); vt.setRows(rows); $('#qc').textContent = `${fmtInt(rows.length)} 筆`; };
+  $('#q').oninput = f; $('#qe').onchange = f; f();
+}
+
+async function renderCheck(box) {
+  const tk = App.token, pid = App.pid, recs = await getExposures(pid);
+  if (tk !== App.token) return;
+  if (!recs.length) { box.innerHTML = emptyState('尚未匯入資料', '匯入後會自動檢核。'); return; }
+  const groups = await DB.byIndex('validationIssues', 'projectId', pid);
+  if (tk !== App.token) return;
+  const nIssues = groups.reduce((s, g) => s + g.count, 0), codes = groups.slice().sort((a, b) => a.code.localeCompare(b.code)), st = App.project.stats || {}, sel = App.tab.dataCode || '';
+  const chip = l => `<span class="chip ${l === 'error' ? 'err' : l}">${l === 'error' ? 'Error' : l === 'warn' ? 'Warning' : 'Info'}</span>`;
+  const selG = groups.find(g => g.code === sel);
+  box.innerHTML = `<div class="kpis"><div class="kpi"><div class="l">授信筆數</div><div class="v">${fmtInt(st.total)}</div></div><div class="kpi"><div class="l">納入運算</div><div class="v">${fmtInt(st.included)}</div></div><div class="kpi"><div class="l">被排除</div><div class="v ${st.excluded ? 'up' : ''}">${fmtInt(st.excluded)}</div></div><div class="kpi"><div class="l">問題項目</div><div class="v">${fmtInt(nIssues)}</div></div></div>
+    <div class="row" style="margin-bottom:8px"><button id="c-re">重新檢核</button><button id="c-csv">匯出檢核結果 CSV</button><span class="muted">點代碼列可查看明細</span></div>
+    <div class="grid g2"><div class="card"><table><thead><tr><th>代碼</th><th>等級</th><th>說明</th><th class="n">影響列數</th></tr></thead><tbody>${codes.length ? codes.map(g => `<tr data-c="${g.code}" style="cursor:pointer;${g.code === sel ? 'background:var(--chip)' : ''}"><td>${g.code}</td><td>${chip(g.level)}</td><td>${esc(VCODES[g.code][1])}</td><td class="n">${g.rows || g.count}</td></tr>`).join('') : '<tr><td colspan="4" class="muted">沒有任何問題 🎉</td></tr>'}</tbody></table></div>
+    <div class="card"><h3>${sel ? sel + '　' + esc(VCODES[sel]?.[1] || '') : '請選擇左側代碼'}</h3><div class="tablewrap"><table><thead><tr><th>列</th><th>授信戶</th><th>欄位</th><th>訊息</th></tr></thead><tbody>${(selG ? selG.items.slice(0, 300) : []).map(i => `<tr><td>${i[0] ?? ''}</td><td>${esc(i[1])}</td><td>${esc(FIELD_LABEL[i[2]] || i[2])}</td><td>${esc(i[3])}</td></tr>`).join('')}</tbody></table></div><div class="muted" style="font-size:12px">畫面最多顯示 300 筆；匯出 CSV 最多含每個代碼 ${fmtInt(ISSUE_ITEM_CAP)} 筆明細。${selG?.truncated ? `<b class="up">此代碼共 ${fmtInt(selG.count)} 筆，僅保留前 ${fmtInt(ISSUE_ITEM_CAP)} 筆明細。</b>` : ''}</div></div></div>`;
+  $('tbody', box).onclick = e => { const tr = e.target.closest('[data-c]'); if (tr) { App.tab.dataCode = tr.dataset.c; renderCheck(box); } };
+  $('#c-re').onclick = async () => { await revalidate(pid); toast('已重新檢核'); render(); };
+  $('#c-csv').onclick = () => downloadCSV(`validation_${todayStr()}.csv`, ['代碼', '等級', '列', '授信戶', '欄位', '訊息'], groups.flatMap(g => g.items.map(i => [g.code, g.level, i[0], i[1], i[2], i[3]])));
+}
+
+/* =====================================================================
+ * 頁面：情境設計器
+ * ===================================================================== */
+const COND_FIELDS = [['industrySection', '行業大類（字母，隨代碼版本而異）'], ['industryDiv2', '行業中類（2 碼）'], ['industryGroup3', '行業小類'], ['industryDetail4', '行業細類'], ['industrySub6', '行業子類（6 碼）'], ['industryScheme', '代碼制度'], ['rating', '內部評等'], ['region', '地區'], ['collateralTypeEffective', '擔保品類型'], ['maturityMonths', '剩餘期間（月）'], ['overdue', '逾期註記'], ['relatedParty', '利害關係人'], ['groupId', '集團代號'], ['ead', '基準 EAD'], ['lgdSource', 'LGD 來源']];
+const BOOL_FIELDS = ['overdue', 'relatedParty'];
+const OPS = [['eq', '等於'], ['ne', '不等於'], ['in', '屬於（逗號分隔）'], ['nin', '不屬於'], ['gt', '大於'], ['gte', '大於等於'], ['lt', '小於'], ['lte', '小於等於'], ['between', '介於（a,b）'], ['isEmpty', '為空值'], ['startsWith', '開頭為'], ['inPrefix', '開頭屬於（逗號分隔）']];
+const TARGETS = [['pd', 'PD'], ['lgd', 'LGD'], ['ccf', 'CCF'], ['collateralValue', '擔保品價值'], ['drawn', '已動用金額']];
+const METHODS = [['multiply', '乘以'], ['add', '加上'], ['set', '設為'], ['haircut', '折減（比例）']];
+const LBL = (arr, k) => (arr.find(x => x[0] === k) || [k, k])[1];
+const SEVERITIES = ['基準', '輕微', '嚴重', '自訂'];
+// 範本以「中類」而非大類字母設定條件：大類字母在第 11／12 次修正不同（如不動產業為 L／M），中類碼則一致
+const TEMPLATES = {
+  mild: { name: '示範－輕微', severity: '輕微', assumptions: '【示範參數，非監理參數】全體 PD ×1.3；LGD +3 個百分點；不動產擔保品價值折減 10%。', rules: [
+    { name: '全體 PD ×1.3', target: 'pd', method: 'multiply', value: 1.3, cap: 1 }, { name: '全體 LGD +3pp', target: 'lgd', method: 'add', value: 0.03, cap: 1 },
+    { name: '不動產擔保品 −10%', filter: { all: [{ field: 'collateralTypeEffective', op: 'eq', value: 'RE' }] }, target: 'collateralValue', method: 'haircut', value: 0.1 }] },
+  severe: { name: '示範－嚴重', severity: '嚴重', assumptions: '【示範參數，非監理參數】全體 PD ×2.0；LGD +10 個百分點；CCF +0.1；不動產擔保品折減 30%、有價證券折減 25%；營建工程業（中類 41–43）與不動產業（中類 67–68）PD 額外 ×1.5。', rules: [
+    { name: '全體 PD ×2.0', target: 'pd', method: 'multiply', value: 2, cap: 1 }, { name: '全體 LGD +10pp', target: 'lgd', method: 'add', value: 0.1, cap: 1 }, { name: '全體 CCF +0.1', target: 'ccf', method: 'add', value: 0.1, cap: 1 },
+    { name: '不動產擔保品 −30%', filter: { all: [{ field: 'collateralTypeEffective', op: 'eq', value: 'RE' }] }, target: 'collateralValue', method: 'haircut', value: 0.3 },
+    { name: '有價證券擔保品 −25%', filter: { all: [{ field: 'collateralTypeEffective', op: 'eq', value: 'SECURITIES' }] }, target: 'collateralValue', method: 'haircut', value: 0.25 },
+    { name: '營建工程業（中類 41–43）PD 額外 ×1.5', filter: { all: [{ field: 'industryDiv2', op: 'in', value: ['41', '42', '43'] }] }, target: 'pd', method: 'multiply', value: 1.5, cap: 1 },
+    { name: '不動產業（中類 67–68）PD 額外 ×1.5', filter: { all: [{ field: 'industryDiv2', op: 'in', value: ['67', '68'] }] }, target: 'pd', method: 'multiply', value: 1.5, cap: 1 }] }
+};
+async function baseInfos(pid) {
+  const recs = (await getExposures(pid)).filter(r => !r.excluded), m = await latestModel(pid);
+  return recs.map(r => { const x = ENGINE.computeOne(r, [], m.params); return { rec: r, ead: x.ead0, lgdSource: x.lgdSource, type: x.collType }; });
+}
+function previewRule(rule, infos) {
+  let matched = 0, ead = 0, tot = 0, skip = 0; const conds = [...(rule.filter?.all || []), ...(rule.filter?.any || [])];
+  for (const i of infos) {
+    tot += i.ead; const get = f => f === 'ead' ? i.ead : f === 'lgdSource' ? i.lgdSource : f === 'collateralTypeEffective' ? i.type : i.rec[f];
+    if (ENGINE.matchFilter(rule.filter, get)) { matched++; ead += i.ead; if (rule.target === 'collateralValue' && (i.type === 'NONE' || i.rec.collateralValue == null)) skip++; }
+    else if (conds.some(c => c.op !== 'isEmpty' && c.unknownAs !== 'true' && c.unknownAs !== 'false' && (get(c.field) == null || get(c.field) === ''))) skip++;
+  }
+  return { matched, ead, share: tot ? ead / tot : 0, skip, total: infos.length };
+}
+const filterText = f => { const c = x => `${LBL(COND_FIELDS, x.field)} ${LBL(OPS, x.op)} ${x.op === 'isEmpty' ? '' : Array.isArray(x.value) ? x.value.join(',') : x.value}${x.unknownAs && x.unknownAs !== 'noMatch' ? `（未知視為${x.unknownAs === 'true' ? '是' : '否'}）` : ''}`; const a = (f?.all || []).map(c), b = (f?.any || []).map(c); return !a.length && !b.length ? '全部授信戶' : [a.join(' 且 '), b.length ? '任一：' + b.join(' 或 ') : ''].filter(Boolean).join('；'); };
+const ruleSummary = r => `${LBL(TARGETS, r.target)} ${LBL(METHODS, r.method)} ${r.value}${r.cap != null && r.cap !== '' ? `（上限 ${r.cap}）` : ''}${r.floor != null && r.floor !== '' ? `（下限 ${r.floor}）` : ''}`;
+
+function condRowHtml(c = {}) {
+  const f = c.field || 'industrySection', op = c.op || 'eq', bool = BOOL_FIELDS.includes(f);
+  const val = Array.isArray(c.value) ? c.value.join(',') : (c.value ?? '');
+  let vi;
+  if (op === 'isEmpty') vi = '<span class="muted">（不需輸入）</span>';
+  else if (bool && ['eq', 'ne'].includes(op)) vi = `<select class="cv"><option value="true" ${String(val) === 'true' ? 'selected' : ''}>是</option><option value="false" ${String(val) === 'false' ? 'selected' : ''}>否</option></select>`;
+  else if (f === 'collateralTypeEffective' && ['eq', 'ne'].includes(op)) vi = `<select class="cv">${['RE', 'DEPOSIT', 'SECURITIES', 'GUARANTEE', 'NONE', 'UNKNOWN'].map(t => `<option value="${t}" ${val === t ? 'selected' : ''}>${t}（${CT_LABEL[t]}）</option>`).join('')}</select>`;
+  else vi = `<input class="cv" value="${esc(val)}" placeholder="值">`;
+  return `<div class="row cd" style="margin-bottom:6px;align-items:center"><select class="cg"><option value="all" ${c.grp !== 'any' ? 'selected' : ''}>且（全部）</option><option value="any" ${c.grp === 'any' ? 'selected' : ''}>或（任一）</option></select>
+    <select class="cf">${COND_FIELDS.map(([k, l]) => `<option value="${k}" ${k === f ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <select class="co">${OPS.map(([k, l]) => `<option value="${k}" ${k === op ? 'selected' : ''}>${l}</option>`).join('')}</select><span class="cvw">${vi}</span>
+    ${bool && op !== 'isEmpty' ? `<select class="cu" title="欄位為空值（未知）時的處理"><option value="noMatch">未知→不符合</option><option value="true" ${c.unknownAs === 'true' ? 'selected' : ''}>未知→視為是</option><option value="false" ${c.unknownAs === 'false' ? 'selected' : ''}>未知→視為否</option></select>` : ''}
+    <button class="sm danger cx" type="button">✕</button></div>`;
+}
+async function ruleDialog(rule, infos) {
+  const r = rule || { name: '', filter: { all: [], any: [] }, target: 'pd', method: 'multiply', value: 1, enabled: true };
+  const conds = [...(r.filter?.all || []).map(c => ({ ...c, grp: 'all' })), ...(r.filter?.any || []).map(c => ({ ...c, grp: 'any' }))];
+  const body = `<label>規則名稱<input id="r-name" value="${esc(r.name)}"></label><h3>條件（空白＝套用到全部授信戶；欄位為空值時預設「不符合」）</h3><div id="r-conds">${conds.map(condRowHtml).join('')}</div><button type="button" class="sm" id="r-addc">＋ 新增條件</button>
+    <h3>衝擊</h3><div class="row"><label>目標<select id="r-t">${TARGETS.map(([k, l]) => `<option value="${k}" ${r.target === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label>方式<select id="r-m">${METHODS.map(([k, l]) => `<option value="${k}" ${r.method === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label><label>數值<input id="r-v" type="number" step="any" value="${r.value}" style="width:110px"></label><label>上限（選填）<input id="r-cap" type="number" step="any" value="${r.cap ?? ''}" style="width:100px"></label><label>下限（選填）<input id="r-floor" type="number" step="any" value="${r.floor ?? ''}" style="width:100px"></label></div>
+    <p class="muted" style="font-size:12px">比例請用小數：PD ×1.5 → 乘以 1.5；LGD +3 個百分點 → 加上 0.03；擔保品折減 20% → 折減 0.2。規則依優先順序逐條套用，條件一律依「基準值」判斷。大類字母在第 11／12 次修正不同，建議以「行業中類」設定條件。</p><div class="banner info" id="r-prev">—</div>`;
+  const readCond = row => { const field = $('.cf', row).value, op = $('.co', row).value, grp = $('.cg', row).value, cvEl = $('.cv', row); let value = cvEl ? cvEl.value.trim() : undefined;
+    if (['in', 'nin', 'inPrefix', 'between'].includes(op)) value = (value || '').split(/[,，;；、]/).map(s => s.trim()).filter(Boolean); if (op === 'isEmpty') value = undefined;
+    const c = { field, op }; if (value !== undefined) c.value = value; const u = $('.cu', row); if (u && u.value !== 'noMatch') c.unknownAs = u.value; return { grp, c }; };
+  const readRule = d => { const all = [], any = []; $$('.cd', d).forEach(row => { const { grp, c } = readCond(row); (grp === 'any' ? any : all).push(c); }); const num = id => { const v = $(id, d).value; return v === '' ? null : Number(v); };
+    return { ...r, name: $('#r-name', d).value.trim(), filter: { all, any }, target: $('#r-t', d).value, method: $('#r-m', d).value, value: $('#r-v', d).value === '' ? NaN : Number($('#r-v', d).value), cap: num('#r-cap'), floor: num('#r-floor') }; };
+  return openDialog(rule ? '編輯規則' : '新增規則', body, [{ label: '取消', value: null }, { label: '儲存', cls: 'primary', action: d => {
+    const x = readRule(d); if (!x.name) { toast('請輸入規則名稱', 'err'); return false; } if (!isFinite(x.value)) { toast('請輸入衝擊數值（不可留白）', 'err'); return false; }
+    for (const c of [...x.filter.all, ...x.filter.any]) if (c.op !== 'isEmpty' && (c.value === undefined || c.value === '' || (Array.isArray(c.value) && !c.value.length))) { toast('有條件尚未填寫比對值', 'err'); return false; }
+    return x; } }], d => {
+    const upd = () => { if (!infos || !infos.length) { $('#r-prev', d).textContent = '尚無資料可預覽影響筆數。'; return; } const p = previewRule(readRule(d), infos); $('#r-prev', d).innerHTML = `符合 <b>${fmtInt(p.matched)}</b>／${fmtInt(p.total)} 筆，EAD 占 <b>${fmtPct(p.share, 1)}</b>${p.skip ? `；略過 <b>${fmtInt(p.skip)}</b> 筆（欄位為空值或擔保品價值未知）` : ''}`; };
+    const rewire = () => { $$('.cd', d).forEach(row => { if (row._w) return; row._w = true; $('.cx', row).onclick = () => { row.remove(); upd(); }; $('.cf', row).onchange = $('.co', row).onchange = () => { const { grp, c } = readCond(row); c.grp = grp; const f = $('.cf', row).value; if (c.field !== f) delete c.value; const tmp = document.createElement('div'); tmp.innerHTML = condRowHtml({ ...c, grp, field: $('.cf', row).value, op: $('.co', row).value }); const nr = tmp.firstElementChild; row.replaceWith(nr); rewire(); upd(); }; row.addEventListener('input', upd); row.addEventListener('change', upd); }); };
+    $('#r-addc', d).onclick = () => { $('#r-conds', d).insertAdjacentHTML('beforeend', condRowHtml({})); rewire(); upd(); };
+    ['#r-t', '#r-m', '#r-v'].forEach(s => $(s, d).addEventListener('change', upd)); rewire(); upd();
+  });
+}
+function newRule(sid, o, priority) { return { id: uid(), scenarioId: sid, priority, name: o.name, filter: o.filter || { all: [], any: [] }, target: o.target, method: o.method, value: o.value, cap: o.cap ?? null, floor: o.floor ?? null, enabled: o.enabled !== false, origin: o.origin || 'manual' }; }
+async function createScenario(pid, o) {
+  const s = { id: uid(), projectId: pid, name: o.name, severity: o.severity || '自訂', description: o.description || '', assumptions: o.assumptions || '', isDemo: !!o.isDemo, createdAt: nowISO(), updatedAt: nowISO() };
+  await DB.put('scenarios', s); let i = 0; for (const r of o.rules || []) await DB.put('scenarioRules', newRule(s.id, r, ++i)); await audit('SCENARIO_CREATE', 'scenario', s.id, null, { name: s.name, rules: (o.rules || []).length }, ''); return s;
+}
+
+PAGES.scenarios = async function () {
+  const tk = App.token, pid = App.pid, scs = await getScenarios(pid), sel = scs.find(s => s.id === App.scSel) || scs[0];
+  if (sel) App.scSel = sel.id;
+  const infos = await baseInfos(pid);
+  if (tk !== App.token) return;
+  V().innerHTML = `<h1>情境設計器</h1><div class="cols2"><div><div class="card"><div class="row" style="margin-bottom:8px"><button class="primary sm" id="s-new">＋ 新增情境</button><button class="sm" id="s-tpl">從範本建立</button></div>
+    ${scs.length ? scs.map(s => `<div class="card" data-s="${s.id}" style="cursor:pointer;padding:8px 10px;margin-bottom:6px;${s.id === sel?.id ? 'border-color:var(--accent);background:var(--panel2)' : ''}"><b>${esc(s.name)}</b><div><span class="chip">${esc(s.severity)}</span> ${s.isDemo ? '<span class="chip demo">示範參數，非監理參數</span>' : ''}</div></div>`).join('') : '<p class="muted">尚無情境。可從範本建立或新增。</p>'}</div></div><div id="s-edit"></div></div>`;
+  $('#s-new').onclick = async () => {
+    const v = await openDialog('新增情境', `<label>名稱<input id="n-name"></label><label>嚴重度<select id="n-sev">${SEVERITIES.map(x => `<option ${x === '自訂' ? 'selected' : ''}>${x}</option>`).join('')}</select></label><label>假設說明（必填）<textarea id="n-ass" style="min-height:60px"></textarea></label>`, [{ label: '取消', value: null }, { label: '建立', cls: 'primary', action: d => { const name = $('#n-name', d).value.trim(), ass = $('#n-ass', d).value.trim(); if (!name || !ass) { toast('名稱與假設說明都必填', 'err'); return false; } return { name, severity: $('#n-sev', d).value, assumptions: ass }; } }]);
+    if (v) { const s = await createScenario(pid, v); App.scSel = s.id; render(); }
+  };
+  $('#s-tpl').onclick = async () => { const k = await openDialog('從範本建立', `<p>範本中的數值皆為<b>示範參數，非監理參數</b>，請依實際需求調整。</p>`, [{ label: '取消', value: null }, { label: '示範－輕微', value: 'mild', cls: 'primary' }, { label: '示範－嚴重', value: 'severe', cls: 'primary' }]); if (!k) return; const t = TEMPLATES[k]; const s = await createScenario(pid, { ...t, isDemo: true, rules: t.rules.map(r => ({ ...r, origin: 'template' })) }); App.scSel = s.id; render(); };
+  $$('[data-s]').forEach(el => el.onclick = () => { App.scSel = el.dataset.s; render(); });
+  if (sel) renderScenarioEditor(sel, infos);
+  else $('#s-edit').innerHTML = emptyState('尚未建立情境', '請由左側「從範本建立」快速開始，或新增自訂情境。');
+};
+
+async function renderScenarioEditor(sel, infos) {
+  const tk = App.token, box = $('#s-edit'), rules = await getRules(sel.id), mode = App.tab.sc || 'rules', pid = App.pid;
+  if (tk !== App.token) return;
+  const prev = rules.map(r => previewRule(r, infos));
+  box.innerHTML = `<div class="card"><div class="row"><label class="grow">名稱<input id="e-name" value="${esc(sel.name)}"></label><label>嚴重度<select id="e-sev">${SEVERITIES.map(x => `<option ${x === sel.severity ? 'selected' : ''}>${x}</option>`).join('')}</select></label></div>
+    <label style="margin-top:8px">假設說明（必填，會寫入每次執行的快照）<textarea id="e-ass" style="min-height:60px">${esc(sel.assumptions)}</textarea></label>
+    <div class="row" style="margin-top:8px"><button class="primary" id="e-save">儲存情境資訊</button><button id="e-dup">複製情境</button><button class="danger" id="e-del">刪除情境</button></div></div>
+    <div class="tabs"><button data-m="rules" class="${mode === 'rules' ? 'on' : ''}">進階規則</button><button data-m="quick" class="${mode === 'quick' ? 'on' : ''}">快速加壓</button><button data-m="matrix" class="${mode === 'matrix' ? 'on' : ''}">矩陣加壓</button></div><div id="e-mode"></div>`;
+  $('#e-save').onclick = async () => { const name = $('#e-name').value.trim(), ass = $('#e-ass').value.trim(); if (!name || !ass) return toast('名稱與假設說明都必填', 'err'); const before = { name: sel.name, assumptions: sel.assumptions, severity: sel.severity }; Object.assign(sel, { name, assumptions: ass, severity: $('#e-sev').value, updatedAt: nowISO() }); await DB.put('scenarios', sel); await audit('SCENARIO_UPDATE', 'scenario', sel.id, before, { name, assumptions: ass, severity: sel.severity }, ''); toast('已儲存'); render(); };
+  $('#e-dup').onclick = async () => { const s = await createScenario(pid, { ...sel, name: sel.name + '（複本）', rules: rules.map(r => ({ ...r })) }); App.scSel = s.id; render(); };
+  $('#e-del').onclick = async () => { if (await confirmDlg('刪除情境', `刪除情境「${esc(sel.name)}」及其規則？既有 Run 的情境快照不受影響。`)) { await DB.delByIndex('scenarioRules', 'scenarioId', sel.id); await DB.del('scenarios', sel.id); await audit('SCENARIO_DELETE', 'scenario', sel.id, { name: sel.name }, null, ''); App.scSel = null; render(); } };
+  $$('.tabs [data-m]', box).forEach(b => b.onclick = () => { App.tab.sc = b.dataset.m; renderScenarioEditor(sel, infos); });
+  const m = $('#e-mode');
+  if (mode === 'rules') {
+    m.innerHTML = `<div class="card"><div class="row" style="margin-bottom:8px"><h3 class="grow" style="margin:0">規則（由上而下依序套用，可拖曳排序）</h3><button class="primary sm" id="r-add">＋ 新增規則</button></div>
+      ${rules.length ? `<ul class="rulelist" id="r-list">${rules.map((r, i) => { const p = prev[i]; return `<li draggable="true" data-id="${r.id}"><span title="拖曳排序" style="cursor:grab">⠿</span><span class="chip">${i + 1}</span><div class="grow"><b>${esc(r.name)}</b> ${r.origin && r.origin !== 'manual' ? `<span class="chip">${esc(r.origin === 'quick' ? '快速' : r.origin === 'matrix' ? '矩陣' : '範本')}</span>` : ''}<div class="muted" style="font-size:12px">${esc(filterText(r.filter))} → ${esc(ruleSummary(r))}</div><div style="font-size:12px">${infos.length ? `符合 ${fmtInt(p.matched)} 筆｜EAD 占 ${fmtPct(p.share, 1)}${p.skip ? `｜略過 ${fmtInt(p.skip)} 筆（欄位未知）` : ''}` : '<span class="muted">尚無資料可預覽</span>'}</div></div>
+      <label style="flex-direction:row;align-items:center;gap:4px"><input type="checkbox" data-en="${r.id}" ${r.enabled !== false ? 'checked' : ''}>啟用</label><button class="sm" data-up="${r.id}">↑</button><button class="sm" data-dn="${r.id}">↓</button><button class="sm" data-ed="${r.id}">編輯</button><button class="sm danger" data-rm="${r.id}">刪除</button></li>`; }).join('')}</ul>` : '<p class="muted">此情境尚無規則（等同基準，無衝擊）。</p>'}</div>`;
+    $('#r-add').onclick = async () => { const x = await ruleDialog(null, infos); if (!x) return; const nr = newRule(sel.id, x, (rules.reduce((a, r) => Math.max(a, r.priority), 0)) + 1); await DB.put('scenarioRules', nr); await audit('RULE_ADD', 'rule', nr.id, null, nr, sel.name); renderScenarioEditor(sel, infos); };
+    const list = $('#r-list');
+    if (list) {
+      const reorder = async ids => { const map = new Map(rules.map(r => [r.id, r])); let i = 0; for (const id of ids) { const r = map.get(id); r.priority = ++i; await DB.put('scenarioRules', r); } await audit('RULE_REORDER', 'scenario', sel.id, null, ids, sel.name); renderScenarioEditor(sel, infos); };
+      list.onclick = async e => {
+        const t = e.target, id = t.dataset.up || t.dataset.dn || t.dataset.ed || t.dataset.rm; if (!id) return; const ids = rules.map(r => r.id), i = ids.indexOf(id), r = rules[i];
+        if (t.dataset.up && i > 0) { [ids[i - 1], ids[i]] = [ids[i], ids[i - 1]]; reorder(ids); }
+        if (t.dataset.dn && i < ids.length - 1) { [ids[i + 1], ids[i]] = [ids[i], ids[i + 1]]; reorder(ids); }
+        if (t.dataset.ed) { const x = await ruleDialog(r, infos); if (x) { await DB.put('scenarioRules', x); await audit('RULE_UPDATE', 'rule', id, r, x, sel.name); renderScenarioEditor(sel, infos); } }
+        if (t.dataset.rm && await confirmDlg('刪除規則', `刪除規則「${esc(r.name)}」？`)) { await DB.del('scenarioRules', id); await audit('RULE_DELETE', 'rule', id, r, null, sel.name); renderScenarioEditor(sel, infos); }
+      };
+      list.onchange = async e => { const id = e.target.dataset.en; if (!id) return; const r = rules.find(x => x.id === id); r.enabled = e.target.checked; await DB.put('scenarioRules', r); await audit('RULE_TOGGLE', 'rule', id, null, { enabled: r.enabled }, sel.name); };
+      let dragId = null;
+      list.ondragstart = e => { dragId = e.target.closest('li')?.dataset.id; e.target.closest('li')?.classList.add('drag'); };
+      list.ondragend = e => e.target.closest('li')?.classList.remove('drag');
+      list.ondragover = e => e.preventDefault();
+      list.ondrop = e => { e.preventDefault(); const to = e.target.closest('li')?.dataset.id; if (!dragId || !to || to === dragId) return; const ids = rules.map(r => r.id); ids.splice(ids.indexOf(dragId), 1); ids.splice(ids.indexOf(to), 0, dragId); reorder(ids); };
+    }
+  } else if (mode === 'quick') {
+    m.innerHTML = `<div class="card"><p class="muted">一組全體參數。套用後會取代此情境中所有「快速」來源的規則（其他規則不受影響）。</p><div class="row"><label>PD 倍數<input id="q-pm" type="number" step="any" value="1" style="width:100px"></label><label>PD 加點（小數）<input id="q-pa" type="number" step="any" value="0" style="width:100px"></label><label>LGD 加點（小數）<input id="q-la" type="number" step="any" value="0" style="width:100px"></label><label>擔保品價值折減（%）<input id="q-ch" type="number" step="any" value="0" style="width:100px"></label><label>CCF 加點<input id="q-ca" type="number" step="any" value="0" style="width:100px"></label></div><p><button class="primary" id="q-go">套用（產生規則）</button></p></div>`;
+    $('#q-go').onclick = async () => {
+      const pm = +$('#q-pm').value, pa = +$('#q-pa').value, la = +$('#q-la').value, ch = +$('#q-ch').value / 100, ca = +$('#q-ca').value, out = [];
+      if (pm !== 1) out.push({ name: `全體 PD ×${pm}`, target: 'pd', method: 'multiply', value: pm, cap: 1 }); if (pa) out.push({ name: `全體 PD +${pa}`, target: 'pd', method: 'add', value: pa, cap: 1 });
+      if (la) out.push({ name: `全體 LGD +${la}`, target: 'lgd', method: 'add', value: la, cap: 1 }); if (ch) out.push({ name: `全體擔保品價值 −${(ch * 100).toFixed(1)}%`, target: 'collateralValue', method: 'haircut', value: ch }); if (ca) out.push({ name: `全體 CCF +${ca}`, target: 'ccf', method: 'add', value: ca, cap: 1 });
+      for (const r of rules.filter(r => r.origin === 'quick')) await DB.del('scenarioRules', r.id);
+      let pr = rules.filter(r => r.origin !== 'quick').reduce((a, r) => Math.max(a, r.priority), 0); for (const o of out) await DB.put('scenarioRules', newRule(sel.id, { ...o, origin: 'quick' }, ++pr));
+      await audit('QUICK_STRESS', 'scenario', sel.id, null, { pm, pa, la, ch, ca }, sel.name); App.tab.sc = 'rules'; toast(`已產生 ${out.length} 條規則`); render();
+    };
+  } else {
+    const dims = [['industrySection', '行業大類'], ['industryDiv2', '行業中類'], ['industryDetail4', '行業細類'], ['rating', '內部評等'], ['region', '地區']], dim = App.tab.dim || 'industrySection', dver = App.project.industrySettings?.dgbasVersion;
+    const vals = [...new Set(infos.map(i => i.rec[dim]).filter(v => v != null && v !== ''))].sort().slice(0, 300);
+    m.innerHTML = `<div class="card"><p class="muted">每個維度值可設 PD 倍數、LGD 加點、擔保品折減；空白＝不產生規則。套用後會取代此情境「矩陣」來源的規則。</p><div class="row" style="margin-bottom:8px"><label>維度<select id="x-dim">${dims.map(([k, l]) => `<option value="${k}" ${k === dim ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      ${vals.length ? `<div class="tablewrap"><table><thead><tr><th>${LBL(dims, dim)}</th><th>PD ×</th><th>LGD +</th><th>擔保品折減 %</th></tr></thead><tbody>${vals.map(v => `<tr data-v="${esc(v)}"><td>${esc(v)}${dim === 'industrySection' ? ' ' + esc(secName(v, dver)) : ''}</td><td><input class="x-pm" type="number" step="any" style="width:90px"></td><td><input class="x-la" type="number" step="any" style="width:90px"></td><td><input class="x-ch" type="number" step="any" style="width:90px"></td></tr>`).join('')}</tbody></table></div><p><button class="primary" id="x-go">套用（產生規則）</button></p>` : '<p class="muted">沒有資料可列出維度值，請先匯入資料。</p>'}</div>`;
+    $('#x-dim').onchange = e => { App.tab.dim = e.target.value; renderScenarioEditor(sel, infos); };
+    const go = $('#x-go');
+    if (go) go.onclick = async () => {
+      const out = [];
+      $$('tr[data-v]', m).forEach(tr => { const v = tr.dataset.v, flt = { all: [{ field: dim, op: 'eq', value: v }] }, g = c => $(c, tr).value === '' ? null : +$(c, tr).value, pm = g('.x-pm'), la = g('.x-la'), ch = g('.x-ch');
+        if (pm != null) out.push({ name: `${LBL(dims, dim)} ${v}：PD ×${pm}`, filter: flt, target: 'pd', method: 'multiply', value: pm, cap: 1 }); if (la != null) out.push({ name: `${LBL(dims, dim)} ${v}：LGD +${la}`, filter: flt, target: 'lgd', method: 'add', value: la, cap: 1 }); if (ch != null) out.push({ name: `${LBL(dims, dim)} ${v}：擔保品 −${ch}%`, filter: flt, target: 'collateralValue', method: 'haircut', value: ch / 100 }); });
+      for (const r of rules.filter(r => r.origin === 'matrix')) await DB.del('scenarioRules', r.id);
+      let pr = rules.filter(r => r.origin !== 'matrix').reduce((a, r) => Math.max(a, r.priority), 0); for (const o of out) await DB.put('scenarioRules', newRule(sel.id, { ...o, origin: 'matrix' }, ++pr));
+      await audit('MATRIX_STRESS', 'scenario', sel.id, null, { dim, rules: out.length }, sel.name); App.tab.sc = 'rules'; toast(`已產生 ${out.length} 條規則`); render();
+    };
+  }
+}
+
+/* =====================================================================
+ * 執行壓測
+ * ===================================================================== */
+const slim = r => ({ id: r.id, rowNo: r.rowNo, borrowerId: r.borrowerId, industryCode: r.industryCode, industryScheme: r.industryScheme, industrySub6: r.industrySub6, industryDetail4: r.industryDetail4, industryGroup3: r.industryGroup3, industryDiv2: r.industryDiv2, industrySection: r.industrySection, rating: r.rating, region: r.region, drawn: r.drawn, limit: r.limit, ccf: r.ccf, pd: r.pd, lgd: r.lgd, collateralTypeEffective: r.collateralTypeEffective, collateralValue: r.collateralValue, maturityMonths: r.maturityMonths, overdue: r.overdue, relatedParty: r.relatedParty, groupId: r.groupId, concentrationKey: r.concentrationKey });
+async function loadResults(runId) { const bl = await DB.byIndex('simulationResults', 'runId', runId); bl.sort((a, b) => a.block - b.block); const out = []; for (const b of bl) pushAll(out, b.rows); return out; }
+const dataHashOf = async recs => sha256Hex(recs.map(r => [r.borrowerId, r.industryCode, r.rating, r.drawn, r.limit, r.ccf, r.pd, r.lgd, r.collateralTypeEffective, r.collateralValue, r.maturityMonths, r.overdue, r.relatedParty, r.groupId].join('|')).join('\n'));
+const NONE_SCENARIO = { id: null, name: '基準（無衝擊）', severity: '基準', assumptions: '無任何衝擊，僅計算基準值。', isDemo: false };
+
+/* hashRecs：用來計算「來源資料雜湊」的原始曝險（含模擬措施時，雜湊必須對應措施前的原始資料，才能和其他 Run 比較） */
+async function executeRun({ scenario, rules, model, note, recs, hashRecs, totalCount, mitigation, onProgress, onStage }) {
+  const p = App.project, started = nowISO(), t0 = performance.now();
+  onStage && onStage('計算資料集雜湊…'); const hash = await dataHashOf(hashRecs || recs);
+  onStage && onStage('計算中…');
+  const results = await Runner.run(recs.map(slim), rules, model.params, onProgress);
+  const tot = sumResults(results);
+  if (tot.attrErr > Math.max(1e-6, Math.abs(tot.dEL) * 1e-9)) throw new Error('歸因加總與 ΔEL 不一致（' + tot.attrErr + '）');
+  const run = {
+    id: uid(), projectId: p.id, scenarioId: scenario.id, scenarioSnapshot: { name: scenario.name, severity: scenario.severity, assumptions: scenario.assumptions, isDemo: !!scenario.isDemo, rules: deepClone(rules) },
+    modelVersion: model.version, modelSnapshot: deepClone(model.params), industrySettings: deepClone(p.industrySettings), codebookVersion: `${BUILTIN_CB_VERSION}／${p.industrySettings.dgbasVersion}／MOF_9`,
+    sourceDataHash: hash, exposureCount: recs.length, excludedCount: totalCount - recs.length, startedAt: started, completedAt: nowISO(), durationMs: Math.round(performance.now() - t0),
+    status: 'done', note, appVersion: APP_VERSION, totals: tot, mitigation: mitigation || null, amountUnit: p.amountUnit
+  };
+  onStage && onStage('寫入結果…');
+  const blocks = []; for (let i = 0; i < results.length; i += 2000) blocks.push({ runId: run.id, block: i / 2000, rows: results.slice(i, i + 2000) });
+  await DB.putMany('simulationResults', blocks, (d, t) => onProgress && onProgress(d, t, 'write'), 25);
+  await DB.put('simulationRuns', run);
+  await audit('RUN', 'run', run.id, null, { scenario: scenario.name, modelVersion: model.version, hash: hash.slice(0, 16), n: recs.length, dEL: tot.dEL, durationMs: run.durationMs, mitigation: !!mitigation }, note);
+  return run;
+}
+
+function modelFormHtml(m) {
+  const P = m.params, h = P.collateralHaircutByType || {};
+  const f = (id, label, v, step = '0.01') => `<label>${label}<input id="mp-${id}" type="number" step="${step}" value="${v}" style="width:110px"></label>`;
+  return `<div class="row">${f('defaultCCF', '預設 CCF', P.defaultCCF)}${f('pdFloor', 'PD 下限', P.pdFloor, '0.0001')}${f('lgdFloor', 'LGD 下限', P.lgdFloor)}${f('recoveryCost', '處分成本', P.recoveryCost)}${f('defaultLgdUnknownCollateral', '擔保品未知時預設 LGD', P.defaultLgdUnknownCollateral)}${f('defaultLgdUnsecured', '無擔保預設 LGD', P.defaultLgdUnsecured)}</div>
+    <h3>基準擔保品折減（折減後才計入回收）</h3><div class="row">${['RE', 'DEPOSIT', 'SECURITIES', 'GUARANTEE', 'UNKNOWN'].map(t => f('h' + t, `${t}（${CT_LABEL[t]}）`, h[t] ?? 0)).join('')}</div>
+    <label style="margin-top:8px">評等 → PD 區間（JSON，格式 {"評等":[下限,上限]}；供 V010 檢核與評等遷徙使用）<textarea id="mp-rpm">${esc(JSON.stringify(P.ratingPdMap))}</textarea></label>`;
+}
+function readModelForm(d) {
+  const n = id => { const v = Number($('#mp-' + id, d).value); if (!isFinite(v) || v < 0 || v > 1) throw new Error(`參數 ${id} 必須介於 0–1`); return v; };
+  let rpm; try { rpm = JSON.parse($('#mp-rpm', d).value); for (const [k, v] of Object.entries(rpm)) if (!Array.isArray(v) || v.length !== 2 || !(v[0] <= v[1])) throw 0; } catch (e) { throw new Error('評等 → PD 區間 JSON 格式不正確'); }
+  return { defaultCCF: n('defaultCCF'), pdFloor: n('pdFloor'), lgdFloor: n('lgdFloor'), recoveryCost: n('recoveryCost'), defaultLgdUnknownCollateral: n('defaultLgdUnknownCollateral'), defaultLgdUnsecured: n('defaultLgdUnsecured'), collateralHaircutByType: Object.fromEntries(['RE', 'DEPOSIT', 'SECURITIES', 'GUARANTEE', 'UNKNOWN'].map(t => [t, n('h' + t)])), ratingPdMap: rpm };
+}
+
+PAGES.run = async function () {
+  const tk = App.token, pid = App.pid, recs = await getExposures(pid), scs = await getScenarios(pid), models = await getModels(pid);
+  const runs = (await DB.byIndex('simulationRuns', 'projectId', pid)).sort((a, b) => b.startedAt.localeCompare(a.startedAt)), inc = recs.filter(r => !r.excluded);
+  if (tk !== App.token) return;
+  if (!recs.length) { V().innerHTML = `<h1>執行壓測</h1>` + emptyState('尚未匯入資料', '請先到資料工作台匯入授信資料。', `<p><a href="${hashOf('data')}"><button class="primary">前往資料工作台</button></a></p>`); return; }
+  const selScn = App.runScn ?? (scs.find(s => s.severity === '嚴重') || scs[0] || NONE_SCENARIO).id ?? '__none';
+  V().innerHTML = `<h1>執行壓測</h1>
+    <div class="card"><div class="row"><label>情境<select id="r-scn">${scs.map(s => `<option value="${s.id}" ${s.id === selScn ? 'selected' : ''}>${esc(s.name)}（${esc(s.severity)}）</option>`).join('')}<option value="__none" ${selScn === '__none' ? 'selected' : ''}>基準（無衝擊）</option></select></label>
+    <label>模型參數版本<select id="r-mdl">${models.map(m => `<option value="${m.id}" ${m === models[models.length - 1] ? 'selected' : ''}>v${m.version}｜${fmtDT(m.createdAt)}${m.note ? '｜' + esc(m.note) : ''}</option>`).join('')}</select></label>
+    <label class="grow">執行備註（必填）<input id="r-note" placeholder="例如：2026Q3 嚴重情境首次試算"></label></div>
+    <p class="muted">將運算 <b>${fmtInt(inc.length)}</b> 筆（排除 ${fmtInt(recs.length - inc.length)} 筆）。每次執行都會保存資料雜湊、情境快照與模型快照，相同輸入重跑結果完全一致。</p>
+    ${runs.length >= 20 ? `<div class="banner">本專案已有 ${runs.length} 個 Run（建議保留上限 20），請在下方清理舊 Run。</div>` : ''}
+    <div class="row"><button class="primary" id="r-go" ${inc.length ? '' : 'disabled'}>▶ 執行</button><button id="r-cancel" hidden>取消</button><span id="r-stage" class="muted"></span></div><div class="bar" id="r-bar" hidden style="margin-top:8px"><i></i></div></div>
+    <details class="card"><summary style="cursor:pointer;font-weight:600">模型參數（示範值，可修改；每次儲存都會產生新版本）</summary><div id="r-model" style="margin-top:10px"></div><div class="row" style="margin-top:8px"><label class="grow">版本備註<input id="mp-note"></label><button id="mp-save" class="primary">儲存為新版本</button></div></details>
+    <div class="card"><h3>歷史 Run</h3>${runs.length ? `<div class="tablewrap"><table><thead><tr><th>時間</th><th>情境</th><th>模型</th><th class="n">筆數</th><th class="n">ΔEL</th><th>資料雜湊</th><th>備註</th><th></th></tr></thead><tbody>${runs.map(r => `<tr><td>${fmtDT(r.startedAt)}</td><td>${esc(r.scenarioSnapshot.name)}${r.mitigation ? ' <span class="chip warn">含模擬措施</span>' : ''}</td><td>v${r.modelVersion}</td><td class="n">${fmtInt(r.exposureCount)}</td><td class="n ${r.totals.dEL > 0 ? 'up' : ''}">${fmtInt(r.totals.dEL)}</td><td><code>${r.sourceDataHash.slice(0, 10)}</code></td><td>${esc(trunc(r.note, 30))}</td><td style="white-space:nowrap"><a href="${hashOf('results', r.id)}"><button class="sm">開啟</button></a> <button class="sm danger" data-del="${r.id}">刪除</button></td></tr>`).join('')}</tbody></table></div>` : '<p class="muted">尚無執行紀錄。</p>'}</div>`;
+  const modelOf = () => models.find(m => m.id === $('#r-mdl').value);
+  const fillModel = () => { $('#r-model').innerHTML = modelFormHtml(modelOf()); };
+  fillModel(); $('#r-mdl').onchange = fillModel; $('#r-scn').onchange = e => App.runScn = e.target.value;
+  $('#mp-save').onclick = async () => {
+    try {
+      const params = readModelForm(V()), v = models[models.length - 1].version + 1;
+      await DB.put('modelDefinitions', { id: uid(), projectId: pid, version: v, params, note: $('#mp-note').value.trim(), createdAt: nowISO() });
+      await audit('MODEL_UPDATE', 'model', pid, { version: v - 1, params: models[models.length - 1].params }, { version: v, params }, $('#mp-note').value);
+      toast(`已儲存為模型 v${v}，重新檢核中…`); await revalidate(pid); render();
+    } catch (e) { toast(e.message, 'err'); }
+  };
+  $$('[data-del]').forEach(b => b.onclick = async () => { if (await confirmDlg('刪除 Run', '刪除此執行結果？', {})) { await DB.delByIndex('simulationResults', 'runId', b.dataset.del); await DB.del('simulationRuns', b.dataset.del); await audit('RUN_DELETE', 'run', b.dataset.del, null, null, ''); render(); } });
+  $('#r-go').onclick = async () => {
+    const note = $('#r-note').value.trim(); if (!note) return toast('請先填寫執行備註', 'err');
+    const sid = $('#r-scn').value, scenario = sid === '__none' ? NONE_SCENARIO : scs.find(s => s.id === sid), rules = sid === '__none' ? [] : await getRules(sid), model = modelOf();
+    if (scenario.id && !scenario.assumptions) return toast('此情境缺少假設說明', 'err');
+    const go = $('#r-go'), bar = $('#r-bar'), stage = $('#r-stage'); go.disabled = true; $('#r-cancel').hidden = false; bar.hidden = false; $('#r-cancel').onclick = () => Runner.cancel();
+    try {
+      const run = await executeRun({ scenario, rules, model, note, recs: inc, totalCount: recs.length, onStage: t => { if ($('#r-stage')) $('#r-stage').textContent = t; }, onProgress: (d, t, ph) => { const b = $('#r-bar'); if (b) { $('i', b).style.width = (d / t * 100) + '%'; $('#r-stage').textContent = `${ph === 'write' ? '寫入結果' : '計算中'} ${fmtInt(d)}／${fmtInt(t)}`; } } });
+      toast(`完成：ΔEL ${fmtInt(run.totals.dEL)}，耗時 ${run.durationMs} ms`);
+      if (location.hash.startsWith(`#/p/${pid}/run`)) location.hash = hashOf('results', run.id);   // 使用者若已切到別頁就不強制跳轉
+    } catch (e) { toast(e.message === '已取消' ? '已取消執行' : '執行失敗：' + e.message, 'err'); if ($('#r-go')) { $('#r-go').disabled = false; $('#r-cancel').hidden = true; $('#r-bar').hidden = true; $('#r-stage').textContent = ''; } }
+  };
+};
+
+/* =====================================================================
+ * 結果儀表板
+ * ===================================================================== */
+const kpi = (l, v, s, cls) => `<div class="kpi"><div class="l">${l}</div><div class="v ${cls || ''}">${v}</div><div class="s">${s || ''}</div></div>`;
+const signCls = v => v > 1e-9 ? 'up' : v < -1e-9 ? 'down' : '';
+const secOrNone = v => v || '未分類';
+const LVL = { section: ['行業大類', r => secOrNone(r.section)], div2: ['行業中類', r => secOrNone(r.div2)], detail4: ['行業細類', r => secOrNone(r.detail4)] };
+const grpLabel = k => k.startsWith('SOLO:') ? `(獨立戶) ${k.slice(5)}` : k;
+function completenessText(T) {
+  const pc = e => fmtPct(T.ead0 ? e / T.ead0 : 0, 1);
+  return `擔保品未知 ${fmtInt(T.fCollUnk)} 筆（EAD 占 ${pc(T.eCollUnk)}）；LGD 採預設值 ${fmtInt(T.fLgdDef)} 筆（${pc(T.eLgdDef)}）；利害關係人未知 ${fmtInt(T.fRelUnk)} 筆（${pc(T.eRelUnk)}）；無集團代號 ${fmtInt(T.fGrpNone)} 筆（${pc(T.eGrpNone)}）；行業別未分類 ${fmtInt(T.fSecNone)} 筆（${pc(T.eSecNone)}）`;
+}
+function ratingMatrix(results, map) {
+  const keys = Object.keys(map || {}).sort((a, b) => (Number(a) - Number(b)) || a.localeCompare(b)); if (!keys.length) return null;
+  const cols = [...keys, '未對應'], mat = {}; let max = 1;
+  for (const r of results) { const a = pdToRating(r.pd0, map), b = pdToRating(r.pd1, map); (mat[a] ??= {})[b] ??= { n: 0, ead: 0 }; const c = mat[a][b]; c.n++; c.ead += r.ead0; if (a !== b) max = Math.max(max, c.n); }
+  return { cols, mat, max };
+}
+
+PAGES.results = async function (runId) {
+  const tk = App.token, pid = App.pid, runs = (await DB.byIndex('simulationRuns', 'projectId', pid)).sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  if (tk !== App.token) return;
+  if (!runId) { if (runs.length) { location.replace(hashOf('results', runs[0].id)); return; } V().innerHTML = `<h1>結果儀表板</h1>` + emptyState('尚無執行結果', '請先到「執行壓測」執行一次。', `<p><a href="${hashOf('run')}"><button class="primary">前往執行壓測</button></a></p>`); return; }
+  const run = await DB.get('simulationRuns', runId); if (!run) { V().innerHTML = emptyState('找不到此 Run', '它可能已被刪除。'); return; }
+  const results = await loadResults(runId); if (tk !== App.token) return;
+  const T = sumResults(results);
+  const st = { lvl: 'section', conc: 'section', solo: true, drill: null, q: '' };
+  const unit = run.amountUnit || App.project.amountUnit, sc = run.scenarioSnapshot, sens = (App.sens ||= {}), dver = run.industrySettings?.dgbasVersion || 'DGBAS_11';
+  let vt = null;
+  const draw = () => {
+    const [lvlName, lvlKey] = LVL[st.lvl], groups = groupSum(results, lvlKey).sort((a, b) => b.dEL - a.dEL);
+    const top = results.slice().sort((a, b) => b.dEL - a.dEL).slice(0, 20);
+    const nameOf = k => st.lvl === 'section' ? secName(k, dver) : (CB.name[baseVer(dver)]?.['DETAIL' + k] || '');
+    const rm = ratingMatrix(results, run.modelSnapshot.ratingPdMap);
+    const cg = groupSum(results.filter(r => st.conc !== 'group' || st.solo || !r.grp.startsWith('SOLO:')), st.conc === 'group' ? (r => r.grp) : st.conc === 'section' ? (r => secOrNone(r.section)) : st.conc === 'div2' ? (r => secOrNone(r.div2)) : (r => secOrNone(r.detail4))).sort((a, b) => b.ead0 - a.ead0);
+    const hh = hhi(cg.map(g => g.ead0)), allSolo = results.every(r => r.grp.startsWith('SOLO:')), cTot = cg.reduce((s, g) => s + g.ead0, 0), top10 = cg.slice(0, 10).reduce((s, g) => s + g.ead0, 0);
+    const sres = sens[runId], canSens = !run.mitigation;
+    const mk = () => ({   // 所有圖表集中在這裡產生，匯出報告時以淺色主題重產
+      wf: svgWaterfall([{ label: '基準 EL', value: T.el0, kind: 'total' }, { label: 'ΔPD', value: T.aPD }, { label: 'ΔLGD', value: T.aLGD }, { label: 'ΔEAD', value: T.aEAD }, { label: '壓力後 EL', value: T.el1, kind: 'total' }]),
+      topSvg: svgHBar(top.map(r => ({ label: r.borrowerId, value: r.dEL, key: r.exposureId })), { click: true }),
+      bub: svgBubble(groups.map(g => ({ key: g.key, short: g.key, label: `${g.key} ${nameOf(g.key)}`.trim(), x: g.wPD1 - g.wPD0, y: g.wLGD1 - g.wLGD0, r: g.ead0, c: g.dEL })), 'ΔPD（加權，百分點）', 'ΔLGD（加權，百分點）'),
+      concSvg: svgHBar(cg.slice(0, 10).map(g => ({ label: st.conc === 'group' ? grpLabel(g.key) : g.key, value: g.ead0, key: g.key })), { color: PAL().accent }),
+      sensSvg: sres ? svgLine(sres.map(p => ({ x: p.h, y: p.el1 })), '額外擔保品價值折減', '壓力後 EL', x => '−' + Math.round(x * 100) + '%') : ''
+    });
+    const S = mk();
+    V().innerHTML = `<div class="row"><h1 class="grow">結果：${esc(sc.name)} ${sc.isDemo ? '<span class="chip demo">示範參數，非監理參數</span>' : ''}</h1>
+      <select id="x-run" aria-label="切換 Run">${runs.map(r => `<option value="${r.id}" ${r.id === runId ? 'selected' : ''}>${fmtDT(r.startedAt)}｜${esc(r.scenarioSnapshot.name)}</option>`).join('')}</select>
+      <button id="x-csv">明細 CSV</button><button id="x-sum">彙總 CSV</button><button id="x-html" class="primary">管理摘要 HTML</button><button onclick="window.print()">列印</button></div>
+      ${String(run.codebookVersion).startsWith('builtin-1') ? '<div class="banner">此 Run 使用舊版內建行業代碼表（builtin-1），部分中類（例如 08、09 製造業）的大類歸屬可能錯誤。請重新執行以取得正確的行業彙總。</div>' : ''}
+      <p class="muted">執行於 ${fmtDT(run.startedAt)}｜模型 v${run.modelVersion}｜資料雜湊 <code>${run.sourceDataHash.slice(0, 16)}</code>｜${fmtInt(run.exposureCount)} 筆（排除 ${fmtInt(run.excludedCount)}）｜耗時 ${run.durationMs} ms｜單位：${esc(unit)}｜代碼表：${esc(run.codebookVersion)}<br>備註：${esc(run.note)}${run.mitigation ? '｜<span class="chip warn">含模擬措施，未經核准</span>' : ''}</p>
+      <details class="card"><summary style="cursor:pointer">情境假設與規則快照</summary><p>${esc(sc.assumptions)}</p><ol>${sc.rules.map(r => `<li>${esc(r.name)}　<span class="muted">${esc(filterText(r.filter))} → ${esc(ruleSummary(r))}${r.enabled === false ? '（停用）' : ''}</span></li>`).join('') || '<li class="muted">無規則</li>'}</ol>${run.mitigation ? `<p class="up">模擬措施（未經核准）：${esc(run.mitigation.map(m => m.text).join('；'))}</p>` : ''}</details>
+      <div class="kpis">${kpi('總 EAD（基準→壓力）', fmtInt(T.ead0), '→ ' + fmtInt(T.ead1))}${kpi('EL 基準', fmtInt(T.el0))}${kpi('EL 壓力', fmtInt(T.el1))}${kpi('ΔEL', fmtInt(T.dEL), `${T.el0 ? (T.dEL / T.el0 >= 0 ? '+' : '') + fmtPct(T.dEL / T.el0, 1) : '—'} 相對基準`, signCls(T.dEL))}${kpi('加權 PD', fmtPct(T.wPD1, 3), '基準 ' + fmtPct(T.wPD0, 3))}${kpi('加權 LGD', fmtPct(T.wLGD1, 2), '基準 ' + fmtPct(T.wLGD0, 2))}${kpi('擔保覆蓋率', fmtPct(T.cov1, 1), '基準 ' + fmtPct(T.cov0, 1))}${kpi('受影響戶數', fmtInt(T.aff), `／${fmtInt(T.n)} 戶`)}${kpi('歸因檢核', T.attrErr <= Math.max(1e-6, Math.abs(T.dEL) * 1e-9) ? '✔ 通過' : '✘ 差異 ' + fmtNum(T.attrErr, 4), 'ΔPD+ΔLGD+ΔEAD＝ΔEL（誤差 ' + T.attrErr.toExponential(1) + '）')}</div>
+      <div class="banner info"><b>資料完整度：</b>${completenessText(T)}</div>
+      <div class="grid g2">${chartCard('waterfall', '損失瀑布圖（基準 → 壓力後 EL）', S.wf, dataTable(['項目', '金額'], [['基準 EL', fmtInt(T.el0)], ['ΔPD', fmtInt(T.aPD)], ['ΔLGD', fmtInt(T.aLGD)], ['ΔEAD', fmtInt(T.aEAD)], ['壓力後 EL', fmtInt(T.el1)]]))}
+      ${chartCard('top20', '前 20 大損失貢獻戶（ΔEL，點擊看明細）', S.topSvg, dataTable(['授信戶', 'ΔEL'], top.map(r => [esc(r.borrowerId), fmtInt(r.dEL)])))}</div>
+      <div class="card"><div class="row"><h3 class="grow" style="margin:0">產業風險</h3><label style="flex-direction:row;align-items:center;gap:6px">層級<select id="x-lvl">${Object.entries(LVL).map(([k, [l]]) => `<option value="${k}" ${k === st.lvl ? 'selected' : ''}>${l}</option>`).join('')}</select></label></div></div>
+      ${chartCard('industry', `產業風險氣泡圖（${lvlName}；大小＝EAD，紅＝損失增加；點擊可下鑽明細）`, S.bub)}
+      <div class="card"><div class="tablewrap"><table><thead><tr><th>${lvlName}</th><th>名稱</th><th class="n">戶數</th><th class="n">EAD</th><th class="n">占比</th><th class="n">ΔPD(pp)</th><th class="n">ΔLGD(pp)</th><th class="n">EL 基準</th><th class="n">EL 壓力</th><th class="n">ΔEL</th></tr></thead><tbody>${groups.map(g => `<tr data-g="${esc(g.key)}" style="cursor:pointer"><td>${esc(g.key)}</td><td>${esc(nameOf(g.key))}</td><td class="n">${fmtInt(g.n)}</td><td class="n">${fmtInt(g.ead0)}</td><td class="n">${fmtPct(T.ead0 ? g.ead0 / T.ead0 : 0, 1)}</td><td class="n">${fmtNum((g.wPD1 - g.wPD0) * 100, 2)}</td><td class="n">${fmtNum((g.wLGD1 - g.wLGD0) * 100, 2)}</td><td class="n">${fmtInt(g.el0)}</td><td class="n">${fmtInt(g.el1)}</td><td class="n ${signCls(g.dEL)}">${fmtInt(g.dEL)}</td></tr>`).join('')}</tbody></table></div></div>
+      <div class="card"><h3>評等遷徙矩陣（依 PD 區間回推評等；列＝壓力前，欄＝壓力後；格內為戶數）</h3>${rm ? `<div class="tablewrap"><table class="heat"><thead><tr><th>前＼後</th>${rm.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${rm.cols.filter(a => rm.mat[a]).map(a => `<tr><th>${esc(a)}</th>${rm.cols.map(b => { const c = rm.mat[a]?.[b]; if (!c) return '<td></td>'; const mig = a !== b, al = mig ? 0.15 + 0.7 * Math.min(1, c.n / rm.max) : 0; return `<td style="background:${mig ? `rgba(196,49,75,${al})` : 'var(--chip)'}" title="EAD ${fmtInt(c.ead)}">${c.n}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>` : '<p class="muted">模型參數未設定評等 → PD 區間。</p>'}</div>
+      <div class="card"><div class="row"><h3 class="grow" style="margin:0">擔保品跌價敏感度（在此情境之上，再對所有已知擔保品價值折減）</h3>${canSens ? `<button id="x-sens">${sres ? '重新計算' : '計算'}</button>` : ''}</div>${!canSens ? '<p class="muted">含模擬措施的 Run 不支援敏感度分析（措施後的曝險資料未另行保存）。請對未含措施的 Run 執行。</p>' : sres ? chartCard('sensitivity', '壓力後 EL vs. 額外擔保品折減', S.sensSvg, dataTable(['額外折減', '壓力後 EL', '擔保覆蓋率'], sres.map(p => ['−' + Math.round(p.h * 100) + '%', fmtInt(p.el1), fmtPct(p.cov1, 1)]))).replace('class="card charts"', 'class="charts" style="margin-top:8px"') : '<p class="muted">按「計算」後以 0%～50% 折減重新試算（價值未知的戶不計入）。</p>'}<div id="x-sens-msg" class="muted"></div></div>
+      <div class="card"><div class="row"><h3 class="grow" style="margin:0">集中度</h3><label style="flex-direction:row;align-items:center;gap:6px">維度<select id="x-conc"><option value="section" ${st.conc === 'section' ? 'selected' : ''}>行業大類</option><option value="div2" ${st.conc === 'div2' ? 'selected' : ''}>行業中類</option><option value="detail4" ${st.conc === 'detail4' ? 'selected' : ''}>行業細類</option><option value="group" ${st.conc === 'group' ? 'selected' : ''}>集團</option></select></label>${st.conc === 'group' ? `<label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="x-solo" ${st.solo ? 'checked' : ''}>包含獨立戶</label>` : ''}</div>
+      <p>HHI：<b>${fmtNum(hh, 0)}</b>｜前 10 名占比：<b>${fmtPct(cTot ? top10 / cTot : 0, 1)}</b>｜單位數：${fmtInt(cg.length)}</p>${st.conc === 'group' && allSolo ? '<div class="banner">目前為單戶集中度（專案未提供集團資料，V026）。</div>' : ''}${chartCard('conc', '前 10 大（基準 EAD）', S.concSvg, dataTable(['名稱', 'EAD', '占比'], cg.slice(0, 10).map(g => [esc(st.conc === 'group' ? grpLabel(g.key) : g.key), fmtInt(g.ead0), fmtPct(cTot ? g.ead0 / cTot : 0, 1)]))).replace('class="card charts"', 'class="charts"')}</div>
+      <div class="card"><div class="row"><h3 class="grow" style="margin:0">授信戶明細</h3>${st.drill ? `<span class="chip">下鑽：${LVL[st.drill.lvl][0]} ${esc(st.drill.key)} <button class="sm" id="x-undrill">✕</button></span>` : ''}<label>搜尋授信戶<input id="x-q" value="${esc(st.q)}"></label><span class="muted" id="x-n"></span></div><div id="x-vt" style="margin-top:8px"></div></div>`;
+    bindChartDownloads(V());
+    $('#x-run').onchange = e => location.hash = hashOf('results', e.target.value);
+    $('#x-lvl').onchange = e => { st.lvl = e.target.value; draw(); };
+    $('#x-conc').onchange = e => { st.conc = e.target.value; draw(); };
+    $('#x-solo') && ($('#x-solo').onchange = e => { st.solo = e.target.checked; draw(); });
+    $('#x-undrill') && ($('#x-undrill').onclick = () => { st.drill = null; draw(); });
+    const drill = k => { st.drill = { lvl: st.lvl, key: k }; draw(); $('#x-vt').scrollIntoView({ behavior: 'smooth' }); };
+    $$('tr[data-g]').forEach(tr => tr.onclick = () => drill(tr.dataset.g));
+    $('#industry svg').onclick = e => { const k = e.target.dataset?.key; if (k) drill(k); };
+    $('#top20 svg').onclick = e => { const k = e.target.closest('[data-key]')?.dataset.key; if (k) borrowerDialog(k, run, results); };
+    $('#x-sens') && ($('#x-sens').onclick = () => runSensitivity());
+    const rows = () => { const q = $('#x-q').value.trim().toLowerCase(); return results.filter(r => (!st.drill || LVL[st.drill.lvl][1](r) === st.drill.key) && (!q || String(r.borrowerId).toLowerCase().includes(q))); };
+    vt = VTable($('#x-vt'), { rows: rows(), height: 420, onCell: r => borrowerDialog(r.exposureId, run, results), cols: [
+      { key: 'borrowerId', label: '授信戶', w: 110 }, { key: 'section', label: '大類', w: 56, get: r => r.section || '未分類' }, { key: 'rating', label: '評等', w: 56 },
+      { key: 'ead0', label: 'EAD 基準', w: 110, n: true, fmt: fmtInt }, { key: 'ead1', label: 'EAD 壓力', w: 110, n: true, fmt: fmtInt },
+      { key: 'pd0', label: 'PD 基準', w: 84, n: true, fmt: v => fmtPct(v, 3) }, { key: 'pd1', label: 'PD 壓力', w: 84, n: true, fmt: v => fmtPct(v, 3) },
+      { key: 'lgd0', label: 'LGD 基準', w: 84, n: true, fmt: v => fmtPct(v, 1) }, { key: 'lgd1', label: 'LGD 壓力', w: 84, n: true, fmt: v => fmtPct(v, 1) },
+      { key: 'el0', label: 'EL 基準', w: 100, n: true, fmt: fmtInt }, { key: 'el1', label: 'EL 壓力', w: 100, n: true, fmt: fmtInt }, { key: 'dEL', label: 'ΔEL', w: 100, n: true, html: (r, v) => `<span class="${signCls(v)}">${fmtInt(v)}</span>` },
+      { key: 'lgdSource', label: 'LGD 來源', w: 140 }, { key: 'rules', label: '規則數', w: 64, n: true, get: r => r.rules.length }] });
+    const upd = () => { const r = rows(); vt.setRows(r); $('#x-n').textContent = fmtInt(r.length) + ' 筆'; }; $('#x-q').oninput = () => { st.q = $('#x-q').value; upd(); }; upd();
+    $('#x-csv').onclick = () => exportDetailCSV(run, results); $('#x-sum').onclick = () => exportSummaryCSV(run, results, T, groups, lvlName);
+    $('#x-html').onclick = () => exportHTMLReport(run, T, { mk, groups, lvlName, nameOf, completeness: completenessText(T) });
+  };
+  async function runSensitivity() {
+    const msg = $('#x-sens-msg'); $('#x-sens').disabled = true;
+    try {
+      const recs = (await getExposures(pid, true)).filter(r => !r.excluded), hash = await dataHashOf(recs);
+      if (hash !== run.sourceDataHash) throw new Error('目前資料已與此 Run 不同（雜湊不符），無法以原資料重算');
+      const slimRecs = recs.map(slim), out = [];
+      for (const h of [0, 0.1, 0.2, 0.3, 0.4, 0.5]) { msg.textContent = `計算折減 ${h * 100}%…`; await tick(); const rules = [...sc.rules, { id: '__sens', name: 'sens', filter: { all: [] }, target: 'collateralValue', method: 'haircut', value: h }]; const t = ENGINE.totals(slimRecs, rules, run.modelSnapshot); out.push({ h, el1: t.el1, cov1: t.cov1 }); }
+      sens[runId] = out; if (tk === App.token) draw();
+    } catch (e) { toast(e.message, 'err'); msg.textContent = e.message; const b = $('#x-sens'); if (b) b.disabled = false; }
+  }
+  draw();
+};
+
+async function borrowerDialog(exposureId, run, results) {
+  const res = results.find(r => r.exposureId === exposureId), rec = res && res.rowNo != null ? await DB.get('exposures', [run.projectId, res.rowNo]) : null;
+  const live = rec && rec.id === exposureId ? rec : null;
+  let body = '';
+  if (live) {
+    const trace = [], x = ENGINE.computeOne(slim(live), run.scenarioSnapshot.rules, run.modelSnapshot, trace), same = res && Math.abs(x.el1 - res.el1) < 1e-6 * Math.max(1, Math.abs(res.el1));
+    const kv = (k, v) => `<tr><td class="muted">${k}</td><td>${v}</td></tr>`;
+    body = `<div class="grid g2"><div><h3>基本資料</h3><table>${kv('授信戶', esc(live.borrowerId))}${kv('行業別原始值 → 正規化', `${esc(live.industryCodeRaw)} → ${esc(live.industryCode)}`)}${kv('制度／版本', `${esc(live.industryScheme)}／${esc(live.industryVersion)}`)}${kv('大類／中類／小類／細類', `${esc(live.industrySection || '未分類')} ${esc(secName(live.industrySection, run.industrySettings?.dgbasVersion))} / ${esc(live.industryDiv2)} / ${esc(live.industryGroup3)} / ${esc(live.industryDetail4)}`)}${kv('行業名稱', showV(live.industryName))}${kv('子類（6 碼）', showV(live.industrySub6))}${kv('評等／地區', `${esc(live.rating)}／${showV(live.region)}`)}${kv('已動用／額度／CCF', `${fmtInt(live.drawn)}／${fmtInt(live.limit)}／${showV(live.ccf, v => v)}（預設 ${run.modelSnapshot.defaultCCF}）`)}${kv('擔保品', `${esc(CT_LABEL[live.collateralTypeEffective])}／${showV(live.collateralValue, fmtInt)}`)}${kv('LGD 來源', esc(x.lgdSource))}${kv('集團', esc(grpLabel(live.concentrationKey)))}</table></div>
+    <div><h3>規則套用過程（依優先順序；條件以基準值判斷）</h3>${trace.length ? `<ol>${trace.map(t => `<li><b>${esc(t.name)}</b>：${t.skipped ? `<span class="muted">${esc(t.skipped)}</span>` : `${esc(LBL(TARGETS, t.target))} ${fmtNum(t.before, 6)} → ${fmtNum(t.after, 6)}`}</li>`).join('')}</ol>` : '<p class="muted">沒有任何規則符合此授信戶。</p>'}</div></div>
+    <h3>結果（以目前資料與規則快照重算）</h3><table><thead><tr><th></th><th class="n">基準</th><th class="n">壓力</th></tr></thead><tbody><tr><td>EAD</td><td class="n">${fmtInt(x.ead0)}</td><td class="n">${fmtInt(x.ead1)}</td></tr><tr><td>PD</td><td class="n">${fmtPct(x.pd0, 4)}</td><td class="n">${fmtPct(x.pd1, 4)}</td></tr><tr><td>LGD</td><td class="n">${fmtPct(x.lgd0, 3)}</td><td class="n">${fmtPct(x.lgd1, 3)}</td></tr><tr><td>EL = PD×LGD×EAD</td><td class="n">${fmtInt(x.el0)}</td><td class="n">${fmtInt(x.el1)}</td></tr><tr><td>ΔEL（ΔPD／ΔLGD／ΔEAD 貢獻）</td><td class="n" colspan="2">${fmtInt(x.dEL)}（${fmtInt(x.aPD)}／${fmtInt(x.aLGD)}／${fmtInt(x.aEAD)}）</td></tr></tbody></table>
+    <p class="muted">${run.mitigation ? '⚠ 此 Run 含模擬措施；上方是措施前的原始資料重算結果，僅供對照，與 Run 儲存的措施後結果不同屬正常。' : same ? '✔ 以快照重算結果與 Run 儲存值一致。' : '⚠ 重算結果與 Run 儲存值不一致（授信資料可能在執行後被修改）。'}</p>`;
+  } else body = `<p class="muted">原始授信資料已不存在（可能已清空或重新匯入），僅顯示 Run 儲存的結果。</p>` + (res ? `<pre>${esc(JSON.stringify(res, null, 1))}</pre>` : '');
+  openDialog('單戶明細：' + (res?.borrowerId || ''), body, [{ label: '關閉', value: true }]);
+}
+
+async function exportDetailCSV(run, results) {
+  const recs = new Map((await DB.exposuresOf(run.projectId)).map(r => [r.id, r]));
+  const H = ['授信戶', '行業別原始值', '行業別代碼', '制度', '版本', '子類6碼', '細類', '小類', '中類', '大類', '評等', '地區', '集團鍵', '擔保品類型(採用)', 'LGD來源', 'EAD基準', 'EAD壓力', 'PD基準', 'PD壓力', 'LGD基準', 'LGD壓力', 'EL基準', 'EL壓力', 'ΔEL', 'ΔPD貢獻', 'ΔLGD貢獻', 'ΔEAD貢獻', '套用規則數'];
+  downloadCSV(`stress_detail_${todayStr()}.csv`, H, results.map(r => { const e = recs.get(r.exposureId) || {}; return [r.borrowerId, e.industryCodeRaw, e.industryCode, e.industryScheme, e.industryVersion, e.industrySub6, r.detail4, e.industryGroup3, r.div2, r.section, r.rating, r.region, r.grp, r.collType, r.lgdSource, r.ead0, r.ead1, r.pd0, r.pd1, r.lgd0, r.lgd1, r.el0, r.el1, r.dEL, r.aPD, r.aLGD, r.aEAD, r.rules.length]; }));
+}
+function exportSummaryCSV(run, results, T, groups, lvlName) {
+  const rows = [['指標', '值'], ['情境', run.scenarioSnapshot.name], ['模型版本', run.modelVersion], ['資料雜湊', run.sourceDataHash], ['授信筆數', T.n], ['總EAD基準', T.ead0], ['總EAD壓力', T.ead1], ['EL基準', T.el0], ['EL壓力', T.el1], ['ΔEL', T.dEL], ['ΔPD貢獻', T.aPD], ['ΔLGD貢獻', T.aLGD], ['ΔEAD貢獻', T.aEAD], ['加權PD基準', T.wPD0], ['加權PD壓力', T.wPD1], ['加權LGD基準', T.wLGD0], ['加權LGD壓力', T.wLGD1], ['擔保覆蓋率基準', T.cov0], ['擔保覆蓋率壓力', T.cov1], ['受影響戶數', T.aff], ['資料完整度', completenessText(T)], ['聲明', DISCLAIMER], [], [lvlName, '戶數', 'EAD基準', 'EL基準', 'EL壓力', 'ΔEL']];
+  for (const g of groups) rows.push([g.key, g.n, g.ead0, g.el0, g.el1, g.dEL]);
+  download(`stress_summary_${todayStr()}.csv`, '\uFEFF' + rows.map(r => r.map(csvCell).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
+}
+function exportHTMLReport(run, T, c) {
+  const S = withLightTheme(c.mk);   // 報告一律用淺色主題的圖表（避免深色模式下匯出深色圖）
+  const sc = run.scenarioSnapshot, unit = run.amountUnit, k = (l, v) => `<div class="k"><div class="l">${l}</div><div class="v">${v}</div></div>`;
+  const html = `<!DOCTYPE html><html lang="zh-Hant"><head><meta charset="utf-8"><title>壓力測試管理摘要－${esc(sc.name)}</title><style>body{font:14px/1.6 "Microsoft JhengHei",Segoe UI,sans-serif;margin:24px auto;max-width:980px;color:#1b2430;padding:0 16px}h1{font-size:22px}h2{font-size:16px;border-bottom:2px solid #0f6cbd;padding-bottom:4px;margin-top:26px}.ks{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.k{border:1px solid #d9e0e8;border-radius:6px;padding:8px}.k .l{font-size:12px;color:#5c6b7d}.k .v{font-size:18px;font-weight:600}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border-bottom:1px solid #d9e0e8;padding:4px 6px;text-align:left}td.n,th.n{text-align:right}svg{max-width:100%;height:auto}.warn{background:#fff4d6;border:1px solid #a85d00;color:#a85d00;padding:8px;border-radius:6px}.disc{margin-top:30px;padding:10px;border:1px solid #d9e0e8;background:#f8fafc;font-size:12px}@media print{body{margin:0}}</style></head><body>
+<h1>企金信用風險壓力測試－管理摘要</h1><p>專案：${esc(App.project.name)}｜基準日 ${esc(App.project.reportingDate || '')}｜情境：<b>${esc(sc.name)}</b>（${esc(sc.severity)}）｜執行時間 ${fmtDT(run.startedAt)}｜單位：${esc(unit)}</p>
+${sc.isDemo ? '<p class="warn">本情境使用示範參數，非監理參數。</p>' : ''}${run.mitigation ? `<p class="warn">含模擬措施（未經核准）：${esc(run.mitigation.map(m => m.text).join('；'))}</p>` : ''}
+<div class="ks">${k('總 EAD', fmtInt(T.ead0))}${k('EL 基準', fmtInt(T.el0))}${k('EL 壓力', fmtInt(T.el1))}${k('ΔEL', fmtInt(T.dEL))}${k('加權 PD', fmtPct(T.wPD0, 3) + ' → ' + fmtPct(T.wPD1, 3))}${k('加權 LGD', fmtPct(T.wLGD0, 2) + ' → ' + fmtPct(T.wLGD1, 2))}${k('擔保覆蓋率', fmtPct(T.cov0, 1) + ' → ' + fmtPct(T.cov1, 1))}${k('受影響戶數', fmtInt(T.aff) + '／' + fmtInt(T.n))}</div>
+<h2>資料完整度</h2><p>${esc(c.completeness)}</p><h2>假設</h2><p>${esc(sc.assumptions)}</p><ol>${sc.rules.map(r => `<li>${esc(r.name)}：${esc(filterText(r.filter))} → ${esc(ruleSummary(r))}</li>`).join('')}</ol>
+<h2>損失瀑布圖</h2>${S.wf}<h2>前 20 大損失貢獻戶</h2>${S.topSvg}<h2>產業風險（${esc(c.lvlName)}）</h2>${S.bub}<table><thead><tr><th>${esc(c.lvlName)}</th><th>名稱</th><th class="n">戶數</th><th class="n">EAD</th><th class="n">EL 基準</th><th class="n">EL 壓力</th><th class="n">ΔEL</th></tr></thead><tbody>${c.groups.map(g => `<tr><td>${esc(g.key)}</td><td>${esc(c.nameOf(g.key))}</td><td class="n">${fmtInt(g.n)}</td><td class="n">${fmtInt(g.ead0)}</td><td class="n">${fmtInt(g.el0)}</td><td class="n">${fmtInt(g.el1)}</td><td class="n">${fmtInt(g.dEL)}</td></tr>`).join('')}</tbody></table>
+<h2>集中度</h2>${S.concSvg}${S.sensSvg ? `<h2>擔保品跌價敏感度</h2>${S.sensSvg}` : ''}
+<h2>可追溯資訊</h2><table><tr><td>資料雜湊（SHA-256）</td><td>${run.sourceDataHash}</td></tr><tr><td>模型版本</td><td>v${run.modelVersion}</td></tr><tr><td>行業別代碼制度／版本</td><td>${esc(JSON.stringify(run.industrySettings))}｜${esc(run.codebookVersion)}</td></tr><tr><td>程式版本</td><td>${esc(run.appVersion || APP_VERSION)}</td></tr><tr><td>執行備註</td><td>${esc(run.note)}</td></tr></table>
+<div class="disc">${DISCLAIMER}</div></body></html>`;
+  download(`stress_report_${todayStr()}.html`, html, 'text/html;charset=utf-8');
+}
+
+/* =====================================================================
+ * 情境比較
+ * ===================================================================== */
+PAGES.compare = async function () {
+  const tk = App.token, pid = App.pid, runs = (await DB.byIndex('simulationRuns', 'projectId', pid)).sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  if (tk !== App.token) return;
+  if (runs.length < 2) { V().innerHTML = '<h1>情境比較</h1>' + emptyState('至少需要 2 個 Run', '請先到「執行壓測」執行不同情境。', `<p><a href="${hashOf('run')}"><button class="primary">前往執行壓測</button></a></p>`); return; }
+  let sel = (App.cmp || []).filter(id => runs.some(r => r.id === id));
+  V().innerHTML = `<h1>情境比較</h1><div class="card"><p class="muted">勾選 2–4 個 Run 並排比較。</p><div id="c-list">${runs.map(r => `<label style="flex-direction:row;align-items:center;gap:8px;color:var(--fg);padding:3px 0"><input type="checkbox" value="${r.id}" ${sel.includes(r.id) ? 'checked' : ''}>${fmtDT(r.startedAt)}｜<b>${esc(r.scenarioSnapshot.name)}</b>｜模型 v${r.modelVersion}｜ΔEL ${fmtInt(r.totals.dEL)}｜${esc(trunc(r.note, 24))}${r.mitigation ? ' <span class="chip warn">含模擬措施</span>' : ''}</label>`).join('')}</div></div><div id="c-out"></div>`;
+  const draw = async () => {
+    const out = $('#c-out'); if (sel.length < 2) { out.innerHTML = '<p class="muted">請至少勾選 2 個 Run。</p>'; return; }
+    const rs = sel.map(id => runs.find(r => r.id === id)), warns = [];
+    if (new Set(rs.map(r => r.sourceDataHash)).size > 1) warns.push('資料雜湊不同：這些 Run 使用的授信資料不一致');
+    if (new Set(rs.map(r => r.modelVersion)).size > 1) warns.push('模型版本不同：' + [...new Set(rs.map(r => 'v' + r.modelVersion))].join('、'));
+    if (new Set(rs.map(r => r.codebookVersion + JSON.stringify(r.industrySettings))).size > 1) warns.push('行業別代碼表版本或設定不同，大類字母的意義可能不同');
+    if (rs.some(r => r.mitigation)) warns.push('其中含「模擬措施」的 Run，措施後的曝險與其他 Run 不同');
+    const gs = []; for (const r of rs) gs.push(new Map(groupSum(await loadResults(r.id), x => secOrNone(x.section)).map(g => [g.key, g])));
+    if (tk !== App.token) return;
+    const secs = [...new Set(gs.flatMap(m => [...m.keys()]))].sort(), dver = rs[0].industrySettings?.dgbasVersion;
+    const row = (l, f) => `<tr><td>${l}</td>${rs.map(f).map(v => `<td class="n">${v}</td>`).join('')}</tr>`;
+    out.innerHTML = `${warns.map(w => `<div class="banner">⚠ ${esc(w)}</div>`).join('')}<div class="card"><div class="tablewrap"><table><thead><tr><th>指標</th>${rs.map(r => `<th class="n">${esc(r.scenarioSnapshot.name)}<div class="muted" style="font-weight:400">${fmtDT(r.startedAt)}</div></th>`).join('')}</tr></thead><tbody>
+      ${row('嚴重度', r => esc(r.scenarioSnapshot.severity))}${row('授信筆數', r => fmtInt(r.exposureCount))}${row('總 EAD（基準）', r => fmtInt(r.totals.ead0))}${row('總 EAD（壓力）', r => fmtInt(r.totals.ead1))}${row('EL 基準', r => fmtInt(r.totals.el0))}${row('EL 壓力', r => fmtInt(r.totals.el1))}${row('ΔEL', r => `<b class="${signCls(r.totals.dEL)}">${fmtInt(r.totals.dEL)}</b>`)}${row('ΔEL / 基準 EL', r => r.totals.el0 ? fmtPct(r.totals.dEL / r.totals.el0, 1) : '—')}${row('ΔPD 貢獻', r => fmtInt(r.totals.aPD))}${row('ΔLGD 貢獻', r => fmtInt(r.totals.aLGD))}${row('ΔEAD 貢獻', r => fmtInt(r.totals.aEAD))}${row('加權 PD（壓力）', r => fmtPct(r.totals.wPD1, 3))}${row('加權 LGD（壓力）', r => fmtPct(r.totals.wLGD1, 2))}${row('擔保覆蓋率（壓力）', r => fmtPct(r.totals.cov1, 1))}${row('受影響戶數', r => fmtInt(r.totals.aff))}</tbody></table></div></div>
+      <div class="card"><h3>各行業大類 ΔEL</h3><div class="tablewrap"><table><thead><tr><th>大類</th>${rs.map(r => `<th class="n">${esc(r.scenarioSnapshot.name)}</th>`).join('')}</tr></thead><tbody>${secs.map(s => `<tr><td>${esc(s)} ${esc(s === '未分類' ? '' : secName(s, dver))}</td>${gs.map(m => `<td class="n ${signCls(m.get(s)?.dEL || 0)}">${m.has(s) ? fmtInt(m.get(s).dEL) : '—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+  };
+  $('#c-list').onchange = e => { const id = e.target.value; if (e.target.checked) { if (sel.length >= 4) { e.target.checked = false; return toast('最多比較 4 個 Run', 'err'); } sel.push(id); } else sel = sel.filter(x => x !== id); App.cmp = sel; draw(); };
+  draw();
+};
+
+/* =====================================================================
+ * 反向壓測
+ * ===================================================================== */
+const REV_VARS = { pdm: { label: 'PD 倍數', target: 'pd', method: 'multiply', lo: 1, hi: 20, cap: 1 }, lgda: { label: 'LGD 加點（小數）', target: 'lgd', method: 'add', lo: 0, hi: 1, cap: 1 }, coll: { label: '擔保品價值折減率', target: 'collateralValue', method: 'haircut', lo: 0, hi: 1, cap: null }, ccfa: { label: 'CCF 加點', target: 'ccf', method: 'add', lo: 0, hi: 1, cap: 1 } };
+const REV_METRICS = { dEL: 'ΔEL 金額', dELr: 'ΔEL 占基準 EAD 比例（%）', cov1: '壓力後擔保覆蓋率（%）' };
+PAGES.reverse = async function () {
+  const tk = App.token, pid = App.pid, recs = (await getExposures(pid)).filter(r => !r.excluded), scs = await getScenarios(pid), model = await latestModel(pid);
+  if (tk !== App.token) return;
+  if (!recs.length) { V().innerHTML = '<h1>反向壓測</h1>' + emptyState('尚未匯入資料', '請先匯入授信資料。'); return; }
+  const dver = App.project.industrySettings?.dgbasVersion;
+  V().innerHTML = `<h1>反向壓測</h1><div class="card"><p class="muted">設定失敗門檻，求出「要多大的衝擊才會達到門檻」。先用二分搜尋（最多 40 次、容差 0.1%）；若指標對變數不單調，改用格點掃描並提示。</p>
+    <div class="row"><label>基準情境（衝擊疊加在其上）<select id="v-scn"><option value="__none">基準（無衝擊）</option>${scs.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}</select></label>
+    <label>求解變數<select id="v-var">${Object.entries(REV_VARS).map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('')}</select></label>
+    <label>適用範圍<select id="v-sf"><option value="">全部授信戶</option><option value="industrySection">行業大類 =</option><option value="industryDiv2">行業中類 =</option><option value="rating">內部評等 =</option><option value="region">地區 =</option></select></label><label>範圍值<input id="v-sv" style="width:110px" placeholder="例如 F 或 41"></label></div>
+    <div class="row" style="margin-top:8px"><label>目標指標<select id="v-met">${Object.entries(REV_METRICS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label><label>門檻值（${esc(App.project.amountUnit)}／%）<input id="v-thr" type="number" step="any" style="width:140px"></label><label>搜尋下限<input id="v-lo" type="number" step="any" style="width:90px"></label><label>搜尋上限<input id="v-hi" type="number" step="any" style="width:90px"></label><button class="primary" id="v-go">求解</button></div><div id="v-msg" class="muted" style="margin-top:6px"></div></div><div id="v-out"></div>`;
+  const setRange = () => { const v = REV_VARS[$('#v-var').value]; $('#v-lo').value = v.lo; $('#v-hi').value = v.hi; }; setRange(); $('#v-var').onchange = setRange;
+  $('#v-go').onclick = async () => {
+    const msg = $('#v-msg'), out = $('#v-out'); out.innerHTML = '';
+    try {
+      const vv = REV_VARS[$('#v-var').value], sid = $('#v-scn').value, base = sid === '__none' ? [] : await getRules(sid), met = $('#v-met').value, thrIn = Number($('#v-thr').value), lo = Number($('#v-lo').value), hi = Number($('#v-hi').value);
+      if ($('#v-thr').value === '' || !isFinite(thrIn)) throw new Error('請輸入門檻值'); if (!(hi > lo)) throw new Error('搜尋上限必須大於下限');
+      const sf = $('#v-sf').value, sval = $('#v-sv').value.trim(); if (sf && !sval) throw new Error('請輸入適用範圍的值');
+      const filter = sf ? { all: [{ field: sf, op: 'eq', value: sval }] } : { all: [] }, thr = met === 'dEL' ? thrIn : thrIn / 100, slimRecs = recs.map(slim);
+      const ruleAt = x => ({ id: '__rev', name: '反向壓測變數', filter, target: vv.target, method: vv.method, value: x, cap: vv.cap });
+      const metric = t => met === 'dEL' ? t.dEL : met === 'dELr' ? (t.ead0 ? t.dEL / t.ead0 : 0) : t.cov1;
+      let it = 0; $('#v-go').disabled = true;
+      const r = await reverseSearch(async x => { await tick(); msg.textContent = `第 ${++it} 次計算…`; return metric(ENGINE.totals(slimRecs, [...base, ruleAt(x)], model.params)); }, lo, hi, thr, { yield: true });
+      msg.textContent = '';
+      if (tk !== App.token) return;
+      const fmtM = v => met === 'dEL' ? fmtInt(v) : fmtPct(v, 3);
+      if (!r.found) { out.innerHTML = `<div class="banner">${r.warn.map(esc).join('<br>') || '找不到穿越門檻的解'}</div>` + pathTable(r.path, fmtM, vv); await audit('REVERSE_STRESS', 'reverse', pid, null, { variable: vv.label, metric: met, thr, found: false }, ''); return; }
+      const rules = [...base, ruleAt(r.x)], t = ENGINE.totals(slimRecs, rules, model.params), res = ENGINE.runBatch(slimRecs, rules, model.params, 0, slimRecs.length);
+      const err = Math.abs(metric(t) - thr), tolOk = err <= Math.abs(thr) * 0.001 + 1e-9, topB = res.slice().sort((a, b) => b.dEL - a.dEL).slice(0, 5), topS = groupSum(res, x => secOrNone(x.section)).sort((a, b) => b.dEL - a.dEL).slice(0, 5);
+      out.innerHTML = `${r.warn.map(w => `<div class="banner">⚠ ${esc(w)}</div>`).join('')}<div class="card"><h2 style="margin-top:0">臨界值：${esc(vv.label)} = <span class="up">${fmtNum(r.x, 4)}</span>${sf ? `（範圍：${esc(sf)} = ${esc(sval)}）` : ''}</h2><p>代回正向計算：${esc(REV_METRICS[met])} = <b>${fmtM(metric(t))}</b>，與門檻 ${fmtM(thr)} 的誤差 ${fmtM(err)}　${tolOk ? '<span class="chip">✔ 在容差內</span>' : '<span class="chip warn">超出容差（格點模式）</span>'}</p>
+      <div class="kpis">${kpi('ΔEL', fmtInt(t.dEL), '', signCls(t.dEL))}${kpi('EL 壓力', fmtInt(t.el1))}${kpi('ΔEL / EAD', fmtPct(t.ead0 ? t.dEL / t.ead0 : 0, 3))}${kpi('擔保覆蓋率（壓力）', fmtPct(t.cov1, 1), '基準 ' + fmtPct(t.cov0, 1))}</div>
+      <div class="grid g2"><div><h3>受影響最大的行業大類</h3><table><tbody>${topS.map(g => `<tr><td>${esc(g.key)} ${esc(g.key === '未分類' ? '' : secName(g.key, dver))}</td><td class="n">${fmtInt(g.dEL)}</td></tr>`).join('')}</tbody></table></div><div><h3>損失最大的授信戶</h3><table><tbody>${topB.map(g => `<tr><td>${esc(g.borrowerId)}</td><td class="n">${fmtInt(g.dEL)}</td></tr>`).join('')}</tbody></table></div></div></div>${pathTable(r.path, fmtM, vv)}`;
+      await audit('REVERSE_STRESS', 'reverse', pid, null, { variable: vv.label, metric: met, thr, scope: sf ? `${sf}=${sval}` : '全部', critical: r.x, mode: r.mode }, '');
+    } catch (e) { toast(e.message, 'err'); msg.textContent = e.message; } finally { const b = $('#v-go'); if (b) b.disabled = false; }
+  };
+  function pathTable(path, fmtM, vv) { return `<div class="card"><h3>搜尋路徑</h3><div class="tablewrap"><table><thead><tr><th class="n">#</th><th class="n">${esc(vv.label)}</th><th class="n">指標</th></tr></thead><tbody>${path.map((p, i) => `<tr><td class="n">${i + 1}</td><td class="n">${fmtNum(p.x, 5)}</td><td class="n">${fmtM(p.v)}</td></tr>`).join('')}</tbody></table></div></div>`; }
+};
+
+/* =====================================================================
+ * 風險抵減模擬
+ * ===================================================================== */
+const MIT_TYPES = { cutLimit: '降低額度', addCollateral: '增提擔保', exit: '出清／收回曝險', sectorCap: '產業限額' };
+const MIT_FIELDS = [['', '全部授信戶'], ['industrySection', '行業大類'], ['industryDiv2', '行業中類'], ['rating', '內部評等'], ['region', '地區'], ['groupId', '集團代號'], ['collateralTypeEffective', '擔保品類型']];
+function applyMitigation(recs, measures, M) {
+  const out = recs.map(r => ({ ...r }));
+  const eadOf = r => r.drawn + (r.ccf ?? M.defaultCCF) * Math.max(0, r.limit - r.drawn);
+  const scale = (r, f) => { r.drawn *= f; r.limit *= f; if (r.collateralValue != null) r.collateralValue *= f; };   // 收回曝險時擔保品按比例一併釋出，避免高估抵減效果
+  for (const m of measures) {
+    const match = r => !m.filter || ENGINE.matchCond(m.filter, f => r[f]);
+    if (m.type === 'cutLimit') { for (const r of out) if (match(r)) r.limit = Math.max(r.drawn, r.limit * (1 - m.pct)); }
+    if (m.type === 'exit') { for (const r of out) if (match(r)) scale(r, 1 - m.pct); }
+    if (m.type === 'addCollateral') {
+      for (const r of out) if (match(r)) {
+        const b = ENGINE.computeOne(r, [], M), add = ENGINE.recov(m.amount, m.ctype, M);   // 新增擔保品的可回收價值
+        r.lgd = b.ead0 > 0 ? Math.max(0, b.lgd0 - add / b.ead0) : b.lgd0;                  // 以既有 LGD 扣除新增的回收覆蓋，不會因增提擔保而反向升高
+        const keepType = r.collateralTypeEffective && !['NONE', 'UNKNOWN'].includes(r.collateralTypeEffective);
+        if (!keepType) r.collateralTypeEffective = m.ctype;
+        r.collateralValue = (r.collateralValue ?? 0) + m.amount;
+      }
+    }
+    if (m.type === 'sectorCap') { const hit = out.filter(match), tot = hit.reduce((s, r) => s + eadOf(r), 0); if (tot > m.cap && tot > 0) { const f = m.cap / tot; for (const r of hit) scale(r, f); } }
+  }
+  return out;
+}
+PAGES.mitigation = async function () {
+  const tk = App.token, pid = App.pid, recs = (await getExposures(pid)).filter(r => !r.excluded), scs = await getScenarios(pid), model = await latestModel(pid), M = (App.mit ||= {});
+  if (tk !== App.token) return;
+  M[pid] ||= []; const measures = M[pid], dver = App.project.industrySettings?.dgbasVersion;
+  if (!recs.length) { V().innerHTML = '<h1>抵減模擬</h1>' + emptyState('尚未匯入資料', '請先匯入授信資料。'); return; }
+  V().innerHTML = `<h1>風險抵減模擬</h1><div class="banner">以下皆為<b>模擬措施，未經核准</b>，不代表已核准或已執行。增提擔保時，該戶 LGD 會扣除新增擔保品的可回收覆蓋（不會反向升高）；出清與限額措施會按相同比例一併釋出擔保品。</div>
+    <div class="card"><div class="row"><label>壓力情境<select id="m-scn">${scs.map(s => `<option value="${s.id}">${esc(s.name)}</option>`).join('')}<option value="__none">基準（無衝擊）</option></select></label><button class="primary" id="m-add">＋ 新增措施</button><button class="primary" id="m-go" ${measures.length ? '' : 'disabled'}>比較措施前後</button></div>
+    <ul id="m-list">${measures.map((m, i) => `<li>${esc(m.text)} <button class="sm danger" data-rm="${i}">✕</button></li>`).join('') || '<li class="muted">尚未新增措施。</li>'}</ul></div><div id="m-out"></div>`;
+  $('#m-add').onclick = async () => {
+    const body = `<label>措施類型<select id="a-t">${Object.entries(MIT_TYPES).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></label><div class="row" style="margin-top:8px"><label>適用對象欄位<select id="a-f">${MIT_FIELDS.map(([k, l]) => `<option value="${k}">${l}</option>`).join('')}</select></label><label>值<input id="a-v" placeholder="例如 F 或 41"></label></div><div id="a-p" class="row" style="margin-top:8px"></div>`;
+    const x = await openDialog('新增模擬措施', body, [{ label: '取消', value: null }, { label: '加入', cls: 'primary', action: d => {
+      const t = $('#a-t', d).value, f = $('#a-f', d).value, v = $('#a-v', d).value.trim(); if (f && !v) { toast('請輸入適用對象的值', 'err'); return false; }
+      const m = { type: t, filter: f ? { field: f, op: 'eq', value: v } : null }; const scope = f ? `${LBL(MIT_FIELDS, f)}=${v}` : '全部授信戶';
+      if (t === 'cutLimit' || t === 'exit') { m.pct = Number($('#a-pct', d).value) / 100; if (!(m.pct > 0 && m.pct <= 1)) { toast('比例必須介於 0–100%', 'err'); return false; } m.text = `${MIT_TYPES[t]}：${scope}，${t === 'cutLimit' ? '額度降低' : '曝險收回'} ${(m.pct * 100).toFixed(0)}%`; }
+      if (t === 'addCollateral') { m.amount = Number($('#a-amt', d).value); m.ctype = $('#a-ct', d).value; if (!(m.amount > 0)) { toast('金額必須大於 0', 'err'); return false; } m.text = `增提擔保：${scope}，每戶增加 ${fmtInt(m.amount)}（${CT_LABEL[m.ctype]}）`; }
+      if (t === 'sectorCap') { if (!f) { toast('產業限額需指定適用對象', 'err'); return false; } m.cap = Number($('#a-cap', d).value); if (!(m.cap >= 0)) { toast('上限不合法', 'err'); return false; } m.text = `限額：${scope} 的 EAD 上限 ${fmtInt(m.cap)}（超過部分按比例縮減）`; }
+      return m; } }], d => {
+      const upd = () => { const t = $('#a-t', d).value; $('#a-p', d).innerHTML = t === 'cutLimit' || t === 'exit' ? `<label>${t === 'cutLimit' ? '額度降幅' : '收回比例'}（%）<input id="a-pct" type="number" value="20" style="width:100px"></label>` : t === 'addCollateral' ? `<label>每戶增加擔保品金額<input id="a-amt" type="number" value="10000000" style="width:140px"></label><label>擔保品類型<select id="a-ct">${['RE', 'DEPOSIT', 'SECURITIES', 'GUARANTEE'].map(c => `<option value="${c}">${CT_LABEL[c]}</option>`).join('')}</select></label>` : `<label>EAD 上限<input id="a-cap" type="number" value="1000000000" style="width:160px"></label>`; };
+      $('#a-t', d).onchange = upd; upd(); });
+    if (x) { measures.push(x); render(); }
+  };
+  $('#m-list').onclick = e => { const i = e.target.dataset.rm; if (i != null) { measures.splice(+i, 1); render(); } };
+  $('#m-go').onclick = async () => {
+    const sid = $('#m-scn').value, sc = sid === '__none' ? NONE_SCENARIO : scs.find(s => s.id === sid), rules = sid === '__none' ? [] : await getRules(sid), out = $('#m-out'); out.innerHTML = '<p class="muted">計算中…</p>'; await tick();
+    const slimRecs = recs.map(slim), after = applyMitigation(slimRecs, measures, model.params);
+    const rb = ENGINE.runBatch(slimRecs, rules, model.params, 0, slimRecs.length), ra = ENGINE.runBatch(after, rules, model.params, 0, after.length), tb = sumResults(rb), ta = sumResults(ra);
+    const row = (l, a, b, f, inv) => { const d = b - a; return `<tr><td>${l}</td><td class="n">${f(a)}</td><td class="n">${f(b)}</td><td class="n ${inv ? (d > 0 ? 'down' : d < 0 ? 'up' : '') : signCls(d)}">${d > 0 ? '+' : ''}${f(d)}</td></tr>`; };
+    const gb = new Map(groupSum(rb, x => secOrNone(x.section)).map(g => [g.key, g])), ga = new Map(groupSum(ra, x => secOrNone(x.section)).map(g => [g.key, g])), keys = [...new Set([...gb.keys(), ...ga.keys()])].sort();
+    out.innerHTML = `<div class="card"><h3>措施前後比較（情境：${esc(sc.name)}）<span class="chip warn">模擬措施，未經核准</span></h3><table><thead><tr><th>指標</th><th class="n">措施前</th><th class="n">措施後</th><th class="n">變化</th></tr></thead><tbody>${row('總 EAD（基準）', tb.ead0, ta.ead0, fmtInt)}${row('總 EAD（壓力）', tb.ead1, ta.ead1, fmtInt)}${row('EL 基準', tb.el0, ta.el0, fmtInt)}${row('壓力後 EL', tb.el1, ta.el1, fmtInt)}${row('ΔEL', tb.dEL, ta.dEL, fmtInt)}${row('擔保覆蓋率（壓力）', tb.cov1, ta.cov1, v => fmtPct(v, 2), true)}</tbody></table><p>剩餘風險（措施後壓力 EL）：<b>${fmtInt(ta.el1)}</b>，較措施前${tb.el1 >= ta.el1 ? '減少' : '增加'} <b class="${tb.el1 >= ta.el1 ? 'down' : 'up'}">${fmtInt(Math.abs(tb.el1 - ta.el1))}</b>。</p></div>
+      <div class="card"><h3>各行業大類壓力後 EL</h3><div class="tablewrap"><table><thead><tr><th>大類</th><th class="n">措施前</th><th class="n">措施後</th><th class="n">變化</th></tr></thead><tbody>${keys.map(k => { const a = gb.get(k)?.el1 || 0, b = ga.get(k)?.el1 || 0; return `<tr><td>${esc(k)} ${esc(k === '未分類' ? '' : secName(k, dver))}</td><td class="n">${fmtInt(a)}</td><td class="n">${fmtInt(b)}</td><td class="n ${b - a < 0 ? 'down' : b - a > 0 ? 'up' : ''}">${fmtInt(b - a)}</td></tr>`; }).join('')}</tbody></table></div></div><div class="row"><button id="m-save">將「措施後」儲存為 Run</button></div>`;
+    $('#m-save').onclick = async () => {
+      const note = await openDialog('儲存為 Run', '<label>備註（必填）<input id="sn" value="模擬措施後"></label>', [{ label: '取消', value: null }, { label: '儲存', cls: 'primary', action: d => $('#sn', d).value.trim() || false }]); if (!note) return;
+      const run = await executeRun({ scenario: sc, rules, model, note: '【模擬措施，未經核准】' + note, recs: after, hashRecs: slimRecs, totalCount: (await getExposures(pid)).length, mitigation: measures.map(m => ({ type: m.type, text: m.text })) }); toast('已儲存'); location.hash = hashOf('results', run.id);
+    };
+    await audit('MITIGATION_SIM', 'mitigation', pid, null, { scenario: sc.name, measures: measures.map(m => m.text), elBefore: tb.el1, elAfter: ta.el1 }, '');
+  };
+};
+
+/* =====================================================================
+ * 稽核紀錄
+ * ===================================================================== */
+PAGES.audit = async function () {
+  const tk = App.token, logs = (await DB.byIndex('auditLogs', 'projectId', App.pid)).sort((a, b) => b.ts.localeCompare(a.ts)), acts = [...new Set(logs.map(l => l.action))].sort();
+  if (tk !== App.token) return;
+  V().innerHTML = `<div class="row"><h1 class="grow">稽核紀錄</h1><button id="a-csv">匯出 CSV</button></div><div class="row" style="margin-bottom:8px"><label>動作<select id="a-act"><option value="">全部</option>${acts.map(a => `<option>${esc(a)}</option>`).join('')}</select></label><label>關鍵字<input id="a-q"></label><span class="muted" id="a-n"></span></div><div class="card"><div class="tablewrap" style="max-height:640px"><table><thead><tr><th>時間</th><th>動作</th><th>對象</th><th>內容</th><th>備註</th></tr></thead><tbody id="a-body"></tbody></table></div></div>`;
+  const f = () => { const a = $('#a-act').value, q = $('#a-q').value.trim().toLowerCase(), r = logs.filter(l => (!a || l.action === a) && (!q || JSON.stringify(l).toLowerCase().includes(q))); $('#a-n').textContent = `${r.length} 筆（最多顯示 500 筆）`; $('#a-body').innerHTML = r.slice(0, 500).map(l => `<tr><td style="white-space:nowrap">${fmtDT(l.ts)}</td><td><span class="chip">${esc(l.action)}</span></td><td>${esc(l.entity)}</td><td style="max-width:520px;word-break:break-all;font-size:12px">${esc(trunc(JSON.stringify(l.after ?? l.before ?? ''), 220))}</td><td>${esc(l.note)}</td></tr>`).join(''); return r; };
+  $('#a-act').onchange = f; $('#a-q').oninput = f; f();
+  $('#a-csv').onclick = () => downloadCSV(`audit_${todayStr()}.csv`, ['時間', '動作', '對象', '對象ID', '之前', '之後', '備註'], logs.map(l => [l.ts, l.action, l.entity, l.entityId, JSON.stringify(l.before), JSON.stringify(l.after), l.note]));
+};
+
+/* =====================================================================
+ * 設定
+ * ===================================================================== */
+const LEVEL_ALIAS = { '大類': 'SECTION', '中類': 'DIV', '小類': 'GROUP', '細類': 'DETAIL', '子類': 'SUB', section: 'SECTION', div: 'DIV', division: 'DIV', group: 'GROUP', detail: 'DETAIL', sub: 'SUB' };
+const normCbVersion = (s, def) => { const t = String(s ?? '').trim(); if (!t) return def; if (/mof|財|稅/i.test(t)) return 'MOF_9'; if (/12/.test(t)) return 'DGBAS_12'; if (/11/.test(t)) return 'DGBAS_11'; return t; };
+async function importCodebookCSV(text, defVersion) {
+  const rows = parseDelimited(text); if (rows.length < 2) throw new Error('沒有資料列');
+  const hdr = rows[0].map(normHdr), col = names => hdr.findIndex(h => names.includes(h)), ic = col(['代碼', 'code']), il = col(['層級', 'level']), inm = col(['名稱', 'name', '行業名稱']), iv = col(['版本', 'version']), ip = col(['上層代碼', 'parentcode', 'parent']);
+  if (ic < 0) throw new Error('找不到「代碼」欄位（欄名需為：代碼、層級、名稱、版本、上層代碼）');
+  const out = [];
+  for (const r of rows.slice(1)) {
+    let code = toHalf(String(r[ic] ?? '')).trim().replace(/[\s\-.]/g, ''); if (!code) continue;
+    let ver = normCbVersion(iv >= 0 ? r[iv] : '', defVersion); code = /^[A-Za-z]$/.test(code) ? code.toUpperCase() : code;
+    let lv = il >= 0 ? LEVEL_ALIAS[String(r[il] ?? '').trim().toLowerCase()] || LEVEL_ALIAS[String(r[il] ?? '').trim()] : null;
+    if (!lv) lv = /^[A-Z]$/.test(code) ? 'SECTION' : { 2: 'DIV', 3: 'GROUP', 4: 'DETAIL', 6: 'SUB' }[code.length];
+    if (!lv) continue;
+    if (lv === 'SUB') ver = 'MOF_9'; else if (ver === 'MOF_9') ver = 'DGBAS_11';   // 6 碼子類只屬財稅；財稅前 4 碼對應主計第 11 次
+    let parent = ip >= 0 && r[ip] ? r[ip].trim().toUpperCase() : null;
+    if (lv === 'DIV' && !parent) parent = (DIV_RANGES[ver] || DIV_RANGES.DGBAS_11).find(([, a, b]) => +code >= a && +code <= b)?.[0] || null;
+    out.push({ version: ver, code, level: lv, name: inm >= 0 ? (r[inm] || '').trim() || null : null, parentCode: parent, source: 'USER_IMPORT' });
+  }
+  if (!out.length) throw new Error('沒有可匯入的代碼');
+  await DB.putMany('industryCodebooks', out); await DB.put('meta', { key: 'userCbStamp', value: Date.now() }); await loadCodebooks(); return out.length;
+}
+PAGES.settings = async function () {
+  const tk = App.token, est = navigator.storage?.estimate ? await navigator.storage.estimate().catch(() => null) : null, persisted = navigator.storage?.persisted ? await navigator.storage.persisted().catch(() => false) : false;
+  const gl = (await DB.getAll('auditLogs')).filter(l => !l.projectId).sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, 30);
+  if (tk !== App.token) return;
+  const cbRows = Object.entries(CB.counts).map(([k, n]) => { const [v, l, s] = k.split('|'); return [v, l, s, n]; }).sort();
+  V().innerHTML = `<h1>設定</h1><div class="grid g2"><div class="card"><h3>外觀</h3><div class="row"><button id="t-l">淺色</button><button id="t-d">深色</button></div></div>
+    <div class="card"><h3>儲存空間</h3><p>用量：${est ? `${(est.usage / 1048576).toFixed(1)} MB／配額 ${(est.quota / 1048576).toFixed(0)} MB` : '無法取得'}<br>持久化：${persisted ? '<span class="chip">已啟用</span>' : '<span class="chip warn">未啟用</span>'} ${persisted ? '' : '<button class="sm" id="s-persist">申請持久化</button>'}</p><p class="muted" style="font-size:12px">瀏覽器清除網站資料時，這裡的專案也會消失，請定期匯出備份。</p></div></div>
+    <div class="card"><h3>行業別代碼表（${esc(BUILTIN_CB_VERSION)}）</h3><p class="muted">內建：第 11 次（19 大類）與第 12 次（20 大類，依 114/8/18 草案整理）的大類名稱，以及「中類 → 大類」範圍對照。中類編碼與 ISIC 不同（例如食品製造為 08、製造業 C 為 08–34）。G 大類範圍 45–48 內的 46、47 是否使用中無法確認，一律歸入 G；細類／子類名稱未內建。匯入官方代碼表（CSV）會覆蓋同版本同代碼的內建項目，並在下次開啟專案時自動重新歸類。</p>
+    <table><thead><tr><th>版本</th><th>層級</th><th>來源</th><th class="n">筆數</th></tr></thead><tbody>${cbRows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td><td>${r[2] === 'BUILTIN' ? '內建' : '使用者匯入'}</td><td class="n">${r[3]}</td></tr>`).join('')}</tbody></table>
+    <div class="row" style="margin-top:8px"><label>預設版本（CSV 無版本欄時）<select id="cb-v"><option>DGBAS_11</option><option>DGBAS_12</option><option>MOF_9</option></select></label><label>代碼表 CSV（欄位：代碼、層級、名稱、版本、上層代碼）<input type="file" id="cb-f" accept=".csv,.txt"></label><button id="cb-clear" class="danger">清除匯入的代碼表</button></div></div>
+    <div class="card"><h3>備份與還原</h3><div class="row"><button id="b-all">匯出全庫備份</button><button id="b-res">還原備份…</button><input type="file" id="b-f" accept=".json" hidden></div></div>
+    <div class="card"><h3>全域稽核（非專案層級）</h3>${gl.length ? `<table><tbody>${gl.map(l => `<tr><td>${fmtDT(l.ts)}</td><td>${esc(l.action)}</td><td>${esc(trunc(JSON.stringify(l.after ?? l.before ?? ''), 120))}</td></tr>`).join('')}</tbody></table>` : '<p class="muted">無紀錄</p>'}</div>
+    <div class="card"><h3>關於</h3><p>Corporate Stress Lab v${APP_VERSION}｜Schema v${DB_VERSION}。單一 HTML 檔，不使用 CDN、外部字型或 API Key；內容安全政策（CSP）禁止所有對外連線（connect-src 'none'）。</p>
+    <details><summary style="cursor:pointer">v1.2.1 修正摘要</summary><ul><li>修正內建行業代碼對照：製造業中類 08、09（食品、飲料）原被歸為礦業，G／H／O 大類的中類範圍也不完整；新增第 12 次修正（20 大類）。</li><li>修正含模擬措施的 Run 其資料雜湊與敏感度；出清／限額措施會一併釋出擔保品。</li><li>修正複製專案（不含曝險）的筆數統計、還原備份後的舊資料快取、10 萬筆以上備份匯出失敗、台灣時區日期差一天、報告在深色模式匯出深色圖。</li><li>規則編輯器：衝擊數值留白不再被當成 0；條件值比對不分大小寫。範本改以中類設定條件。</li></ul></details><p class="muted">${DISCLAIMER}</p></div>
+    <div class="card"><h3 class="up">危險區</h3><button class="danger" id="s-wipe">清除所有資料</button></div>`;
+  $('#t-l').onclick = () => { applyTheme('light'); render(); }; $('#t-d').onclick = () => { applyTheme('dark'); render(); };
+  $('#s-persist') && ($('#s-persist').onclick = async () => { const ok = await navigator.storage.persist(); toast(ok ? '已啟用持久化' : '瀏覽器未允許持久化'); render(); });
+  $('#cb-f').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const n = await importCodebookCSV(decodeBuffer(await f.arrayBuffer(), 'auto').text, $('#cb-v').value); await audit('CODEBOOK_IMPORT', 'codebook', '', null, { file: f.name, rows: n }, '', null); toast(`已匯入 ${n} 筆代碼；開啟專案時會自動重新歸類行業別`); render(); } catch (err) { toast('匯入失敗：' + err.message, 'err'); } };
+  $('#cb-clear').onclick = async () => { if (!(await confirmDlg('清除匯入的代碼表', '將刪除所有使用者匯入的代碼，內建項目保留。'))) return; const all = await DB.getAll('industryCodebooks'); for (const e of all.filter(x => x.source === 'USER_IMPORT')) await DB.del('industryCodebooks', [e.version, e.code]); await DB.del('meta', 'builtinCodebookVersion'); await ensureBuiltinCodebook(); await DB.put('meta', { key: 'userCbStamp', value: Date.now() }); await loadCodebooks(); toast('已清除'); render(); };
+  $('#b-all').onclick = async () => { const ps = await DB.getAll('projects'); await exportBackup(ps.map(p => p.id), {}, `CSLab_full_${todayStr()}.cslab.json`); toast('已匯出'); };
+  $('#b-res').onclick = () => $('#b-f').click();
+  $('#b-f').onchange = async e => { const f = e.target.files[0]; if (!f) return; try { const d = JSON.parse(await f.text()); validateBackup(d); const mode = await openDialog('還原備份', `<p>備份含 ${d.projects.length} 個專案。</p>`, [{ label: '取消', value: null }, { label: '覆蓋', cls: 'danger', value: 'overwrite' }, { label: '另存為新專案', cls: 'primary', value: 'new' }]); if (!mode) return; await importBackup(d, mode); await audit('BACKUP_RESTORE', 'backup', '', null, { mode, projects: d.projects.length }, f.name, null); toast('還原完成'); location.hash = '#/projects'; } catch (err) { toast('還原失敗：' + err.message, 'err'); } };
+  $('#s-wipe').onclick = async () => { if (!(await confirmDlg('清除所有資料', '將刪除本工具在此瀏覽器中的所有專案、Run、稽核與匯入的代碼表，無法復原。', { typed: '清除', okLabel: '全部清除' }))) return; DB.db.close(); await new Promise(r => { const q = indexedDB.deleteDatabase(DB_NAME); q.onsuccess = q.onerror = q.onblocked = () => r(); }); App.pid = null; App.project = null; invalidateCaches(); await DB.open(); await ensureBuiltinCodebook(); await loadCodebooks(); toast('已清除所有資料'); location.hash = '#/projects'; render(); };
+};
+
+/* =====================================================================
+ * 啟動
+ * ===================================================================== */
+(async function main() {
+  initTheme();
+  window.addEventListener('unhandledrejection', e => { console.error(e.reason); toast('發生未預期的錯誤：' + (e.reason?.message || e.reason), 'err'); });
+  window.addEventListener('error', e => { if (e.message && !/ResizeObserver/.test(e.message)) toast('發生未預期的錯誤：' + e.message, 'err'); });
+  try {
+    await DB.open(); await ensureBuiltinCodebook(); await loadCodebooks();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  } catch (e) { V().innerHTML = `<div class="banner">無法初始化 IndexedDB：${esc(e.message)}。請使用 Edge／Chrome 並確認未在無痕模式或停用網站資料。</div>`; return; }
+  if (window.__CSL_TEST__) window.__CSL = { DB, App, ENGINE, Runner, normalizeIndustry, normalizeRow, validateAll, parseDelimited, parseNumber, reverseSearch, sumResults, groupSum, applyMitigation, executeRun, demoCSV, SHA, sha256Hex, DEFAULT_MODEL, TEMPLATES, createProject, createScenario, getRules, getExposures, autoMap, FIELDS, CB, todayStr, fmtInt, pushAll, decodeBuffer, cbStamp, secName, DIV_RANGES, ensureBuiltinCodebook, loadCodebooks, slim };
+  if (!location.hash) location.hash = '#/projects'; else await render();
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style></body>
+</html>
