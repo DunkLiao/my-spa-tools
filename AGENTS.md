@@ -41,18 +41,21 @@ my-spa-tools/
 │  ├─ corporate-stress-lab/      企金壓測沙盒（情境設計、執行、比較、反向壓測與抵減）
 │  ├─ credit-sa-sentinel/        信用標準法異常哨兵（暴險匯入、異常中心與規則管理）
 │  ├─ issuer-classifier/         債券發行人分類器（規則與名單判定、批次與覆核）
-│  └─ reconciliation-lab/        資料勾稽工作台（專案、Key、欄位對應與比對規則）
+│  ├─ reconciliation-lab/        資料勾稽工作台（專案、Key、欄位對應與比對規則）
+│  └─ rule-forge/                監理檢核規則鑄造台（規則、缺失、欄位字典、Value Set、版本與 Oracle SQL 匯出）
 ├─ sql/                          SQL 工具（每個工具一個子資料夾）
 │  ├─ sql-catalog/  sql-compare/  oracle-sql-formatter/
 │  ├─ sql-pii-cleaner/  sql-lineage-analyzer/
 │  ├─ sql-lab/                    SQL Lab 離線 SQL 測試工具（沙箱、匯入與測試案例）
-│  └─ schema-studio/             Schema Studio SQL 欄位映射與 DDL 產生器
+│  ├─ schema-studio/             Schema Studio SQL 欄位映射與 DDL 產生器
+│  └─ cte-builder-pro/           CTE 組裝工作台（WITH 積木、相依檢查、清單資料、版本與 SQL 匯出）
 ├─ data/                         資料工具
 │  ├─ matrix-pivot/              表格矩陣轉置與格式轉換器
 │  ├─ csv-cleaner/               CSV 格式清理器（含 Big5／CP950 讀寫）
 │  ├─ api-mock-studio/           API Mock 與 cURL 格式轉換工作室
 │  ├─ data-quality-audit/        資料品質稽核中心（CSV／Excel 匯入、欄位剖析與規則檢核）
 │  ├─ data-relationship-explorer/ 資料關聯探索器（主外鍵推測、ER 圖與路徑／影響分析）
+│  ├─ schema-detective/          資料表結構偵探（DDL 匯入、Snapshot 比較、欄位反查與關聯）
 │  ├─ excel-formula-map/         Excel 公式地圖（公式解析、依賴圖、熱區、循環與風險掃描）
 │  ├─ pdf-table-rescue/          PDF 表格救援站（PDF 表格框選、欄線校正、OCR 與批次匯出）
 │  ├─ pq-debugger/               PQ Debugger Power Query M 除錯工具（12 條規則、流程圖與修正）
@@ -159,7 +162,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 78 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 81 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

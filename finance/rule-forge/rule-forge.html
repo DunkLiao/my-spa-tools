@@ -1,0 +1,2142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Rule Forge｜監理檢核規則鑄造台</title>
+<style>
+:root{
+  --bg:#f4f5f8;--panel:#fff;--panel2:#f8f9fc;--text:#1d2433;--muted:#6b7488;--line:#dfe3ec;
+  --brand:#3b5bdb;--brand-d:#2f49b0;--brand-s:#e7ecff;--ok:#2b8a3e;--ok-s:#e3f6e8;
+  --warn:#b26a00;--warn-s:#fff3d6;--err:#c92a2a;--err-s:#ffe3e3;--info:#1971c2;--info-s:#e1efff;
+  --code-bg:#0f1629;--code-fg:#e6eaf5;--c-kw:#7aa2ff;--c-str:#9be28f;--c-cm:#7d8bad;--c-par:#ffc66b;
+  --radius:8px;--shadow:0 1px 3px rgba(20,30,60,.08),0 4px 14px rgba(20,30,60,.05);
+}
+[data-theme="dark"]{
+  --bg:#12151d;--panel:#1b2030;--panel2:#212840;--text:#e7eaf3;--muted:#98a2bb;--line:#2e3650;
+  --brand:#748ffc;--brand-d:#91a7ff;--brand-s:#262f55;--ok:#69db7c;--ok-s:#1d3a27;
+  --warn:#ffc078;--warn-s:#3d3017;--err:#ff8787;--err-s:#431f24;--info:#74c0fc;--info-s:#1b3248;
+  --code-bg:#0a0e1a;--shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;font:14px/1.5 "Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--brand);text-decoration:none;cursor:pointer}a:hover{text-decoration:underline}
+#app{display:grid;grid-template-columns:208px 1fr;grid-template-rows:52px 1fr;height:100vh}
+header.top{grid-column:1/3;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+header.top .logo{font-weight:700;font-size:16px;letter-spacing:.3px}
+header.top .logo span{color:var(--brand)}
+header.top .sp{flex:1}
+nav.side{background:var(--panel);border-right:1px solid var(--line);padding:10px 8px;overflow:auto}
+nav.side a{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;color:var(--text);margin-bottom:2px}
+nav.side a:hover{background:var(--panel2);text-decoration:none}
+nav.side a.on{background:var(--brand-s);color:var(--brand-d);font-weight:600}
+nav.side a .n{margin-left:auto;font-size:11px;color:var(--muted)}
+main#main{overflow:auto;padding:18px 22px 60px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:0 0 10px}h3{font-size:14px;margin:14px 0 6px}
+.sub{color:var(--muted);margin:0 0 14px}
+.muted{color:var(--muted)}.small{font-size:12px}.mono{font-family:Consolas,"Courier New",monospace}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.row.sp{justify-content:space-between}
+.grow{flex:1;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card>h2:first-child{display:flex;align-items:center;gap:8px}
+.grid{display:grid;gap:12px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g4{grid-template-columns:repeat(4,1fr)}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px}
+.stat b{display:block;font-size:26px;line-height:1.1}.stat span{color:var(--muted);font-size:12px}
+.btn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:var(--panel);padding:5px 11px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}.btn.primary:hover{background:var(--brand-d)}
+.btn.danger{color:var(--err)}.btn.danger:hover{border-color:var(--err)}
+.btn.sm{padding:2px 8px;font-size:12px}.btn.ghost{border-color:transparent;background:transparent}
+.btn[disabled]{opacity:.45;pointer-events:none}
+input[type=text],input[type=search],input[type=number],select,textarea{width:100%;padding:5px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--brand);box-shadow:0 0 0 2px var(--brand-s)}
+textarea{resize:vertical;min-height:60px;font-family:Consolas,"Courier New",monospace;font-size:13px}
+label.f{display:block;font-size:12px;color:var(--muted);margin-bottom:2px}
+.fld{margin-bottom:10px}
+.chip{display:inline-block;padding:1px 8px;border-radius:99px;font-size:11px;background:var(--panel2);border:1px solid var(--line);color:var(--muted);margin:1px 2px 1px 0}
+.chip.on{background:var(--brand-s);border-color:var(--brand);color:var(--brand-d)}
+.chip.btnlike{cursor:pointer;user-select:none}
+.sev{display:inline-block;padding:0 7px;border-radius:4px;font-size:11px;font-weight:600}
+.sev.HIGH,.sev.ERROR{background:var(--err-s);color:var(--err)}.sev.MEDIUM,.sev.WARN{background:var(--warn-s);color:var(--warn)}
+.sev.LOW,.sev.INFO{background:var(--info-s);color:var(--info)}
+.st{display:inline-block;padding:0 7px;border-radius:4px;font-size:11px;background:var(--panel2);border:1px solid var(--line)}
+.st.ACTIVE,.st.DONE{background:var(--ok-s);color:var(--ok);border-color:transparent}.st.DRAFT,.st.OPEN{background:var(--warn-s);color:var(--warn);border-color:transparent}
+.st.DEPRECATED{color:var(--muted)}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+table.tbl th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--panel2);position:sticky;top:0;z-index:1}
+table.tbl td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.tbl tr:hover td{background:var(--panel2)}
+table.tbl td input[type=text],table.tbl td select{padding:3px 6px}
+.scroll{overflow:auto;max-height:68vh;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+.bar{height:8px;background:var(--brand);border-radius:4px;min-width:2px}
+.barrow{display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;margin:4px 0;font-size:12px}
+.empty{padding:30px;text-align:center;color:var(--muted)}
+/* builder */
+.bgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:14px;align-items:start}
+.sticky{position:sticky;top:0}
+pre.sql{margin:0;background:var(--code-bg);color:var(--code-fg);padding:12px 14px;border-radius:6px;overflow:auto;max-height:50vh;font:12.5px/1.55 Consolas,"Courier New",monospace;white-space:pre}
+pre.sql .sq-kw{color:var(--c-kw);font-weight:600}pre.sql .sq-st{color:var(--c-str)}pre.sql .sq-cm{color:var(--c-cm)}pre.sql .sq-pa{color:var(--c-par)}
+.tabs{display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap}
+.tabs button{border:1px solid var(--line);background:var(--panel);padding:3px 12px;border-radius:99px;cursor:pointer}
+.tabs button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.grp{border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:6px;margin:6px 0;background:var(--panel2)}
+.grp.or{border-left-color:#e67700}
+.grp.off,.cond.off{opacity:.5}
+.grp-head{display:flex;gap:6px;align-items:center;padding:5px 8px;flex-wrap:wrap}
+.grp-body{padding:2px 8px 8px 12px}
+.grp-head select{width:auto}
+.cond{display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;padding:6px;margin:4px 0;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.cond.dragover,.grp-head.dragover{outline:2px dashed var(--brand)}
+.drag{cursor:grab;color:var(--muted);padding:2px 4px;user-select:none}
+.cond .c-field{width:150px}.cond .c-op{width:128px}.cond .c-vt{width:78px}.cond .c-k{width:96px}
+.cond .c-val{flex:1;min-width:180px;display:flex;gap:4px;flex-wrap:wrap}
+.cond .c-val textarea{min-height:34px;height:34px}
+.mod{display:inline-flex;align-items:center;gap:2px;font-size:11px;color:var(--muted);padding-top:6px}
+.mod input[type=text]{width:60px}
+.lint{display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:13px}
+.lint code{font-size:11px}
+/* layout bits */
+.split{display:grid;grid-template-columns:300px minmax(0,1fr);gap:14px;align-items:start}
+.list{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);max-height:72vh;overflow:auto}
+.list .it{padding:7px 10px;border-bottom:1px solid var(--line);cursor:pointer}
+.list .it:hover{background:var(--panel2)}.list .it.on{background:var(--brand-s)}
+.diff{font:12px/1.5 Consolas,monospace;white-space:pre-wrap;border:1px solid var(--line);border-radius:6px;background:var(--panel);max-height:42vh;overflow:auto}
+.diff div{padding:0 8px}.diff .a{background:var(--ok-s)}.diff .d{background:var(--err-s)}
+/* modal & toast */
+.ov{position:fixed;inset:0;background:rgba(10,15,30,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px}
+.dlg{background:var(--panel);border-radius:10px;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.dlg.wide{max-width:980px}
+.dlg>h2{padding:14px 18px 0;margin:0}
+.dlg .bd{padding:12px 18px;overflow:auto}
+.dlg .ft{padding:10px 18px 14px;display:flex;justify-content:flex-end;gap:8px;border-top:1px solid var(--line)}
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:80}
+.toast{background:#1d2433;color:#fff;padding:9px 14px;border-radius:8px;box-shadow:var(--shadow);max-width:380px;font-size:13px}
+.toast.err{background:#c92a2a}.toast.ok{background:#2b8a3e}.toast.warn{background:#b26a00}
+.note{padding:8px 12px;border-radius:6px;background:var(--info-s);color:var(--info);font-size:13px;margin-bottom:10px}
+.note.warn{background:var(--warn-s);color:var(--warn)}.note.err{background:var(--err-s);color:var(--err)}
+.kbd{font:11px Consolas,monospace;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--panel2)}
+@media(max-width:1100px){.bgrid,.split{grid-template-columns:1fr}.g4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){#app{grid-template-columns:1fr}nav.side{display:none}header.top{grid-column:1}}
+@media print{nav.side,header.top{display:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="logo">⚒ Rule <span>Forge</span></div>
+    <span class="muted small">監理檢核規則鑄造台</span>
+    <div class="sp"></div>
+    <span id="hdrSchema" class="chip" title="預設 Schema（可在設定修改）"></span>
+    <button class="btn sm" id="btnTheme" title="切換深色／淺色">🌓</button>
+    <button class="btn sm" id="btnHelp" title="快捷鍵">?</button>
+  </header>
+  <nav class="side" id="nav"></nav>
+  <main id="main"><div class="empty">載入中…</div></main>
+</div>
+<div id="toasts"></div>
+<noscript>需要啟用 JavaScript。</noscript>
+<script>
+'use strict';
+/* ============================================================
+ * Rule Forge v1.2  —  單檔 SPA（Vanilla JS + IndexedDB，離線、無 API Key）
+ * ============================================================ */
+const APP_VERSION = '1.2.1';
+const DB_NAME = 'rule_forge_db';
+const DB_VERSION = 3;
+const SCHEMA_VERSION = 3;
+
+/* ---------- utils ---------- */
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const nowISO = () => new Date().toISOString();
+const clone = o => (o === undefined ? undefined : JSON.parse(JSON.stringify(o)));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+const fmtTime = iso => { if (!iso) return ''; const d = new Date(iso); if (isNaN(d)) return iso; const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+const sortBy = (arr, f, dir) => arr.slice().sort((a, b) => { const x = f(a), y = f(b); return (x < y ? -1 : x > y ? 1 : 0) * (dir || 1); });
+const csvList = s => String(s || '').split(/[,，;；\n]+/).map(x => x.trim()).filter(Boolean);
+
+function download(filename, text, mime) {
+  const blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); return true; } catch (e) { /* fallback */ }
+  try {
+    const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
+  } catch (e) { return false; }
+}
+function toast(msg, type, ms) {
+  const d = document.createElement('div'); d.className = 'toast ' + (type || ''); d.textContent = msg;
+  $('#toasts').appendChild(d); setTimeout(() => d.remove(), ms || 3200);
+}
+function readFile(file) { /* 先以 UTF-8 嚴格解碼；失敗時改用 Big5（繁中 Excel 另存的 CSV 常見編碼） */
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const buf = r.result; readFile.enc = 'utf-8';
+      try { res(new TextDecoder('utf-8', { fatal: true }).decode(buf)); }
+      catch (e) { try { const t = new TextDecoder('big5').decode(buf); readFile.enc = 'big5'; res(t); } catch (e2) { res(new TextDecoder('utf-8').decode(buf)); } }
+    };
+    r.onerror = () => rej(r.error); r.readAsArrayBuffer(file);
+  });
+}
+function pickFile(accept) {
+  return new Promise(res => {
+    const i = document.createElement('input'); i.type = 'file'; i.accept = accept || '';
+    i.onchange = () => res(i.files && i.files[0] || null);
+    i.addEventListener('cancel', () => res(null)); i.click();
+  });
+}
+function stable(o) { return JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v) ? Object.keys(v).sort().reduce((a, x) => { a[x] = v[x]; return a; }, {}) : v)); }
+const pad = (n, w) => String(n).padStart(w, '0');
+
+/* ---------- CSV ---------- */
+function parseCSV(text) {
+  text = String(text || '').replace(/^\uFEFF/, '');
+  const rows = []; let row = [], cur = '', q = false, i = 0;
+  while (i < text.length) {
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+    i++;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(x => String(x).trim() !== ''));
+}
+function toCSV(rows) {
+  return '\uFEFF' + rows.map(r => r.map(v => { v = v == null ? '' : String(v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(',')).join('\r\n');
+}
+
+/* ---------- line diff (LCS) ---------- */
+function lineDiff(a, b) {
+  const n = a.length, m = b.length;
+  if (n * m > 4000000) { return a.map(x => ({ t: 'd', s: x })).concat(b.map(x => ({ t: 'a', s: x }))); }
+  const dp = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+  const out = []; let i = 0, j = 0;
+  while (i < n && j < m) {
+    if (a[i] === b[j]) { out.push({ t: '=', s: a[i] }); i++; j++; }
+    else if (dp[i + 1][j] >= dp[i][j + 1]) out.push({ t: 'd', s: a[i++] });
+    else out.push({ t: 'a', s: b[j++] });
+  }
+  while (i < n) out.push({ t: 'd', s: a[i++] });
+  while (j < m) out.push({ t: 'a', s: b[j++] });
+  return out;
+}
+
+/* ---------- modal ---------- */
+function modal(o) {
+  return new Promise(resolve => {
+    const ov = document.createElement('div'); ov.className = 'ov';
+    const btns = (o.buttons || [{ label: '關閉', value: null }]);
+    ov.innerHTML = `<div class="dlg ${o.wide ? 'wide' : ''}" role="dialog" aria-modal="true"><h2>${esc(o.title || '')}</h2><div class="bd">${o.html || ''}</div><div class="ft">${btns.map((b, i) => `<button class="btn ${b.cls || ''}" data-i="${i}">${esc(b.label)}</button>`).join('')}</div></div>`;
+    document.body.appendChild(ov);
+    const close = v => { document.removeEventListener('keydown', onKey, true); ov.remove(); resolve(v); };
+    const collect = () => o.collect ? o.collect(ov) : undefined;
+    const onKey = e => { if (e.key === 'Escape') { e.stopPropagation(); close(undefined); } };
+    document.addEventListener('keydown', onKey, true);
+    ov.addEventListener('mousedown', e => { if (e.target === ov && !o.sticky) close(undefined); });
+    ov.querySelectorAll('.ft button').forEach(b => b.addEventListener('click', async () => {
+      const spec = btns[+b.dataset.i];
+      if (spec.validate) { const msg = spec.validate(ov); if (msg) { toast(msg, 'err'); return; } }
+      const data = spec.value === undefined ? undefined : collect();
+      close(spec.value === null ? null : { value: spec.value, data });
+    }));
+    if (o.onOpen) o.onOpen(ov, close);
+    const f = ov.querySelector('[autofocus],input[type=text],textarea,select'); if (f) f.focus();
+  });
+}
+async function confirmBox(msg, okLabel, danger) {
+  const r = await modal({ title: '確認', html: `<p style="white-space:pre-wrap">${esc(msg)}</p>`, buttons: [{ label: '取消', value: null }, { label: okLabel || '確定', value: 'ok', cls: danger ? 'danger' : 'primary' }] });
+  return !!(r && r.value === 'ok');
+}
+
+/* ---------- IndexedDB ---------- */
+const STORES = ['rules', 'ruleVersions', 'findings', 'tables', 'fields', 'valueSets', 'settings', 'auditLog'];
+let DB = null;
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = ev => {
+      const db = req.result, tx = req.transaction, old = ev.oldVersion;
+      if (old < 1) {
+        const r = db.createObjectStore('rules', { keyPath: 'ruleId' });
+        ['category', 'severity', 'status', 'findingId', 'updatedAt'].forEach(k => r.createIndex(k, k));
+        r.createIndex('tags', 'tags', { multiEntry: true });
+        const v = db.createObjectStore('ruleVersions', { keyPath: 'versionId' }); v.createIndex('ruleId', 'ruleId'); v.createIndex('createdAt', 'createdAt');
+        const f = db.createObjectStore('findings', { keyPath: 'findingId' }); f.createIndex('exposureType', 'exposureType'); f.createIndex('status', 'status');
+        const t = db.createObjectStore('tables', { keyPath: 'tableKey' }); t.createIndex('schema', 'schema');
+        const fl = db.createObjectStore('fields', { keyPath: 'fieldKey' }); fl.createIndex('tableKey', 'tableKey'); fl.createIndex('fieldName', 'fieldName');
+        const vs = db.createObjectStore('valueSets', { keyPath: 'setId' }); vs.createIndex('name', 'name');
+        db.createObjectStore('settings', { keyPath: 'key' });
+        const a = db.createObjectStore('auditLog', { keyPath: 'logId', autoIncrement: true }); a.createIndex('entityId', 'entityId'); a.createIndex('at', 'at');
+      }
+      if (old < 2) { /* v1 -> v2：targetSchema / defaultSchema / identifierCase */
+        const rs = tx.objectStore('rules');
+        rs.openCursor().onsuccess = e => { const c = e.target.result; if (c) { const r = c.value; if (!('targetSchema' in r)) { r.targetSchema = null; c.update(r); } c.continue(); } };
+        const st = tx.objectStore('settings');
+        st.put({ key: 'defaultSchema', value: 'bis' }); st.put({ key: 'identifierCase', value: 'lower' });
+      }
+      if (old < 3) { /* v2 -> v3：schemaList */
+        const st = tx.objectStore('settings');
+        const list = [{ name: 'bis', label: 'BIS 資本適足', builtin: true }, { name: 'irb_dw', label: 'IRB 資料倉儲', builtin: true }];
+        tx.objectStore('tables').openCursor().onsuccess = e => {
+          const c = e.target.result;
+          if (c) { const n = String(c.value.schema || '').toLowerCase(); if (n && !list.some(s => s.name === n)) list.push({ name: n, label: n, builtin: false }); c.continue(); }
+          else st.put({ key: 'schemaList', value: list });
+        };
+      }
+    };
+    req.onsuccess = () => { DB = req.result; DB.onversionchange = () => { DB.close(); toast('資料庫已在其他分頁升級，請重新整理', 'warn'); }; resolve(DB); };
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => toast('資料庫升級被其他分頁阻擋，請關閉其他分頁', 'warn');
+  });
+}
+const idb = {
+  _tx(stores, mode, fn) {
+    return new Promise((resolve, reject) => {
+      const tx = DB.transaction(stores, mode); let out;
+      tx.oncomplete = () => resolve(out); tx.onerror = () => reject(tx.error); tx.onabort = () => reject(tx.error || new Error('tx aborted'));
+      out = fn(tx);
+    });
+  },
+  all(store) { return new Promise((res, rej) => { const r = DB.transaction(store).objectStore(store).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  get(store, key) { return new Promise((res, rej) => { const r = DB.transaction(store).objectStore(store).get(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  byIndex(store, idx, key) { return new Promise((res, rej) => { const r = DB.transaction(store).objectStore(store).index(idx).getAll(key); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  put(store, val) { return this._tx(store, 'readwrite', tx => { tx.objectStore(store).put(val); }); },
+  bulkPut(store, arr) { return this._tx(store, 'readwrite', tx => { const s = tx.objectStore(store); arr.forEach(v => s.put(v)); }); },
+  del(store, key) { return this._tx(store, 'readwrite', tx => { tx.objectStore(store).delete(key); }); },
+  bulkDel(store, keys) { return this._tx(store, 'readwrite', tx => { const s = tx.objectStore(store); keys.forEach(k => s.delete(k)); }); },
+  clear(store) { return this._tx(store, 'readwrite', tx => { tx.objectStore(store).clear(); }); },
+  count(store) { return new Promise((res, rej) => { const r = DB.transaction(store).objectStore(store).count(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  multi(ops) { /* ops: [{store, op:'put'|'del'|'clear', val|key}] 單一交易 */
+    if (!ops || !ops.length) return Promise.resolve();
+    const names = [...new Set(ops.map(o => o.store))];
+    return this._tx(names, 'readwrite', tx => { ops.forEach(o => { const s = tx.objectStore(o.store); if (o.op === 'put') s.put(o.val); else if (o.op === 'del') s.delete(o.key); else if (o.op === 'clear') s.clear(); }); });
+  }
+};
+
+/* ---------- state ---------- */
+const S = { rules: [], findings: [], tables: [], fields: [], valueSets: [], settings: {}, rulesMap: new Map(), vsMap: new Map(), tableMap: new Map(), fieldsByTable: new Map(), findingMap: new Map() };
+const SETTING_DEFAULTS = {
+  defaultSchema: 'bis', identifierCase: 'lower', dialect: 'oracle', theme: 'auto',
+  schemaList: [{ name: 'bis', label: 'BIS 資本適足', builtin: true }, { name: 'irb_dw', label: 'IRB 資料倉儲', builtin: true }],
+  saveCount: 0, backupEvery: 20, lastBackupAt: null
+};
+const getSet = k => (k in S.settings ? S.settings[k] : clone(SETTING_DEFAULTS[k]));
+async function setSet(k, v) { S.settings[k] = v; await idb.put('settings', { key: k, value: v }); }
+function indexAll() {
+  S.rulesMap = new Map(S.rules.map(r => [r.ruleId, r]));
+  S.vsMap = new Map(S.valueSets.map(v => [v.setId, v]));
+  S.tableMap = new Map(S.tables.map(t => [t.tableKey, t]));
+  S.findingMap = new Map(S.findings.map(f => [f.findingId, f]));
+  S.fieldsByTable = new Map();
+  S.fields.forEach(f => { if (!S.fieldsByTable.has(f.tableKey)) S.fieldsByTable.set(f.tableKey, []); S.fieldsByTable.get(f.tableKey).push(f); });
+  S.fieldsByTable.forEach(a => a.sort((x, y) => (x.ordinal || 0) - (y.ordinal || 0)));
+}
+async function reload(only) {
+  const list = only ? [].concat(only) : ['rules', 'findings', 'tables', 'fields', 'valueSets', 'settings'];
+  for (const st of list) {
+    const data = await idb.all(st);
+    if (st === 'settings') { S.settings = {}; data.forEach(x => { S.settings[x.key] = x.value; }); }
+    else S[st] = data;
+  }
+  indexAll();
+}
+async function ensureSchemaDefaults() {
+  let list = getSet('schemaList'); let changed = false;
+  ['bis', 'irb_dw'].forEach(n => { if (!list.some(s => s.name === n)) { list.push({ name: n, label: n === 'bis' ? 'BIS 資本適足' : 'IRB 資料倉儲', builtin: true }); changed = true; } });
+  list.forEach(s => { if ((s.name === 'bis' || s.name === 'irb_dw') && !s.builtin) { s.builtin = true; changed = true; } });
+  if (changed) await setSet('schemaList', list);
+  if (!getSet('schemaList').some(s => s.name === getSet('defaultSchema'))) {
+    const l = getSet('schemaList'); l.push({ name: getSet('defaultSchema'), label: getSet('defaultSchema'), builtin: false }); await setSet('schemaList', l);
+  }
+}
+
+/* ---------- audit ---------- */
+async function audit(action, entity, entityId, detail) {
+  try {
+    await idb.put('auditLog', { at: nowISO(), action, entity, entityId: entityId || '', detail: detail || '' });
+    if ((await idb.count('auditLog')) > 1100) { const all = await idb.all('auditLog'); await idb.bulkDel('auditLog', sortBy(all, x => x.logId).slice(0, all.length - 1000).map(x => x.logId)); }
+  } catch (e) { /* 不影響主流程 */ }
+}
+async function bumpSaveCount() {
+  const n = (getSet('saveCount') || 0) + 1; await setSet('saveCount', n);
+  const every = Number(getSet('backupEvery'));
+  if (every > 0 && n % every === 0) toast(`已累積 ${n} 次儲存，建議到「設定」匯出完整備份`, 'warn', 5000);
+}
+
+/* ============================================================
+ * SQL 引擎：Rule DSL → SQL、Lint、DDL 解析（純函式，不碰 DOM / DB）
+ * ============================================================ */
+const RE_IDENT = /^[A-Za-z][A-Za-z0-9_$#]{0,127}$/;
+const OP_LABEL = {
+  EQ: '等於 =', NE: '不等於 <>', GT: '大於 >', GE: '大於等於 >=', LT: '小於 <', LE: '小於等於 <=',
+  IN: '屬於 IN', NOT_IN: '不屬於 NOT IN', LIKE: 'LIKE', NOT_LIKE: 'NOT LIKE', STARTS_WITH: '開頭為',
+  BETWEEN: '介於 BETWEEN', IS_NULL: '為空 IS NULL', NOT_NULL: '不為空 NOT NULL', REGEX: '正規式 REGEXP_LIKE',
+  LEN_EQ: '長度等於', LEN_NE: '長度不等於', SUBSTR_IN: '子字串屬於', SUBSTR_NOT_IN: '子字串不屬於', RAW: '⚠ 自由 SQL'
+};
+const OP_ORDER = ['EQ', 'NE', 'GT', 'GE', 'LT', 'LE', 'IN', 'NOT_IN', 'LIKE', 'NOT_LIKE', 'STARTS_WITH', 'BETWEEN', 'IS_NULL', 'NOT_NULL', 'REGEX', 'LEN_EQ', 'LEN_NE', 'SUBSTR_IN', 'SUBSTR_NOT_IN', 'RAW'];
+const CMP_OPS = ['EQ', 'NE', 'GT', 'GE', 'LT', 'LE', 'LIKE', 'NOT_LIKE'];
+const LIST_OPS = ['IN', 'NOT_IN', 'SUBSTR_IN', 'SUBSTR_NOT_IN'];
+const STR_CMP_OPS = ['EQ', 'NE', 'IN', 'NOT_IN', 'LIKE', 'NOT_LIKE', 'STARTS_WITH'];
+const CATEGORIES = ['EXPOSURE_TYPE', 'RISK_WEIGHT', 'CCF', 'COLLATERAL', 'DATA_QUALITY', 'OTHER'];
+const CAT_LABEL = { EXPOSURE_TYPE: '暴險類型', RISK_WEIGHT: '風險權數', CCF: '信用轉換係數', COLLATERAL: '擔保品', DATA_QUALITY: '資料品質', OTHER: '其他' };
+const SEVERITIES = ['HIGH', 'MEDIUM', 'LOW'];
+const STATUSES = ['DRAFT', 'ACTIVE', 'DEPRECATED'];
+
+const idCase = (s, mode) => { s = String(s == null ? '' : s); return mode === 'upper' ? s.toUpperCase() : mode === 'lower' ? s.toLowerCase() : s; };
+const sqlStr = v => "'" + String(v).replace(/'/g, "''") + "'";
+const RE_FIELD = /^[A-Za-z][A-Za-z0-9_$#]*$/, RE_PARAM = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const safeIdent = s => String(s == null ? '' : s).replace(/[^A-Za-z0-9_$#]/g, '');   /* 產生 SQL 時只允許識別字字元，避免夾帶任意文字 */
+const safeParam = s => String(s == null ? '' : s).replace(/^:/, '').replace(/[^A-Za-z0-9_]/g, '');
+const stripAlias = (name, alias) => { const n = String(name == null ? '' : name).trim(), p = String(alias || 't') + '.'; return n.toLowerCase().startsWith(p.toLowerCase()) ? n.slice(p.length) : n; };
+const isNumStr = s => /^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(String(s).trim());
+const normNum = s => { const t = String(s).trim(); const n = Number(t); return Number.isFinite(n) && !/e/i.test(String(n)) ? String(n) : t.replace(/^\+/, ''); };
+const singleLine = s => String(s == null ? '' : s).replace(/[\r\n]+/g, ' ').trim();
+function typeClass(t) {
+  if (!t) return null; t = String(t).toUpperCase();
+  if (/CHAR|CLOB|TEXT|STRING/.test(t)) return 'char';
+  if (/NUMBER|NUMERIC|DECIMAL|INT|FLOAT|DOUBLE|REAL/.test(t) && !/INTERVAL/.test(t)) return 'num';
+  if (/DATE|TIME/.test(t)) return 'date';
+  return 'other';
+}
+function normalizeSchemaInput(s) {
+  const raw = String(s == null ? '' : s);
+  const value = raw.replace(/^[\s."'`]+|[\s."'`]+$/g, '');
+  return { value, changed: value !== raw.trim(), valid: RE_IDENT.test(value) };
+}
+function renderLiteral(v, vt, tcls) {
+  const s = String(v == null ? '' : v);
+  if (vt === 'num') return { sql: isNumStr(s) ? normNum(s) : sqlStr(s) };
+  if (vt === 'str') return { sql: sqlStr(s) };
+  if (tcls === 'num' && isNumStr(s)) return { sql: normNum(s) };
+  if (tcls === 'date' && /^\d{4}-\d{2}-\d{2}$/.test(s.trim())) return { sql: "DATE '" + s.trim() + "'" };
+  if (typeof v === 'number') return { sql: String(v) };
+  return { sql: sqlStr(s) };
+}
+function cteNameOf(setId, cs, ctx) {
+  const slug = id => ('vs_' + String(id).replace(/^vs[-_]/i, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '')).toLowerCase();
+  let name = slug(setId).slice(0, 30);
+  const ids = ctx && ctx.valueSetIds ? ctx.valueSetIds() : [];
+  if (ids.some(o => o !== setId && slug(o).slice(0, 30) === name)) {   /* 截斷後撞名 → 加上依 setId 計算的短雜湊 */
+    let h = 0; for (const ch of String(setId)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    name = slug(setId).slice(0, 24) + '_' + h.toString(36).slice(0, 5);
+  }
+  return idCase(name, cs === 'upper' ? 'upper' : 'lower');
+}
+
+/* ctx 介面：{defaultSchema, caseMode, dialect, schemaList:[name], valueSet(id), tableFields(schema,table)->[]|null, tableSchemas(table)->[]} */
+function resolveSchema(rule, opts, ctx) {
+  const ok = x => { const v = normalizeSchemaInput(x).value; return RE_IDENT.test(v) ? v : ''; };
+  return ok(opts && opts.schemaOverride) || (rule.targetSchema ? ok(rule.targetSchema) : '') || safeIdent(ctx.defaultSchema) || '';
+}
+function mkEnv(rule, opts, ctx) {
+  const schema = resolveSchema(rule, opts, ctx), table = safeIdent(rule.targetTable);
+  const fl = ctx.tableFields(schema, table) || [];
+  const fmap = new Map(fl.map(f => [String(f.fieldName).toUpperCase(), f]));
+  return {
+    rule, ctx, schema, table, alias: safeIdent(rule.alias) || 't', cs: ctx.caseMode || 'lower', ansi: ctx.dialect === 'ansi', ctes: new Map(),
+    fieldType: n => { const f = fmap.get(String(n || '').trim().toUpperCase()); return f ? f.dataType : null; }
+  };
+}
+function colRef(env, name) { return env.alias + '.' + idCase(safeIdent(stripAlias(name, env.alias)), env.cs); }
+function wrapCol(env, node, base, tcls) {
+  let c = base;
+  if (node.nvl != null && String(node.nvl) !== '') c = (env.ansi ? 'COALESCE' : 'NVL') + '(' + c + ', ' + renderLiteral(node.nvl, 'auto', tcls).sql + ')';
+  if (node.trim) c = 'TRIM(' + c + ')';
+  if (node.upper) c = 'UPPER(' + c + ')';
+  return c;
+}
+function rhsOf(env, node, tcls) {
+  const v = node.value || {};
+  if (v.kind === 'param') return ':' + safeParam(v.name);
+  if (v.kind === 'field') return colRef(env, v.name);
+  return renderLiteral(v.v, node.vt, tcls).sql;
+}
+function inItems(env, node, forceStr) {
+  const v = node.value || {};
+  if (v.kind === 'valueSet') {
+    const vs = env.ctx.valueSet(v.setId);
+    const items = vs && vs.items ? vs.items.map(i => String(i.value)).filter(x => x !== '') : [];
+    if (!items.length) return { empty: true };
+    const num = vs.valueType === 'NUMBER' && !forceStr;
+    const lits = items.map(x => (num && isNumStr(x) ? normNum(x) : sqlStr(x)));
+    if (vs.renderMode === 'CTE') { const nm = cteNameOf(vs.setId, env.cs, env.ctx); env.ctes.set(nm, lits); return { cte: nm }; }
+    return { items: lits };
+  }
+  const arr = (v.v || []).map(String).filter(x => x.trim() !== '');
+  if (!arr.length) return { empty: true };
+  return { items: arr.map(x => (forceStr ? sqlStr(x) : renderLiteral(x, node.vt, null).sql)) };
+}
+function renderIn(env, node, lhs, neg, forceStr, tcls) {
+  const v = node.value || {};
+  let r;
+  if (v.kind !== 'valueSet' && !forceStr) {
+    const arr = (v.v || []).map(String).filter(x => x.trim() !== '');
+    r = arr.length ? { items: arr.map(x => renderLiteral(x, node.vt, tcls).sql) } : { empty: true };
+  } else r = inItems(env, node, forceStr);
+  if (r.empty) return neg ? '1 = 1 /* 清單為空 */' : '1 = 0 /* 清單為空 */';
+  const kw = neg ? 'NOT IN' : 'IN';
+  if (r.cte) return lhs + ' ' + kw + ' (SELECT ' + idCase('val', env.cs) + ' FROM ' + r.cte + ')';
+  return lhs + ' ' + kw + ' (' + r.items.join(', ') + ')';
+}
+function renderCond(env, node) {
+  if (node.enabled === false) return null;
+  const op = node.op;
+  if (op === 'RAW') { const t = String(node.raw || '').trim().replace(/;+\s*$/, ''); return t ? '(' + t + ')' : null; }
+  if (!node.field || !String(node.field).trim()) return null;
+  const tcls = typeClass(env.fieldType(node.field));
+  const base = colRef(env, node.field);
+  const col = wrapCol(env, node, base, tcls);
+  const v = node.value || {};
+  switch (op) {
+    case 'EQ': return col + ' = ' + rhsOf(env, node, tcls);
+    case 'NE': return col + ' <> ' + rhsOf(env, node, tcls);
+    case 'GT': return col + ' > ' + rhsOf(env, node, tcls);
+    case 'GE': return col + ' >= ' + rhsOf(env, node, tcls);
+    case 'LT': return col + ' < ' + rhsOf(env, node, tcls);
+    case 'LE': return col + ' <= ' + rhsOf(env, node, tcls);
+    case 'LIKE': return col + ' LIKE ' + rhsOf(env, node, 'char');
+    case 'NOT_LIKE': return col + ' NOT LIKE ' + rhsOf(env, node, 'char');
+    case 'STARTS_WITH': {
+      if (v.kind === 'param') return col + ' LIKE :' + safeParam(v.name) + " || '%'";
+      const raw = String(v.v == null ? '' : v.v), need = /[%_\\]/.test(raw);
+      return col + ' LIKE ' + sqlStr((need ? raw.replace(/[%_\\]/g, '\\$&') : raw) + '%') + (need ? " ESCAPE '\\'" : '');
+    }
+    case 'IN': return renderIn(env, node, col, false, false, tcls);
+    case 'NOT_IN': return renderIn(env, node, col, true, false, tcls);
+    case 'BETWEEN': {
+      const a = (v.v || [])[0], b = (v.v || [])[1];
+      const f = x => (/^:\w+$/.test(String(x).trim()) ? ':' + safeParam(x) : renderLiteral(x, node.vt, tcls).sql);
+      return col + ' BETWEEN ' + f(a) + ' AND ' + f(b);
+    }
+    case 'IS_NULL': return col + ' IS NULL';
+    case 'NOT_NULL': return col + ' IS NOT NULL';
+    case 'REGEX': return 'REGEXP_LIKE(' + col + ', ' + sqlStr(v.v == null ? '' : v.v) + ')';
+    case 'LEN_EQ': case 'LEN_NE': {
+      const fn = env.ansi ? 'CHAR_LENGTH' : 'LENGTH';
+      return fn + '(TRIM(' + base + ')) ' + (op === 'LEN_EQ' ? '=' : '<>') + ' ' + renderLiteral(v.v, 'num').sql;
+    }
+    case 'SUBSTR_IN': case 'SUBSTR_NOT_IN': {
+      const s = parseInt(node.start, 10) || 1, l = parseInt(node.len, 10) || 1;
+      const lhs = env.ansi ? 'SUBSTRING(TRIM(' + base + ') FROM ' + s + ' FOR ' + l + ')' : 'SUBSTR(TRIM(' + base + '), ' + s + ', ' + l + ')';
+      return renderIn(env, node, lhs, op === 'SUBSTR_NOT_IN', true, 'char');
+    }
+    default: return null;
+  }
+}
+function renderGroup(env, node, P, top) {
+  if (!node || node.enabled === false) return null;
+  const L = node.logic === 'OR' ? 'OR' : 'AND';
+  const childP = top && L === 'AND' ? P : P + 5 - L.length;
+  const parts = (node.children || []).map(c => (c.type === 'group' ? renderGroup(env, c, childP, false) : renderCond(env, c))).filter(Boolean);
+  if (!parts.length) return null;
+  if (parts.length === 1) return parts[0];
+  const sp = n => ' '.repeat(Math.max(0, n));
+  if (top && L === 'AND') return parts.join('\n' + sp(P) + 'AND ');
+  const logicCol = P + 6 - (L.length + 1);
+  return '(\n' + sp(P + 6) + parts.join('\n' + sp(logicCol) + L + ' ') + '\n' + sp(P) + ')';
+}
+function cteBlock(ctes, env) {
+  if (!ctes.size) return '';
+  const dual = env.ansi ? '' : ' FROM ' + idCase('dual', env.cs);
+  const val = idCase('val', env.cs);
+  return 'WITH ' + Array.from(ctes.entries()).map(([name, lits]) =>
+    name + ' AS (\n' + lits.map((x, i) => '  ' + (i ? 'UNION ALL ' : '') + 'SELECT ' + x + (i ? '' : ' AS ' + val) + dual).join('\n') + '\n)').join(',\n') + '\n';
+}
+function parseOrder(env, s) {
+  const m = String(s).trim().match(/^(\S+)(?:\s+(ASC|DESC))?$/i);
+  return m ? colRef(env, m[1]) + (m[2] ? ' ' + m[2].toUpperCase() : '') : null;
+}
+function buildQuery(rule, opts, ctx) {
+  opts = opts || {};
+  const env = mkEnv(rule, opts, ctx), cs = env.cs;
+  const batch = !!opts.batch;
+  let mode = opts.mode || 'detail';
+  if (batch && mode === 'summary') mode = 'count';
+  const where = renderGroup(env, rule.condition, 2, true);
+  const rid = batch ? sqlStr(rule.ruleId) + ' AS ' + idCase('rule_id', cs) + ', ' : '';
+  let sel, groupBy = [], orderBy = [];
+  if (mode === 'count') sel = 'SELECT ' + rid + 'COUNT(*) AS ' + idCase('cnt', cs);
+  else if (mode === 'summary') {
+    const gb = (rule.groupBy || []).filter(Boolean).map(c => colRef(env, c));
+    const parts = gb.slice(); parts.push('COUNT(*) AS ' + idCase('cnt', cs));
+    if (rule.sumColumn) parts.push('SUM(' + colRef(env, rule.sumColumn) + ') AS ' + idCase('sum_' + String(rule.sumColumn).trim(), cs));
+    sel = 'SELECT ' + rid + parts.join(', '); groupBy = gb; orderBy = [idCase('cnt', cs) + ' DESC'];
+  } else {
+    const cols = (rule.selectColumns && rule.selectColumns.length ? rule.selectColumns : ['*']);
+    sel = 'SELECT ' + rid + (cols.includes('*') ? env.alias + '.*' : cols.map(c => colRef(env, c)).join(', '));
+    orderBy = (rule.orderBy || []).map(o => parseOrder(env, o)).filter(Boolean);
+  }
+  const from = 'FROM ' + (env.schema ? idCase(env.schema, cs) + '.' : '') + idCase(env.table, cs) + ' ' + env.alias;
+  let body = sel + '\n' + from;
+  if (where) body += '\nWHERE ' + where;
+  if (groupBy.length) body += '\nGROUP BY ' + groupBy.join(', ');
+  if (!batch && orderBy.length) body += '\nORDER BY ' + orderBy.join(', ');
+  const header = ['-- ' + rule.ruleId + ' ' + singleLine(rule.ruleName),
+    '-- Finding: ' + (rule.findingId || '-') + ' | Severity: ' + (rule.severity || '-') + ' | Version: ' + (rule.version || 1) + ' | Schema: ' + (env.schema || '-')];
+  const cte = cteBlock(env.ctes, env);
+  return { sql: header.join('\n') + '\n' + cte + body + ';', header, body, cte, ctes: env.ctes, schema: env.schema, table: env.table, cols: (rule.selectColumns || ['*']).join(',') };
+}
+function buildBatch(rules, opts, ctx) {
+  opts = Object.assign({}, opts, { batch: true });
+  const qs = rules.map(r => buildQuery(r, opts, ctx));
+  const ctes = new Map(); qs.forEach(q => q.ctes.forEach((v, k) => ctes.set(k, v)));
+  const mode = (opts.mode === 'summary' ? 'count' : opts.mode) || 'detail';
+  const notes = [];
+  if (mode === 'detail') {
+    if (new Set(qs.map(q => q.schema + '.' + q.table)).size > 1) notes.push('-- ⚠ 各規則的目標表不同，明細模式的 UNION ALL 需要各分支欄位數量與型別一致；建議改用「筆數」模式');
+    else if (new Set(qs.map(q => q.cols)).size > 1) notes.push('-- ⚠ 各規則選取的欄位不同，UNION ALL 需要欄位數量與型別一致');
+  }
+  const fake = { ansi: ctx.dialect === 'ansi', cs: ctx.caseMode || 'lower' };
+  const sql = ['-- Rule Forge 批次輸出｜' + qs.length + ' 條規則｜模式：' + mode + '｜' + fmtTime(nowISO())].concat(notes).join('\n') + '\n' +
+    cteBlock(ctes, fake) + qs.map(q => q.header.join('\n') + '\n' + q.body).join('\nUNION ALL\n') + ';';
+  return { sql, count: qs.length };
+}
+function buildFor(rules, opts, ctx) { return rules.length === 1 && !(opts && opts.union) ? buildQuery(rules[0], opts, ctx).sql : (opts && opts.union ? buildBatch(rules, opts, ctx).sql : rules.map(r => buildQuery(r, opts, ctx).sql).join('\n\n')); }
+
+/* ---------- SQL 語法上色（先 escape，再包 span） ---------- */
+const SQL_KW = 'SELECT|FROM|WHERE|AND|OR|NOT|IN|AS|LIKE|BETWEEN|IS|NULL|GROUP BY|ORDER BY|UNION ALL|WITH|ESCAPE|DESC|ASC|COUNT|SUM|TRIM|UPPER|NVL|COALESCE|LENGTH|CHAR_LENGTH|SUBSTR|SUBSTRING|REGEXP_LIKE|DATE|DUAL|FOR';
+const SQL_RE = new RegExp("(--[^\\n]*)|(/\\*[\\s\\S]*?\\*/)|('(?:[^']|'')*')|(:[A-Za-z_]\\w*)|\\b(" + SQL_KW.replace(/ /g, '\\s+') + ')\\b', 'gi');
+function highlightSQL(sql) {
+  let out = '', last = 0, m; SQL_RE.lastIndex = 0;
+  while ((m = SQL_RE.exec(sql))) {
+    out += esc(sql.slice(last, m.index));
+    const cls = m[1] || m[2] ? 'sq-cm' : m[3] ? 'sq-st' : m[4] ? 'sq-pa' : 'sq-kw';
+    out += '<span class="' + cls + '">' + esc(m[0]) + '</span>'; last = m.index + m[0].length;
+  }
+  return out + esc(sql.slice(last));
+}
+
+/* ---------- Lint ---------- */
+function walkConds(node, fn, parentLogic) {
+  if (!node) return;
+  if (node.type === 'group') { if (node.enabled === false) return; (node.children || []).forEach(c => walkConds(c, fn, node.logic)); }
+  else if (node.enabled !== false) fn(node, parentLogic);
+}
+function lintRule(rule, ctx) {
+  const out = []; const add = (code, level, msg) => out.push({ code, level, msg });
+  const schema = (rule.targetSchema || ctx.defaultSchema || '');
+  if (!schema || !RE_IDENT.test(schema)) add('L007', 'ERROR', 'Schema 為空或格式不合法：' + (schema || '（空）'));
+  else {
+    if (!ctx.schemaList.includes(String(schema).toLowerCase())) add('L011', 'WARN', '使用的 schema「' + schema + '」不在 Schema 清單中，建議到設定加入');
+    if (rule.targetSchema && String(rule.targetSchema).toLowerCase() !== String(ctx.defaultSchema).toLowerCase()) add('L009', 'INFO', '此規則的 schema（' + rule.targetSchema + '）與全域預設（' + ctx.defaultSchema + '）不同，屬例外設定');
+  }
+  if (!rule.targetTable) add('L020', 'ERROR', '尚未指定目標表');
+  else if (!RE_FIELD.test(String(rule.targetTable))) add('L023', 'ERROR', '目標表名稱「' + String(rule.targetTable).slice(0, 30) + '」含不合法字元');
+  if (rule.alias && !/^[A-Za-z][A-Za-z0-9_]*$/.test(String(rule.alias))) add('L023', 'ERROR', '別名「' + String(rule.alias).slice(0, 20) + '」格式不合法');
+  const fields = rule.targetTable ? ctx.tableFields(schema, rule.targetTable) : null;
+  if (rule.targetTable && !fields) {
+    const others = ctx.tableSchemas(rule.targetTable).filter(s => s !== String(schema).toLowerCase());
+    add('L008', 'WARN', schema + '.' + rule.targetTable + ' 不在欄位字典中' + (others.length ? '（字典中有 ' + others.join('、') + ' 版本）' : ''));
+  }
+  const fmap = new Map((fields || []).map(f => [String(f.fieldName).toUpperCase(), f]));
+  const declared = new Set((rule.parameters || []).map(p => String(p.name).toUpperCase()));
+  const used = new Set(); let enabledCount = 0, ansiRegex = false;
+  const seen = {};
+  const num = (code, node, label, x) => { if (!isNumStr(x)) add(code, 'ERROR', label + ' 的值「' + x + '」不是數字'); };
+  walkConds(rule.condition, (n, pl) => {
+    enabledCount++;
+    const op = n.op, v = n.value || {}, lab = (n.field || '(未填欄位)') + ' ' + (OP_LABEL[op] || op);
+    if (op === 'RAW') {
+      add('L005', 'WARN', '使用自由 SQL 片段，不會檢核欄位與 schema：' + singleLine(n.raw).slice(0, 40));
+      const re = /\b(?:FROM|JOIN)\s+([A-Za-z_][\w$#]*)(\s*\.)?/gi; let m;
+      while ((m = re.exec(n.raw || ''))) if (!m[2] && m[1].toUpperCase() !== 'DUAL') add('L010', 'WARN', 'RAW 片段中的表名「' + m[1] + '」沒有加 schema');
+      (String(n.raw || '').match(/:[A-Za-z_]\w*/g) || []).forEach(p => used.add(p.slice(1).toUpperCase()));
+      return;
+    }
+    if (!n.field || !String(n.field).trim()) { add('L017', 'ERROR', '有條件缺少欄位（運算子：' + (OP_LABEL[op] || op) + '）'); return; }
+    const fname = stripAlias(n.field, rule.alias).toUpperCase();
+    if (!RE_FIELD.test(fname)) { add('L023', 'ERROR', '欄位名稱「' + String(n.field).trim().slice(0, 30) + '」含不合法字元（只允許英數字與 _ $ #，需以英文字母開頭），產生 SQL 時這些字元會被移除'); return; }
+    const f = fmap.get(fname);
+    if (fields && !f) add('L002', 'ERROR', '欄位 ' + fname + ' 不在 ' + rule.targetTable + ' 的欄位字典中');
+    const tcls = f ? typeClass(f.dataType) : null;
+    if (tcls === 'char' && !n.trim && STR_CMP_OPS.includes(op)) add('L003', 'WARN', fname + ' 為字串欄位但未加 TRIM（' + OP_LABEL[op] + '）');
+    if (v.kind === 'param' && String(v.name || '').trim() && !RE_PARAM.test(String(v.name).replace(/^:/, ''))) add('L023', 'ERROR', lab + '：參數名稱「' + v.name + '」含不合法字元');
+    if (v.kind === 'field' && String(v.name || '').trim() && !RE_FIELD.test(stripAlias(v.name, rule.alias))) add('L023', 'ERROR', lab + '：比較欄位「' + v.name + '」含不合法字元');
+    if (v.kind === 'param') { used.add(String(v.name || '').replace(/^:/, '').toUpperCase()); if (!String(v.name || '').trim()) add('L017', 'ERROR', lab + '：缺少參數名稱'); else if (!declared.has(String(v.name).replace(/^:/, '').toUpperCase())) add('L021', 'WARN', '參數 :' + v.name + ' 尚未在「參數」區宣告'); }
+    if (v.kind === 'field' && !String(v.name || '').trim()) add('L017', 'ERROR', lab + '：缺少比較欄位');
+    if (CMP_OPS.includes(op) && (!v.kind || v.kind === 'literal')) {
+      const x = v.v == null ? '' : String(v.v);
+      if (x === '') add('L017', ['EQ', 'NE'].includes(op) ? 'WARN' : 'ERROR', lab + '：值為空' + (['EQ', 'NE'].includes(op) ? '（Oracle 的空字串等同 NULL，條件永遠不成立）' : ''));
+      else if (!['LIKE', 'NOT_LIKE'].includes(op)) {
+        if (n.vt === 'num') num('L012', n, lab, x); else if (!n.vt && tcls === 'num') num('L012', n, lab, x);
+      }
+      if (n.vt === 'num' && tcls === 'char') add('L013', 'WARN', lab + '：字串欄位以數字比較，會發生隱式轉型');
+    }
+    if (['GT', 'GE', 'LT', 'LE', 'STARTS_WITH', 'REGEX', 'LEN_EQ', 'LEN_NE'].includes(op) && v.kind !== 'param' && v.kind !== 'field' && String(v.v == null ? '' : v.v) === '') { /* 已於上方 CMP 或此處處理 */
+      if (!CMP_OPS.includes(op)) add('L017', 'ERROR', lab + '：值為空');
+    }
+    if (['LEN_EQ', 'LEN_NE'].includes(op) && String(v.v || '') !== '' && !/^\d+$/.test(String(v.v).trim())) add('L012', 'ERROR', lab + '：長度必須是非負整數');
+    if (op === 'BETWEEN') {
+      const a = (v.v || [])[0], b = (v.v || [])[1];
+      if (a == null || b == null || String(a) === '' || String(b) === '') add('L017', 'ERROR', lab + '：需要起訖兩個值');
+      else if (n.vt === 'num' || tcls === 'num') [a, b].forEach(x => { if (!/^:\w+$/.test(String(x).trim())) num('L012', n, lab, x); });
+      (v.v || []).forEach(x => { if (/^:\w+$/.test(String(x).trim())) used.add(String(x).trim().slice(1).toUpperCase()); });
+    }
+    if (LIST_OPS.includes(op)) {
+      let cnt = 0, inline = true;
+      if (v.kind === 'valueSet') {
+        const vs = ctx.valueSet(v.setId);
+        if (!vs) add('L004', 'WARN', lab + '：找不到 Value Set「' + (v.setId || '未選擇') + '」');
+        else { cnt = (vs.items || []).filter(i => String(i.value) !== '').length; inline = vs.renderMode !== 'CTE'; if (!cnt) add('L004', 'WARN', lab + '：Value Set「' + vs.name + '」目前沒有任何項目，此條件會恆為' + (op.includes('NOT') ? '真' : '假')); }
+      } else {
+        cnt = (v.v || []).filter(x => String(x).trim() !== '').length;
+        if (!cnt) add('L004', 'WARN', lab + '：IN 清單為空，此條件會恆為' + (op.includes('NOT') ? '真' : '假'));
+        if (n.vt === 'num' || (tcls === 'num' && !n.vt)) (v.v || []).forEach(x => { if (String(x).trim() !== '' && !isNumStr(x)) add('L012', 'ERROR', lab + '：清單值「' + x + '」不是數字'); });
+      }
+      if (inline && cnt > 1000) add('L018', 'WARN', lab + '：IN 清單超過 1000 筆（Oracle 上限），請改用 CTE 模式的 Value Set');
+      if (op.startsWith('SUBSTR') && (!/^\d+$/.test(String(n.start || '')) || !/^\d+$/.test(String(n.len || '')))) add('L017', 'ERROR', lab + '：起始位置與長度需為正整數');
+    }
+    if (op === 'REGEX' && ctx.dialect === 'ansi') ansiRegex = true;
+    if (nvlBad(n)) add('L017', 'WARN', lab + '：NVL 預設值不應只有空白');
+  });
+  const outCols = [].concat(rule.selectColumns || [], rule.groupBy || [], rule.sumColumn ? [rule.sumColumn] : []).filter(c => c && c !== '*');
+  outCols.forEach(c => { const n = stripAlias(c, rule.alias).toUpperCase(); if (!RE_FIELD.test(n)) add('L023', 'ERROR', '輸出設定的欄位「' + String(c).slice(0, 30) + '」含不合法字元'); else if (fields && !fmap.has(n)) add('L002', 'ERROR', '輸出設定的欄位 ' + n + ' 不在 ' + rule.targetTable + ' 的欄位字典中'); });
+  (rule.orderBy || []).forEach(o => { const m = String(o).trim().match(/^(\S+)(?:\s+(ASC|DESC))?$/i); if (!m) add('L022', 'WARN', '排序設定「' + o + '」格式不正確（應為「欄位」或「欄位 DESC」），已被忽略'); else if (!RE_FIELD.test(stripAlias(m[1], rule.alias))) add('L023', 'ERROR', '排序欄位「' + m[1].slice(0, 30) + '」含不合法字元'); else if (fields && !fmap.has(stripAlias(m[1], rule.alias).toUpperCase())) add('L002', 'ERROR', '排序欄位 ' + m[1] + ' 不在 ' + rule.targetTable + ' 的欄位字典中'); });
+  if (ansiRegex) add('L016', 'WARN', 'ANSI 模式不支援 REGEXP_LIKE，產出的 SQL 需自行改寫');
+  rule.parameters && rule.parameters.forEach(p => { if (p.required && !used.has(String(p.name).toUpperCase())) add('L001', 'ERROR', '缺少必要參數條件：:' + p.name + '（例如 ' + p.name + ' = :' + p.name + '）'); });
+  if (!enabledCount) add('L014', 'WARN', '沒有任何啟用的條件，產出的 SQL 會掃描整張表');
+  /* L006：AND 群組內互斥條件 */
+  (function scan(node) {
+    if (!node || node.type !== 'group' || node.enabled === false) return;
+    if (node.logic !== 'OR') {
+      const m = {};
+      (node.children || []).forEach(c => {
+        if (c.type !== 'cond' || c.enabled === false || !c.field) return;
+        if (!['EQ', 'NE'].includes(c.op) || (c.value || {}).kind !== 'literal') return;
+        const k = String(c.field).toUpperCase() + '|' + !!c.trim + '|' + !!c.upper;
+        (m[k] = m[k] || []).push(c);
+      });
+      Object.keys(m).forEach(k => {
+        const a = m[k], eqs = a.filter(x => x.op === 'EQ').map(x => String(x.value.v)), nes = a.filter(x => x.op === 'NE').map(x => String(x.value.v));
+        if (new Set(eqs).size > 1) add('L006', 'INFO', '同一 AND 群組內 ' + a[0].field + ' 同時等於多個不同值（' + [...new Set(eqs)].join('、') + '），結果恆為空；是否想用 OR 或 IN？');
+        else if (eqs.some(x => nes.includes(x))) add('L006', 'INFO', '同一 AND 群組內 ' + a[0].field + ' 同時要求等於與不等於相同的值，結果恆為空');
+      });
+    }
+    (node.children || []).forEach(scan);
+  })(rule.condition);
+  const rank = { ERROR: 0, WARN: 1, INFO: 2 };
+  return out.sort((a, b) => rank[a.level] - rank[b.level] || a.code.localeCompare(b.code));
+}
+function nvlBad(n) { return n.nvl != null && String(n.nvl) !== '' && String(n.nvl).trim() === ''; }
+
+/* ---------- 規則結構清理：匯入或手寫 JSON 時補齊缺漏、修正型別，避免畫面或產生器崩潰 ---------- */
+function sanitizeValue(op, v) {
+  const isObj = v && typeof v === 'object' && !Array.isArray(v);
+  const src = isObj ? v : { kind: Array.isArray(v) ? 'list' : 'literal', v };
+  const toArr = x => (Array.isArray(x) ? x.map(y => (y == null ? '' : String(y))) : (x == null || x === '' ? [] : String(x).split(/[\n,;，；]+/).map(s => s.trim()).filter(Boolean)));
+  if (op === 'BETWEEN') { const a = toArr(src.v); return { kind: 'list', v: [a[0] || '', a[1] || ''] }; }
+  if (LIST_OPS.includes(op)) return src.kind === 'valueSet' ? { kind: 'valueSet', setId: String(src.setId || '') } : { kind: 'list', v: toArr(src.v) };
+  if (src.kind === 'param' && !['REGEX', 'LEN_EQ', 'LEN_NE'].includes(op)) return { kind: 'param', name: String(src.name || '') };
+  if (src.kind === 'field' && CMP_OPS.includes(op) && !['LIKE', 'NOT_LIKE'].includes(op)) return { kind: 'field', name: String(src.name || '') };
+  return { kind: 'literal', v: src.v == null || typeof src.v === 'object' ? '' : String(src.v) };
+}
+function sanitizeTree(node, depth) {
+  depth = depth || 0;
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return depth ? null : newGroup('AND');
+  if (depth > 12) return null;
+  if (node.type === 'group' || (!node.type && Array.isArray(node.children))) {
+    const g = Object.assign({}, node, { type: 'group', enabled: node.enabled !== false, logic: node.logic === 'OR' ? 'OR' : 'AND', children: [] });
+    (Array.isArray(node.children) ? node.children : []).forEach(c => { const s = sanitizeTree(c, depth + 1); if (s) g.children.push(s); });
+    return g;
+  }
+  const op = OP_ORDER.includes(node.op) ? node.op : 'EQ';
+  const c = Object.assign(newCond(), node, { type: 'cond', op, enabled: node.enabled !== false, field: node.field == null ? '' : String(node.field), trim: !!node.trim, upper: !!node.upper, nvl: node.nvl == null ? '' : String(node.nvl), vt: node.vt === 'str' || node.vt === 'num' ? node.vt : '' });
+  if (op === 'RAW') { c.raw = node.raw == null ? '' : String(node.raw); c.value = null; }
+  else if (op === 'IS_NULL' || op === 'NOT_NULL') c.value = null;
+  else c.value = sanitizeValue(op, node.value);
+  if (op.startsWith('SUBSTR')) { c.start = String(node.start == null ? '1' : node.start); c.len = String(node.len == null ? '1' : node.len); }
+  return c;
+}
+
+/* ---------- Rule DSL helpers ---------- */
+const newCond = () => ({ type: 'cond', enabled: true, field: '', op: 'EQ', trim: false, upper: false, nvl: '', vt: '', value: { kind: 'literal', v: '' } });
+const newGroup = logic => ({ type: 'group', enabled: true, logic: logic || 'AND', children: [] });
+function defaultValueFor(op, old) {
+  if (['IS_NULL', 'NOT_NULL', 'RAW'].includes(op)) return null;
+  if (LIST_OPS.includes(op)) return old && (old.kind === 'list' || old.kind === 'valueSet') ? old : { kind: 'list', v: [] };
+  if (op === 'BETWEEN') return { kind: 'list', v: ['', ''] };
+  if (['REGEX', 'LEN_EQ', 'LEN_NE', 'STARTS_WITH'].includes(op)) return old && ['literal', 'param'].includes(old.kind) && op === 'STARTS_WITH' ? old : { kind: 'literal', v: '' };
+  return old && ['literal', 'param', 'field'].includes(old.kind) ? old : { kind: 'literal', v: '' };
+}
+function walkTree(node, fn) { if (!node) return; fn(node); if (node.type === 'group') (node.children || []).forEach(c => walkTree(c, fn)); }
+function newRuleTemplate(nextId) {
+  const root = newGroup('AND');
+  root.children.push(Object.assign(newCond(), { field: 'SS_SEQ', op: 'EQ', value: { kind: 'param', name: 'SS_SEQ' } }));
+  return {
+    ruleId: nextId, ruleName: '', findingId: '', category: 'OTHER', exposureType: '', severity: 'MEDIUM', status: 'DRAFT',
+    targetSchema: null, targetTable: '', alias: 't', parameters: [{ name: 'SS_SEQ', type: 'NUMBER', required: true }],
+    condition: root, expected: '', selectColumns: ['*'], orderBy: [], groupBy: [], sumColumn: '', regulationRef: '', description: '',
+    tags: [], version: 0, createdAt: nowISO(), updatedAt: nowISO()
+  };
+}
+function describeNode(node, ctx, depth) {
+  const ind = '  '.repeat(depth || 0);
+  if (node.enabled === false) return '';
+  if (node.type === 'group') {
+    const kids = (node.children || []).map(c => describeNode(c, ctx, (depth || 0) + 1)).filter(Boolean);
+    if (!kids.length) return '';
+    return ind + '- ' + (node.logic === 'OR' ? '**任一**條件成立：' : '**全部**條件成立：') + '\n' + kids.join('\n');
+  }
+  const v = node.value || {};
+  let fexp = String(node.field || ''); if (node.upper) fexp = 'UPPER(' + fexp + ')'; if (node.trim) fexp = 'TRIM(' + fexp + ')';
+  let val = '';
+  if (v.kind === 'param') val = ':' + v.name; else if (v.kind === 'field') val = v.name;
+  else if (v.kind === 'valueSet') { const vs = ctx.valueSet(v.setId); val = 'Value Set「' + (vs ? vs.name : v.setId) + '」'; }
+  else if (Array.isArray(v.v)) val = v.v.join('、'); else val = v.v == null ? '' : String(v.v);
+  if (node.op === 'RAW') return ind + '- ⚠ 自由 SQL：`' + singleLine(node.raw) + '`';
+  const sub = node.op.startsWith('SUBSTR') ? '（第 ' + node.start + ' 碼起 ' + node.len + ' 碼）' : '';
+  return ind + '- `' + fexp + '`' + sub + ' ' + (OP_LABEL[node.op] || node.op).replace(/\s.*$/, '') + (['IS_NULL', 'NOT_NULL'].includes(node.op) ? '' : ' `' + val + '`');
+}
+
+/* ---------- DDL 解析器 ---------- */
+function stripSqlComments(t) {
+  let out = '', i = 0, q = null;
+  while (i < t.length) {
+    const c = t[i], n = t[i + 1];
+    if (q) { out += c; if (c === q) { if (t[i + 1] === q) { out += t[i + 1]; i++; } else q = null; } i++; continue; }
+    if (c === "'" || c === '"') { q = c; out += c; i++; continue; }
+    if (c === '-' && n === '-') { while (i < t.length && t[i] !== '\n') i++; continue; }
+    if (c === '/' && n === '*') { i += 2; while (i < t.length && !(t[i] === '*' && t[i + 1] === '/')) i++; i += 2; out += ' '; continue; }
+    out += c; i++;
+  }
+  return out;
+}
+function readIdent(s, p) {
+  while (p < s.length && /\s/.test(s[p])) p++;
+  if (s[p] === '"') { const e = s.indexOf('"', p + 1); if (e < 0) return null; return { name: s.slice(p + 1, e), end: e + 1 }; }
+  const m = /^[A-Za-z_][\w$#]*/.exec(s.slice(p)); if (!m) return null;
+  return { name: m[0], end: p + m[0].length };
+}
+function readQualified(s, p) {
+  const a = readIdent(s, p); if (!a) return null;
+  let q = a.end; while (q < s.length && /\s/.test(s[q])) q++;
+  if (s[q] === '.') { const b = readIdent(s, q + 1); if (b) return { schema: a.name, name: b.name, end: b.end }; }
+  return { schema: null, name: a.name, end: a.end };
+}
+function matchParen(s, open) {
+  let d = 0, q = null;
+  for (let i = open; i < s.length; i++) {
+    const c = s[i];
+    if (q) { if (c === q) q = null; continue; }
+    if (c === "'" || c === '"') { q = c; continue; }
+    if (c === '(') d++; else if (c === ')') { d--; if (d === 0) return i; }
+  }
+  return -1;
+}
+function splitTop(s) {
+  const out = []; let d = 0, q = null, cur = '';
+  for (const c of s) {
+    if (q) { cur += c; if (c === q) q = null; continue; }
+    if (c === "'" || c === '"') { q = c; cur += c; continue; }
+    if (c === '(') d++; if (c === ')') d--;
+    if (c === ',' && d === 0) { out.push(cur); cur = ''; } else cur += c;
+  }
+  if (cur.trim()) out.push(cur);
+  return out.map(x => x.trim()).filter(Boolean);
+}
+const identList = s => { const r = []; String(s).replace(/"([^"]+)"|([A-Za-z_][\w$#]*)/g, (m, a, b) => { r.push((a || b).toUpperCase()); return m; }); return r; };
+function parseDDL(text, defSchema) {
+  const src = stripSqlComments(String(text || ''));
+  const tables = []; const byKey = {};
+  const reC = /CREATE\s+(?:GLOBAL\s+TEMPORARY\s+)?TABLE\s+/gi; let m;
+  while ((m = reC.exec(src))) {
+    const q = readQualified(src, m.index + m[0].length); if (!q) continue;
+    let p = q.end; while (p < src.length && /\s/.test(src[p])) p++;
+    if (src[p] !== '(') continue;
+    const close = matchParen(src, p); if (close < 0) continue;
+    const t = { schema: (q.schema || defSchema || '').toLowerCase(), table: q.name.toUpperCase(), fields: [], pk: [], comment: '' };
+    splitTop(src.slice(p + 1, close)).forEach(part => {
+      let u = part.replace(/^\s*CONSTRAINT\s+("[^"]+"|\S+)\s+/i, 'CONSTRAINT_ ');
+      if (/^(CONSTRAINT_\s+)?PRIMARY\s+KEY/i.test(u)) { const mm = /\(([^)]*)\)/.exec(u); if (mm) t.pk = identList(mm[1]); return; }
+      if (/^(CONSTRAINT_\s+)?FOREIGN\s+KEY/i.test(u)) {
+        const mm = /FOREIGN\s+KEY\s*\(([^)]*)\)\s*REFERENCES\s+(.+?)\s*\(([^)]*)\)/i.exec(u);
+        if (mm) { const cols = identList(mm[1]), rt = readQualified(mm[2], 0); if (rt) cols.forEach(c => { (t.fks = t.fks || {})[c] = (rt.schema ? rt.schema.toLowerCase() + '.' : '') + rt.name.toUpperCase() + '.' + identList(mm[3])[0]; }); }
+        return;
+      }
+      if (/^(CONSTRAINT_\s+)?(UNIQUE|CHECK)\b/i.test(u) || /^(SUPPLEMENTAL|PERIOD|PARTITION)\b/i.test(u)) return;
+      const id = readIdent(part, 0); if (!id) return;
+      const rest = part.slice(id.end).trim();
+      const tm = /^([A-Za-z][A-Za-z0-9_]*(?:\s+(?:WITH(?:\s+LOCAL)?\s+TIME\s+ZONE|VARYING|PRECISION))?)\s*(?:\(([^)]*)\))?/i.exec(rest);
+      const f = { fieldName: id.name.toUpperCase(), dataType: tm ? tm[1].toUpperCase().replace(/\s+/g, ' ') : 'UNKNOWN', length: null, precision: null, scale: null, nullable: !/\bNOT\s+NULL\b/i.test(rest), isPk: /\bPRIMARY\s+KEY\b/i.test(rest) };
+      if (tm && tm[2]) {
+        const args = tm[2].replace(/\b(BYTE|CHAR)\b/ig, '').split(',').map(x => parseInt(x, 10));
+        if (typeClass(f.dataType) === 'char') f.length = isNaN(args[0]) ? null : args[0];
+        else { f.precision = isNaN(args[0]) ? null : args[0]; f.scale = args.length > 1 && !isNaN(args[1]) ? args[1] : null; }
+      }
+      f.comment = ''; t.fields.push(f);
+    });
+    tables.push(t); byKey[t.schema + '.' + t.table] = t;
+  }
+  const findT = (sc, tb) => byKey[(sc || defSchema || '').toLowerCase() + '.' + tb.toUpperCase()];
+  const reA = /ALTER\s+TABLE\s+/gi;
+  while ((m = reA.exec(src))) {
+    const q = readQualified(src, m.index + m[0].length); if (!q) continue;
+    const seg = src.slice(q.end, src.indexOf(';', q.end) < 0 ? undefined : src.indexOf(';', q.end));
+    const pk = /PRIMARY\s+KEY\s*\(([^)]*)\)/i.exec(seg); const t = findT(q.schema, q.name);
+    if (pk && t) t.pk = identList(pk[1]);
+  }
+  const reCm = /COMMENT\s+ON\s+(COLUMN|TABLE)\s+/gi;
+  while ((m = reCm.exec(src))) {
+    const rest = src.slice(m.index + m[0].length); const im = /^(.*?)\s+IS\s+'((?:[^']|'')*)'/is.exec(rest); if (!im) continue;
+    const parts = []; im[1].replace(/"([^"]+)"|([A-Za-z_][\w$#]*)/g, (x, a, b) => { parts.push(a || b); return x; });
+    const txt = im[2].replace(/''/g, "'");
+    if (m[1].toUpperCase() === 'TABLE') { const t = findT(parts.length > 1 ? parts[0] : null, parts[parts.length - 1]); if (t) t.comment = txt; }
+    else if (parts.length >= 2) { const col = parts[parts.length - 1].toUpperCase(), tb = parts[parts.length - 2], sc = parts.length > 2 ? parts[parts.length - 3] : null; const t = findT(sc, tb); const f = t && t.fields.find(x => x.fieldName === col); if (f) f.comment = txt; }
+  }
+  tables.forEach(t => t.fields.forEach(f => { if (t.pk.includes(f.fieldName)) { f.isPk = true; f.nullable = false; } if (t.fks && t.fks[f.fieldName]) f.fk = t.fks[f.fieldName]; }));
+  return tables;
+}
+
+/* ============================================================
+ * 應用層（A）：context、共用 helper、路由、Dashboard、Rule Library
+ * ============================================================ */
+const tkey = (schema, table) => String(schema || '').toLowerCase() + '.' + String(table || '').toUpperCase();
+function makeCtx() {
+  return {
+    defaultSchema: getSet('defaultSchema'), caseMode: getSet('identifierCase'), dialect: getSet('dialect'),
+    schemaList: getSet('schemaList').map(s => s.name.toLowerCase()),
+    valueSet: id => S.vsMap.get(id) || null, valueSetIds: () => S.valueSets.map(v => v.setId),
+    tableFields: (schema, table) => { const k = tkey(schema, table); return S.tableMap.has(k) ? (S.fieldsByTable.get(k) || []) : null; },
+    tableSchemas: table => S.tables.filter(t => t.table === String(table).toUpperCase()).map(t => t.schema)
+  };
+}
+const effSchema = rule => { const t = rule.targetSchema ? normalizeSchemaInput(rule.targetSchema).value : ''; return RE_IDENT.test(t) ? t : getSet('defaultSchema'); };
+const ruleCoreJson = r => { const c = clone(r); delete c.updatedAt; delete c.version; delete c.createdAt; return stable(c); };
+function nextRuleId(extra) {
+  let max = 0; const used = new Set(extra || []);
+  S.rules.forEach(r => { const m = /^RF-(\d+)$/.exec(r.ruleId); if (m) max = Math.max(max, +m[1]); });
+  (extra || []).forEach(id => { const m = /^RF-(\d+)$/.exec(id); if (m) max = Math.max(max, +m[1]); });
+  let id; do { max++; id = 'RF-' + pad(max, 4); } while (S.rulesMap.has(id) || used.has(id));
+  return id;
+}
+function normalizeRule(r) {
+  if (!r || typeof r !== 'object' || Array.isArray(r)) r = {};
+  const d = newRuleTemplate(r.ruleId == null ? '' : String(r.ruleId));
+  const out = Object.assign({}, d, r);
+  if (!r.createdAt) out.createdAt = r.updatedAt || d.createdAt;
+  if (!r.updatedAt) out.updatedAt = out.createdAt;
+  if (!('targetSchema' in r) || out.targetSchema === '' || out.targetSchema === undefined) out.targetSchema = null;
+  out.ruleId = out.ruleId == null ? '' : String(out.ruleId);
+  ['ruleName', 'findingId', 'exposureType', 'targetTable', 'alias', 'expected', 'regulationRef', 'description', 'sumColumn'].forEach(k => { out[k] = out[k] == null ? '' : String(out[k]); });
+  if (!out.alias) out.alias = 't';
+  if (!CATEGORIES.includes(out.category)) out.category = 'OTHER';
+  if (!SEVERITIES.includes(out.severity)) out.severity = 'MEDIUM';
+  if (!STATUSES.includes(out.status)) out.status = 'DRAFT';
+  out.version = Number.isFinite(Number(out.version)) ? Number(out.version) : 0;
+  ['tags', 'selectColumns', 'orderBy', 'groupBy'].forEach(k => { out[k] = (Array.isArray(out[k]) ? out[k] : clone(d[k])).filter(x => x != null && typeof x !== 'object').map(String); });
+  out.parameters = (Array.isArray(out.parameters) ? out.parameters : clone(d.parameters)).filter(x => x && typeof x === 'object').map(x => ({ name: String(x.name == null ? '' : x.name), type: ['NUMBER', 'STRING', 'DATE'].includes(x.type) ? x.type : 'STRING', required: !!x.required }));
+  let cond = sanitizeTree(out.condition);
+  if (!cond || cond.type !== 'group') { const g = newGroup('AND'); if (cond) g.children.push(cond); cond = g; }
+  out.condition = cond;
+  if (!out.selectColumns.length) out.selectColumns = ['*'];
+  return out;
+}
+function rulesUsingField(tableKey, fieldName) {
+  const [sc, tb] = [tableKey.split('.')[0], tableKey.split('.').slice(1).join('.')];
+  return S.rules.filter(r => String(r.targetTable).toUpperCase() === tb && effSchema(r).toLowerCase() === sc && (() => { let hit = false; walkTree(r.condition, n => { if (n.type === 'cond' && String(n.field || '').toUpperCase() === fieldName) hit = true; }); return hit; })());
+}
+async function refreshFindingLinks() {
+  const ops = [];
+  S.findings.forEach(f => {
+    const ids = S.rules.filter(r => r.findingId === f.findingId).map(r => r.ruleId).sort();
+    if (JSON.stringify(ids) !== JSON.stringify(f.ruleIds || [])) ops.push({ store: 'findings', op: 'put', val: Object.assign({}, f, { ruleIds: ids }) });
+  });
+  if (ops.length) { await idb.multi(ops); await reload('findings'); }
+}
+let PQ = Promise.resolve();   /* 儲存一律排隊執行，避免連按兩次造成重複版本 */
+function persistRule(rule, o) { const run = () => persistRuleNow(rule, o); const p = PQ.then(run, run); PQ = p.catch(() => { }); return p; }
+async function persistRuleNow(rule, o) {
+  o = o || {};
+  const ctx = makeCtx(); const ex = S.rulesMap.get(rule.ruleId);
+  const changed = !ex || ruleCoreJson(ex) !== ruleCoreJson(rule);
+  if (ex && !changed) return { changed: false, rule: ex };
+  rule.updatedAt = nowISO();
+  if (!ex) { rule.version = 1; rule.createdAt = rule.createdAt || rule.updatedAt; }
+  else rule.version = (ex.version || 0) + 1;
+  const ops = [{ store: 'rules', op: 'put', val: rule }];
+  if (changed) ops.push({ store: 'ruleVersions', op: 'put', val: { versionId: uid(), ruleId: rule.ruleId, version: rule.version, createdAt: rule.updatedAt, note: o.note || '', snapshot: clone(rule), sql: buildQuery(rule, { mode: 'detail' }, ctx).sql } });
+  await idb.multi(ops);
+  await reload('rules'); await refreshFindingLinks();
+  await audit(ex ? 'update' : 'create', 'rule', rule.ruleId, (o.note || '') + ' v' + rule.version);
+  if (!o.silent) await bumpSaveCount();
+  return { changed, rule };
+}
+async function deleteRules(ids) {
+  const ops = [];
+  for (const id of ids) {
+    ops.push({ store: 'rules', op: 'del', key: id });
+    (await idb.byIndex('ruleVersions', 'ruleId', id)).forEach(v => ops.push({ store: 'ruleVersions', op: 'del', key: v.versionId }));
+  }
+  await idb.multi(ops); await reload('rules'); await refreshFindingLinks();
+  await audit('delete', 'rule', ids.join(','), ids.length + ' 條');
+}
+async function bulkSetStatus(ids, st) {   /* 批次改狀態：單一交易、單次重載（1,000 條規則也很快） */
+  const ctx = makeCtx(), ops = []; let n = 0;
+  ids.forEach(id => {
+    const ex = S.rulesMap.get(id); if (!ex || ex.status === st) return;
+    const r = clone(ex); r.status = st; r.updatedAt = nowISO(); r.version = (ex.version || 0) + 1;
+    ops.push({ store: 'rules', op: 'put', val: r });
+    ops.push({ store: 'ruleVersions', op: 'put', val: { versionId: uid(), ruleId: id, version: r.version, createdAt: r.updatedAt, note: '批次變更狀態為 ' + st, snapshot: clone(r), sql: buildQuery(r, { mode: 'detail' }, ctx).sql } }); n++;
+  });
+  if (ops.length) { await idb.multi(ops); await reload('rules'); await refreshFindingLinks(); }
+  await audit('bulk-status', 'rule', '', n + ' 條 → ' + st); if (n) await bumpSaveCount(); return n;
+}
+
+/* ---------- schema picker（下拉 + 手動輸入） ---------- */
+function schemaPickerHTML(id, value, defLabel) {
+  const list = getSet('schemaList'); const v = value || '';
+  const known = list.some(s => s.name.toLowerCase() === v.toLowerCase());
+  const opts = ['<option value="">' + esc(defLabel) + '</option>'].concat(list.map(s => `<option value="${esc(s.name)}" ${v && s.name.toLowerCase() === v.toLowerCase() ? 'selected' : ''}>${esc(s.name)}${s.label && s.label !== s.name ? ' — ' + esc(s.label) : ''}</option>`));
+  if (v && !known) opts.push(`<option value="__custom__" selected>手動：${esc(v)}</option>`);
+  opts.push('<option value="__new__">手動輸入…</option>');
+  return `<span class="row" data-sp="${id}" style="flex-wrap:nowrap"><select data-sp-sel>${opts.join('')}</select><input type="text" data-sp-inp placeholder="輸入 schema" style="display:none;width:140px"></span>`;
+}
+function wireSchemaPicker(root, id, onChange) {
+  const box = root.querySelector(`[data-sp="${id}"]`); if (!box) return;
+  const sel = box.querySelector('[data-sp-sel]'), inp = box.querySelector('[data-sp-inp]');
+  let prev = sel.value, busy = false;
+  const setCustom = name => {   /* 手動輸入的值變成一個可選項目並選取，畫面與實際值一致 */
+    Array.from(sel.options).filter(o => o.value === '__custom__').forEach(o => o.remove());
+    const known = Array.from(sel.options).find(o => o.value && o.value !== '__new__' && o.value.toLowerCase() === name.toLowerCase());
+    if (known) { sel.value = known.value; return; }
+    const o = document.createElement('option'); o.value = '__custom__'; o.textContent = '手動：' + name;
+    sel.insertBefore(o, Array.from(sel.options).find(x => x.value === '__new__')); sel.value = '__custom__';
+  };
+  sel.addEventListener('change', () => {
+    if (sel.value === '__new__') { inp.style.display = ''; inp.focus(); return; }
+    inp.style.display = 'none'; prev = sel.value;
+    onChange(sel.value === '__custom__' ? sel.options[sel.selectedIndex].text.replace(/^手動：/, '') : sel.value);
+  });
+  const commit = () => {
+    if (busy) return; busy = true; setTimeout(() => { busy = false; }, 250);
+    if (!inp.value.trim()) { inp.style.display = 'none'; sel.value = prev; return; }
+    const n = normalizeSchemaInput(inp.value);
+    if (!n.valid) { toast('Schema 格式不合法（L007）：需以英文字母開頭，僅限英數字、_ $ #', 'err'); return; }
+    if (n.changed) toast('已自動移除多餘符號：' + n.value, 'warn');
+    inp.value = ''; inp.style.display = 'none'; setCustom(n.value); prev = sel.value; onChange(n.value, true);
+  };
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commit(); } });
+  inp.addEventListener('blur', commit);
+}
+function getPickerValue(root, id) {
+  const box = root.querySelector(`[data-sp="${id}"]`); const sel = box.querySelector('[data-sp-sel]'), inp = box.querySelector('[data-sp-inp]');
+  if (sel.value === '__new__') return normalizeSchemaInput(inp.value);
+  if (sel.value === '__custom__') return normalizeSchemaInput(sel.options[sel.selectedIndex].text.replace(/^手動：/, ''));
+  return sel.value ? normalizeSchemaInput(sel.value) : { value: '', valid: true, changed: false };
+}
+
+/* ---------- 匯出 .sql 對話框 ---------- */
+async function exportSqlDialog(rules, pre) {
+  pre = pre || {};
+  if (!rules.length) { toast('沒有可匯出的規則', 'warn'); return; }
+  const multi = rules.length > 1;
+  const html = `
+    <p class="muted small">共 ${rules.length} 條規則。此處的 schema 只套用於本次匯出，不會改動規則本身。</p>
+    <div class="fld"><label class="f">本次使用的 Schema（留空＝依各規則設定／全域預設 ${esc(getSet('defaultSchema'))}）</label>${schemaPickerHTML('exp', pre.override || '', '（依規則／預設）')}</div>
+    <div class="fld"><label class="f">輸出模式</label>
+      <div class="row">${[['detail', '明細'], ['count', '筆數'], ['summary', '彙總']].map(([k, l]) => `<label><input type="radio" name="xm" value="${k}" ${((pre.mode || 'detail') === k) ? 'checked' : ''}> ${l}</label>`).join('')}</div></div>
+    ${multi ? `<div class="fld"><label><input type="checkbox" id="xu" ${pre.union !== false ? 'checked' : ''}> 合併成單一 UNION ALL（自動加入 rule_id 欄位；彙總模式會改為筆數）</label></div>` : ''}
+    <div class="fld"><label class="f">檔名</label><input type="text" id="xf" value="${esc(pre.filename || (multi ? 'rule-forge-batch' : rules[0].ruleId))}"></div>`;
+  const r = await modal({
+    title: '匯出 .sql', html, buttons: [{ label: '取消', value: null }, { label: '下載', value: 'ok', cls: 'primary', validate: ov => (getPickerValue(ov, 'exp').valid ? '' : 'Schema 格式不合法（L007）') }],
+    onOpen: ov => wireSchemaPicker(ov, 'exp', () => { }),
+    collect: ov => ({ override: getPickerValue(ov, 'exp').value, mode: (ov.querySelector('input[name=xm]:checked') || {}).value || 'detail', union: ov.querySelector('#xu') ? ov.querySelector('#xu').checked : false, filename: ov.querySelector('#xf').value.trim() || 'rule-forge' })
+  });
+  if (!r) return;
+  const d = r.data, ctx = makeCtx();
+  const sql = buildFor(rules, { mode: d.mode, schemaOverride: d.override, union: d.union }, ctx);
+  download(d.filename.replace(/\.sql$/i, '') + '.sql', sql + '\n', 'application/sql');
+  toast('已下載 .sql（Schema：' + (d.override || '依規則／預設') + '）', 'ok');
+}
+
+/* ---------- router ---------- */
+const NAV = [
+  ['dashboard', '📊', 'Dashboard', () => ''], ['rules', '📚', 'Rule Library', () => S.rules.length], ['rules/new', '🛠', 'Rule Builder', () => ''],
+  ['findings', '🧾', 'Finding Registry', () => S.findings.length], ['fields', '🗂', 'Field Dictionary', () => S.tables.length],
+  ['valuesets', '🧩', 'Value Sets', () => S.valueSets.length], ['versions', '🕘', 'Versions', () => ''], ['settings', '⚙', 'Settings', () => '']
+];
+let GUARD = null, CUR = { hash: '', view: '' }, SUPPRESS = null;
+function suppressNext(h) { SUPPRESS = h; setTimeout(() => { if (SUPPRESS === h) SUPPRESS = null; }, 500); }   /* 只吞掉「這一個」程式自己造成的 hashchange，且 0.5 秒後失效 */
+const safeDecode = s => { try { return decodeURIComponent(s); } catch (e) { return s; } };
+function renderNav() {
+  const cur = CUR.view;
+  $('#nav').innerHTML = NAV.map(([id, ic, lb, cnt]) => {
+    const on = id === 'rules' ? cur === 'rules' : id === 'rules/new' ? cur === 'builder' : id === cur;
+    return `<a href="#/${id}" class="${on ? 'on' : ''}">${ic} ${lb}<span class="n">${esc(cnt())}</span></a>`;
+  }).join('');
+  $('#hdrSchema').textContent = '預設 Schema：' + getSet('defaultSchema');
+}
+function parseHash() {
+  const h = (location.hash || '#/dashboard').replace(/^#\/?/, '');
+  const [pathPart, qs] = h.split('?'); const parts = pathPart.split('/').filter(Boolean).map(safeDecode);
+  const q = {}; (qs || '').split('&').filter(Boolean).forEach(kv => { const [k, v] = kv.split('='); q[k] = safeDecode(v || ''); });
+  return { parts, q, raw: h };
+}
+async function route() {
+  if (SUPPRESS !== null && location.hash === SUPPRESS) { SUPPRESS = null; return; }
+  const next = location.hash;
+  if (GUARD && GUARD() && next !== CUR.hash) {
+    suppressNext(CUR.hash); location.replace(CUR.hash);
+    const ok = await confirmBox('目前有尚未儲存的變更，確定要離開嗎？', '放棄變更並離開', true);
+    if (!ok) return;
+    GUARD = null; location.hash = next; return;
+  }
+  GUARD = null;
+  const { parts, q } = parseHash(); const v = parts[0] || 'dashboard';
+  CUR.hash = next;
+  const main = $('#main'); main.scrollTop = 0;
+  try {
+    if (v === 'dashboard') { CUR.view = 'dashboard'; renderNav(); viewDashboard(); }
+    else if (v === 'rules' && parts[1]) { CUR.view = 'builder'; renderNav(); await viewBuilder(parts[1], q); }
+    else if (v === 'rules') { CUR.view = 'rules'; renderNav(); viewLibrary(); }
+    else if (v === 'findings') { CUR.view = 'findings'; renderNav(); viewFindings(); }
+    else if (v === 'fields') { CUR.view = 'fields'; renderNav(); viewFields(parts.slice(1).join('/')); }
+    else if (v === 'valuesets') { CUR.view = 'valuesets'; renderNav(); viewValueSets(parts[1]); }
+    else if (v === 'versions') { CUR.view = 'versions'; renderNav(); await viewVersions(parts[1]); }
+    else if (v === 'settings') { CUR.view = 'settings'; renderNav(); await viewSettings(); }
+    else { location.hash = '#/dashboard'; }
+  } catch (e) { console.error(e); main.innerHTML = `<div class="card"><h2>發生錯誤</h2><pre class="mono small">${esc(e && e.stack || e)}</pre></div>`; }
+}
+const go = h => { if (location.hash === h) route(); else location.hash = h; };
+
+/* ---------- Dashboard ---------- */
+function bars(map, total, labelFn) {
+  const ent = Object.entries(map).sort((a, b) => b[1] - a[1]); if (!ent.length) return '<div class="muted small">（無資料）</div>';
+  const mx = Math.max(...ent.map(e => e[1]), 1);
+  return ent.map(([k, n]) => `<div class="barrow"><span title="${esc(k)}">${esc(labelFn ? labelFn(k) : k)}</span><div><div class="bar" style="width:${Math.round(n / mx * 100)}%"></div></div><b>${n}</b></div>`).join('');
+}
+function viewDashboard() {
+  const R = S.rules, ctx = makeCtx(), cnt = (f) => R.reduce((m, r) => { const k = f(r) || '（未設定）'; m[k] = (m[k] || 0) + 1; return m; }, {});
+  const lintAgg = { ERROR: 0, WARN: 0, INFO: 0 }; let errRules = 0;
+  R.filter(r => r.status !== 'DEPRECATED').forEach(r => { const l = lintRule(r, ctx); let e = 0; l.forEach(x => { lintAgg[x.level]++; if (x.level === 'ERROR') e++; }); if (e) errRules++; });
+  const noRule = S.findings.filter(f => !R.some(r => r.findingId === f.findingId));
+  const sc = getSet('saveCount') || 0, last = getSet('lastBackupAt');
+  const empty = !R.length && !S.findings.length && !S.tables.length;
+  const recent = sortBy(R, r => r.updatedAt, -1).slice(0, 8);
+  $('#main').innerHTML = `<div id="v"><h1>Dashboard</h1><p class="sub">監理缺失 → 結構化規則 → 可執行 SQL。所有資料只存在這台電腦的瀏覽器（IndexedDB），不會連網。</p>
+  ${empty ? `<div class="card"><h2>👋 開始使用</h2><p>目前沒有任何資料。你可以：</p><div class="row"><button class="btn primary" id="dSample">載入範例資料</button><button class="btn" id="dNew">直接新增規則</button><button class="btn" id="dImp">匯入備份 JSON</button></div><p class="muted small">範例包含缺失態樣第 1–5 項、<span class="mono">CAL_CR3000_DETAIL</span> 的範例欄位字典（請之後以正式 DDL 覆蓋）與三條示範規則。</p></div>` : ''}
+  ${Number(getSet('backupEvery')) > 0 && sc >= Number(getSet('backupEvery')) ? `<div class="note warn">已累積 ${sc} 次儲存${last ? '（上次備份：' + esc(fmtTime(last)) + '）' : '，尚未備份過'}。建議到「設定」匯出完整 JSON 備份。</div>` : ''}
+  <div class="grid g4" style="margin-bottom:14px">
+    <div class="stat"><b>${R.length}</b><span>規則總數</span></div>
+    <div class="stat"><b style="color:var(--ok)">${R.filter(r => r.status === 'ACTIVE').length}</b><span>ACTIVE</span></div>
+    <div class="stat"><b style="color:var(--warn)">${R.filter(r => r.status === 'DRAFT').length}</b><span>DRAFT</span></div>
+    <div class="stat"><b>${R.filter(r => r.status === 'DEPRECATED').length}</b><span>DEPRECATED</span></div>
+    <div class="stat"><b>${S.findings.length}</b><span>缺失態樣</span></div>
+    <div class="stat"><b style="color:${noRule.length ? 'var(--warn)' : 'var(--ok)'}">${noRule.length}</b><span>尚無規則的缺失態樣</span></div>
+    <div class="stat"><b style="color:${errRules ? 'var(--err)' : 'var(--ok)'}">${errRules}</b><span>有 Lint ERROR 的規則</span></div>
+    <div class="stat"><b>${lintAgg.WARN}</b><span>Lint 警告（全部規則）</span></div>
+  </div>
+  <div class="grid g3">
+    <div class="card"><h2>依類別</h2>${bars(cnt(r => r.category), R.length, k => CAT_LABEL[k] || k)}</div>
+    <div class="card"><h2>依嚴重度</h2>${bars(cnt(r => r.severity), R.length)}</div>
+    <div class="card"><h2>依 Schema</h2>${bars(cnt(r => effSchema(r)), R.length)}</div>
+  </div>
+  <div class="grid g2">
+    <div class="card"><h2>最近修改</h2>${recent.length ? `<table class="tbl"><tbody>${recent.map(r => `<tr><td><a href="#/rules/${encodeURIComponent(r.ruleId)}">${esc(r.ruleId)}</a></td><td>${esc(r.ruleName)}</td><td class="muted small">${esc(fmtTime(r.updatedAt))}</td></tr>`).join('')}</tbody></table>` : '<div class="muted">尚無規則</div>'}</div>
+    <div class="card"><h2>尚無規則的缺失態樣</h2>${noRule.length ? `<table class="tbl"><tbody>${noRule.slice(0, 8).map(f => `<tr><td>#${esc(f.seqNo)}</td><td>${esc(singleLine(f.description).slice(0, 60))}${singleLine(f.description).length > 60 ? '…' : ''}</td><td><a href="#/rules/new?finding=${encodeURIComponent(f.findingId)}">建立規則</a></td></tr>`).join('')}</tbody></table>` : '<div class="muted">全部缺失態樣都已有對應規則 ✔</div>'}</div>
+  </div></div>`;
+  const v = $('#v');
+  const s = $('#dSample', v); if (s) s.onclick = async () => { await loadSampleData(); toast('已載入範例資料', 'ok'); route(); };
+  const n = $('#dNew', v); if (n) n.onclick = () => go('#/rules/new');
+  const i = $('#dImp', v); if (i) i.onclick = () => importFlow();
+}
+
+/* ---------- Rule Library ---------- */
+const LIB = { q: '', cat: '', sev: '', status: '', schema: '', finding: '', sort: 'updatedAt', dir: -1, sel: new Set(), limit: 200 };
+function libFiltered() {
+  const q = LIB.q.trim().toLowerCase();
+  let a = S.rules.filter(r => {
+    if (LIB.cat && r.category !== LIB.cat) return false; if (LIB.sev && r.severity !== LIB.sev) return false;
+    if (LIB.status && r.status !== LIB.status) return false; if (LIB.schema && effSchema(r).toLowerCase() !== LIB.schema) return false;
+    if (LIB.finding && (LIB.finding === '__none__' ? r.findingId : r.findingId !== LIB.finding)) return false;
+    if (!q) return true;
+    return (r.ruleId + ' ' + r.ruleName + ' ' + (r.description || '') + ' ' + (r.tags || []).join(' ') + ' ' + r.targetTable + ' ' + (r.expected || '') + ' ' + (r.regulationRef || '') + ' ' + (r.findingId || '')).toLowerCase().includes(q);
+  });
+  const key = { updatedAt: r => r.updatedAt || '', ruleId: r => r.ruleId, severity: r => SEVERITIES.indexOf(r.severity), status: r => r.status, ruleName: r => r.ruleName || '' }[LIB.sort] || (r => r.updatedAt);
+  return sortBy(a, key, LIB.dir);
+}
+function viewLibrary() {
+  [...LIB.sel].forEach(id => { if (!S.rulesMap.has(id)) LIB.sel.delete(id); });
+  const schemas = getSet('schemaList').map(s => s.name);
+  $('#main').innerHTML = `<div id="v"><div class="row sp"><div><h1>Rule Library</h1><p class="sub">規則清單、搜尋、篩選與批次操作</p></div>
+    <div class="row"><button class="btn" id="lImp">匯入 JSON</button><button class="btn primary" id="lNew">＋ 新增規則</button></div></div>
+  <div class="card"><div class="row">
+    <input type="search" id="lq" placeholder="搜尋規則編號／名稱／標籤／表名…" value="${esc(LIB.q)}" style="max-width:320px">
+    <select id="lcat" style="width:auto"><option value="">全部類別</option>${CATEGORIES.map(c => `<option value="${c}" ${LIB.cat === c ? 'selected' : ''}>${CAT_LABEL[c]}</option>`).join('')}</select>
+    <select id="lsev" style="width:auto"><option value="">全部嚴重度</option>${SEVERITIES.map(c => `<option ${LIB.sev === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    <select id="lst" style="width:auto"><option value="">全部狀態</option>${STATUSES.map(c => `<option ${LIB.status === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    <select id="lsc" style="width:auto"><option value="">全部 Schema</option>${schemas.map(c => `<option ${LIB.schema === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+    <select id="lfd" style="width:auto;max-width:200px"><option value="">全部缺失態樣</option><option value="__none__" ${LIB.finding === '__none__' ? 'selected' : ''}>（未連結缺失）</option>${S.findings.map(f => `<option value="${esc(f.findingId)}" ${LIB.finding === f.findingId ? 'selected' : ''}>${esc(f.findingId)}</option>`).join('')}</select>
+    <button class="btn sm" id="lclr">清除篩選</button></div>
+    <div class="row" id="lbatch" style="margin-top:10px"></div></div>
+  <div class="scroll"><table class="tbl"><thead><tr><th style="width:28px"><input type="checkbox" id="lall"></th>
+    <th data-s="ruleId" style="cursor:pointer">編號</th><th data-s="ruleName" style="cursor:pointer">名稱</th><th>類別</th><th data-s="severity" style="cursor:pointer">嚴重度</th><th data-s="status" style="cursor:pointer">狀態</th><th>缺失</th><th>目標表</th><th>Lint</th><th data-s="updatedAt" style="cursor:pointer">更新</th><th></th></tr></thead><tbody id="lbody"></tbody></table></div>
+  <div class="row sp" style="margin-top:8px"><span class="muted small" id="lcount"></span><button class="btn sm" id="lmore" style="display:none">顯示更多</button></div></div>`;
+  const v = $('#v'); const ctx = makeCtx();
+  const draw = () => {
+    const rows = libFiltered(), shown = rows.slice(0, LIB.limit);
+    $('#lbody', v).innerHTML = shown.length ? shown.map(r => {
+      const l = lintRule(r, ctx), e = l.filter(x => x.level === 'ERROR').length, w = l.filter(x => x.level === 'WARN').length;
+      return `<tr data-id="${esc(r.ruleId)}"><td><input type="checkbox" data-sel ${LIB.sel.has(r.ruleId) ? 'checked' : ''}></td>
+      <td><a href="#/rules/${encodeURIComponent(r.ruleId)}">${esc(r.ruleId)}</a><div class="muted small">v${esc(r.version)}</div></td>
+      <td>${esc(r.ruleName)}<div>${(r.tags || []).map(t => `<span class="chip">${esc(t)}</span>`).join('')}</div></td><td>${esc(CAT_LABEL[r.category] || r.category)}</td>
+      <td><span class="sev ${esc(r.severity)}">${esc(r.severity)}</span></td><td><span class="st ${esc(r.status)}">${esc(r.status)}</span></td>
+      <td>${r.findingId ? `<a href="#/findings">${esc(r.findingId)}</a>` : '<span class="muted">—</span>'}</td>
+      <td class="mono small">${esc(effSchema(r))}.${esc(r.targetTable)}</td>
+      <td>${e ? `<span class="sev ERROR" title="Lint ERROR">⛔ ${e}</span> ` : ''}${w ? `<span class="sev WARN" title="Lint WARN">⚠ ${w}</span>` : ''}${!e && !w ? '<span class="muted">✔</span>' : ''}</td>
+      <td class="muted small">${esc(fmtTime(r.updatedAt))}</td>
+      <td style="white-space:nowrap"><button class="btn sm" data-a="dup" title="複製">⧉</button> <button class="btn sm danger" data-a="del" title="刪除">✕</button></td></tr>`;
+    }).join('') : `<tr><td colspan="11" class="empty">沒有符合條件的規則</td></tr>`;
+    $('#lcount', v).textContent = `共 ${rows.length} 條（顯示 ${shown.length}）／全部 ${S.rules.length} 條`;
+    $('#lmore', v).style.display = rows.length > shown.length ? '' : 'none';
+    const n = LIB.sel.size;
+    $('#lbatch', v).innerHTML = n ? `<b>已選 ${n} 條</b> <button class="btn sm" data-b="sql">匯出 SQL</button><button class="btn sm" data-b="json">匯出 JSON</button><button class="btn sm" data-b="md">匯出 Markdown</button>
+      <select data-b-st style="width:auto"><option value="">設定狀態…</option>${STATUSES.map(s => `<option>${s}</option>`).join('')}</select><button class="btn sm danger" data-b="del">刪除</button><button class="btn sm ghost" data-b="clr">取消選取</button>` : '<span class="muted small">勾選規則後可批次匯出（SQL／JSON／Markdown）、變更狀態或刪除</span>';
+  };
+  const dr = debounce(() => { LIB.limit = 200; draw(); }, 120);
+  $('#lq', v).oninput = e => { LIB.q = e.target.value; dr(); };
+  [['lcat', 'cat'], ['lsev', 'sev'], ['lst', 'status'], ['lsc', 'schema'], ['lfd', 'finding']].forEach(([id, k]) => { $('#' + id, v).onchange = e => { LIB[k] = e.target.value; LIB.limit = 200; draw(); }; });
+  $('#lclr', v).onclick = () => { Object.assign(LIB, { q: '', cat: '', sev: '', status: '', schema: '', finding: '' }); viewLibrary(); };
+  $('#lmore', v).onclick = () => { LIB.limit += 400; draw(); };
+  $('#lNew', v).onclick = () => go('#/rules/new'); $('#lImp', v).onclick = () => importFlow();
+  $('#lall', v).onchange = e => { libFiltered().forEach(r => { if (e.target.checked) LIB.sel.add(r.ruleId); else LIB.sel.delete(r.ruleId); }); draw(); };
+  v.querySelectorAll('th[data-s]').forEach(th => th.onclick = () => { if (LIB.sort === th.dataset.s) LIB.dir *= -1; else { LIB.sort = th.dataset.s; LIB.dir = th.dataset.s === 'updatedAt' ? -1 : 1; } draw(); });
+  v.addEventListener('change', async e => {
+    const t = e.target;
+    if (t.matches('[data-sel]')) { const id = t.closest('tr').dataset.id; if (t.checked) LIB.sel.add(id); else LIB.sel.delete(id); draw(); }
+    else if (t.matches('[data-b-st]') && t.value) {
+      const ids = [...LIB.sel], st = t.value;
+      const n = await bulkSetStatus(ids, st);
+      toast(`已將 ${n} 條規則設為 ${st}` + (n < ids.length ? `（${ids.length - n} 條原本就是 ${st}）` : ''), 'ok'); draw(); renderNav();
+    }
+  });
+  v.addEventListener('click', async e => {
+    const b = e.target.closest('[data-b],[data-a]'); if (!b) return;
+    if (b.dataset.a) {
+      const id = b.closest('tr').dataset.id, r = S.rulesMap.get(id);
+      if (b.dataset.a === 'del') { if (await confirmBox(`刪除規則 ${id}「${r.ruleName}」與其所有版本？此動作無法復原。`, '刪除', true)) { await deleteRules([id]); LIB.sel.delete(id); toast('已刪除', 'ok'); renderNav(); draw(); } }
+      else { const c = normalizeRule(clone(r)); c.ruleId = nextRuleId(); c.ruleName += '（複製）'; c.status = 'DRAFT'; c.version = 0; delete c.createdAt; await persistRule(c, { note: '由 ' + id + ' 複製' }); toast('已複製為 ' + c.ruleId, 'ok'); renderNav(); draw(); }
+      return;
+    }
+    const ids = [...LIB.sel], rules = sortBy(ids.map(i => S.rulesMap.get(i)).filter(Boolean), r => r.ruleId, 1);
+    if (b.dataset.b === 'sql') exportSqlDialog(rules);
+    else if (b.dataset.b === 'json') exportRulesJson(rules);
+    else if (b.dataset.b === 'md') exportMarkdown(rules);
+    else if (b.dataset.b === 'clr') { LIB.sel.clear(); draw(); }
+    else if (b.dataset.b === 'del') { if (await confirmBox(`刪除已選的 ${ids.length} 條規則與其所有版本？此動作無法復原。`, '刪除', true)) { await deleteRules(ids); LIB.sel.clear(); toast('已刪除', 'ok'); renderNav(); draw(); } }
+  });
+  draw();
+}
+
+/* ============================================================
+ * 應用層（B）：Rule Builder
+ * ============================================================ */
+const B = { draft: null, orig: '', isNew: false, mode: 'detail', override: '', dirty: false, dragPath: null };
+const pathArr = s => (s === '' || s == null ? [] : String(s).split('.').map(Number));
+const nodeAt = arr => { let n = B.draft.condition; for (const i of arr) n = n.children[i]; return n; };
+const parseList = s => String(s || '').split(/[\n,;，；]+/).map(x => x.trim().replace(/^(['"])(.*)\1$/, '$2')).filter(x => x !== '');
+const markDirty = () => { B.dirty = B.draft && ruleCoreJson(B.draft) !== B.orig; };
+const vtSel = (cur) => `<select class="c-vt" data-f="vt" title="值的型別：自動＝依欄位字典判斷"><option value="" ${!cur ? 'selected' : ''}>自動</option><option value="str" ${cur === 'str' ? 'selected' : ''}>文字</option><option value="num" ${cur === 'num' ? 'selected' : ''}>數字</option></select>`;
+
+function valueEditorHTML(n) {
+  const op = n.op, v = n.value || {};
+  if (op === 'IS_NULL' || op === 'NOT_NULL') return '<span class="muted small" style="padding-top:6px">（不需要值）</span>';
+  if (op === 'RAW') return `<textarea data-f="raw" placeholder="自由 SQL 片段，例如 t.col_a > t.col_b（需自行加上 schema，Lint 不檢核）">${esc(n.raw || '')}</textarea>`;
+  if (LIST_OPS.includes(op)) {
+    const sub = op.startsWith('SUBSTR') ? `<span class="mod">第<input type="text" data-f="start" value="${esc(n.start == null ? '' : n.start)}" style="width:42px">碼起，長<input type="text" data-f="len" value="${esc(n.len == null ? '' : n.len)}" style="width:42px"></span>` : '';
+    const ks = `<select class="c-k" data-f="vkind"><option value="list" ${v.kind !== 'valueSet' ? 'selected' : ''}>直接輸入</option><option value="valueSet" ${v.kind === 'valueSet' ? 'selected' : ''}>Value Set</option></select>`;
+    if (v.kind === 'valueSet') {
+      const o = ['<option value="">（選擇 Value Set）</option>'].concat(S.valueSets.map(s => `<option value="${esc(s.setId)}" ${s.setId === v.setId ? 'selected' : ''}>${esc(s.name)}（${(s.items || []).length}）${s.renderMode === 'CTE' ? ' [CTE]' : ''}</option>`)).join('');
+      return sub + ks + `<select data-f="setId" style="flex:1;min-width:150px">${o}</select>`;
+    }
+    return sub + ks + `<textarea data-f="vlist" placeholder="每行一個值，或以逗號分隔">${esc((v.v || []).join('\n'))}</textarea>` + (op.startsWith('SUBSTR') ? '' : vtSel(n.vt));
+  }
+  if (op === 'BETWEEN') return `<input type="text" data-f="b0" value="${esc((v.v || [])[0] == null ? '' : v.v[0])}" placeholder="起（可用 :參數）" style="width:130px"><span class="muted" style="padding-top:5px">～</span><input type="text" data-f="b1" value="${esc((v.v || [])[1] == null ? '' : v.v[1])}" placeholder="迄" style="width:130px">` + vtSel(n.vt);
+  if (['REGEX', 'LEN_EQ', 'LEN_NE'].includes(op)) return `<input type="text" data-f="v" value="${esc(v.v == null ? '' : v.v)}" placeholder="${op === 'REGEX' ? '正規表示式，如 ^[0-9]{8}$' : '長度，如 8'}" style="flex:1;min-width:120px">`;
+  const kinds = op === 'STARTS_WITH' ? [['literal', '常數'], ['param', '參數']] : [['literal', '常數'], ['param', '參數'], ['field', '欄位']];
+  const kind = v.kind || 'literal';
+  const ks = `<select class="c-k" data-f="vkind">${kinds.map(([k, l]) => `<option value="${k}" ${kind === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  if (kind === 'param') return ks + `<input type="text" data-f="pname" list="dl-params" value="${esc(v.name || '')}" placeholder="參數名，如 SS_SEQ" style="flex:1;min-width:120px">`;
+  if (kind === 'field') return ks + `<input type="text" data-f="vname" list="dl-fields" value="${esc(v.name || '')}" placeholder="欄位" style="flex:1;min-width:120px">`;
+  return ks + `<input type="text" data-f="v" value="${esc(v.v == null ? '' : v.v)}" placeholder="值" style="flex:1;min-width:110px">` + vtSel(n.vt);
+}
+function treeHTML(node, path) {
+  const off = node.enabled === false ? ' off' : '';
+  if (node.type === 'group') {
+    const root = path === '';
+    const kids = node.children.map((c, i) => treeHTML(c, root ? String(i) : path + '.' + i)).join('');
+    return `<div class="grp ${node.logic === 'OR' ? 'or' : ''}${off}" data-path="${path}"><div class="grp-head" data-drop="${path}">
+      ${root ? '' : `<span class="drag" draggable="true" data-drag="${path}" title="拖曳排序">⋮⋮</span>`}
+      <input type="checkbox" data-act="toggle" ${node.enabled !== false ? 'checked' : ''} ${root ? 'disabled' : ''} title="啟用／停用（停用時不產生 SQL）">
+      <select data-g="logic"><option ${node.logic !== 'OR' ? 'selected' : ''} value="AND">AND</option><option ${node.logic === 'OR' ? 'selected' : ''} value="OR">OR</option></select>
+      <span class="muted small">${node.logic === 'OR' ? '任一成立' : '全部成立'}</span>
+      <button class="btn sm" data-act="addCond">＋條件</button><button class="btn sm" data-act="addGroup">＋群組</button>
+      ${root ? '' : '<button class="btn sm ghost" data-act="up">↑</button><button class="btn sm ghost" data-act="down">↓</button><button class="btn sm ghost" data-act="dup" title="複製">⧉</button><button class="btn sm ghost danger" data-act="del">✕</button>'}
+    </div><div class="grp-body">${kids || '<div class="muted small" style="padding:4px 0">（空群組：按「＋條件」開始）</div>'}</div></div>`;
+  }
+  const raw = node.op === 'RAW';
+  return `<div class="cond${off}" data-path="${path}" data-drop="${path}">
+    <span class="drag" draggable="true" data-drag="${path}" title="拖曳排序">⋮⋮</span>
+    <input type="checkbox" data-act="toggle" ${node.enabled !== false ? 'checked' : ''} title="啟用／停用（停用時不產生 SQL）" style="margin-top:8px">
+    ${raw ? '' : `<input type="text" class="c-field" list="dl-fields" data-f="field" value="${esc(node.field || '')}" placeholder="欄位">
+    <label class="mod"><input type="checkbox" data-f="trim" ${node.trim ? 'checked' : ''}>TRIM</label><label class="mod"><input type="checkbox" data-f="upper" ${node.upper ? 'checked' : ''}>UPPER</label>
+    <span class="mod">NVL<input type="text" data-f="nvl" value="${esc(node.nvl || '')}" placeholder="預設值"></span>`}
+    <select class="c-op" data-f="op">${OP_ORDER.map(o => `<option value="${o}" ${node.op === o ? 'selected' : ''}>${esc(OP_LABEL[o])}</option>`).join('')}</select>
+    <div class="c-val">${valueEditorHTML(node)}</div>
+    <span style="white-space:nowrap"><button class="btn sm ghost" data-act="up">↑</button><button class="btn sm ghost" data-act="down">↓</button><button class="btn sm ghost" data-act="dup" title="複製">⧉</button><button class="btn sm ghost danger" data-act="del">✕</button></span></div>`;
+}
+function paramsHTML() {
+  const ps = B.draft.parameters;
+  return `<table class="tbl"><thead><tr><th>參數名（Bind 變數）</th><th style="width:110px">型別</th><th style="width:60px">必要</th><th style="width:30px"></th></tr></thead><tbody>${ps.map((p, i) => `<tr data-pi="${i}">
+    <td><input type="text" data-pf="name" value="${esc(p.name)}"></td><td><select data-pf="type">${['NUMBER', 'STRING', 'DATE'].map(t => `<option ${p.type === t ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+    <td><input type="checkbox" data-pf="required" ${p.required ? 'checked' : ''}></td><td><button class="btn sm ghost danger" data-pa="del">✕</button></td></tr>`).join('') || '<tr><td colspan="4" class="muted">（無參數）</td></tr>'}</tbody></table>
+    <button class="btn sm" data-pa="add" style="margin-top:6px">＋ 參數</button> <span class="muted small">「必要」的參數若未被任何條件使用，Lint 會報 L001。</span>`;
+}
+function fieldOptionsFor(rule) {
+  const f = makeCtx().tableFields(effSchema(rule), rule.targetTable) || [];
+  const f2 = f.length ? f : (S.tables.filter(t => t.table === String(rule.targetTable).toUpperCase()).flatMap(t => S.fieldsByTable.get(t.tableKey) || []));
+  return f2.map(x => `<option value="${esc(x.fieldName)}">${esc(x.label || x.comment || '')} ${esc(x.dataType || '')}</option>`).join('');
+}
+
+async function viewBuilder(id, q) {
+  let draft;
+  if (id === 'new') {
+    draft = newRuleTemplate(nextRuleId());
+    if (q.finding && S.findingMap.has(q.finding)) { const f = S.findingMap.get(q.finding); draft.findingId = f.findingId; draft.description = f.description || ''; draft.expected = f.correctTreatment || ''; draft.exposureType = ''; }
+    B.isNew = true;
+  } else {
+    const r = S.rulesMap.get(id);
+    if (!r) { $('#main').innerHTML = `<div class="card"><h2>找不到規則 ${esc(id)}</h2><a href="#/rules">回到規則清單</a></div>`; return; }
+    draft = normalizeRule(clone(r)); B.isNew = false;
+  }
+  B.draft = draft; B.orig = ruleCoreJson(draft); B.dirty = false; B.mode = 'detail'; B.override = '';
+  GUARD = () => B.dirty;
+  const d = () => B.draft;
+  $('#main').innerHTML = `<div id="v">
+  <div class="row sp"><div><h1><span id="bTitle"></span></h1><p class="sub">條件樹 → Oracle SQL，右側即時預覽與 Lint。<span class="kbd">Ctrl</span>+<span class="kbd">S</span> 儲存　<span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> 複製 SQL</p></div>
+    <div class="row"><a class="btn" href="#/rules">← 清單</a>${B.isNew ? '' : `<a class="btn" href="#/versions/${encodeURIComponent(id)}">🕘 版本</a><button class="btn" id="bSaveAs">另存新規則</button><button class="btn danger" id="bDel">刪除</button>`}<button class="btn primary" id="bSave">💾 儲存</button></div></div>
+  <div class="bgrid"><div>
+    <div class="card"><h2>基本資訊</h2><div class="grid g2">
+      <div class="fld"><label class="f">規則編號</label><input type="text" data-bind="ruleId" ${B.isNew ? '' : 'readonly'} value="${esc(d().ruleId)}"></div>
+      <div class="fld"><label class="f">狀態</label><select data-bind="status">${STATUSES.map(s => `<option ${d().status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+      <div class="fld" style="grid-column:1/3"><label class="f">規則名稱 *</label><input type="text" data-bind="ruleName" value="${esc(d().ruleName)}" placeholder="例如：銀行暴險外部信評風險權數偏高"></div>
+      <div class="fld"><label class="f">關聯缺失態樣</label><select data-bind="findingId"><option value="">（無）</option>${S.findings.map(f => `<option value="${esc(f.findingId)}" ${d().findingId === f.findingId ? 'selected' : ''}>${esc(f.findingId)}｜${esc(singleLine(f.description).slice(0, 28))}</option>`).join('')}</select></div>
+      <div class="fld"><label class="f">類別</label><select data-bind="category">${CATEGORIES.map(c => `<option value="${c}" ${d().category === c ? 'selected' : ''}>${CAT_LABEL[c]}</option>`).join('')}</select></div>
+      <div class="fld"><label class="f">嚴重度</label><select data-bind="severity">${SEVERITIES.map(s => `<option ${d().severity === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+      <div class="fld"><label class="f">暴險類型代碼（選填）</label><input type="text" data-bind="exposureType" value="${esc(d().exposureType)}" placeholder="如 3"></div>
+      <div class="fld" style="grid-column:1/3"><label class="f">目標表　Schema . Table　Alias</label><div class="row" style="flex-wrap:nowrap"><span id="spRule"></span><b>.</b><input type="text" id="bTable" list="dl-tables" value="${esc(d().targetTable)}" placeholder="如 CAL_CR3000_DETAIL" style="flex:1"><input type="text" data-bind="alias" value="${esc(d().alias)}" style="width:60px" title="別名"></div></div>
+      <div class="fld"><label class="f">預期處理（expected）</label><input type="text" data-bind="expected" value="${esc(d().expected)}"></div>
+      <div class="fld"><label class="f">法規／態樣依據</label><input type="text" data-bind="regulationRef" value="${esc(d().regulationRef)}"></div>
+      <div class="fld" style="grid-column:1/3"><label class="f">說明</label><textarea data-bind="description" style="min-height:48px;font-family:inherit">${esc(d().description)}</textarea></div>
+      <div class="fld" style="grid-column:1/3"><label class="f">標籤（逗號分隔）</label><input type="text" data-bind="tags" data-kind="csv" value="${esc((d().tags || []).join(', '))}"></div>
+    </div></div>
+    <div class="card"><h2>條件樹 <span class="muted small" style="font-weight:400">拖曳 ⋮⋮ 可排序、可跨群組</span></h2><div id="tree"></div></div>
+    <div class="card"><h2>參數</h2><div id="params"></div></div>
+    <div class="card"><h2>輸出設定</h2><div class="grid g2">
+      <div class="fld"><label class="f">明細：選取欄位（逗號分隔，* 為全部）</label><input type="text" data-bind="selectColumns" data-kind="csv" value="${esc((d().selectColumns || ['*']).join(', '))}"></div>
+      <div class="fld"><label class="f">明細：排序（如 CUST_ID, AMOUNT DESC）</label><input type="text" data-bind="orderBy" data-kind="csv" value="${esc((d().orderBy || []).join(', '))}"></div>
+      <div class="fld"><label class="f">彙總：分組欄位（逗號分隔）</label><input type="text" data-bind="groupBy" data-kind="csv" value="${esc((d().groupBy || []).join(', '))}"></div>
+      <div class="fld"><label class="f">彙總：加總欄位（選填，如 AMOUNT）</label><input type="text" data-bind="sumColumn" value="${esc(d().sumColumn || '')}"></div></div></div>
+  </div>
+  <div class="sticky"><div class="card"><h2>SQL 預覽</h2>
+    <div class="tabs" id="modeTabs">${[['detail', '明細'], ['count', '筆數'], ['summary', '彙總']].map(([k, l]) => `<button data-m="${k}" class="${B.mode === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    <div class="fld"><label class="f">Schema 覆寫（只影響預覽／複製／下載，不改規則）</label><span id="spOvr"></span>　<span class="muted small">實際使用：<b id="effSc"></b></span></div>
+    <pre class="sql" id="sqlOut"></pre>
+    <div class="row" style="margin-top:8px"><button class="btn primary" id="bCopy">複製 SQL</button><button class="btn" id="bDl">下載 .sql</button></div></div>
+  <div class="card"><h2>Lint <span id="lintN" class="muted small" style="font-weight:400"></span></h2><div id="lintOut"></div></div></div></div>
+  <datalist id="dl-fields"></datalist><datalist id="dl-params"></datalist><datalist id="dl-tables"></datalist></div>`;
+  const v = $('#v');
+  const title = () => { $('#bTitle', v).textContent = (B.isNew ? '新增規則 ' : '編輯規則 ') + d().ruleId + (B.dirty ? ' ●' : ''); };
+  const renderTree = () => { $('#tree', v).innerHTML = treeHTML(d().condition, ''); };
+  const renderParams = () => { $('#params', v).innerHTML = paramsHTML(); };
+  const mountPickers = () => {
+    $('#spRule', v).innerHTML = schemaPickerHTML('rule', d().targetSchema || '', '（預設：' + getSet('defaultSchema') + '）');
+    wireSchemaPicker(v, 'rule', val => { d().targetSchema = val || null; markDirty(); refresh(); });
+    $('#spOvr', v).innerHTML = schemaPickerHTML('ovr', B.override, '（依規則／預設）');
+    wireSchemaPicker(v, 'ovr', val => { B.override = val || ''; refresh(); });
+  };
+  const refresh = () => {
+    const ctx = makeCtx(), rule = d();
+    const ov = normalizeSchemaInput(B.override);
+    const q = buildQuery(rule, { mode: B.mode, schemaOverride: ov.valid ? ov.value : '' }, ctx);
+    $('#sqlOut', v).innerHTML = highlightSQL(q.sql);
+    $('#effSc', v).textContent = q.schema || '（空）';
+    const l = lintRule(rule, ctx), E = l.filter(x => x.level === 'ERROR').length, W = l.filter(x => x.level === 'WARN').length;
+    $('#lintN', v).textContent = l.length ? `（${E} 錯誤・${W} 警告・${l.length - E - W} 提示）` : '';
+    $('#lintOut', v).innerHTML = l.length ? l.map(x => `<div class="lint"><span class="sev ${x.level}">${x.level}</span><span><code>${x.code}</code> ${esc(x.msg)}</span></div>`).join('') : '<div class="muted">✔ 沒有 Lint 問題</div>';
+    $('#dl-fields', v).innerHTML = fieldOptionsFor(rule);
+    $('#dl-params', v).innerHTML = rule.parameters.filter(p => p.name).map(p => `<option value="${esc(p.name)}">`).join('');
+    $('#dl-tables', v).innerHTML = S.tables.map(t => `<option value="${esc(t.schema + '.' + t.table)}">`).join('');
+    title();
+  };
+  const rf = debounce(refresh, 60);
+  mountPickers(); renderTree(); renderParams(); refresh();
+
+  /* --- 基本欄位綁定 --- */
+  v.addEventListener('input', e => {
+    const t = e.target;
+    if (t.matches('[data-bind]')) {
+      const k = t.dataset.bind; let val = t.value;
+      if (t.dataset.kind === 'csv') { val = csvList(val); if (k === 'selectColumns' && !val.length) val = ['*']; }
+      d()[k] = val; markDirty(); rf();
+    } else if (t.matches('[data-f],[data-g]')) onCondEdit(t, false);
+    else if (t.matches('[data-pf]')) { const i = +t.closest('tr').dataset.pi; const p = d().parameters[i]; const f = t.dataset.pf; p[f] = f === 'required' ? t.checked : t.value.replace(/^:/, '').trim(); markDirty(); rf(); }
+  });
+  v.addEventListener('change', e => {
+    const t = e.target;
+    if (t.matches('[data-bind]') && t.tagName === 'SELECT') { d()[t.dataset.bind] = t.value; markDirty(); refresh(); }
+    else if (t.matches('[data-f],[data-g]')) onCondEdit(t, true);
+    else if (t.matches('[data-pf]')) { markDirty(); refresh(); }
+    else if (t.id === 'bTable') onTableChange(t.value);
+    else if (t.matches('[data-act="toggle"]')) actOn(t, 'toggle');
+  });
+  function onTableChange(val) {
+    let s = String(val || '').trim(), sc = null;
+    if (s.includes('.')) { const p = s.split('.'); sc = p.slice(0, -1).join('.'); s = p[p.length - 1]; }
+    s = s.replace(/^["']|["']$/g, '').toUpperCase(); d().targetTable = s;
+    if (sc) { const n = normalizeSchemaInput(sc); if (n.valid) d().targetSchema = n.value.toLowerCase() === String(getSet('defaultSchema')).toLowerCase() ? null : n.value.toLowerCase(); }
+    else {
+      const cands = S.tables.filter(t => t.table === s).map(t => t.schema); const cur = effSchema(d()).toLowerCase();
+      if (cands.length && !cands.includes(cur)) d().targetSchema = cands.includes(String(getSet('defaultSchema')).toLowerCase()) ? null : cands[0];
+    }
+    $('#bTable', v).value = s; mountPickers(); markDirty(); refresh();
+  }
+  function onCondEdit(el, commit) {
+    const host = el.closest('[data-path]'); if (!host) return;
+    const n = nodeAt(pathArr(host.dataset.path)); const f = el.dataset.f || ('g:' + el.dataset.g);
+    let structural = false;
+    switch (f) {
+      case 'g:logic': n.logic = el.value; structural = true; break;
+      case 'field': n.field = el.value; break;
+      case 'trim': case 'upper': n[f] = el.checked; break;
+      case 'nvl': n.nvl = el.value; break;
+      case 'vt': n.vt = el.value; break;
+      case 'op': n.op = el.value; n.value = defaultValueFor(n.op, n.value); if (n.op === 'RAW') n.raw = n.raw || ''; if (n.op.startsWith('SUBSTR')) { n.start = n.start || '1'; n.len = n.len || '1'; } structural = true; break;
+      case 'vkind': {
+        const k = el.value; n.value = k === 'valueSet' ? { kind: 'valueSet', setId: '' } : k === 'list' ? { kind: 'list', v: [] } : k === 'param' ? { kind: 'param', name: '' } : k === 'field' ? { kind: 'field', name: '' } : { kind: 'literal', v: '' }; structural = true; break;
+      }
+      case 'v': n.value.v = el.value; break;
+      case 'pname': n.value.name = el.value.replace(/^:/, ''); break;
+      case 'vname': n.value.name = el.value; break;
+      case 'vlist': n.value.v = parseList(el.value); break;
+      case 'setId': n.value.setId = el.value; break;
+      case 'b0': n.value.v[0] = el.value; break;
+      case 'b1': n.value.v[1] = el.value; break;
+      case 'start': case 'len': n[f] = el.value; break;
+      case 'raw': n.raw = el.value; break;
+    }
+    if (structural && commit) renderTree();
+    markDirty(); rf();
+  }
+  /* --- 樹狀操作 --- */
+  function actOn(el, act) {
+    const host = el.closest('[data-path]'); const arr = pathArr(host.dataset.path); const n = nodeAt(arr);
+    const parent = arr.length ? nodeAt(arr.slice(0, -1)) : null, idx = arr.length ? arr[arr.length - 1] : -1;
+    if (act === 'toggle') { n.enabled = el.checked ? true : false; }
+    else if (act === 'addCond') { n.children.push(newCond()); }
+    else if (act === 'addGroup') { n.children.push(newGroup(n.logic === 'AND' ? 'OR' : 'AND')); }
+    else if (act === 'up') { if (idx > 0) { [parent.children[idx - 1], parent.children[idx]] = [parent.children[idx], parent.children[idx - 1]]; } }
+    else if (act === 'down') { if (idx < parent.children.length - 1) { [parent.children[idx + 1], parent.children[idx]] = [parent.children[idx], parent.children[idx + 1]]; } }
+    else if (act === 'dup') { parent.children.splice(idx + 1, 0, clone(n)); }
+    else if (act === 'del') { parent.children.splice(idx, 1); }
+    renderTree(); markDirty(); refresh();
+    if (act === 'addCond') { const fs = $$('.c-field', v); const last = fs[fs.length - 1]; if (last && !last.value) last.focus(); }
+  }
+  v.addEventListener('click', async e => {
+    const b = e.target.closest('button,[data-m]'); if (!b) return;
+    if (b.dataset.act) {
+      if (b.dataset.act === 'del') { const n = nodeAt(pathArr(b.closest('[data-path]').dataset.path)); if (n.type === 'group' && n.children.length && !(await confirmBox('刪除此群組及其內所有條件？', '刪除', true))) return; }
+      actOn(b, b.dataset.act); return;
+    }
+    if (b.dataset.m) { B.mode = b.dataset.m; $$('#modeTabs button', v).forEach(x => x.classList.toggle('on', x === b)); refresh(); return; }
+    if (b.dataset.pa === 'add') { d().parameters.push({ name: '', type: 'STRING', required: false }); renderParams(); markDirty(); refresh(); }
+    else if (b.dataset.pa === 'del') { d().parameters.splice(+b.closest('tr').dataset.pi, 1); renderParams(); markDirty(); refresh(); }
+    else if (b.id === 'bSave') saveRule(false);
+    else if (b.id === 'bSaveAs') saveRule(true);
+    else if (b.id === 'bCopy') copyCurrentSql();
+    else if (b.id === 'bDl') exportSqlDialog([d()], { mode: B.mode, override: B.override, filename: d().ruleId });
+    else if (b.id === 'bDel') { if (await confirmBox(`刪除規則 ${d().ruleId} 與其所有版本？此動作無法復原。`, '刪除', true)) { B.dirty = false; await deleteRules([d().ruleId]); toast('已刪除', 'ok'); go('#/rules'); } }
+  });
+  async function copyCurrentSql() { const ok = await copyText($('#sqlOut', v).textContent); toast(ok ? '已複製 SQL' : '複製失敗，請手動選取', ok ? 'ok' : 'err'); }
+  /* --- 拖曳 --- */
+  v.addEventListener('dragstart', e => {
+    const h = e.target.closest('[data-drag]'); if (!h) return;
+    B.dragPath = h.dataset.drag; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', B.dragPath);
+    const row = h.closest('.cond,.grp'); if (row && e.dataTransfer.setDragImage) e.dataTransfer.setDragImage(row, 10, 10);
+  });
+  v.addEventListener('dragover', e => { const t = e.target.closest('[data-drop]'); if (!t || B.dragPath == null) return; e.preventDefault(); $$('.dragover', v).forEach(x => x.classList.remove('dragover')); t.classList.add('dragover'); });
+  v.addEventListener('dragend', () => { B.dragPath = null; $$('.dragover', v).forEach(x => x.classList.remove('dragover')); });
+  v.addEventListener('drop', e => {
+    const t = e.target.closest('[data-drop]'); if (!t || B.dragPath == null) return; e.preventDefault();
+    const from = pathArr(B.dragPath), to = pathArr(t.dataset.drop); B.dragPath = null;
+    if (!from.length || (to.length >= from.length && from.every((x, i) => to[i] === x))) { renderTree(); return; }
+    const node = nodeAt(from), fromParent = nodeAt(from.slice(0, -1)), target = nodeAt(to);
+    const tParent = to.length ? nodeAt(to.slice(0, -1)) : null;
+    fromParent.children.splice(from[from.length - 1], 1);
+    if (target.type === 'group') target.children.push(node);
+    else { const i = tParent.children.indexOf(target); tParent.children.splice(i, 0, node); }
+    renderTree(); markDirty(); refresh();
+  });
+
+  /* --- 儲存 --- */
+  async function saveRule(asNew) {
+    if (B.saving) return; B.saving = true;   /* 防止連按兩次造成重複儲存 */
+    try {
+      const dr = asNew ? clone(d()) : d();   /* 另存時只改複本，驗證失敗不會污染目前編輯中的規則 */
+      if (asNew) { dr.ruleId = nextRuleId(); dr.ruleName = (dr.ruleName || '') + '（複製）'; dr.status = 'DRAFT'; dr.version = 0; delete dr.createdAt; }
+      const creating = asNew || B.isNew;
+      dr.ruleId = String(dr.ruleId || '').trim();
+      if (!/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(dr.ruleId)) { toast('規則編號需以英文字母開頭，僅限英數字、- _', 'err'); return; }
+      if (creating && S.rulesMap.has(dr.ruleId)) { toast('規則編號 ' + dr.ruleId + ' 已存在', 'err'); return; }
+      if (!String(dr.ruleName || '').trim()) { toast('請輸入規則名稱', 'err'); return; }
+      if (!String(dr.targetTable || '').trim()) { toast('請指定目標表（可從欄位字典選，或直接輸入）', 'err'); return; }
+      if (!RE_IDENT.test(String(dr.targetTable).trim())) { toast('目標表名稱格式不合法', 'err'); return; }
+      if (dr.targetSchema) { const n = normalizeSchemaInput(dr.targetSchema); if (!n.valid) { toast('Schema 格式不合法（L007），無法儲存', 'err'); return; } dr.targetSchema = n.value; }
+      if (!RE_IDENT.test(getSet('defaultSchema')) && !dr.targetSchema) { toast('全域預設 Schema 不合法（L007），請先到設定修正', 'err'); return; }
+      dr.alias = (dr.alias || 't').trim() || 't';
+      if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(dr.alias)) { toast('別名格式不合法', 'err'); return; }
+      dr.targetTable = String(dr.targetTable || '').trim().toUpperCase();
+      if (!dr.selectColumns || !dr.selectColumns.length) dr.selectColumns = ['*'];
+      const errs = lintRule(dr, makeCtx()).filter(x => x.level === 'ERROR');
+      if (errs.length && dr.status === 'ACTIVE' && !(await confirmBox(`這條規則還有 ${errs.length} 個 Lint ERROR（例如：${errs[0].msg}）。\n仍要以 ACTIVE 狀態儲存嗎？`, '仍要儲存'))) return;
+      const res = await persistRule(dr, { note: asNew ? '另存新規則（來源 ' + d().ruleId + '）' : '' });
+      renderNav();
+      if (creating) {
+        toast(`已儲存 ${dr.ruleId}（v${S.rulesMap.get(dr.ruleId).version}）`, 'ok');
+        B.dirty = false; GUARD = null;
+        const h = '#/rules/' + encodeURIComponent(dr.ruleId); location.replace(h); CUR.hash = location.hash; suppressNext(location.hash);
+        await viewBuilder(dr.ruleId, {}); return;
+      }
+      B.draft = normalizeRule(clone(S.rulesMap.get(dr.ruleId))); B.orig = ruleCoreJson(B.draft); B.dirty = false;
+      toast(res.changed ? `已儲存 ${dr.ruleId}（v${B.draft.version}）` : '沒有變更，未建立新版本', 'ok'); title();
+    } finally { B.saving = false; }
+  }
+  B.save = () => saveRule(false); B.copy = copyCurrentSql;
+}
+
+/* ============================================================
+ * 應用層（C）：Finding Registry、Field Dictionary、Value Sets
+ * ============================================================ */
+const FD_STATUS = ['OPEN', 'IN_PROGRESS', 'DONE'];
+
+/* ---------- Finding Registry ---------- */
+function nextFindingId(seq) {
+  if (seq != null && seq !== '' && !isNaN(+seq)) { const id = 'FD-' + pad(+seq, 3); if (!S.findingMap.has(id)) return id; }
+  let max = 0; S.findings.forEach(f => { const m = /^FD-(\d+)$/.exec(f.findingId); if (m) max = Math.max(max, +m[1]); });
+  return 'FD-' + pad(max + 1, 3);
+}
+async function saveFinding(f, linkedIds) {
+  const ops = [{ store: 'findings', op: 'put', val: f }];
+  S.rules.forEach(r => {
+    const should = linkedIds.includes(r.ruleId), is = r.findingId === f.findingId;
+    if (should !== is) { const c = clone(r); c.findingId = should ? f.findingId : ''; c.updatedAt = nowISO(); ops.push({ store: 'rules', op: 'put', val: c }); }
+  });
+  await idb.multi(ops); await reload(['findings', 'rules']); await refreshFindingLinks(); await audit('save', 'finding', f.findingId, ''); await bumpSaveCount();
+}
+async function findingDialog(f) {
+  const isNew = !f; f = f ? clone(f) : { findingId: '', seqNo: S.findings.reduce((m, x) => Math.max(m, +x.seqNo || 0), 0) + 1, exposureType: '', description: '', correctTreatment: '', wrongTreatment: '', status: 'OPEN', ruleIds: [] };
+  const linked = new Set(S.rules.filter(r => r.findingId === f.findingId && f.findingId).map(r => r.ruleId));
+  const html = `<div class="grid g2"><div class="fld"><label class="f">項次</label><input type="text" id="fSeq" value="${esc(f.seqNo)}"></div>
+    <div class="fld"><label class="f">狀態</label><select id="fSt">${FD_STATUS.map(s => `<option ${f.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div></div>
+    <div class="fld"><label class="f">暴險類型（缺失所屬分類）</label><input type="text" id="fEx" value="${esc(f.exposureType)}" placeholder="如：銀行(含多邊開發銀行及集中結算交易對手)"></div>
+    <div class="fld"><label class="f">缺失態樣說明 *</label><textarea id="fDesc" style="min-height:80px;font-family:inherit">${esc(f.description)}</textarea></div>
+    <div class="grid g2"><div class="fld"><label class="f">正確處理</label><input type="text" id="fOk" value="${esc(f.correctTreatment)}" placeholder="如：非中央政府公共部門 / 20%"></div>
+    <div class="fld"><label class="f">錯誤處理</label><input type="text" id="fBad" value="${esc(f.wrongTreatment)}" placeholder="如：主權國家 / 0%"></div></div>
+    <div class="fld"><label class="f">連結規則（勾選＝將該規則的「關聯缺失態樣」設為本項）</label><div class="scroll" style="max-height:150px">${S.rules.length ? S.rules.map(r => `<label style="display:block;padding:2px 8px"><input type="checkbox" data-lr="${esc(r.ruleId)}" ${linked.has(r.ruleId) ? 'checked' : ''}> ${esc(r.ruleId)} ${esc(r.ruleName)}${r.findingId && r.findingId !== f.findingId ? ` <span class="muted small">（目前連到 ${esc(r.findingId)}）</span>` : ''}</label>`).join('') : '<div class="muted" style="padding:8px">尚無規則</div>'}</div></div>`;
+  const r = await modal({
+    title: isNew ? '新增缺失態樣' : '編輯 ' + f.findingId, html, wide: true,
+    buttons: [{ label: '取消', value: null }, { label: '儲存', value: 'ok', cls: 'primary', validate: ov => (ov.querySelector('#fDesc').value.trim() ? '' : '請輸入缺失態樣說明') }],
+    collect: ov => ({ seqNo: ov.querySelector('#fSeq').value.trim(), status: ov.querySelector('#fSt').value, exposureType: ov.querySelector('#fEx').value.trim(), description: ov.querySelector('#fDesc').value.trim(), correctTreatment: ov.querySelector('#fOk').value.trim(), wrongTreatment: ov.querySelector('#fBad').value.trim(), linked: $$('[data-lr]', ov).filter(c => c.checked).map(c => c.dataset.lr) })
+  });
+  if (!r) return false;
+  const d = r.data;
+  const rec = Object.assign({}, f, { seqNo: /^\d+$/.test(d.seqNo) ? +d.seqNo : d.seqNo, status: d.status, exposureType: d.exposureType, description: d.description, correctTreatment: d.correctTreatment, wrongTreatment: d.wrongTreatment });
+  if (isNew) rec.findingId = nextFindingId(rec.seqNo);
+  await saveFinding(rec, d.linked); return true;
+}
+function viewFindings() {
+  const rows = sortBy(S.findings, f => (typeof f.seqNo === 'number' ? f.seqNo : 1e9), 1);
+  $('#main').innerHTML = `<div id="v"><div class="row sp"><div><h1>Finding Registry</h1><p class="sub">監理缺失態樣登錄。每個缺失可連結多條規則，並可一鍵建立規則。</p></div>
+    <div class="row"><button class="btn" id="fImp">匯入 CSV</button><button class="btn" id="fExp">匯出 CSV</button><button class="btn primary" id="fNew">＋ 新增缺失態樣</button></div></div>
+    <div class="scroll"><table class="tbl"><thead><tr><th>項次</th><th>編號</th><th>暴險類型</th><th>缺失態樣說明</th><th>正確 → 錯誤</th><th>狀態</th><th>連結規則</th><th></th></tr></thead><tbody>
+    ${rows.map(f => { const rs = S.rules.filter(r => r.findingId === f.findingId); return `<tr data-id="${esc(f.findingId)}"><td>${esc(f.seqNo)}</td><td>${esc(f.findingId)}</td><td>${esc(f.exposureType)}</td><td style="max-width:420px">${esc(f.description)}</td>
+      <td class="small">${f.correctTreatment ? '✔ ' + esc(f.correctTreatment) : ''}${f.wrongTreatment ? '<br>✘ ' + esc(f.wrongTreatment) : ''}</td><td><span class="st ${esc(f.status)}">${esc(f.status)}</span></td>
+      <td>${rs.map(r => `<a href="#/rules/${encodeURIComponent(r.ruleId)}" class="chip on">${esc(r.ruleId)}</a>`).join('') || '<span class="muted">—</span>'}</td>
+      <td style="white-space:nowrap"><a class="btn sm" href="#/rules/new?finding=${encodeURIComponent(f.findingId)}">建立規則</a> <button class="btn sm" data-a="edit">編輯</button> <button class="btn sm danger" data-a="del">✕</button></td></tr>`; }).join('') || '<tr><td colspan="8" class="empty">尚無缺失態樣</td></tr>'}
+    </tbody></table></div></div>`;
+  const v = $('#v');
+  $('#fNew', v).onclick = async () => { if (await findingDialog(null)) { renderNav(); viewFindings(); } };
+  $('#fExp', v).onclick = () => {
+    const rows2 = [['seqNo', 'exposureType', 'description', 'correctTreatment', 'wrongTreatment', 'status']].concat(S.findings.map(f => [f.seqNo, f.exposureType, f.description, f.correctTreatment, f.wrongTreatment, f.status]));
+    download('findings.csv', toCSV(rows2), 'text/csv'); toast('已匯出 findings.csv', 'ok');
+  };
+  $('#fImp', v).onclick = async () => {
+    const file = await pickFile('.csv,text/csv'); if (!file) return;
+    const rows2 = parseCSV(await readFile(file)); if (rows2.length < 2) { toast('CSV 沒有資料列', 'err'); return; }
+    if (readFile.enc === 'big5') toast('偵測到 Big5 編碼，已自動轉換', 'warn');
+    const head = rows2[0].map(x => x.trim()), ix = k => head.indexOf(k);
+    if (ix('description') < 0) { toast('CSV 需要 description 欄位（欄名：seqNo, exposureType, description, correctTreatment, wrongTreatment, status）', 'err'); return; }
+    const recs = []; let dup = 0; const have = new Set(S.findings.map(f => String(f.seqNo) + '|' + f.description));
+    rows2.slice(1).forEach(r => {
+      const g = k => (ix(k) >= 0 ? (r[ix(k)] || '').trim() : ''); if (!g('description')) return;
+      if (have.has(g('seqNo') + '|' + g('description'))) { dup++; return; }   /* 重複匯入同一份 CSV 時不會產生重複缺失 */
+      const seq = /^\d+$/.test(g('seqNo')) ? +g('seqNo') : g('seqNo');
+      const id = nextFindingId(seq) ; recs.push({ findingId: id, seqNo: seq, exposureType: g('exposureType'), description: g('description'), correctTreatment: g('correctTreatment'), wrongTreatment: g('wrongTreatment'), status: FD_STATUS.includes(g('status')) ? g('status') : 'OPEN', ruleIds: [] });
+      S.findingMap.set(id, recs[recs.length - 1]);
+    });
+    const ok = recs.length && await confirmBox(`將匯入 ${recs.length} 筆缺失態樣（編號依項次自動產生為 FD-xxx，既有編號不會被覆蓋）。` + (dup ? `\n另有 ${dup} 筆與現有資料（項次＋說明）相同，已略過。` : ''), '匯入');
+    if (!ok) { indexAll(); if (!recs.length) toast(dup ? `全部 ${dup} 筆都已存在，沒有新資料` : 'CSV 沒有可匯入的資料', 'warn'); return; }
+    await idb.bulkPut('findings', recs); await reload('findings'); await audit('import', 'finding', '', recs.length + ' 筆 CSV'); toast(`已匯入 ${recs.length} 筆`, 'ok'); renderNav(); viewFindings();
+  };
+  v.addEventListener('click', async e => {
+    const b = e.target.closest('[data-a]'); if (!b) return; const id = b.closest('tr').dataset.id, f = S.findingMap.get(id);
+    if (b.dataset.a === 'edit') { if (await findingDialog(f)) viewFindings(); }
+    else if (await confirmBox(`刪除缺失態樣 ${id}？已連結的規則不會被刪除，只會解除連結。`, '刪除', true)) {
+      const ops = [{ store: 'findings', op: 'del', key: id }];
+      S.rules.filter(r => r.findingId === id).forEach(r => ops.push({ store: 'rules', op: 'put', val: Object.assign(clone(r), { findingId: '', updatedAt: nowISO() }) }));
+      await idb.multi(ops); await reload(['findings', 'rules']); await audit('delete', 'finding', id, ''); renderNav(); viewFindings();
+    }
+  });
+}
+
+/* ---------- Field Dictionary ---------- */
+const FLD = { schema: '', q: '', fq: '' };
+async function ensureSchemaInList(name) {
+  if (!RE_IDENT.test(name)) return;
+  const l = getSet('schemaList'); if (!l.some(s => s.name.toLowerCase() === name.toLowerCase())) { l.push({ name: name.toLowerCase(), label: name.toLowerCase(), builtin: false }); await setSet('schemaList', l); }
+}
+async function importDDLText(text, fallbackSchema) {
+  const all = parseDDL(text, fallbackSchema);
+  const parsed = all.filter(t => RE_IDENT.test(t.schema || fallbackSchema || '') && RE_IDENT.test(t.table));   /* schema／表名含特殊字元者略過，避免之後產生不合法 SQL */
+  const skipped = all.length - parsed.length;
+  if (!parsed.length) return { tables: 0, fields: 0, skipped };
+  const ops = []; let nf = 0;
+  for (const t of parsed) {
+    if (!t.schema) t.schema = String(fallbackSchema).toLowerCase();
+    await ensureSchemaInList(t.schema);
+    const key = tkey(t.schema, t.table), old = S.tableMap.get(key);
+    const oldF = new Map((S.fieldsByTable.get(key) || []).map(x => [x.fieldName, x]));
+    ops.push({ store: 'tables', op: 'put', val: { tableKey: key, schema: t.schema, table: t.table, label: old ? old.label : '', note: t.comment || (old ? old.note : ''), source: 'ddl', updatedAt: nowISO() } });
+    oldF.forEach(x => ops.push({ store: 'fields', op: 'del', key: x.fieldKey }));
+    t.fields.forEach((f, i) => {
+      const o = oldF.get(f.fieldName); nf++;
+      ops.push({ store: 'fields', op: 'put', val: { fieldKey: key + '.' + f.fieldName, tableKey: key, fieldName: f.fieldName, dataType: f.dataType, length: f.length, precision: f.precision, scale: f.scale, nullable: f.nullable, isPk: !!f.isPk, fk: f.fk || '', label: (o && o.label) || f.comment || '', note: o ? o.note : '', enumValues: o ? o.enumValues : [], ordinal: i + 1 } });
+    });
+  }
+  await idb.multi(ops); await reload(['tables', 'fields', 'settings']); await audit('import', 'ddl', '', parsed.length + ' 張表');
+  return { tables: parsed.length, fields: nf, skipped, keys: parsed.map(t => tkey(t.schema, t.table)) };
+}
+function typeText(f) { return f.dataType + (f.length ? '(' + f.length + ')' : f.precision != null ? '(' + f.precision + (f.scale != null ? ',' + f.scale : '') + ')' : ''); }
+function viewFields(tableKeyParam) {
+  const schemas = getSet('schemaList').map(s => s.name);
+  const q = FLD.q.toLowerCase();
+  const tabs = sortBy(S.tables.filter(t => (!FLD.schema || t.schema === FLD.schema) && (!q || (t.tableKey + ' ' + (t.label || '')).toLowerCase().includes(q))), t => t.tableKey, 1);
+  const cur = S.tableMap.get(tableKeyParam);
+  $('#main').innerHTML = `<div id="v"><div class="row sp"><div><h1>Field Dictionary</h1><p class="sub">資料表／欄位／列舉值字典。同名表可在不同 schema 並存（tableKey＝schema.TABLE）。</p></div>
+    <div class="row"><button class="btn" id="ddl">📋 貼上 DDL 匯入</button><button class="btn" id="tNew">＋ 新增表</button></div></div>
+  <div class="card"><div class="row"><input type="search" id="gq" placeholder="全域搜尋欄位（欄位名／中文名）…" value="${esc(FLD.fq)}" style="max-width:340px"></div><div id="gres"></div></div>
+  <div class="split"><div><div class="row" style="margin-bottom:8px"><select id="fsc" style="width:auto"><option value="">全部 schema</option>${schemas.map(s => `<option ${FLD.schema === s ? 'selected' : ''}>${esc(s)}</option>`).join('')}</select><input type="search" id="tq" placeholder="篩選表…" value="${esc(FLD.q)}" style="flex:1"></div>
+    <div class="list">${tabs.map(t => `<div class="it ${cur && cur.tableKey === t.tableKey ? 'on' : ''}" data-k="${esc(t.tableKey)}"><b class="mono">${esc(t.tableKey)}</b><div class="muted small">${(S.fieldsByTable.get(t.tableKey) || []).length} 欄${t.label ? '・' + esc(t.label) : ''}</div></div>`).join('') || '<div class="empty">尚無資料表<br>請貼上 Oracle DDL 或手動新增</div>'}</div></div>
+  <div id="tdetail"></div></div></div>`;
+  const v = $('#v');
+  const drawDetail = () => {
+    const box = $('#tdetail', v);
+    if (!cur) { box.innerHTML = '<div class="card empty">請從左側選擇資料表</div>'; return; }
+    const fl = S.fieldsByTable.get(cur.tableKey) || [];
+    const used = S.rules.filter(r => String(r.targetTable).toUpperCase() === cur.table && effSchema(r).toLowerCase() === cur.schema);
+    box.innerHTML = `<div class="card"><div class="row sp"><h2 class="mono" style="margin:0">${esc(cur.tableKey)}</h2><div class="row"><button class="btn sm" id="fAdd">＋ 欄位</button><button class="btn sm" id="tRen">編輯表資訊</button><button class="btn sm danger" id="tDel">刪除表</button></div></div>
+      ${cur.label || cur.note ? `<p class="muted">${esc(cur.label)} ${esc(cur.note)}</p>` : ''}
+      <p class="small muted">${fl.length} 欄位・被 ${used.length} 條規則使用${used.length ? '：' + used.slice(0, 6).map(r => `<a href="#/rules/${encodeURIComponent(r.ruleId)}">${esc(r.ruleId)}</a>`).join('、') + (used.length > 6 ? '…' : '') : ''}</p>
+      <div class="scroll"><table class="tbl"><thead><tr><th>#</th><th>欄位</th><th>型別</th><th>Null</th><th>PK</th><th>中文名稱</th><th>說明</th><th>列舉值</th><th style="white-space:nowrap">規則</th><th></th></tr></thead><tbody>
+      ${fl.map(f => `<tr data-fk="${esc(f.fieldKey)}"><td class="muted">${esc(f.ordinal)}</td><td class="mono"><b>${esc(f.fieldName)}</b>${f.fk ? `<div class="muted small">→ ${esc(f.fk)}</div>` : ''}</td><td class="mono small">${esc(typeText(f))}</td><td>${f.nullable ? '' : 'NN'}</td><td>${f.isPk ? '🔑' : ''}</td>
+        <td><input type="text" data-p="label" value="${esc(f.label || '')}"></td><td><input type="text" data-p="note" value="${esc(f.note || '')}"></td>
+        <td><button class="btn sm" data-a="enum">${(f.enumValues || []).length ? (f.enumValues.length + ' 項') : '設定'}</button></td><td class="small">${rulesUsingField(cur.tableKey, f.fieldName).length || ''}</td><td><button class="btn sm ghost danger" data-a="fdel">✕</button></td></tr>`).join('') || '<tr><td colspan="10" class="empty">尚無欄位</td></tr>'}
+      </tbody></table></div></div>`;
+  };
+  const drawSearch = () => {
+    const s = FLD.fq.trim().toLowerCase(); const box = $('#gres', v);
+    if (!s) { box.innerHTML = ''; return; }
+    const hits = S.fields.filter(f => (f.fieldName + ' ' + (f.label || '') + ' ' + (f.note || '')).toLowerCase().includes(s)).slice(0, 40);
+    box.innerHTML = hits.length ? `<div class="scroll" style="margin-top:8px;max-height:220px"><table class="tbl"><tbody>${hits.map(f => `<tr><td class="mono"><b>${esc(f.fieldName)}</b></td><td><a href="#/fields/${encodeURIComponent(f.tableKey)}">${esc(f.tableKey)}</a></td><td class="mono small">${esc(typeText(f))}</td><td>${esc(f.label || '')}</td></tr>`).join('')}</tbody></table></div>` : '<div class="muted small" style="margin-top:6px">沒有符合的欄位</div>';
+  };
+  drawDetail(); drawSearch();
+  $('#gq', v).oninput = debounce(e => { FLD.fq = e.target.value; drawSearch(); }, 120);
+  $('#fsc', v).onchange = e => { FLD.schema = e.target.value; viewFields(tableKeyParam); };
+  $('#tq', v).oninput = debounce(e => { FLD.q = e.target.value; viewFields(tableKeyParam); const i = $('#tq'); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }, 200);
+  $('#ddl', v).onclick = async () => {
+    const r = await modal({
+      title: '貼上 Oracle DDL', wide: true, html: `<p class="muted small">支援 <span class="mono">CREATE TABLE "SCHEMA"."TABLE" (...)</span>（可一次貼多張）、<span class="mono">COMMENT ON COLUMN</span>、<span class="mono">ALTER TABLE … PRIMARY KEY</span>。重複匯入同一張表會更新欄位型別，並保留你已填的中文名稱／說明／列舉值。</p>
+      <div class="fld"><label class="f">DDL 沒寫 schema 時，歸屬於</label><select id="dSc">${getSet('schemaList').map(s => `<option ${s.name === getSet('defaultSchema') ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
+      <textarea id="dTx" style="min-height:260px" placeholder='CREATE TABLE "BIS"."ST1_ACDTL" ( "DATADATE" DATE, "CUST_ID" VARCHAR2(20 BYTE) );'></textarea>`,
+      buttons: [{ label: '取消', value: null }, { label: '解析並匯入', value: 'ok', cls: 'primary', validate: ov => (ov.querySelector('#dTx').value.trim() ? '' : '請貼上 DDL') }],
+      collect: ov => ({ text: ov.querySelector('#dTx').value, sc: ov.querySelector('#dSc').value })
+    });
+    if (!r) return; const res = await importDDLText(r.data.text, r.data.sc);
+    if (!res.tables) { toast('沒有解析到任何 CREATE TABLE 語句', 'err'); return; }
+    toast(`已匯入 ${res.tables} 張表、${res.fields} 個欄位` + (res.skipped ? `（另有 ${res.skipped} 張因名稱含特殊字元而略過）` : ''), 'ok'); renderNav(); go('#/fields/' + encodeURIComponent(res.keys[0]));
+  };
+  $('#tNew', v).onclick = async () => {
+    const r = await modal({ title: '新增資料表', html: `<div class="fld"><label class="f">Schema</label><select id="nSc">${getSet('schemaList').map(s => `<option ${s.name === getSet('defaultSchema') ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div><div class="fld"><label class="f">表名 *</label><input type="text" id="nTb"></div><div class="fld"><label class="f">中文名稱</label><input type="text" id="nLb"></div>`, buttons: [{ label: '取消', value: null }, { label: '建立', value: 'ok', cls: 'primary', validate: ov => (RE_IDENT.test(ov.querySelector('#nTb').value.trim()) ? '' : '表名格式不合法') }], collect: ov => ({ sc: ov.querySelector('#nSc').value, tb: ov.querySelector('#nTb').value.trim().toUpperCase(), lb: ov.querySelector('#nLb').value.trim() }) });
+    if (!r) return; const key = tkey(r.data.sc, r.data.tb);
+    if (S.tableMap.has(key)) { toast('此表已存在', 'err'); return; }
+    await idb.put('tables', { tableKey: key, schema: r.data.sc.toLowerCase(), table: r.data.tb, label: r.data.lb, note: '', source: 'manual', updatedAt: nowISO() }); await reload('tables'); renderNav(); go('#/fields/' + encodeURIComponent(key));
+  };
+  v.addEventListener('click', async e => {
+    const it = e.target.closest('.it[data-k]'); if (it) { go('#/fields/' + encodeURIComponent(it.dataset.k)); return; }
+    const b = e.target.closest('button'); if (!b || !cur) return;
+    if (b.id === 'fAdd') {
+      const r = await modal({ title: '新增欄位', html: `<div class="fld"><label class="f">欄位名 *</label><input type="text" id="aN"></div><div class="grid g2"><div class="fld"><label class="f">型別</label><select id="aT">${['VARCHAR2', 'NUMBER', 'DATE', 'CHAR', 'CLOB', 'TIMESTAMP'].map(t => `<option>${t}</option>`).join('')}</select></div><div class="fld"><label class="f">長度／精度</label><input type="text" id="aL" placeholder="如 20 或 10,2"></div></div><div class="fld"><label class="f">中文名稱</label><input type="text" id="aB"></div>`, buttons: [{ label: '取消', value: null }, { label: '新增', value: 'ok', cls: 'primary', validate: ov => (RE_IDENT.test(ov.querySelector('#aN').value.trim()) ? '' : '欄位名格式不合法') }], collect: ov => ({ n: ov.querySelector('#aN').value.trim().toUpperCase(), t: ov.querySelector('#aT').value, l: ov.querySelector('#aL').value.trim(), b: ov.querySelector('#aB').value.trim() }) });
+      if (!r) return; const fl = S.fieldsByTable.get(cur.tableKey) || [];
+      if (fl.some(f => f.fieldName === r.data.n)) { toast('欄位已存在', 'err'); return; }
+      const nums = r.data.l.split(',').map(x => parseInt(x, 10)); const isChar = typeClass(r.data.t) === 'char';
+      await idb.put('fields', { fieldKey: cur.tableKey + '.' + r.data.n, tableKey: cur.tableKey, fieldName: r.data.n, dataType: r.data.t, length: isChar && !isNaN(nums[0]) ? nums[0] : null, precision: !isChar && !isNaN(nums[0]) ? nums[0] : null, scale: !isChar && nums.length > 1 && !isNaN(nums[1]) ? nums[1] : null, nullable: true, isPk: false, fk: '', label: r.data.b, note: '', enumValues: [], ordinal: fl.length + 1 });
+      await reload('fields'); viewFields(tableKeyParam);
+    } else if (b.id === 'tDel') {
+      const n = S.rules.filter(r => String(r.targetTable).toUpperCase() === cur.table && effSchema(r).toLowerCase() === cur.schema).length;
+      if (await confirmBox(`刪除 ${cur.tableKey} 及其欄位字典？${n ? `\n注意：有 ${n} 條規則使用這張表，刪除後這些規則會出現 L008 警告。` : ''}`, '刪除', true)) {
+        const ops = [{ store: 'tables', op: 'del', key: cur.tableKey }].concat((S.fieldsByTable.get(cur.tableKey) || []).map(f => ({ store: 'fields', op: 'del', key: f.fieldKey })));
+        await idb.multi(ops); await reload(['tables', 'fields']); await audit('delete', 'table', cur.tableKey, ''); renderNav(); go('#/fields');
+      }
+    } else if (b.id === 'tRen') {
+      const r = await modal({ title: '表資訊 ' + cur.tableKey, html: `<div class="fld"><label class="f">中文名稱</label><input type="text" id="rL" value="${esc(cur.label || '')}"></div><div class="fld"><label class="f">說明</label><textarea id="rN" style="font-family:inherit">${esc(cur.note || '')}</textarea></div>`, buttons: [{ label: '取消', value: null }, { label: '儲存', value: 'ok', cls: 'primary' }], collect: ov => ({ l: ov.querySelector('#rL').value, n: ov.querySelector('#rN').value }) });
+      if (!r) return; await idb.put('tables', Object.assign({}, cur, { label: r.data.l, note: r.data.n, updatedAt: nowISO() })); await reload('tables'); viewFields(tableKeyParam);
+    } else if (b.dataset.a) {
+      const tr = b.closest('tr'), f = S.fields.find(x => x.fieldKey === tr.dataset.fk);
+      if (b.dataset.a === 'fdel') { if (await confirmBox('刪除欄位 ' + f.fieldName + '？', '刪除', true)) { await idb.del('fields', f.fieldKey); await reload('fields'); viewFields(tableKeyParam); } }
+      else if (b.dataset.a === 'enum') {
+        const r = await modal({ title: f.fieldName + ' 列舉值', html: `<p class="muted small">每行一筆：<span class="mono">值=說明</span>，例如 <span class="mono">3=銀行</span>。</p><textarea id="eT" style="min-height:200px">${esc((f.enumValues || []).map(x => x.value + '=' + (x.label || '')).join('\n'))}</textarea>`, buttons: [{ label: '取消', value: null }, { label: '儲存', value: 'ok', cls: 'primary' }], collect: ov => ov.querySelector('#eT').value });
+        if (!r) return; const ev = r.data.split(/\n/).map(x => x.trim()).filter(Boolean).map(x => { const i = x.indexOf('='); return i < 0 ? { value: x, label: '' } : { value: x.slice(0, i).trim(), label: x.slice(i + 1).trim() }; });
+        await idb.put('fields', Object.assign({}, f, { enumValues: ev })); await reload('fields'); viewFields(tableKeyParam);
+      }
+    }
+  });
+  v.addEventListener('change', async e => {
+    const t = e.target; if (!t.matches('[data-p]')) return; const f = S.fields.find(x => x.fieldKey === t.closest('tr').dataset.fk);
+    await idb.put('fields', Object.assign({}, f, { [t.dataset.p]: t.value })); await reload('fields');
+  });
+}
+
+/* ---------- Value Sets ---------- */
+function slugId(name) { return 'VS-' + String(name).trim().toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40); }
+function rulesUsingSet(id) { return S.rules.filter(r => { let hit = false; walkTree(r.condition, n => { if (n.type === 'cond' && n.value && n.value.kind === 'valueSet' && n.value.setId === id) hit = true; }); return hit; }); }
+const VSD = { draft: null, dirty: false };
+function viewValueSets(setId, keep) {
+  const cur = setId ? S.vsMap.get(setId) : null;
+  if (!keep || !VSD.draft || VSD.draft.setId !== (cur && cur.setId)) { VSD.draft = cur ? clone(cur) : null; VSD.dirty = false; }
+  GUARD = () => VSD.dirty;
+  $('#main').innerHTML = `<div id="v"><div class="row sp"><div><h1>Value Sets</h1><p class="sub">共用清單（如 SOURCE 清單、MDB 名單、銀行保代統編）。IN_LIST 直接展開成 IN (…)；CTE 會產生 WITH 子句。</p></div><div class="row"><button class="btn" id="vImp">匯入 CSV（新增清單）</button><button class="btn primary" id="vNew">＋ 新增 Value Set</button></div></div>
+    <div class="split"><div class="list">${sortBy(S.valueSets, s => s.name, 1).map(s => `<div class="it ${cur && cur.setId === s.setId ? 'on' : ''}" data-k="${esc(s.setId)}"><b>${esc(s.name)}</b><div class="muted small mono">${esc(s.setId)}・${(s.items || []).length} 項・${esc(s.renderMode)}</div></div>`).join('') || '<div class="empty">尚無 Value Set</div>'}</div><div id="vdetail"></div></div></div>`;
+  const v = $('#v'); const d = VSD.draft;
+  const box = $('#vdetail', v);
+  if (!d) { box.innerHTML = '<div class="card empty">請從左側選擇，或新增 Value Set</div>'; }
+  else {
+    const used = rulesUsingSet(d.setId);
+    box.innerHTML = `<div class="card"><div class="row sp"><h2 style="margin:0">${esc(d.name)}</h2><div class="row"><button class="btn sm" id="vExp">匯出 CSV</button><button class="btn sm primary" id="vSave">儲存</button><button class="btn sm danger" id="vDel">刪除</button></div></div>
+    <div class="grid g2" style="margin-top:10px"><div class="fld"><label class="f">名稱</label><input type="text" data-b="name" value="${esc(d.name)}"></div><div class="fld"><label class="f">編號（setId，不可改）</label><input type="text" value="${esc(d.setId)}" readonly></div>
+    <div class="fld"><label class="f">值型別</label><select data-b="valueType">${['STRING', 'NUMBER'].map(t => `<option ${d.valueType === t ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+    <div class="fld"><label class="f">輸出方式</label><select data-b="renderMode">${[['IN_LIST', 'IN_LIST：IN (\'A\',\'B\')'], ['CTE', 'CTE：WITH vs_xxx AS (…)']].map(([k, l]) => `<option value="${k}" ${d.renderMode === k ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></div></div>
+    <p class="small muted">被 ${used.length} 條規則使用${used.length ? '：' + used.map(r => `<a href="#/rules/${encodeURIComponent(r.ruleId)}">${esc(r.ruleId)}</a>`).join('、') : ''}</p>
+    <div class="row sp"><h3 style="margin:0">項目（${d.items.length}）</h3><div class="row"><button class="btn sm" id="vBulk">批次貼上</button><button class="btn sm" id="vAdd">＋ 項目</button></div></div>
+    <div class="scroll" style="margin-top:6px;max-height:50vh"><table class="tbl"><thead><tr><th>值</th><th>說明</th><th style="width:30px"></th></tr></thead><tbody>${d.items.map((it, i) => `<tr data-i="${i}"><td><input type="text" data-it="value" value="${esc(it.value)}"></td><td><input type="text" data-it="label" value="${esc(it.label || '')}"></td><td><button class="btn sm ghost danger" data-del>✕</button></td></tr>`).join('') || '<tr><td colspan="3" class="muted">尚無項目（Lint 會提示 L004）</td></tr>'}</tbody></table></div></div>`;
+  }
+  v.addEventListener('click', async e => {
+    const it = e.target.closest('.it[data-k]'); if (it) { go('#/valuesets/' + encodeURIComponent(it.dataset.k)); return; }
+    const b = e.target.closest('button'); if (!b) return;
+    if ((b.id === 'vNew' || b.id === 'vImp') && VSD.dirty && !(await confirmBox('目前這個 Value Set 有尚未儲存的變更，確定要放棄並繼續嗎？', '放棄變更', true))) return;
+    if ((b.id === 'vNew' || b.id === 'vImp') && VSD.dirty) VSD.dirty = false;
+    if (b.id === 'vNew') {
+      const r = await modal({ title: '新增 Value Set', html: `<div class="fld"><label class="f">名稱 *</label><input type="text" id="nN"></div><div class="grid g2"><div class="fld"><label class="f">值型別</label><select id="nT"><option>STRING</option><option>NUMBER</option></select></div><div class="fld"><label class="f">輸出方式</label><select id="nR"><option>IN_LIST</option><option>CTE</option></select></div></div>`, buttons: [{ label: '取消', value: null }, { label: '建立', value: 'ok', cls: 'primary', validate: ov => (ov.querySelector('#nN').value.trim() ? '' : '請輸入名稱') }], collect: ov => ({ n: ov.querySelector('#nN').value.trim(), t: ov.querySelector('#nT').value, r: ov.querySelector('#nR').value }) });
+      if (!r) return; let id = slugId(r.data.n), k = 1; if (id === 'VS-') id = 'VS-' + uid().toUpperCase(); const base = id; while (S.vsMap.has(id)) id = base + '-' + (++k);
+      await idb.put('valueSets', { setId: id, name: r.data.n, valueType: r.data.t, renderMode: r.data.r, items: [] }); await reload('valueSets'); VSD.draft = null; renderNav(); go('#/valuesets/' + encodeURIComponent(id));
+    } else if (b.id === 'vImp') {
+      const file = await pickFile('.csv,text/csv'); if (!file) return; const rows = parseCSV(await readFile(file)); if (!rows.length) { toast('CSV 沒有資料', 'err'); return; }
+      if (readFile.enc === 'big5') toast('偵測到 Big5 編碼，已自動轉換', 'warn');
+      const hdr = rows[0].map(x => x.trim().toLowerCase()); const hasHead = hdr.includes('value'); const body = hasHead ? rows.slice(1) : rows; const vi = hasHead ? hdr.indexOf('value') : 0, li = hasHead ? hdr.indexOf('label') : 1;
+      const name = file.name.replace(/\.csv$/i, ''); let id = slugId(name), k = 1; if (id === 'VS-') id = 'VS-' + uid().toUpperCase(); const base = id; while (S.vsMap.has(id)) id = base + '-' + (++k);
+      const seenV = new Set(); const items = body.map(r => ({ value: (r[vi] || '').trim(), label: li >= 0 ? (r[li] || '').trim() : '' })).filter(x => { if (x.value === '' || seenV.has(x.value)) return false; seenV.add(x.value); return true; });
+      await idb.put('valueSets', { setId: id, name, valueType: items.length && items.every(x => isNumStr(x.value)) ? 'NUMBER' : 'STRING', renderMode: 'IN_LIST', items }); await reload('valueSets'); await audit('import', 'valueSet', id, items.length + ' 項'); toast(`已建立「${name}」（${items.length} 項）`, 'ok'); VSD.draft = null; renderNav(); go('#/valuesets/' + encodeURIComponent(id));
+    }
+    if (!d) return;
+    if (b.id === 'vAdd') { d.items.push({ value: '', label: '' }); VSD.dirty = true; rerender(); }
+    else if (b.hasAttribute('data-del')) { d.items.splice(+b.closest('tr').dataset.i, 1); VSD.dirty = true; rerender(); }
+    else if (b.id === 'vBulk') {
+      const r = await modal({ title: '批次貼上項目', html: `<p class="muted small">每行一筆，可用 Tab、逗號或 = 分隔「值」與「說明」。會附加到現有項目之後，並自動去除重複的值。</p><textarea id="bT" style="min-height:240px"></textarea>`, buttons: [{ label: '取消', value: null }, { label: '加入', value: 'ok', cls: 'primary' }], collect: ov => ov.querySelector('#bT').value });
+      if (!r) return; const have = new Set(d.items.map(x => String(x.value)));
+      r.data.split(/\r?\n/).forEach(line => { line = line.trim(); if (!line) return; const m = line.split(/\t|,|=/); const val = (m[0] || '').trim().replace(/^(['"])(.*)\1$/, '$2'); if (val && !have.has(val)) { have.add(val); d.items.push({ value: val, label: m.slice(1).join(' ').trim() }); } });
+      VSD.dirty = true; rerender();
+    } else if (b.id === 'vSave') {
+      d.items.forEach(x => { x.value = String(x.value).trim(); });
+      const seenS = new Set(), before = d.items.length; d.items = d.items.filter(x => { if (x.value === '') return false; if (seenS.has(x.value)) return false; seenS.add(x.value); return true; });
+      if (before > d.items.length) toast(`已移除 ${before - d.items.length} 筆空白或重複的項目`, 'warn');
+      if (d.valueType === 'NUMBER') { const bad = d.items.find(x => !isNumStr(x.value)); if (bad) { toast('值型別為 NUMBER，但「' + bad.value + '」不是數字', 'err'); return; } }
+      await idb.put('valueSets', d); await reload('valueSets'); await audit('save', 'valueSet', d.setId, d.items.length + ' 項'); await bumpSaveCount(); VSD.dirty = false; toast('已儲存', 'ok'); renderNav(); viewValueSets(d.setId);
+    } else if (b.id === 'vDel') {
+      const used = rulesUsingSet(d.setId); if (!(await confirmBox(used.length ? `此 Value Set 被 ${used.length} 條規則使用（${used.map(r => r.ruleId).join('、')}）。\n刪除後這些規則的 IN 條件會變成恆為假（Lint L004）。確定刪除？` : `刪除 Value Set「${d.name}」？`, '刪除', true))) return;
+      await idb.del('valueSets', d.setId); await reload('valueSets'); VSD.dirty = false; VSD.draft = null; await audit('delete', 'valueSet', d.setId, ''); renderNav(); go('#/valuesets');
+    } else if (b.id === 'vExp') { download(d.setId + '.csv', toCSV([['value', 'label']].concat(d.items.map(x => [x.value, x.label || '']))), 'text/csv'); }
+  });
+  v.addEventListener('input', e => { const t = e.target; if (!d) return; if (t.dataset.b) { d[t.dataset.b] = t.value; VSD.dirty = true; } else if (t.dataset.it) { d.items[+t.closest('tr').dataset.i][t.dataset.it] = t.value; VSD.dirty = true; } });
+  function rerender() { viewValueSets(d.setId, true); }
+}
+
+/* ============================================================
+ * 應用層（D）：Versions、Settings、匯入／匯出、範例資料、啟動
+ * ============================================================ */
+const stamp = () => { const d = new Date(), p = n => pad(n, 2); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`; };
+
+/* ---------- Versions ---------- */
+const VER = { a: null, b: null };
+async function viewVersions(ruleId) {
+  if (!ruleId) {
+    $('#main').innerHTML = `<div id="v"><h1>Versions</h1><p class="sub">選擇規則以檢視版本歷程、比較差異與還原。</p><div class="scroll"><table class="tbl"><thead><tr><th>編號</th><th>名稱</th><th>目前版本</th><th></th></tr></thead><tbody>${sortBy(S.rules, r => r.ruleId, 1).map(r => `<tr><td>${esc(r.ruleId)}</td><td>${esc(r.ruleName)}</td><td>v${esc(r.version)}</td><td><a class="btn sm" href="#/versions/${encodeURIComponent(r.ruleId)}">檢視</a></td></tr>`).join('') || '<tr><td colspan="4" class="empty">尚無規則</td></tr>'}</tbody></table></div></div>`;
+    return;
+  }
+  const rule = S.rulesMap.get(ruleId);
+  if (!rule) { $('#main').innerHTML = `<div class="card"><h2>找不到規則 ${esc(ruleId)}</h2><a href="#/versions">回到列表</a></div>`; return; }
+  const vers = sortBy(await idb.byIndex('ruleVersions', 'ruleId', ruleId), x => x.version, -1);
+  const byId = new Map(vers.map(x => [x.versionId, x]));
+  if (!byId.has(VER.a) || !byId.has(VER.b)) { VER.b = vers[0] && vers[0].versionId; VER.a = (vers[1] || vers[0] || {}).versionId; }
+  $('#main').innerHTML = `<div id="v"><div class="row sp"><div><h1>版本歷程：${esc(ruleId)}</h1><p class="sub">${esc(rule.ruleName)}・目前 v${esc(rule.version)}・共 ${vers.length} 個版本</p></div><div class="row"><a class="btn" href="#/rules/${encodeURIComponent(ruleId)}">← 回到編輯</a></div></div>
+  <div class="split"><div class="list">${vers.map(x => `<div class="it" data-vid="${esc(x.versionId)}"><div class="row sp"><b>v${esc(x.version)}</b><span class="muted small">${esc(fmtTime(x.createdAt))}</span></div><div class="small muted">${esc(x.note || '')}</div>
+    <div class="row" style="margin-top:4px"><button class="btn sm ${VER.a === x.versionId ? 'primary' : ''}" data-set="a">A</button><button class="btn sm ${VER.b === x.versionId ? 'primary' : ''}" data-set="b">B</button><button class="btn sm" data-rs>還原</button></div></div>`).join('') || '<div class="empty">尚無版本紀錄</div>'}</div>
+  <div id="vdiff"></div></div></div>`;
+  const v = $('#v'), A = byId.get(VER.a), Bv = byId.get(VER.b);
+  const core = s => { const c = clone(s && typeof s === 'object' ? s : {}); delete c.updatedAt; delete c.version; delete c.createdAt; return JSON.stringify(c, null, 2).split('\n'); };
+  const render = (title, la, lb) => { const df = lineDiff(la, lb), n = df.filter(x => x.t !== '=').length; return `<h3>${title}　<span class="muted small">${n ? n + ' 行差異' : '無差異'}</span></h3><div class="diff">${df.map(x => `<div class="${x.t === 'a' ? 'a' : x.t === 'd' ? 'd' : ''}">${x.t === 'a' ? '+ ' : x.t === 'd' ? '- ' : '  '}${esc(x.s)}</div>`).join('')}</div>`; };
+  $('#vdiff', v).innerHTML = A && Bv ? `<div class="card"><p>比較 <b>A：v${esc(A.version)}</b>（${esc(fmtTime(A.createdAt))}）→ <b>B：v${esc(Bv.version)}</b>（${esc(fmtTime(Bv.createdAt))}）</p>${render('SQL 差異', String(A.sql || '').split('\n'), String(Bv.sql || '').split('\n'))}${render('規則 DSL（JSON）差異', core(A.snapshot), core(Bv.snapshot))}</div>` : '<div class="card empty">沒有可比較的版本</div>';
+  v.addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return; const vid = b.closest('.it').dataset.vid;
+    if (b.dataset.set) { VER[b.dataset.set] = vid; viewVersions(ruleId); }
+    else if (b.hasAttribute('data-rs')) {
+      const x = byId.get(vid); if (!x.snapshot || typeof x.snapshot !== 'object') { toast('這個版本沒有可還原的內容', 'err'); return; }
+      if (!(await confirmBox(`將規則還原成 v${x.version} 的內容？\n還原後會建立一個新版本，原本的歷程都會保留。`, '還原'))) return;
+      const r = normalizeRule(clone(x.snapshot)); r.ruleId = ruleId; await persistRule(r, { note: '還原自 v' + x.version }); toast('已還原，並建立新版本 v' + S.rulesMap.get(ruleId).version, 'ok'); VER.a = VER.b = null; viewVersions(ruleId);
+    }
+  });
+}
+
+/* ---------- 匯出 ---------- */
+async function exportFull() {
+  const stores = {}; for (const st of STORES) stores[st] = await idb.all(st);
+  download(`rule-forge-backup-${stamp()}.json`, JSON.stringify({ app: 'rule-forge', kind: 'full', schemaVersion: SCHEMA_VERSION, appVersion: APP_VERSION, exportedAt: nowISO(), stores }, null, 1), 'application/json');
+  await setSet('lastBackupAt', nowISO()); await setSet('saveCount', 0); toast('已匯出完整備份', 'ok');
+}
+function exportRulesJson(rules) {
+  const vsIds = new Set(); rules.forEach(r => walkTree(r.condition, n => { if (n.type === 'cond' && n.value && n.value.kind === 'valueSet' && n.value.setId) vsIds.add(n.value.setId); }));
+  const payload = { app: 'rule-forge', kind: 'rules', schemaVersion: SCHEMA_VERSION, appVersion: APP_VERSION, exportedAt: nowISO(), stores: { rules: clone(rules), valueSets: S.valueSets.filter(s => vsIds.has(s.setId)).map(clone) } };
+  download(`rule-forge-rules-${stamp()}.json`, JSON.stringify(payload, null, 1), 'application/json'); toast(`已匯出 ${rules.length} 條規則（含 ${payload.stores.valueSets.length} 個 Value Set）`, 'ok');
+}
+function exportMarkdown(rules) {
+  const ctx = makeCtx(); const cell = s => String(s == null ? '' : s).replace(/\|/g, '\\|').replace(/\n/g, ' ');
+  const out = ['# Rule Forge 規則說明書', '', `產出時間：${fmtTime(nowISO())}　規則數：${rules.length}`, ''];
+  rules.forEach(r => {
+    const f = S.findingMap.get(r.findingId), q = buildQuery(r, { mode: 'detail' }, ctx);
+    out.push(`## ${r.ruleId}　${singleLine(r.ruleName)}`, '', '| 項目 | 內容 |', '|---|---|', `| 嚴重度／狀態 | ${r.severity}／${r.status}（v${r.version}） |`, `| 類別 | ${cell(CAT_LABEL[r.category] || r.category)} |`, `| 目標表 | \`${q.schema}.${r.targetTable}\` |`);
+    if (r.exposureType) out.push(`| 暴險類型代碼 | ${cell(r.exposureType)} |`); if (r.expected) out.push(`| 預期處理 | ${cell(r.expected)} |`); if (r.regulationRef) out.push(`| 依據 | ${cell(r.regulationRef)} |`);
+    out.push('');
+    if (f) { out.push('### 缺失態樣', '', `**${f.findingId}**${f.exposureType ? '（' + f.exposureType + '）' : ''}：${f.description}`, ''); if (f.correctTreatment) out.push(`- 正確：${f.correctTreatment}`); if (f.wrongTreatment) out.push(`- 錯誤：${f.wrongTreatment}`); out.push(''); }
+    if (r.description) out.push(r.description, '');
+    out.push('### 檢核邏輯', '', describeNode(r.condition, ctx, 0) || '（無條件）', '', '### SQL', '', '```sql', q.sql, '```', '');
+  });
+  download(`rule-forge-spec-${stamp()}.md`, out.join('\n'), 'text/markdown'); toast('已匯出 Markdown 規則說明書', 'ok');
+}
+
+/* ---------- 匯入 ---------- */
+const KEYOF = { findings: 'findingId', valueSets: 'setId', rules: 'ruleId', ruleVersions: 'versionId', tables: 'tableKey', fields: 'fieldKey' };
+const STORE_LABEL = { valueSets: 'Value Sets', findings: '缺失態樣', rules: '規則', ruleVersions: '規則版本', tables: '資料表', fields: '欄位' };
+function existingOf(st, all) { return st === 'rules' ? S.rulesMap : st === 'findings' ? S.findingMap : st === 'valueSets' ? S.vsMap : st === 'tables' ? S.tableMap : st === 'fields' ? new Map(S.fields.map(x => [x.fieldKey, x])) : new Map((all[st] || []).map(x => [x[KEYOF[st]], x])); }
+function normalizePayload(p) {
+  const st = p.stores || {}; const out = {}; let skipped = 0;
+  const obj = x => x && typeof x === 'object' && !Array.isArray(x);
+  const keep = (k, test) => { const arr = Array.isArray(st[k]) ? st[k] : []; out[k] = arr.filter(x => { const ok = obj(x) && test(x); if (!ok) skipped++; return ok; }); };
+  const str = x => typeof x === 'string' && x.trim() !== '';
+  STORES.forEach(k => { out[k] = []; });
+  keep('rules', x => typeof x.ruleId === 'string' && /^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(x.ruleId));
+  keep('findings', x => str(x.findingId));
+  keep('valueSets', x => str(x.setId));
+  keep('tables', x => str(x.tableKey) && RE_IDENT.test(String(x.schema || '')) && RE_IDENT.test(String(x.table || '')));
+  keep('fields', x => str(x.fieldKey) && str(x.tableKey) && str(x.fieldName));
+  keep('ruleVersions', x => str(x.versionId) && str(x.ruleId));
+  keep('settings', x => str(x.key));
+  keep('auditLog', x => true);
+  out.rules = out.rules.map(r => normalizeRule(clone(r)));
+  out.findings = out.findings.map(f => Object.assign({}, f, { seqNo: f.seqNo == null ? '' : f.seqNo, exposureType: String(f.exposureType || ''), description: String(f.description || ''), correctTreatment: String(f.correctTreatment || ''), wrongTreatment: String(f.wrongTreatment || ''), status: FD_STATUS.includes(f.status) ? f.status : 'OPEN', ruleIds: Array.isArray(f.ruleIds) ? f.ruleIds.map(String) : [] }));
+  out.valueSets = out.valueSets.map(v => Object.assign({}, v, { name: String(v.name || v.setId), valueType: v.valueType === 'NUMBER' ? 'NUMBER' : 'STRING', renderMode: v.renderMode === 'CTE' ? 'CTE' : 'IN_LIST', items: (Array.isArray(v.items) ? v.items : []).filter(obj).map(i => ({ value: i.value == null ? '' : String(i.value), label: i.label == null ? '' : String(i.label) })) }));
+  const tk = new Set(out.tables.map(t => t.tableKey));   /* 欄位必須屬於檔案內或現有的表，否則視為孤兒略過 */
+  out.fields = out.fields.filter(f => { const ok = tk.has(f.tableKey) || S.tableMap.has(f.tableKey); if (!ok) skipped++; return ok; });
+  out._skipped = skipped;
+  return out;
+}
+async function sanitizeSettings() {   /* 匯入後確保設定值合法，避免之後產生不合法 SQL */
+  const l = (getSet('schemaList') || []).filter(s => s && RE_IDENT.test(String(s.name || ''))).map(s => ({ name: String(s.name).toLowerCase(), label: String(s.label || s.name), builtin: !!s.builtin }));
+  const seen = new Set(); const dedup = l.filter(s => (seen.has(s.name) ? false : (seen.add(s.name), true)));
+  await setSet('schemaList', dedup);
+  if (!RE_IDENT.test(String(getSet('defaultSchema') || ''))) await setSet('defaultSchema', 'bis');
+  if (!['lower', 'upper', 'preserve'].includes(getSet('identifierCase'))) await setSet('identifierCase', 'lower');
+  if (!['oracle', 'ansi'].includes(getSet('dialect'))) await setSet('dialect', 'oracle');
+  if (!['auto', 'light', 'dark'].includes(getSet('theme'))) await setSet('theme', 'auto');
+  if (!Number.isFinite(Number(getSet('backupEvery'))) || Number(getSet('backupEvery')) < 0) await setSet('backupEvery', 20);
+  await ensureSchemaDefaults();
+}
+function analyze(inc, all) {
+  const res = {};
+  Object.keys(KEYOF).forEach(st => {
+    const ex = existingOf(st, all), cmpKey = st === 'rules' ? ruleCoreJson : stable; let nw = 0, same = 0; const conf = [];
+    inc[st].forEach(x => { const e = ex.get(x[KEYOF[st]]); if (!e) nw++; else if (cmpKey(e) === cmpKey(x)) same++; else conf.push(x[KEYOF[st]]); });
+    res[st] = { total: inc[st].length, nw, same, conf };
+  }); return res;
+}
+async function syncSchemaList() {
+  const l = getSet('schemaList'); let ch = false;
+  const add = n => { n = String(n || '').toLowerCase(); if (RE_IDENT.test(n) && !l.some(s => s.name.toLowerCase() === n)) { l.push({ name: n, label: n, builtin: false }); ch = true; } };
+  S.tables.forEach(t => add(t.schema)); S.rules.forEach(r => r.targetSchema && add(r.targetSchema)); if (ch) await setSet('schemaList', l);
+}
+async function importFlow() {
+  try { await importFlowCore(); } catch (e) { console.error(e); toast('匯入失敗：' + (e && e.message || e), 'err', 6000); }
+}
+async function importFlowCore() {
+  const file = await pickFile('.json,application/json'); if (!file) return;
+  let payload; try { payload = JSON.parse(await readFile(file)); } catch (e) { toast('不是有效的 JSON 檔案', 'err'); return; }
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) { toast('這不是 Rule Forge 匯出的檔案', 'err'); return; }
+  if (!payload || !payload.stores || typeof payload.stores !== 'object') { toast('這不是 Rule Forge 匯出的檔案（缺少 stores）', 'err'); return; }
+  const inc = normalizePayload(payload), full = payload.kind === 'full' || payload.kind === undefined;
+  const all = { ruleVersions: await idb.all('ruleVersions') }, an = analyze(inc, all);
+  const rows = Object.keys(KEYOF).filter(st => an[st].total).map(st => `<tr><td>${STORE_LABEL[st]}</td><td>${an[st].total}</td><td>${an[st].nw}</td><td>${an[st].same}</td><td>${an[st].conf.length ? `<b style="color:var(--warn)">${an[st].conf.length}</b> <span class="muted small">${esc(an[st].conf.slice(0, 4).join('、'))}${an[st].conf.length > 4 ? '…' : ''}</span>` : 0}</td></tr>`).join('');
+  const html = `${inc._skipped ? `<div class="note warn">檔案內有 ${inc._skipped} 筆資料格式不正確（缺少編號、編號不合法或孤立的欄位），已自動略過。</div>` : ''}<p class="muted small">檔案：${esc(file.name)}・類型：${esc(payload.kind || 'full')}・schemaVersion ${esc(payload.schemaVersion || '?')}・匯出於 ${esc(fmtTime(payload.exportedAt))}</p>
+    <table class="tbl"><thead><tr><th>項目</th><th>檔案內</th><th>新增</th><th>完全相同</th><th>衝突（同 ID 但內容不同）</th></tr></thead><tbody>${rows || '<tr><td colspan="5" class="muted">檔案內沒有可匯入的資料</td></tr>'}</tbody></table>
+    <h3>匯入方式</h3>
+    <label style="display:block"><input type="radio" name="im" value="merge" checked> <b>合併</b>：保留現有資料，只處理檔案內的項目</label>
+    <div style="margin:4px 0 8px 22px" class="small">衝突時：
+      <label><input type="radio" name="st" value="skip" checked> 略過</label>　<label><input type="radio" name="st" value="overwrite"> 覆蓋</label>　<label><input type="radio" name="st" value="newid"> 另存新 ID</label>
+      <div class="muted">「另存新 ID」只適用於規則／缺失態樣／Value Set（連結會自動重新對應）；資料表與欄位字典只能略過或覆蓋。</div></div>
+    ${full ? `<label style="display:block"><input type="radio" name="im" value="replace"> <b style="color:var(--err)">完整取代</b>：先清空整個資料庫，再還原檔案內容（含設定與操作紀錄）</label>` : ''}`;
+  const r = await modal({ title: '匯入預覽與衝突處理', html, wide: true, buttons: [{ label: '取消', value: null }, { label: '開始匯入', value: 'ok', cls: 'primary' }], collect: ov => ({ mode: ov.querySelector('input[name=im]:checked').value, strategy: ov.querySelector('input[name=st]:checked').value }) });
+  if (!r) return;
+  if (r.data.mode === 'replace' && !(await confirmBox('「完整取代」會清空目前所有規則、字典與設定，再匯入檔案內容。\n建議先匯出目前資料備份。確定繼續？', '清空並匯入', true))) return;
+  const s = r.data.mode === 'replace' ? await applyReplace(payload, inc) : await applyMerge(payload, inc, r.data.strategy, all);
+  await sanitizeSettings(); toast(s, 'ok', 5000);
+  applyTheme(); renderNav(); route();
+}
+async function applyReplace(payload, inc) {
+  const ops = STORES.map(st => ({ store: st, op: 'clear' }));
+  STORES.forEach(st => { (st === 'rules' ? inc.rules : inc[st]).forEach(x => ops.push({ store: st, op: 'put', val: x })); });
+  await idb.multi(ops); await reload();
+  await ensureSchemaDefaults(); await syncSchemaList();
+  return `已完整還原：${inc.rules.length} 條規則、${inc.findings.length} 個缺失、${inc.tables.length} 張表、${inc.valueSets.length} 個 Value Set`;
+}
+function remapTree(rule, vsMap) { walkTree(rule.condition, n => { if (n.type === 'cond' && n.value && n.value.kind === 'valueSet' && vsMap.has(n.value.setId)) n.value.setId = vsMap.get(n.value.setId); }); }
+async function applyMerge(payload, inc, strategy, all) {
+  const ops = [], stat = { add: 0, ow: 0, skip: 0, nid: 0 };
+  const vsMap = new Map(), fdMap = new Map(), ruleMap = new Map();
+  const usedVS = new Set(S.vsMap.keys()), usedFD = new Set(S.findingMap.keys());
+  const uniq = (id, used) => { let n = id, k = 1; while (used.has(n)) n = id + '-' + (++k); used.add(n); return n; };
+  const same = (a, b) => stable(a) === stable(b);
+  inc.valueSets.forEach(x => { const e = S.vsMap.get(x.setId); if (!e) { ops.push({ store: 'valueSets', op: 'put', val: x }); stat.add++; } else if (same(e, x)) stat.skip++; else if (strategy === 'overwrite') { ops.push({ store: 'valueSets', op: 'put', val: x }); stat.ow++; } else if (strategy === 'newid') { const id = uniq(x.setId, usedVS); vsMap.set(x.setId, id); ops.push({ store: 'valueSets', op: 'put', val: Object.assign({}, x, { setId: id, name: x.name + '（匯入）' }) }); stat.nid++; } else stat.skip++; });
+  inc.findings.forEach(x => { const e = S.findingMap.get(x.findingId); if (!e) { ops.push({ store: 'findings', op: 'put', val: x }); stat.add++; } else if (same(e, x)) stat.skip++; else if (strategy === 'overwrite') { ops.push({ store: 'findings', op: 'put', val: x }); stat.ow++; } else if (strategy === 'newid') { const id = uniq(x.findingId, usedFD); fdMap.set(x.findingId, id); ops.push({ store: 'findings', op: 'put', val: Object.assign({}, x, { findingId: id, ruleIds: [] }) }); stat.nid++; } else stat.skip++; });
+  const newRuleIds = [];
+  const verBy = new Map(); inc.ruleVersions.forEach(v => { (verBy.get(v.ruleId) || verBy.set(v.ruleId, []).get(v.ruleId)).push(v); });
+  const ctx = makeCtx();
+  const snap = r => ({ versionId: uid(), ruleId: r.ruleId, version: r.version, createdAt: r.updatedAt, note: '匯入', snapshot: clone(r), sql: buildQuery(r, { mode: 'detail' }, ctx).sql });
+  inc.rules.forEach(x => {
+    const r = clone(x); remapTree(r, vsMap); if (r.findingId && fdMap.has(r.findingId)) r.findingId = fdMap.get(r.findingId);
+    const e = S.rulesMap.get(x.ruleId);
+    if (!e || strategy === 'newid' && ruleCoreJson(e) !== ruleCoreJson(r)) {
+      let isNewId = false;
+      if (e) { r.ruleId = nextRuleId(newRuleIds); isNewId = true; ruleMap.set(x.ruleId, r.ruleId); }
+      newRuleIds.push(r.ruleId); r.version = r.version || 1; ops.push({ store: 'rules', op: 'put', val: r });
+      const vs = verBy.get(x.ruleId) || []; if (vs.length) vs.forEach(v => ops.push({ store: 'ruleVersions', op: 'put', val: Object.assign({}, v, { versionId: uid(), ruleId: r.ruleId }) })); else ops.push({ store: 'ruleVersions', op: 'put', val: snap(r) });
+      isNewId ? stat.nid++ : stat.add++;
+    } else if (ruleCoreJson(e) === ruleCoreJson(r)) stat.skip++;
+    else if (strategy === 'overwrite') { r.version = (e.version || 0) + 1; r.updatedAt = nowISO(); r.createdAt = e.createdAt || r.createdAt; ops.push({ store: 'rules', op: 'put', val: r }); ops.push({ store: 'ruleVersions', op: 'put', val: Object.assign(snap(r), { note: '匯入覆蓋' }) }); stat.ow++; }
+    else stat.skip++;
+  });
+  const tblIn = new Set();
+  inc.tables.forEach(x => { const e = S.tableMap.get(x.tableKey); if (!e) { ops.push({ store: 'tables', op: 'put', val: x }); tblIn.add(x.tableKey); stat.add++; } else if (same(e, x)) stat.skip++; else if (strategy === 'overwrite') { ops.push({ store: 'tables', op: 'put', val: x }); tblIn.add(x.tableKey); (S.fieldsByTable.get(x.tableKey) || []).forEach(f => ops.push({ store: 'fields', op: 'del', key: f.fieldKey })); stat.ow++; } else stat.skip++; });
+  const fm = new Map(S.fields.map(f => [f.fieldKey, f]));
+  inc.fields.forEach(x => { const e = fm.get(x.fieldKey); if (!e || tblIn.has(x.tableKey)) { ops.push({ store: 'fields', op: 'put', val: x }); } else if (strategy === 'overwrite' && !same(e, x)) ops.push({ store: 'fields', op: 'put', val: x }); });
+  const skipKeys = ['saveCount', 'lastBackupAt'];
+  inc.settings.forEach(s => {
+    if (skipKeys.includes(s.key)) return;
+    if (s.key === 'schemaList') { const l = getSet('schemaList'); (s.value || []).forEach(n => { if (n && n.name && !l.some(z => z.name.toLowerCase() === String(n.name).toLowerCase())) l.push({ name: String(n.name).toLowerCase(), label: n.label || n.name, builtin: !!n.builtin }); }); ops.push({ store: 'settings', op: 'put', val: { key: 'schemaList', value: l } }); }
+    else if (strategy === 'overwrite' && ['defaultSchema', 'identifierCase', 'dialect'].includes(s.key)) ops.push({ store: 'settings', op: 'put', val: s });
+  });
+  if (ops.length) await idb.multi(ops);
+  await reload(); await refreshFindingLinks(); await ensureSchemaDefaults(); await syncSchemaList();
+  await audit('import', 'json', '', `新增 ${stat.add}、覆蓋 ${stat.ow}、新ID ${stat.nid}、略過 ${stat.skip}（策略：${strategy}）`);
+  return `匯入完成：新增 ${stat.add}、覆蓋 ${stat.ow}、另存新 ID ${stat.nid}、略過 ${stat.skip}`;
+}
+
+/* ---------- 範例資料 ---------- */
+const SAMPLE_DDL = `-- 範例欄位：請之後以正式 DDL 覆蓋（匯入同一張表會保留你已填的中文名稱）
+CREATE TABLE "BIS"."CAL_CR3000_DETAIL" (
+  "SS_SEQ" NUMBER(10,0) NOT NULL ENABLE,
+  "DATADATE" DATE,
+  "SOURCE" VARCHAR2(30 BYTE),
+  "CUST_ID" VARCHAR2(20 BYTE),
+  "ISSUER_ID" VARCHAR2(20 BYTE),
+  "INDUSTRY_TYPE" VARCHAR2(10 BYTE),
+  "EXPOSURE_TYPE" VARCHAR2(2 BYTE),
+  "RISK_WEIGHT" NUMBER(6,3),
+  "AMOUNT" NUMBER(20,2)
+);
+COMMENT ON COLUMN "BIS"."CAL_CR3000_DETAIL"."SS_SEQ" IS '批次號碼';
+COMMENT ON COLUMN "BIS"."CAL_CR3000_DETAIL"."SOURCE" IS '資料來源';
+COMMENT ON COLUMN "BIS"."CAL_CR3000_DETAIL"."CUST_ID" IS '客戶統編';
+COMMENT ON COLUMN "BIS"."CAL_CR3000_DETAIL"."ISSUER_ID" IS '發行人統編';
+COMMENT ON COLUMN "BIS"."CAL_CR3000_DETAIL"."INDUSTRY_TYPE" IS '行業別';
+COMMENT ON COLUMN "BIS"."CAL_CR3000_DETAIL"."EXPOSURE_TYPE" IS '暴險類型';
+COMMENT ON COLUMN "BIS"."CAL_CR3000_DETAIL"."RISK_WEIGHT" IS '風險權數';
+COMMENT ON COLUMN "BIS"."CAL_CR3000_DETAIL"."AMOUNT" IS '暴險金額';`;
+async function loadSampleData() {
+  const vs = [
+    { setId: 'VS-SOURCE-ALL', name: 'CAL_CR3000 SOURCE 清單', valueType: 'STRING', renderMode: 'IN_LIST', items: [['LOAN', '放款'], ['DEMAND', '逾期放款'], ['TF', '進出口押匯'], ['AR_CONTRACT', '應收帳款承購'], ['CR_CARD', '信用卡資料'], ['ST2_MM', '拆放銀行同業'], ['NB', '存放同業'], ['NC', '存放央行'], ['SHORT_ADV', '短墊'], ['LONG_AR', '長期應收帳款'], ['EQUITY', '權益證券投資'], ['ACCOUNT', '會計餘額']].map(([value, label]) => ({ value, label })) },
+    { setId: 'VS-BANK-INS-AGENT', name: '國內銀行保險代理部（統編請自行填入）', valueType: 'STRING', renderMode: 'CTE', items: [] }
+  ].filter(x => !S.vsMap.has(x.setId));
+  if (vs.length) await idb.bulkPut('valueSets', vs);
+  await importDDLText(SAMPLE_DDL, 'bis');
+  const fds = [
+    [1, '主權國家', '持有國外○○州政府債券，應為「非中央政府公共部門」暴險類型，風險權數20%，誤列「主權國家」暴險類型，風險權數0%。', '非中央政府公共部門 / 20%', '主權國家 / 0%'],
+    [2, '主權國家', '按攤銷後成本衡量之金融資產(安第斯開發公司債券)，應為「銀行(含多邊開發銀行及集中結算交易對手)」暴險類型，風險權數20%，誤列「主權國家」暴險類型，風險權數0%。', '銀行(含MDB及CCP) / 20%', '主權國家 / 0%'],
+    [3, '非中央政府公共部門', '銀行保險代理部，風險權數應為0%，誤為100%。', '風險權數 0%', '風險權數 100%'],
+    [4, '銀行(含多邊開發銀行及集中結算交易對手)', '帳列存放銀行同業之美國聯邦儲備銀行，屬主權國家，依外部信評對該國家之評等結果，改列為主權國家(風險權數0%)。', '主權國家 / 0%', '銀行'],
+    [5, '銀行(含多邊開發銀行及集中結算交易對手)', '帳列應收帳款、存放銀行同業或持有國外銀行金融債券，依外部信評之評等結果，改適用風險權數20%、30%或50% (原誤為30%、50%或100%)。', '風險權數 20%／30%／50%', '風險權數 30%／50%／100%']
+  ].map(([n, ex, d, ok, bad]) => ({ findingId: 'FD-' + pad(n, 3), seqNo: n, exposureType: ex, description: d, correctTreatment: ok, wrongTreatment: bad, status: 'OPEN', ruleIds: [] })).filter(f => !S.findingMap.has(f.findingId));
+  if (fds.length) await idb.bulkPut('findings', fds);
+  await reload();
+  const C = (field, op, value, extra) => Object.assign(newCond(), { field, op, value }, extra || {});
+  const G = (logic, kids) => Object.assign(newGroup(logic), { children: kids });
+  const ss = () => C('SS_SEQ', 'EQ', { kind: 'param', name: 'SS_SEQ' });
+  const defs = [
+    { name: '銀行暴險外部信評風險權數偏高（範例）', findingId: 'FD-005', category: 'RISK_WEIGHT', exposureType: '3', severity: 'HIGH', status: 'ACTIVE', expected: '依外部信評改適用 20%/30%/50%', regulationRef: '缺失態樣第 5 項', tags: ['範例', '銀行', '外部信評'],
+      cond: G('AND', [ss(), C('EXPOSURE_TYPE', 'EQ', { kind: 'literal', v: '3' }, { trim: true }), C('SOURCE', 'IN', { kind: 'list', v: ['AR_CONTRACT', 'LONG_AR', 'NB'] }, { trim: true }), G('OR', [0.3, 0.5, 1].map(x => C('RISK_WEIGHT', 'EQ', { kind: 'literal', v: String(x) })))]) },
+    { name: '銀行保險代理部風險權數誤為 100%（範例）', findingId: 'FD-003', category: 'RISK_WEIGHT', exposureType: '2', severity: 'MEDIUM', status: 'DRAFT', expected: '風險權數應為 0%', regulationRef: '缺失態樣第 3 項', tags: ['範例', '保險代理部'], description: '請先到 Value Sets 補上「國內銀行保險代理部」的統編清單。',
+      cond: G('AND', [ss(), C('EXPOSURE_TYPE', 'EQ', { kind: 'literal', v: '2' }, { trim: true }), C('RISK_WEIGHT', 'EQ', { kind: 'literal', v: '1' }), C('CUST_ID', 'IN', { kind: 'valueSet', setId: 'VS-BANK-INS-AGENT' }, { trim: true })]) },
+    { name: '發行人非 8 碼統編且非銀行業（範例）', findingId: '', category: 'DATA_QUALITY', exposureType: '', severity: 'LOW', status: 'DRAFT', expected: '確認發行人身分', regulationRef: '', tags: ['範例', '資料品質'],
+      cond: G('AND', [ss(), C('ISSUER_ID', 'NOT_NULL', null), C('ISSUER_ID', 'LEN_NE', { kind: 'literal', v: '8' }), C('INDUSTRY_TYPE', 'SUBSTR_NOT_IN', { kind: 'list', v: ['64', '65', '66'] }, { start: '3', len: '2' })]) }
+  ];
+  for (const df of defs) {
+    if (S.rules.some(r => r.ruleName === df.name)) continue;
+    const r = newRuleTemplate(nextRuleId()); Object.assign(r, { ruleName: df.name, findingId: df.findingId, category: df.category, exposureType: df.exposureType, severity: df.severity, status: df.status, expected: df.expected, regulationRef: df.regulationRef, tags: df.tags, description: df.description || '', targetTable: 'CAL_CR3000_DETAIL', condition: df.cond });
+    await persistRule(r, { note: '範例資料', silent: true });
+  }
+  await audit('sample', 'system', '', '載入範例資料'); renderNav();
+}
+
+/* ---------- Settings ---------- */
+async function viewSettings() {
+  const logs = sortBy(await idb.all('auditLog'), x => x.logId, -1).slice(0, 100);
+  const sl = getSet('schemaList'), cs = getSet('identifierCase'), dsc = getSet('defaultSchema');
+  $('#main').innerHTML = `<div id="v"><h1>設定</h1><p class="sub">所有設定自動儲存於本機 IndexedDB。</p>
+  <div class="card"><h2>SQL 產生設定</h2><div class="grid g3">
+    <div class="fld"><label class="f">預設 Schema（必填）</label><select id="sDef">${sl.map(s => `<option ${s.name === dsc ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></div>
+    <div class="fld"><label class="f">識別字大小寫（schema／表／欄位）</label><div class="row">${[['lower', '小寫'], ['upper', '大寫'], ['preserve', '維持原樣']].map(([k, l]) => `<label><input type="radio" name="sCs" value="${k}" ${cs === k ? 'checked' : ''}> ${l}</label>`).join('')}</div></div>
+    <div class="fld"><label class="f">SQL 方言</label><select id="sDi"><option value="oracle" ${getSet('dialect') === 'oracle' ? 'selected' : ''}>Oracle（預設）</option><option value="ansi" ${getSet('dialect') === 'ansi' ? 'selected' : ''}>ANSI SQL（備用）</option></select></div></div>
+    <p>預覽：<span class="mono" id="sPrev"></span></p></div>
+  <div class="card"><h2>Schema 清單</h2><p class="muted small">所有下拉選單共用此清單。<b>bis</b>、<b>irb_dw</b> 為內建，不可刪除。</p>
+    <table class="tbl"><thead><tr><th>Schema</th><th>說明</th><th style="width:60px"></th></tr></thead><tbody>${sl.map((s, i) => `<tr data-i="${i}"><td class="mono"><b>${esc(s.name)}</b>${s.name === dsc ? ' <span class="chip on">預設</span>' : ''}</td><td><input type="text" data-lb value="${esc(s.label || '')}"></td><td>${s.builtin ? '🔒' : '<button class="btn sm danger" data-del>🗑</button>'}</td></tr>`).join('')}</tbody></table>
+    <div class="row" style="margin-top:8px"><input type="text" id="sNew" placeholder="新增 schema，如 bis_uat" style="max-width:220px"><input type="text" id="sNewLb" placeholder="說明（選填）" style="max-width:220px"><button class="btn" id="sAdd">＋ 新增 Schema</button></div></div>
+  <div class="card"><h2>外觀與提醒</h2><div class="row"><label>主題 <select id="sTh" style="width:auto"><option value="auto" ${getSet('theme') === 'auto' ? 'selected' : ''}>跟隨系統</option><option value="light" ${getSet('theme') === 'light' ? 'selected' : ''}>淺色</option><option value="dark" ${getSet('theme') === 'dark' ? 'selected' : ''}>深色</option></select></label>
+    <label>每 <input type="number" id="sBk" min="0" value="${esc(getSet('backupEvery'))}" style="width:70px;display:inline-block"> 次儲存提醒備份（0＝不提醒）</label></div>
+    <p class="muted small">上次備份：${esc(fmtTime(getSet('lastBackupAt')) || '尚未備份')}・自上次備份起累計儲存 ${esc(getSet('saveCount') || 0)} 次</p></div>
+  <div class="card"><h2>資料管理</h2><div class="row"><button class="btn primary" id="sExp">⬇ 匯出完整備份 JSON</button><button class="btn" id="sImp">⬆ 匯入 JSON</button><button class="btn" id="sSample">載入範例資料</button><button class="btn danger" id="sClear">清除所有資料</button></div>
+    <p class="muted small">資料只存在此瀏覽器的 IndexedDB。更換電腦、清除瀏覽資料或使用無痕模式前，請先匯出備份。</p><p class="small" id="sPersist"></p></div>
+  <div class="card"><h2>操作紀錄（最近 100 筆）</h2><div class="scroll" style="max-height:300px"><table class="tbl"><thead><tr><th>時間</th><th>動作</th><th>對象</th><th>內容</th></tr></thead><tbody>${logs.map(l => `<tr><td class="small muted">${esc(fmtTime(l.at))}</td><td>${esc(l.action)}</td><td class="small">${esc(l.entity)} ${esc(l.entityId)}</td><td class="small">${esc(l.detail)}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">無紀錄</td></tr>'}</tbody></table></div><div style="margin-top:8px"><button class="btn sm" id="sLogClr">清除紀錄</button></div></div>
+  <div class="card"><h2>關於</h2><p class="small">Rule Forge v${APP_VERSION}・單檔 SPA・Vanilla JS・IndexedDB（${DB_NAME} v${DB_VERSION}）・不發出任何網路請求（CSP 已限制 connect-src）。</p></div></div>`;
+  const v = $('#v');
+  const prev = () => { $('#sPrev', v).textContent = `FROM ${idCase(getSet('defaultSchema'), getSet('identifierCase'))}.${idCase('CAL_CR3000_DETAIL', getSet('identifierCase'))} t`; };
+  prev();
+  try { if (navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p => { $('#sPersist', v).textContent = p ? '✔ 瀏覽器已授予持久儲存，不會被自動清除。' : '⚠ 瀏覽器尚未授予持久儲存，空間不足時資料可能被清除，請定期備份。'; }); } catch (e) { }
+  $('#sDef', v).onchange = async e => { if (!RE_IDENT.test(e.target.value)) { toast('預設 Schema 不合法（L007）', 'err'); return; } await setSet('defaultSchema', e.target.value); prev(); renderNav(); viewSettings(); };
+  $$('input[name=sCs]', v).forEach(r => r.onchange = async () => { await setSet('identifierCase', r.value); prev(); });
+  $('#sDi', v).onchange = async e => { await setSet('dialect', e.target.value); };
+  $('#sTh', v).onchange = async e => { await setSet('theme', e.target.value); applyTheme(); };
+  $('#sBk', v).onchange = async e => { await setSet('backupEvery', Math.max(0, parseInt(e.target.value, 10) || 0)); };
+  $('#sAdd', v).onclick = async () => {
+    const n = normalizeSchemaInput($('#sNew', v).value); if (!n.valid) { toast('Schema 格式不合法（L007）：需以英文字母開頭，僅限英數字、_ $ #', 'err'); return; }
+    const name = n.value.toLowerCase(); if (sl.some(s => s.name === name)) { toast('此 schema 已在清單中', 'err'); return; }
+    if (n.changed) toast('已自動移除多餘符號：' + name, 'warn');
+    sl.push({ name, label: $('#sNewLb', v).value.trim() || name, builtin: false }); await setSet('schemaList', sl); viewSettings();
+  };
+  v.addEventListener('change', async e => { if (e.target.matches('[data-lb]')) { sl[+e.target.closest('tr').dataset.i].label = e.target.value; await setSet('schemaList', sl); } });
+  v.addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.hasAttribute('data-del')) {
+      const i = +b.closest('tr').dataset.i, s = sl[i]; if (s.builtin) return;
+      if (s.name === getSet('defaultSchema').toLowerCase()) { toast('這是目前的預設 Schema，請先改選其他預設再刪除', 'err'); return; }
+      const aff = S.rules.filter(r => r.targetSchema && r.targetSchema.toLowerCase() === s.name), nt = S.tables.filter(t => t.schema === s.name).length;
+      if (aff.length || nt) { if (!(await confirmBox(`Schema「${s.name}」仍被使用：\n・規則 ${aff.length} 條${aff.length ? '（' + aff.slice(0, 8).map(r => r.ruleId).join('、') + (aff.length > 8 ? '…' : '') + '）' : ''}\n・欄位字典資料表 ${nt} 張\n\n刪除只會從清單移除，規則與字典不會被改動，但會出現 L011 提醒。確定刪除？`, '仍要刪除', true))) return; }
+      sl.splice(i, 1); await setSet('schemaList', sl); await audit('delete', 'schema', s.name, ''); viewSettings();
+    } else if (b.id === 'sExp') { await exportFull(); viewSettings(); }
+    else if (b.id === 'sImp') importFlow();
+    else if (b.id === 'sSample') { await loadSampleData(); toast('已載入範例資料', 'ok'); viewSettings(); }
+    else if (b.id === 'sLogClr') { await idb.clear('auditLog'); viewSettings(); }
+    else if (b.id === 'sClear') {
+      const r = await modal({ title: '清除所有資料', html: `<div class="note err">此動作會刪除所有規則、版本、缺失、字典、Value Set 與設定，無法復原。</div><p>請輸入 <b>DELETE</b> 確認：</p><input type="text" id="cT">`, buttons: [{ label: '取消', value: null }, { label: '清除', value: 'ok', cls: 'danger', validate: ov => (ov.querySelector('#cT').value.trim() === 'DELETE' ? '' : '請輸入 DELETE') }] });
+      if (!r) return; await idb.multi(STORES.map(st => ({ store: st, op: 'clear' }))); await reload(); await idb.put('settings', { key: 'defaultSchema', value: 'bis' }); await idb.put('settings', { key: 'identifierCase', value: 'lower' }); await reload(); await ensureSchemaDefaults(); applyTheme(); renderNav(); toast('已清除所有資料', 'ok'); go('#/dashboard'); route();
+    }
+  });
+}
+
+/* ---------- 啟動 ---------- */
+function applyTheme() {
+  const t = getSet('theme'); const dark = t === 'dark' || (t === 'auto' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+}
+function showHelp() {
+  modal({ title: '快捷鍵與小提示', html: `<table class="tbl"><tbody><tr><td><span class="kbd">Ctrl</span>+<span class="kbd">S</span></td><td>在 Rule Builder 儲存規則</td></tr><tr><td><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span></td><td>在 Rule Builder 複製目前 SQL</td></tr><tr><td><span class="kbd">?</span></td><td>開啟此說明</td></tr><tr><td><span class="kbd">Esc</span></td><td>關閉對話框</td></tr></tbody></table>
+  <p class="small muted">條件列左側的 ⋮⋮ 可拖曳排序（含跨群組）；取消勾選會停用該條件（不產生 SQL）。Schema 的決定順序：臨時覆寫 → 規則的 Schema → 全域預設。</p>`, buttons: [{ label: '關閉', value: null }] });
+}
+async function boot() {
+  try { await openDB(); } catch (e) { $('#main').innerHTML = `<div class="card"><h2>無法開啟 IndexedDB</h2><p>${esc(e && e.message || e)}</p><p class="muted">請確認瀏覽器未停用儲存功能，且不是在無痕模式中使用。</p></div>`; return; }
+  await reload(); await sanitizeSettings(); applyTheme();
+  const heal = []; S.rules.forEach(r => { const n = normalizeRule(clone(r)); if (stable(n) !== stable(r)) heal.push(n); });
+  if (heal.length) { await idb.bulkPut('rules', heal); await reload('rules'); }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { }
+  $('#btnTheme').onclick = async () => { const dark = document.documentElement.getAttribute('data-theme') === 'dark'; await setSet('theme', dark ? 'light' : 'dark'); applyTheme(); };
+  $('#btnHelp').onclick = showHelp;
+  window.addEventListener('hashchange', route);
+  window.addEventListener('unhandledrejection', e => { console.error(e.reason); toast('發生錯誤：' + ((e.reason && e.reason.message) || e.reason), 'err', 5000); });
+  window.addEventListener('error', e => { if (e.message) toast('發生錯誤：' + e.message, 'err', 5000); });
+  window.addEventListener('beforeunload', e => { if (GUARD && GUARD()) { e.preventDefault(); e.returnValue = ''; } });
+  document.addEventListener('keydown', e => {
+    if (document.querySelector('.ov')) return;   /* 對話框開啟時不觸發頁面快捷鍵 */
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && (e.key === 's' || e.key === 'S')) { if (CUR.view === 'builder' && B.save) { e.preventDefault(); B.save(); } }
+    else if (mod && e.key === 'Enter') { if (CUR.view === 'builder' && B.copy) { e.preventDefault(); B.copy(); } }
+    else if (e.key === '?' && !/INPUT|TEXTAREA|SELECT/.test((e.target.tagName || ''))) showHelp();
+  });
+  if (!location.hash) history.replaceState(null, '', location.pathname + location.search + '#/dashboard');
+  await route();
+}
+boot();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style></body>
+</html>

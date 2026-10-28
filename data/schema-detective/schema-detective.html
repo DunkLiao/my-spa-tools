@@ -1,0 +1,2230 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Schema Detective 資料表結構偵探</title>
+<style>
+:root{--bg:#f5f6f8;--panel:#fff;--panel2:#f0f2f5;--bd:#d9dde3;--tx:#1d2330;--tx2:#5b6475;--ac:#2563eb;--ac2:#dbe7ff;--ok:#16a34a;--warn:#d97706;--err:#dc2626;--add:#dcfce7;--del:#fee2e2;--chg:#fef3c7;--cm:#dbeafe;--ix:#ede9fe;--mono:ui-monospace,SFMono-Regular,Consolas,"Courier New",monospace;--rh:28px}
+[data-theme=dark]{--bg:#0f131a;--panel:#171c26;--panel2:#1e2430;--bd:#2c3445;--tx:#e6e9ef;--tx2:#9aa5b8;--ac:#5b92ff;--ac2:#22324f;--ok:#4ade80;--warn:#fbbf24;--err:#f87171;--add:#12301d;--del:#3a1717;--chg:#3a2f10;--cm:#16294a;--ix:#2a2347}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.45 "Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;background:var(--bg);color:var(--tx);display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+input,select,textarea{background:var(--panel);border:1px solid var(--bd);border-radius:6px;padding:5px 8px;min-width:0}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--ac);outline-offset:-1px}
+textarea{width:100%;resize:vertical;font-family:var(--mono);font-size:12.5px}
+button{background:var(--panel2);border:1px solid var(--bd);border-radius:6px;padding:5px 12px;cursor:pointer}
+button:hover{border-color:var(--ac)}
+button.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+button.dng{color:var(--err)}
+button:disabled{opacity:.5;cursor:not-allowed}
+a{color:var(--ac)}
+code,.mono{font-family:var(--mono);font-size:12.5px}
+#top{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--bd);flex-wrap:wrap}
+#top h1{font-size:15px;margin:0;white-space:nowrap}
+#search{flex:1;min-width:200px;max-width:520px}
+#tabs{display:flex;gap:2px;background:var(--panel);border-bottom:1px solid var(--bd);padding:0 8px;overflow-x:auto}
+#tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;padding:8px 14px;white-space:nowrap}
+#tabs button.on{border-bottom-color:var(--ac);color:var(--ac);font-weight:600}
+#main{flex:1;min-height:0;position:relative}
+.view{position:absolute;inset:0;display:none;overflow:hidden}
+.view.on{display:flex}
+.scroll{overflow:auto;padding:14px 18px;width:100%}
+.pane{display:flex;flex-direction:column;min-height:0;min-width:0;background:var(--panel);border-right:1px solid var(--bd)}
+.pane-h{padding:8px;border-bottom:1px solid var(--bd);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.pane-h input[type=text],.pane-h input:not([type]){flex:1}
+.grow{flex:1;min-height:0;position:relative}
+#v-explorer .tree{width:300px;flex:none}
+#v-explorer .mid{flex:1}
+#v-explorer .right{width:360px;flex:none;overflow:auto;border-right:0;padding:12px}
+.vl{overflow:auto;position:relative;--rh:28px}
+.vl-sp{width:1px;position:absolute;left:0;top:0}
+.vl-in{position:absolute;left:0;right:0;top:0}
+.vl .r{height:var(--rh);display:flex;align-items:center;gap:6px;padding:0 10px;border-bottom:1px solid transparent;white-space:nowrap;overflow:hidden;cursor:pointer}
+.vl .r:hover{background:var(--panel2)}
+.vl .r.sel{background:var(--ac2)}
+.vl .r .t{overflow:hidden;text-overflow:ellipsis}
+.vl .r.sh{font-weight:600;background:var(--panel2);cursor:pointer}
+.vl .r.gh{padding-left:22px;color:var(--tx2);font-weight:600}
+.vl .r.tt{padding-left:34px}
+.vl .r.tt.nog{padding-left:22px}
+.vl .r.h{color:var(--tx2);font-size:12px;text-transform:uppercase;cursor:default}
+.cg{display:grid;grid-template-columns:46px minmax(130px,1.2fr) minmax(130px,1fr) 30px 34px 34px minmax(140px,2fr);gap:6px;align-items:center}
+.vl .r.cg{display:grid}
+.cg>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hdr{background:var(--panel2);font-weight:600;font-size:12.5px;padding:6px 10px;border-bottom:1px solid var(--bd)}
+.hdr span{cursor:pointer}
+.badge{display:inline-block;padding:0 6px;border-radius:9px;font-size:11px;line-height:18px;background:var(--panel2);border:1px solid var(--bd);color:var(--tx2)}
+.badge.ok{color:var(--ok);border-color:var(--ok)}.badge.warn{color:var(--warn);border-color:var(--warn)}.badge.err{color:var(--err);border-color:var(--err)}.badge.ac{color:var(--ac);border-color:var(--ac)}
+.muted{color:var(--tx2)}
+.card{background:var(--panel);border:1px solid var(--bd);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:15px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.row>label{display:flex;gap:4px;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:13px}
+.kv>div:nth-child(odd){color:var(--tx2)}
+.dz{border:2px dashed var(--bd);border-radius:10px;padding:18px;text-align:center;color:var(--tx2)}
+.dz.over{border-color:var(--ac);background:var(--ac2)}
+.bar{height:10px;background:var(--panel2);border-radius:6px;overflow:hidden;border:1px solid var(--bd)}
+.bar>i{display:block;height:100%;background:var(--ac);width:0;transition:width .15s}
+table.tb{border-collapse:collapse;width:100%;font-size:13px}
+table.tb th,table.tb td{border-bottom:1px solid var(--bd);padding:4px 8px;text-align:left;vertical-align:top}
+table.tb th{background:var(--panel2);position:sticky;top:0}
+.dl{padding:2px 10px;font-family:var(--mono);font-size:12.5px;white-space:pre;overflow:hidden;text-overflow:ellipsis}
+.dl.add{background:var(--add)}.dl.del{background:var(--del)}.dl.chg{background:var(--chg)}.dl.cm{background:var(--cm)}.dl.ix{background:var(--ix)}.dl.hd{background:var(--panel2);font-weight:600}
+.tag{display:inline-block;background:var(--ac2);color:var(--ac);border-radius:4px;padding:0 6px;margin:0 3px 3px 0;font-size:12px}
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:50}
+#overlay.on{display:flex}
+#modal{background:var(--panel);border:1px solid var(--bd);border-radius:12px;max-width:min(1100px,94vw);max-height:90vh;overflow:auto;padding:18px 20px;min-width:360px}
+#modal h3{margin-top:0}
+#palette{position:fixed;top:12vh;left:50%;transform:translateX(-50%);width:min(560px,92vw);background:var(--panel);border:1px solid var(--bd);border-radius:12px;box-shadow:0 10px 40px rgba(0,0,0,.35);z-index:60;display:none;padding:10px}
+#palette.on{display:block}
+#palette input{width:100%;margin-bottom:6px}
+#palette .it{padding:6px 10px;border-radius:6px;cursor:pointer}
+#palette .it.on,#palette .it:hover{background:var(--ac2)}
+#toasts{position:fixed;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px;z-index:70}
+.toast{background:var(--panel);border:1px solid var(--bd);border-left:4px solid var(--ac);padding:8px 12px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.25);max-width:380px}
+.toast.err{border-left-color:var(--err)}.toast.ok{border-left-color:var(--ok)}
+#busy{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:80;color:#fff;font-size:16px}
+#busy.on{display:flex}
+pre.sql{background:var(--panel2);border:1px solid var(--bd);border-radius:8px;padding:10px;overflow:auto;max-height:420px;font-family:var(--mono);font-size:12.5px;white-space:pre}
+.cols2{display:flex;gap:12px;min-height:0;height:100%;width:100%}
+.cols2>.pane{border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.sticky-note{font-size:12px;color:var(--tx2)}
+#lkWrap{display:flex;flex-direction:column;width:100%;height:100%;padding:12px 16px;gap:10px;min-height:0}
+#lkIn{font-family:var(--mono);font-size:14px;min-height:56px}
+#lkSugBox{display:none;position:absolute;left:0;top:100%;z-index:30;min-width:260px;max-width:100%;background:var(--panel);border:1px solid var(--bd);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);padding:4px}
+#lkSugBox .it{padding:4px 10px;border-radius:6px;cursor:pointer}
+#lkSugBox .it.on,#lkSugBox .it:hover{background:var(--ac2)}
+.lg{display:grid;grid-template-columns:minmax(190px,1.4fr) minmax(130px,1fr) minmax(130px,1fr) 30px 34px minmax(140px,2fr);gap:6px;align-items:center}
+.lg>*{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vl .r.lg{display:grid}
+.vl .r.gh2{background:var(--panel2);font-weight:600;gap:8px;position:relative}
+@media(max-width:1100px){#v-explorer .right{display:none}#v-explorer .tree{width:240px}}
+</style>
+</head>
+<body>
+<div id="top">
+  <h1>🔍 Schema Detective</h1>
+  <select id="snapSel" title="目前 Snapshot"></select>
+  <input id="search" type="search" placeholder="搜尋  CUST_ID · =CUST_ID · type:NUMBER · table:CAL_* · tag:xx   ( / )">
+  <span class="muted" id="statLine"></span>
+  <span style="flex:1"></span>
+  <button id="btnPal" title="命令面板 Ctrl+K">⌘ 命令</button>
+  <button id="btnTheme" title="切換主題">🌓</button>
+</div>
+<div id="tabs"></div>
+<div id="main">
+  <section class="view" id="v-explorer">
+    <div class="pane tree">
+      <div class="pane-h"><input id="treeFilter" type="search" placeholder="篩選資料表…"><label class="muted"><input type="checkbox" id="grpPrefix">前綴分組</label></div>
+      <div class="grow" id="treeList"></div>
+    </div>
+    <div class="pane mid">
+      <div id="tblHead" class="pane-h" style="display:block"></div>
+      <div class="pane-h" id="colFilters">
+        <input id="colFilter" placeholder="篩選欄位…">
+        <label><input type="checkbox" id="fPk">只看 PK</label>
+        <label><input type="checkbox" id="fCm">有註解</label>
+        <label><input type="checkbox" id="fNn">NOT NULL</label>
+        <label><input type="checkbox" id="fNote">有筆記</label>
+      </div>
+      <div class="hdr cg" id="colHead"><span data-s="pos">#</span><span data-s="name">欄位</span><span data-s="type">型態</span><span data-s="nn">N</span><span data-s="pk">PK</span><span data-s="idx">IDX</span><span data-s="cm">註解</span></div>
+      <div class="grow" id="colList"></div>
+    </div>
+    <div class="pane right" id="detail"></div>
+  </section>
+  <section class="view" id="v-lookup"><div id="lkWrap">
+    <div class="card" style="margin:0">
+      <div style="position:relative">
+        <textarea id="lkIn" rows="2" spellcheck="false" autocomplete="off" placeholder="輸入欄位名稱，查詢哪些資料表使用它　例：CUST_ID　或多個：CUST_ID, ISSUER_ID（逗號／空白／換行分隔）　支援 CUST* 萬用字元　Enter 查詢"></textarea>
+        <div id="lkSugBox"></div>
+      </div>
+      <div class="row">
+        <label>比對 <select id="lkMode"><option value="exact">完全相符</option><option value="contains">包含</option><option value="prefix">開頭為</option><option value="suffix">結尾為</option></select></label>
+        <label>多個欄位 <select id="lkLogic"><option value="any">任一欄位（聯集）</option><option value="all">全部欄位（同一張表需同時包含）</option></select></label>
+        <label><select id="lkSch"></select></label>
+        <label><input type="checkbox" id="lkCmt">同時比對欄位註解／業務筆記</label>
+        <span style="flex:1"></span>
+        <button class="pri" id="lkRun">查詢</button><button id="lkClear">清除</button><button id="lkCopy" disabled>複製資料表清單</button><button id="lkCsv" disabled>匯出 CSV</button>
+      </div>
+    </div>
+    <div class="card" id="lkSum" style="margin:0"></div>
+    <div class="pane" style="flex:1;min-height:0;border:1px solid var(--bd);border-radius:10px;overflow:hidden">
+      <div class="hdr lg" id="lkHead"></div><div class="grow" id="lkList"></div>
+    </div>
+  </div></section>
+  <section class="view" id="v-search"><div class="cols2" style="padding:10px"><div class="pane" style="flex:1"><div id="searchSum" class="pane-h" style="display:block"></div><div class="grow" id="searchList"></div></div></div></section>
+  <section class="view" id="v-import"><div class="scroll" id="importBox"></div></section>
+  <section class="view" id="v-diff"><div class="scroll" id="diffBox"></div></section>
+  <section class="view" id="v-relations"><div class="scroll" id="relBox"></div></section>
+  <section class="view" id="v-sql"><div class="scroll" id="sqlBox"></div></section>
+  <section class="view" id="v-settings"><div class="scroll" id="setBox"></div></section>
+</div>
+<div id="overlay"><div id="modal"></div></div>
+<div id="palette"><input id="palIn" placeholder="輸入指令…"><div id="palList"></div></div>
+<div id="toasts"></div>
+<div id="busy"><div id="busyMsg">處理中…</div></div>
+
+<script>
+'use strict';
+function __sdFactory(){
+'use strict';
+
+/* ======================= Statement Splitter (streaming) ======================= */
+/* 狀態：0 normal, 1 'str', 2 "qid", 3 --comment, 4 block comment, 5 q'[ ]' */
+class Splitter{
+  constructor(){
+    this.carry=''; this.cur=''; this.st=0; this.qend=''; this.line=1; this.sl=-1;
+    this.lineBlank=true; this.prev=''; this.prev2='';
+  }
+  feed(text, final){
+    const s=this.carry+text; this.carry=''; const n=s.length; const out=[];
+    const lim=final?n:Math.max(0,n-3);
+    let i=0, seg=0, st=this.st;
+    const emit=(endIdx)=>{
+      const t=this.cur+s.slice(seg,endIdx); this.cur='';
+      if(t.trim()!==''){ out.push({text:t,line:this.sl<0?this.line:this.sl,endLine:this.line}); }
+      this.sl=-1;
+    };
+    while(i<lim){
+      const c=s.charCodeAt(i);
+      if(c===10){ this.line++; this.lineBlank=true; if(st===3) st=0; this.prev2=this.prev; this.prev='\n'; i++; continue; }
+      if(st===0){
+        if(c===32||c===9||c===13){ this.prev2=this.prev; this.prev=' '; i++; continue; }
+        if(this.sl<0) this.sl=this.line;
+        const ch=s[i];
+        if(ch===';'){ emit(i); seg=i+1; this.lineBlank=false; this.prev2=this.prev; this.prev=ch; i++; continue; }
+        if(ch==="'"){
+          const p=this.prev, pp=this.prev2;
+          if((p==='q'||p==='Q') && !/[A-Za-z0-9_$#"]/.test(pp||' ')){
+            const d=s[i+1]; const close={'[':']','{':'}','(':')','<':'>'}[d]||d;
+            st=5; this.qend=close+"'"; i+=2; this.lineBlank=false; this.prev2=this.prev; this.prev="'"; continue;
+          }
+          st=1; this.lineBlank=false; this.prev2=this.prev; this.prev=ch; i++; continue;
+        }
+        if(ch==='"'){ st=2; this.lineBlank=false; this.prev2=this.prev; this.prev=ch; i++; continue; }
+        if(ch==='-'&&s[i+1]==='-'){ st=3; this.lineBlank=false; i+=2; this.prev2=this.prev; this.prev='-'; continue; }
+        if(ch==='/'){
+          if(s[i+1]==='*'){ st=4; this.lineBlank=false; i+=2; this.prev2=this.prev; this.prev='/'; continue; }
+          if(this.lineBlank){
+            let j=i+1; while(j<n && (s[j]===' '||s[j]==='\t'||s[j]==='\r')) j++;
+            if(j>=n && !final){ break; }
+            if(j>=n || s[j]==='\n'){ emit(i); seg=i+1; i=j; this.prev2=this.prev; this.prev='/'; continue; }
+          }
+        }
+        this.lineBlank=false; this.prev2=this.prev; this.prev=s[i]; i++; continue;
+      }
+      if(st===1){ if(c===39){ if(s.charCodeAt(i+1)===39){ i+=2; continue; } st=0; } this.prev2=this.prev; this.prev="'"; i++; continue; }
+      if(st===2){ if(c===34){ if(s.charCodeAt(i+1)===34){ i+=2; continue; } st=0; } this.prev2=this.prev; this.prev='"'; i++; continue; }
+      if(st===3){ i++; continue; }
+      if(st===4){ if(c===42&&s.charCodeAt(i+1)===47){ st=0; i+=2; this.prev='/'; continue; } i++; continue; }
+      if(st===5){ if(s.startsWith(this.qend,i)){ st=0; i+=this.qend.length; this.prev="'"; continue; } i++; continue; }
+    }
+    this.st=st;
+    this.cur+=s.slice(seg,i);
+    if(final){ this.carry=''; emit(i); }
+    else this.carry=s.slice(i);
+    return out;
+  }
+}
+
+/* ======================= Tokenizer ======================= */
+function tokenize(sql){
+  const toks=[]; const n=sql.length; let i=0, line=0;
+  const isId=(c)=>(c>=48&&c<=57)||(c>=65&&c<=90)||(c>=97&&c<=122)||c===95||c===36||c===35||c>127;
+  while(i<n){
+    const c=sql.charCodeAt(i);
+    if(c<=32){ if(c===10) line++; i++; continue; }
+    const ch=sql[i];
+    if(ch==='-'&&sql[i+1]==='-'){ while(i<n&&sql.charCodeAt(i)!==10) i++; continue; }
+    if(ch==='/'&&sql[i+1]==='*'){ const e=sql.indexOf('*/',i+2); const end=e<0?n:e+2; for(let k=i;k<end;k++) if(sql.charCodeAt(k)===10) line++; i=end; continue; }
+    if(ch==='"'){
+      let j=i+1, v='';
+      while(j<n){ if(sql[j]==='"'){ if(sql[j+1]==='"'){ v+='"'; j+=2; continue; } break; } v+=sql[j++]; }
+      toks.push({t:'q',v,u:null,s:i,e:j+1,l:line}); i=j+1; continue;
+    }
+    if(ch==="'"){
+      let j=i+1, v='';
+      while(j<n){ if(sql[j]==="'"){ if(sql[j+1]==="'"){ v+="'"; j+=2; continue; } break; } if(sql.charCodeAt(j)===10) line++; v+=sql[j++]; }
+      toks.push({t:'s',v,u:null,s:i,e:j+1,l:line}); i=j+1; continue;
+    }
+    if((ch==='q'||ch==='Q')&&sql[i+1]==="'"&&i+2<n){
+      const d=sql[i+2]; const close=({'[':']','{':'}','(':')','<':'>'}[d]||d)+"'";
+      const e=sql.indexOf(close,i+3);
+      if(e>=0){ toks.push({t:'s',v:sql.slice(i+3,e),u:null,s:i,e:e+2,l:line}); for(let k=i;k<e;k++) if(sql.charCodeAt(k)===10) line++; i=e+2; continue; }
+    }
+    if((c>=48&&c<=57)||(ch==='.'&&sql.charCodeAt(i+1)>=48&&sql.charCodeAt(i+1)<=57)){
+      let j=i+1; while(j<n){ const d=sql.charCodeAt(j); if((d>=48&&d<=57)||d===46||d===69||d===101) j++; else break; }
+      toks.push({t:'n',v:sql.slice(i,j),u:null,s:i,e:j,l:line}); i=j; continue;
+    }
+    if(isId(c)&&!(c>=48&&c<=57)){
+      let j=i+1; while(j<n&&isId(sql.charCodeAt(j))) j++;
+      const v=sql.slice(i,j); toks.push({t:'i',v,u:v.toUpperCase(),s:i,e:j,l:line}); i=j; continue;
+    }
+    toks.push({t:'p',v:ch,u:null,s:i,e:i+1,l:line}); i++;
+  }
+  return toks;
+}
+const nm=(t)=>t.t==='i'?t.u:t.v;                 // 識別字名稱（未加引號者轉大寫）
+const isName=(t)=>t&&(t.t==='i'||t.t==='q');
+const isKw=(t,k)=>t&&t.t==='i'&&t.u===k;
+const isP=(t,v)=>t&&t.t==='p'&&t.v===v;
+
+function skipGroup(toks,p,b){ // toks[p] 為 '('，回傳對應 ')' 之後的位置
+  let d=0; for(;p<b;p++){ const t=toks[p]; if(t.t==='p'){ if(t.v==='(') d++; else if(t.v===')'){ d--; if(d===0) return p+1; } } }
+  return b;
+}
+function splitTop(toks,a,b){ // 在 [a,b) 以 depth-0 逗號切段
+  const items=[]; let d=0, st=a;
+  for(let p=a;p<b;p++){ const t=toks[p]; if(t.t!=='p') continue;
+    if(t.v==='(') d++; else if(t.v===')') d--; else if(t.v===','&&d===0){ items.push([st,p]); st=p+1; } }
+  if(st<b) items.push([st,b]); return items;
+}
+function parseNameParts(toks,p,b){
+  const parts=[]; 
+  while(p<b&&isName(toks[p])){ parts.push(nm(toks[p])); p++; if(p<b&&isP(toks[p],'.')) p++; else break; }
+  return {parts,next:p};
+}
+function colList(toks,p,b){ // toks[p]=='('
+  const cols=[]; if(!isP(toks[p],'(')) return {cols,next:p};
+  const e=skipGroup(toks,p,b); const items=splitTop(toks,p+1,e-1);
+  for(const [x,y] of items){ if(isName(toks[x])) cols.push(nm(toks[x])); }
+  return {cols,next:e};
+}
+
+/* ======================= Column / table parsing ======================= */
+const DEF_STOP=new Set(['NOT','NULL','CONSTRAINT','PRIMARY','UNIQUE','REFERENCES','CHECK','ENABLE','DISABLE','VISIBLE','INVISIBLE','ENCRYPT','GENERATED','COLLATE','USING','VALIDATE','NOVALIDATE']);
+const CHARLIKE=new Set(['VARCHAR2','NVARCHAR2','CHAR','NCHAR','VARCHAR','RAW','NVARCHAR','CHARACTER','UROWID']);
+const NUMLIKE=new Set(['NUMBER','FLOAT','DECIMAL','NUMERIC','DEC','INTEGER','INT','SMALLINT','BINARY_FLOAT','BINARY_DOUBLE','REAL']);
+
+function parseType(toks,p,b,src){
+  const r={dtype:'',length:null,precision:null,scale:null,unit:null,disp:''};
+  if(p>=b) return {r,next:p};
+  let t=toks[p];
+  if(t.t==='q'){ // 使用者自訂型別 "S"."T"
+    const np=parseNameParts(toks,p,b); r.dtype=np.parts.join('.'); p=np.next;
+  } else if(t.t==='i'){
+    let base=t.u; p++;
+    if(base==='DOUBLE'&&isKw(toks[p],'PRECISION')){ base='DOUBLE PRECISION'; p++; }
+    else if(base==='LONG'&&isKw(toks[p],'RAW')){ base='LONG RAW'; p++; }
+    else if(base==='CHARACTER'&&isKw(toks[p],'VARYING')){ base='VARCHAR'; p++; }
+    else if(base==='NATIONAL'&&p<b&&toks[p].t==='i'){ base='N'+toks[p].u; p++; if(isKw(toks[p],'VARYING')){ base='NVARCHAR'; p++; } }
+    while(isP(toks[p],'.')&&p+1<b&&(toks[p+1].t==='i'||toks[p+1].t==='q')){ base+='.'+nm(toks[p+1]); p+=2; }
+    r.dtype=base;
+    if(base==='INTERVAL'){
+      let s=base; while(p<b){ const x=toks[p]; if(x.t==='i'&&['YEAR','DAY','MONTH','SECOND','HOUR','MINUTE','TO'].includes(x.u)){ s+=' '+x.u; p++; if(isP(toks[p],'(')){ const e=skipGroup(toks,p,b); s+=src.slice(toks[p].s,toks[e-1].e); p=e; } } else break; }
+      r.dtype=s; r.disp=s; return {r,next:p};
+    }
+    if(isP(toks[p],'(')){
+      const e=skipGroup(toks,p,b); const args=[];
+      for(const [x,y] of splitTop(toks,p+1,e-1)){
+        let raw=[]; for(let k=x;k<y;k++){ const tk=toks[k]; if(tk.t==='i'&&(tk.u==='BYTE'||tk.u==='CHAR')) r.unit=tk.u; else raw.push(tk.v); }
+        if(raw.length) args.push(raw.join(''));
+      }
+      p=e;
+      const num=(v)=>{ if(v==null) return null; const x=Number(v); return isNaN(x)?v:x; };
+      if(CHARLIKE.has(base)) r.length=num(args[0]);
+      else if(NUMLIKE.has(base)){ r.precision=num(args[0]); r.scale=args.length>1?num(args[1]):(args.length?0:null); }
+      else if(base==='TIMESTAMP'){ r.precision=num(args[0]); }
+      else if(args.length){ r.length=num(args[0]); }
+    }
+    if(base==='TIMESTAMP'&&isKw(toks[p],'WITH')){
+      let s=' WITH'; p++; if(isKw(toks[p],'LOCAL')){ s+=' LOCAL'; p++; }
+      if(isKw(toks[p],'TIME')&&isKw(toks[p+1],'ZONE')){ s+=' TIME ZONE'; p+=2; }
+      r.dtype=base+s;
+    }
+  }
+  r.disp=typeDisp(r); return {r,next:p};
+}
+function typeDisp(r){
+  let s=r.dtype||'';
+  if(r.length!=null) s+='('+r.length+(r.unit?' '+r.unit:'')+')';
+  else if(r.precision!=null){
+    if(/^TIMESTAMP/.test(s)) return s.replace('TIMESTAMP','TIMESTAMP('+r.precision+')');
+    s+='('+r.precision+((r.scale||r.precision==='*')&&r.scale!=null?','+r.scale:'')+')';
+  }
+  return s;
+}
+
+function parseColumnDef(toks,a,b,src){
+  let p=a; if(!isName(toks[p])) return null;
+  const col={name:nm(toks[p]),dtype:'',length:null,precision:null,scale:null,unit:null,type:'',nullable:true,def:null,pk:false,uk:false,fk:null,comment:''};
+  p++;
+  const pt=parseType(toks,p,b,src); p=pt.next; Object.assign(col,{dtype:pt.r.dtype,length:pt.r.length,precision:pt.r.precision,scale:pt.r.scale,unit:pt.r.unit,type:pt.r.disp});
+  while(p<b){
+    const t=toks[p]; const u=t.t==='i'?t.u:null;
+    if(u==='DEFAULT'){
+      p++; if(isKw(toks[p],'ON')&&isKw(toks[p+1],'NULL')) p+=2;
+      const st=p; let d=0; if(p<b){ if(isP(toks[p],'(')) d=1; p++; }
+      while(p<b){ const tt=toks[p]; if(tt.t==='p'&&tt.v==='(') d++; else if(tt.t==='p'&&tt.v===')') d--; else if(d===0&&tt.t==='i'&&DEF_STOP.has(tt.u)) break; p++; }
+      if(p>st) col.def=src.slice(toks[st].s,toks[p-1].e).trim();
+    }
+    else if(u==='NOT'&&isKw(toks[p+1],'NULL')){ col.nullable=false; p+=2; }
+    else if(u==='NULL'){ p++; }
+    else if(u==='CONSTRAINT'){ p+=2; }
+    else if(u==='PRIMARY'&&isKw(toks[p+1],'KEY')){ col.pk=true; col.nullable=false; p+=2; }
+    else if(u==='UNIQUE'){ col.uk=true; p++; }
+    else if(u==='REFERENCES'){ p++; const np=parseNameParts(toks,p,b); p=np.next; let rc=[]; if(isP(toks[p],'(')){ const cl=colList(toks,p,b); rc=cl.cols; p=cl.next; }
+      col.fk={refSchema:np.parts.length>1?np.parts[0]:null,refTable:np.parts[np.parts.length-1],refCols:rc}; }
+    else if(u==='CHECK'&&isP(toks[p+1],'(')){ p=skipGroup(toks,p+1,b); }
+    else if(u==='GENERATED'||u==='AS'){ p++; if(p<b&&isP(toks[p],'(')) p=skipGroup(toks,p,b); }
+    else if(t.t==='p'&&t.v==='('){ p=skipGroup(toks,p,b); }
+    else p++;
+  }
+  return col;
+}
+
+function parseCreateTable(toks,p,stm,src,out){
+  const n=toks.length;
+  if(isKw(toks[p],'IF')&&isKw(toks[p+1],'NOT')&&isKw(toks[p+2],'EXISTS')) p+=3;
+  const np=parseNameParts(toks,p,n); if(!np.parts.length) throw new Error('無法解析資料表名稱');
+  p=np.next;
+  const tbl={schema:np.parts.length>1?np.parts[np.parts.length-2]:null,name:np.parts[np.parts.length-1],columns:[],pk:[],pkName:null,uks:[],fks:[],checks:[],partition:null,comment:'',lineStart:stm.line,lineEnd:stm.endLine};
+  if(!isP(toks[p],'(')){ out.warnings.push({line:stm.line,msg:'CREATE TABLE 沒有欄位定義（可能是 AS SELECT / OF 型別），已略過欄位',snippet:src.slice(0,120)}); out.tables.push(tbl); return; }
+  const e=skipGroup(toks,p,n); const items=splitTop(toks,p+1,e-1);
+  const inlinePk=[];
+  for(const [a,b] of items){
+    const first=toks[a]; if(!first) continue;
+    const u=first.t==='i'?first.u:null;
+    let q=a, cname=null;
+    if(u==='CONSTRAINT'){ cname=toks[a+1]?nm(toks[a+1]):null; q=a+2; }
+    const k=toks[q]&&toks[q].t==='i'?toks[q].u:null;
+    if(k==='PRIMARY'&&isKw(toks[q+1],'KEY')){ const cl=colList(toks,q+2,b); tbl.pk=cl.cols; tbl.pkName=cname; }
+    else if(k==='UNIQUE'&&isP(toks[q+1],'(')){ const cl=colList(toks,q+1,b); tbl.uks.push({name:cname,cols:cl.cols}); }
+    else if(k==='FOREIGN'&&isKw(toks[q+1],'KEY')){
+      const cl=colList(toks,q+2,b); let r=cl.next; let ref={refSchema:null,refTable:null,refCols:[]};
+      if(isKw(toks[r],'REFERENCES')){ const rp=parseNameParts(toks,r+1,b); ref.refSchema=rp.parts.length>1?rp.parts[0]:null; ref.refTable=rp.parts[rp.parts.length-1]; if(isP(toks[rp.next],'(')) ref.refCols=colList(toks,rp.next,b).cols; }
+      tbl.fks.push(Object.assign({name:cname,cols:cl.cols},ref));
+    }
+    else if(k==='CHECK'&&isP(toks[q+1],'(')){
+      const ee=skipGroup(toks,q+1,b); const expr=src.slice(toks[q+1].e,toks[ee-1].s).trim();
+      const m=/^"?([^"\s]+)"?\s+IS\s+NOT\s+NULL$/i.exec(expr);
+      tbl.checks.push({name:cname,expr,notnull:m?m[1]:null});
+    }
+    else if((k==='SUPPLEMENTAL'&&isKw(toks[q+1],'LOG'))||(k==='PERIOD'&&isKw(toks[q+1],'FOR'))||(k==='SCOPE'&&isKw(toks[q+1],'FOR'))){ /* 子句，非欄位 */ }
+    else { const c=parseColumnDef(toks,a,b,src); if(c){ tbl.columns.push(c); if(c.pk) inlinePk.push(c.name); } }
+  }
+  if(!tbl.pk.length&&inlinePk.length) tbl.pk=inlinePk;
+  for(const c of tbl.columns){
+    if(c.fk) tbl.fks.push({name:null,cols:[c.name],refSchema:c.fk.refSchema,refTable:c.fk.refTable,refCols:c.fk.refCols});
+    if(c.uk) tbl.uks.push({name:null,cols:[c.name]});
+  }
+  for(const c of tbl.checks){ if(c.notnull){ const col=tbl.columns.find(x=>x.name===c.notnull||x.name.toUpperCase()===c.notnull.toUpperCase()); if(col) col.nullable=false; } }
+  // 分割：PARTITION BY RANGE|LIST|HASH (cols)
+  for(let k=e;k<n;k++){ if(isKw(toks[k],'PARTITION')&&isKw(toks[k+1],'BY')&&toks[k+2]&&toks[k+2].t==='i'){ const type=toks[k+2].u; if(isP(toks[k+3],'(')){ tbl.partition={type,cols:colList(toks,k+3,n).cols}; } break; } }
+  out.tables.push(tbl);
+}
+
+function parseCreateIndex(toks,p,stm,src,out,unique){
+  const n=toks.length;
+  const ip=parseNameParts(toks,p,n); p=ip.next;
+  if(!isKw(toks[p],'ON')) { out.stats.ignored++; return; }
+  const tp=parseNameParts(toks,p+1,n); p=tp.next;
+  if(!isP(toks[p],'(')){ out.stats.ignored++; return; }
+  const e=skipGroup(toks,p,n); const cols=[];
+  for(const [a,b] of splitTop(toks,p+1,e-1)){
+    if(isName(toks[a])&&(b-a===1||(b-a===2&&toks[a+1].t==='i'&&(toks[a+1].u==='ASC'||toks[a+1].u==='DESC')))) cols.push(nm(toks[a]));
+    else cols.push('{'+src.slice(toks[a].s,toks[b-1].e).replace(/\s+/g,' ')+'}');
+  }
+  out.indexes.push({name:ip.parts[ip.parts.length-1],schema:tp.parts.length>1?tp.parts[tp.parts.length-2]:null,table:tp.parts[tp.parts.length-1],cols,unique:!!unique,line:stm.line});
+}
+
+function parseComment(toks,p,stm,out){
+  const n=toks.length; const kind=toks[p]&&toks[p].t==='i'?toks[p].u:null; p++;
+  const np=parseNameParts(toks,p,n); p=np.next;
+  if(!isKw(toks[p],'IS')){ out.stats.ignored++; return; }
+  let v=''; if(toks[p+1]&&toks[p+1].t==='s') v=toks[p+1].v; else if(isKw(toks[p+1],'NULL')) v='';
+  v=v.normalize('NFC');
+  const parts=np.parts;
+  if(kind==='TABLE'){ out.tcomments.push({schema:parts.length>1?parts[parts.length-2]:null,table:parts[parts.length-1],text:v}); }
+  else if(kind==='COLUMN'){
+    if(parts.length<2){ out.stats.ignored++; return; }
+    out.ccomments.push({schema:parts.length>2?parts[parts.length-3]:null,table:parts[parts.length-2],column:parts[parts.length-1],text:v});
+  } else out.stats.ignored++;
+}
+
+function parseAlter(toks,p,stm,src,out){
+  const n=toks.length;
+  if(!isKw(toks[p],'TABLE')){ out.stats.ignored++; return; }
+  const np=parseNameParts(toks,p+1,n); p=np.next;
+  const schema=np.parts.length>1?np.parts[np.parts.length-2]:null, table=np.parts[np.parts.length-1];
+  const k=toks[p]&&toks[p].t==='i'?toks[p].u:null;
+  if(k==='ADD'||k==='MODIFY'){
+    p++;
+    if(k==='ADD'&&isKw(toks[p],'COLUMN')) p++;
+    // ADD CONSTRAINT / ADD PRIMARY KEY ...
+    let q=p, cname=null;
+    if(isKw(toks[q],'CONSTRAINT')){ cname=toks[q+1]?nm(toks[q+1]):null; q+=2; }
+    const kk=toks[q]&&toks[q].t==='i'?toks[q].u:null;
+    if(k==='ADD'&&kk==='PRIMARY'&&isKw(toks[q+1],'KEY')){ out.alters.push({schema,table,kind:'pk',name:cname,cols:colList(toks,q+2,n).cols}); return; }
+    if(k==='ADD'&&kk==='UNIQUE'&&isP(toks[q+1],'(')){ out.alters.push({schema,table,kind:'uk',name:cname,cols:colList(toks,q+1,n).cols}); return; }
+    if(k==='ADD'&&kk==='FOREIGN'&&isKw(toks[q+1],'KEY')){
+      const cl=colList(toks,q+2,n); let r=cl.next; const f={schema,table,kind:'fk',name:cname,cols:cl.cols,refSchema:null,refTable:null,refCols:[]};
+      if(isKw(toks[r],'REFERENCES')){ const rp=parseNameParts(toks,r+1,n); f.refSchema=rp.parts.length>1?rp.parts[0]:null; f.refTable=rp.parts[rp.parts.length-1]; if(isP(toks[rp.next],'(')) f.refCols=colList(toks,rp.next,n).cols; }
+      out.alters.push(f); return;
+    }
+    if(k==='ADD'&&kk==='CHECK'&&isP(toks[q+1],'(')){
+      const ee=skipGroup(toks,q+1,n); const expr=src.slice(toks[q+1].e,toks[ee-1].s).trim();
+      const m=/^"?([^"\s]+)"?\s+IS\s+NOT\s+NULL$/i.exec(expr);
+      out.alters.push({schema,table,kind:'check',name:cname,expr,notnull:m?m[1]:null}); return;
+    }
+    // ADD ( coldefs ) / MODIFY ( col ... )
+    if(isP(toks[p],'(')){
+      const e=skipGroup(toks,p,n);
+      for(const [a,b] of splitTop(toks,p+1,e-1)){
+        if(k==='ADD'){ const c=parseColumnDef(toks,a,b,src); if(c) out.alters.push({schema,table,kind:'addcol',col:c}); }
+        else modifyItem(toks,a,b,schema,table,out);
+      }
+      return;
+    }
+    if(k==='MODIFY'&&isName(toks[p])){ modifyItem(toks,p,n,schema,table,out); return; }
+    if(k==='ADD'&&isName(toks[p])&&toks[p+1]){ const c=parseColumnDef(toks,p,n,src); if(c){ out.alters.push({schema,table,kind:'addcol',col:c}); return; } }
+  }
+  out.stats.ignored++;
+}
+function modifyItem(toks,a,b,schema,table,out){
+  if(!isName(toks[a])) return; const col=nm(toks[a]);
+  for(let k=a+1;k<b;k++){
+    if(isKw(toks[k],'NOT')&&isKw(toks[k+1],'NULL')){ out.alters.push({schema,table,kind:'nullable',column:col,nullable:false}); return; }
+    if(isKw(toks[k],'NULL')){ out.alters.push({schema,table,kind:'nullable',column:col,nullable:true}); return; }
+  }
+}
+
+/* ======================= Statement dispatcher ======================= */
+const SQLPLUS=/^\s*(REM|REMARK|PROMPT|SET|SPOOL|WHENEVER|DEFINE|CONNECT|EXIT|COMMIT|SHOW|CLEAR|COLUMN|TTITLE|BTITLE|STORE)\b/i;
+function stripLead(t){
+  let pos=0;
+  for(;;){
+    let e=t.indexOf('\n',pos); const line=e<0?t.slice(pos):t.slice(pos,e);
+    const ln=line.trim();
+    if(ln===''||ln.startsWith('--')||SQLPLUS.test(line)){ if(e<0) return ''; pos=e+1; continue; }
+    return pos?t.slice(pos):t;
+  }
+}
+const CREATE_MODS=new Set(['OR','REPLACE','GLOBAL','TEMPORARY','PRIVATE','UNIQUE','BITMAP','MULTIVALUE','EDITIONABLE','NONEDITIONABLE','FORCE','NOFORCE','IMMUTABLE','BLOCKCHAIN','SHARDED','DUPLICATED','MATERIALIZED_NOT']);
+
+function parseStatement(stm,out){
+  const src=stripLead(stm.text);
+  if(!src.trim()){ return; }
+  out.stats.stmts++;
+  const toks=tokenize(src);
+  if(!toks.length) return;
+  const k0=toks[0].t==='i'?toks[0].u:'';
+  if(k0==='CREATE'){
+    let p=1, unique=false;
+    while(p<toks.length&&toks[p].t==='i'&&CREATE_MODS.has(toks[p].u)){ if(toks[p].u==='UNIQUE') unique=true; p++; }
+    const kind=toks[p]&&toks[p].t==='i'?toks[p].u:'';
+    if(kind==='TABLE') return parseCreateTable(toks,p+1,stm,src,out);
+    if(kind==='INDEX') return parseCreateIndex(toks,p+1,stm,src,out,unique);
+    out.stats.ignored++; return;
+  }
+  if(k0==='COMMENT'&&isKw(toks[1],'ON')) return parseComment(toks,2,stm,out);
+  if(k0==='ALTER') return parseAlter(toks,1,stm,src,out);
+  out.stats.ignored++;
+}
+function newOut(){ return {tables:[],indexes:[],tcomments:[],ccomments:[],alters:[],warnings:[],stats:{stmts:0,ignored:0}}; }
+function parseStatements(stmts,out){
+  out=out||newOut();
+  for(const s of stmts){
+    try{ parseStatement(s,out); }
+    catch(err){ if(out.warnings.length<500) out.warnings.push({line:s.line,msg:'解析失敗：'+(err&&err.message||err),snippet:s.text.trim().slice(0,120)}); }
+  }
+  return out;
+}
+function parseText(text){
+  const sp=new Splitter(); const stmts=sp.feed(text,true); return parseStatements(stmts);
+}
+
+return {Splitter,tokenize,parseStatements,parseText,newOut,typeDisp};
+}
+
+/* =====================================================================
+   Schema Detective v1.2  —  Vanilla JS 單檔 SPA / 不接 API Key / IndexedDB
+   ===================================================================== */
+const APP_VER='1.2.0';
+const $=(s,r=document)=>r.querySelector(s);
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const tick=()=>new Promise(r=>setTimeout(r,0));
+const fmtBytes=n=>n<1024?n+' B':n<1048576?(n/1024).toFixed(1)+' KB':n<1073741824?(n/1048576).toFixed(1)+' MB':(n/1073741824).toFixed(2)+' GB';
+const fmtMs=ms=>ms<1000?Math.round(ms)+' ms':ms<60000?(ms/1000).toFixed(1)+' s':Math.floor(ms/60000)+' m '+Math.round((ms%60000)/1000)+' s';
+const fmtDate=t=>t?new Date(t).toLocaleString('zh-TW',{hour12:false}):'';
+const dbg=(...a)=>{ if(window.__SD_DEBUG) console.log(...a); };
+
+function toast(msg,type){
+  const el=document.createElement('div'); el.className='toast '+(type||''); el.textContent=msg;
+  $('#toasts').appendChild(el); setTimeout(()=>el.remove(),type==='err'?7000:3500);
+}
+function busy(msg){ if(msg){ $('#busyMsg').textContent=msg; $('#busy').classList.add('on'); } else $('#busy').classList.remove('on'); }
+function modal(html,onOpen){ $('#modal').innerHTML=html; $('#overlay').classList.add('on'); if(onOpen) onOpen($('#modal')); }
+function closeModal(){ $('#overlay').classList.remove('on'); $('#modal').innerHTML=''; }
+function download(name,data,mime){
+  const blob=data instanceof Blob?data:new Blob(Array.isArray(data)?data:[data],{type:mime||'text/plain;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=String(name).replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_'); document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500);
+}
+function debounce(fn,ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+function hash53(str,seed=0){ // cyrb53
+  let h1=0xdeadbeef^seed,h2=0x41c6ce57^seed;
+  for(let i=0,ch;i<str.length;i++){ ch=str.charCodeAt(i); h1=Math.imul(h1^ch,2654435761); h2=Math.imul(h2^ch,1597334677); }
+  h1=Math.imul(h1^(h1>>>16),2246822507)^Math.imul(h2^(h2>>>13),3266489909);
+  h2=Math.imul(h2^(h2>>>16),2246822507)^Math.imul(h1^(h1>>>13),3266489909);
+  return (4294967296*(2097151&h2)+(h1>>>0)).toString(36);
+}
+function globToRe(g){
+  const s=g.trim().replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*\*/g,'\u0001').replace(/\*/g,'[^/]*').replace(/\u0001/g,'.*').replace(/\?/g,'.');
+  return new RegExp('^'+s+'$','i');
+}
+function wildRe(g){ return new RegExp('^'+g.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.')+'$','i'); }
+const ORA_RESERVED=new Set('ACCESS ADD ALL ALTER AND ANY AS ASC AUDIT BETWEEN BY CHAR CHECK CLUSTER COLUMN COLUMN_VALUE COMMENT COMPRESS CONNECT CREATE CURRENT DATE DECIMAL DEFAULT DELETE DESC DISTINCT DROP ELSE EXCLUSIVE EXISTS FILE FLOAT FOR FROM GRANT GROUP HAVING IDENTIFIED IMMEDIATE IN INCREMENT INDEX INITIAL INSERT INTEGER INTERSECT INTO IS LEVEL LIKE LOCK LONG MAXEXTENTS MINUS MLSLABEL MODE MODIFY NESTED_TABLE_ID NOAUDIT NOCOMPRESS NOT NOWAIT NULL NUMBER OF OFFLINE ON ONLINE OPTION OR ORDER PCTFREE PRIOR PUBLIC RAW RENAME RESOURCE REVOKE ROW ROWID ROWNUM ROWS SELECT SESSION SET SHARE SIZE SMALLINT START SUCCESSFUL SYNONYM SYSDATE TABLE THEN TO TRIGGER UID UNION UNIQUE UPDATE USER VALIDATE VALUES VARCHAR VARCHAR2 VIEW WHENEVER WHERE WITH'.split(' '));
+const qid=n=>/^[A-Z][A-Z0-9_$#]*$/.test(n)&&!ORA_RESERVED.has(n)?n:'"'+String(n).replace(/"/g,'""')+'"';
+const tref=t=>(t.schema&&t.schema!=='(default)'?qid(t.schema)+'.':'')+qid(t.name);
+const csvCell=v=>{ let s=v==null?'':String(v); if(/^[=+@\t\r]/.test(s)||/^-[^0-9.\s]/.test(s)) s="'"+s; return /[",\n\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+
+/* ======================= IndexedDB ======================= */
+const DB_NAME='schema_detective', DB_VER=3;
+let db=null;
+const STORES=['snapshots','tables','columns','indexes','relations','annotations','settings','sources','files','fileContents','importJobs','parseCache'];
+function openDB(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(DB_NAME,DB_VER);
+    r.onupgradeneeded=()=>{
+      const d=r.result;
+      const mk=(n,kp,idx)=>{
+        const st=d.objectStoreNames.contains(n)?r.transaction.objectStore(n):d.createObjectStore(n,{keyPath:kp});
+        (idx||[]).forEach(([nm,kpath,opt])=>{ if(!st.indexNames.contains(nm)) st.createIndex(nm,kpath,opt||{}); });
+      };
+      mk('snapshots','id',[['createdAt','createdAt']]);
+      mk('tables','id',[['snapshotId','snapshotId'],['tableName','nameU']]);
+      mk('columns','id',[]);            // 以 key 前綴（snapshotId|）範圍讀寫，免建次要索引以加速大量寫入
+      mk('indexes','id',[['tableId','tableId']]);
+      mk('relations','id',[['fromTable','fromTable'],['toTable','toTable']]);
+      mk('annotations','key',[['tags','tags',{multiEntry:true}],['status','status']]);
+      mk('settings','key');
+      mk('sources','id',[['name','name']]);
+      mk('files','id',[['sourceId','sourceId'],['sha256','sha256'],['snapshotId','snapshotId']]);
+      mk('fileContents','fileId');
+      mk('importJobs','id',[['startedAt','startedAt']]);
+      mk('parseCache','id');
+    };
+    r.onsuccess=()=>{ db=r.result; db.onversionchange=()=>{ db.close(); toast('資料庫已在其他分頁升級，請重新整理','err'); }; res(db); };
+    r.onerror=()=>rej(r.error);
+    r.onblocked=()=>toast('資料庫被其他分頁佔用，請關閉其他 Schema Detective 分頁','err');
+  });
+}
+const reqP=r=>new Promise((res,rej)=>{ r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+const txDone=tx=>new Promise((res,rej)=>{ tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); tx.onabort=()=>rej(tx.error||new Error('transaction aborted')); });
+const prefixRange=p=>IDBKeyRange.bound(p,p+'\uffff');
+const dbGet=(s,k)=>reqP(db.transaction(s).objectStore(s).get(k));
+const dbAll=(s,range)=>reqP(db.transaction(s).objectStore(s).getAll(range));
+const dbAllIdx=(s,idx,key)=>reqP(db.transaction(s).objectStore(s).index(idx).getAll(key));
+async function dbPut(s,v){ const tx=db.transaction(s,'readwrite'); tx.objectStore(s).put(v); return txDone(tx); }
+async function dbDel(s,k){ const tx=db.transaction(s,'readwrite'); tx.objectStore(s).delete(k); return txDone(tx); }
+async function dbPutMany(s,arr){ const tx=db.transaction(s,'readwrite'); const st=tx.objectStore(s); for(const v of arr) st.put(v); return txDone(tx); }
+async function dbDelPrefix(stores,p){ const tx=db.transaction(stores,'readwrite'); for(const s of stores) tx.objectStore(s).delete(prefixRange(p)); return txDone(tx); }
+async function dbClearAll(){ const tx=db.transaction(STORES,'readwrite'); for(const s of STORES) tx.objectStore(s).clear(); return txDone(tx); }
+
+/* ======================= App state ======================= */
+const S={
+  settings:{}, snapshots:[], cur:null, M:null, ann:new Map(), sources:[], rel:new Map(),
+  curTable:null, curCol:null, tab:'explorer', job:null, preview:null, vl:{},
+  colView:[], colSort:{k:'pos',d:1}, searchRes:null
+};
+const DEFAULTS={
+  theme:'auto', excludeCols:['DATADATE','SS_SEQ','CREATE_DATE','CREATE_TIME','UPDATE_DATE','UPDATE_TIME','CREATE_USER','UPDATE_USER','YEAR_MONTH','BATCH_NO'],
+  sqlSsSeq:true, sqlDatadate:false, dupPolicy:'latest', defaultEnc:'auto', keepText:true, keepBigText:false, defaultSchema:'(default)',
+  pins:[], recents:[], groupPrefix:false, scan:{recursive:true,exts:'.sql,.ddl,.txt,.pks,.pkb',exclude:'.git,node_modules,backup*',maxMB:500,nameFilter:''}
+};
+const getSet=k=>S.settings[k]!==undefined?S.settings[k]:DEFAULTS[k];
+async function setSet(k,v){ S.settings[k]=v; await dbPut('settings',{key:k,value:v}); }
+
+/* ======================= Virtual list ======================= */
+class VList{
+  constructor(el,opt){
+    this.el=el; this.rowH=opt.rowH||28; this.render=opt.render; this.n=0; this.os=8; this.raf=0;
+    el.classList.add('vl'); el.style.setProperty('--rh',this.rowH+'px');
+    el.innerHTML='<div class="vl-sp"></div><div class="vl-in"></div>'; this.sp=el.firstChild; this.inn=el.lastChild;
+    el.addEventListener('scroll',()=>this.sched());
+    if(window.ResizeObserver) new ResizeObserver(()=>this.sched()).observe(el);
+    if(opt.onClick) el.addEventListener('click',e=>{ const r=e.target.closest('[data-i]'); if(r&&el.contains(r)) opt.onClick(+r.dataset.i,e,r); });
+    if(opt.onChange) el.addEventListener('change',e=>{ const r=e.target.closest('[data-i]'); if(r) opt.onChange(+r.dataset.i,e,r); });
+  }
+  setCount(n,keep){ this.n=n; this.sp.style.height=(n*this.rowH)+'px'; if(!keep) this.el.scrollTop=0; this.paint(); }
+  sched(){ if(this.raf) return; this.raf=requestAnimationFrame(()=>{ this.raf=0; this.paint(); }); }
+  paint(){
+    if(!this.el.isConnected) return;
+    const h=this.el.clientHeight||600, st=this.el.scrollTop;
+    const a=Math.max(0,Math.floor(st/this.rowH)-this.os), b=Math.min(this.n,Math.ceil((st+h)/this.rowH)+this.os);
+    let html=''; for(let i=a;i<b;i++) html+=this.render(i);
+    this.inn.style.transform='translateY('+(a*this.rowH)+'px)'; this.inn.innerHTML=html;
+  }
+  scrollTo(i){ const top=i*this.rowH, h=this.el.clientHeight; if(top<this.el.scrollTop||top+this.rowH>this.el.scrollTop+h) this.el.scrollTop=Math.max(0,top-h/3); this.paint(); }
+}
+
+/* ======================= Worker pool / parser API ======================= */
+let SD=null, poolInst=null;
+function getSD(){ if(!SD) SD=__sdFactory(); return SD; }
+class Pool{
+  constructor(n){
+    this.size=n; this.ws=[]; this.q=[]; this.main=false; this.everOk=false;
+    try{
+      const code=__sdFactory.toString()+`\n;const SD=__sdFactory();
+self.onmessage=function(e){const m=e.data;try{let r;
+ if(m.type==='parseText'){r=SD.parseText(m.text);}
+ else if(m.type==='parseStmts'){r=SD.parseStatements(m.stmts);}
+ self.postMessage({id:m.id,ok:true,res:r});}catch(err){self.postMessage({id:m.id,ok:false,err:String(err&&err.message||err)});}};`;
+      this.url=URL.createObjectURL(new Blob([code],{type:'text/javascript'}));
+      for(let i=0;i<n;i++){ const w=new Worker(this.url); w.busy=false; w.onmessage=e=>this.done(w,e.data); w.onerror=e=>this.fail(w,e); this.ws.push(w); }
+    }catch(err){ console.warn('Worker 無法建立，改用主執行緒',err); this.main=true; this.size=1; this.ws.forEach(w=>w.terminate()); this.ws=[]; }
+    this.seq=1; this.pending=new Map();
+  }
+  run(msg){ return new Promise((res,rej)=>{ this.q.push({msg,res,rej}); this.pump(); }); }
+  async pump(){
+    if(this.main){
+      while(this.q.length){ const j=this.q.shift(); await tick(); try{ const m=j.msg; const sd=getSD(); j.res(m.type==='parseText'?sd.parseText(m.text):sd.parseStatements(m.stmts)); }catch(e){ j.rej(e); } }
+      return;
+    }
+    for(const w of this.ws){
+      if(w.busy||!this.q.length) continue;
+      const j=this.q.shift(); const id=this.seq++; w.busy=true; w.job=j; this.pending.set(id,w);
+      w.postMessage(Object.assign({id},j.msg));
+    }
+  }
+  done(w,d){ this.everOk=true; const j=w.job; w.busy=false; w.job=null; this.pending.delete(d.id); if(d.ok) j.res(d.res); else j.rej(new Error(d.err)); this.pump(); }
+  fail(w,e){
+    if(!this.everOk&&!this.main){ // Worker 被環境阻擋（例如 CSP）：改用主執行緒，並重排所有未完成工作
+      console.warn('Worker 啟動失敗，改用主執行緒',e&&e.message); const jobs=this.ws.filter(x=>x.busy&&x.job).map(x=>x.job); this.main=true; this.size=1; this.ws.forEach(x=>x.terminate()); this.ws=[]; this.q=jobs.concat(this.q); this.pump(); return;
+    }
+    const j=w.job; w.busy=false; w.job=null; if(j) j.rej(new Error(e.message||'worker error')); this.pump();
+  }
+  destroy(){ this.ws.forEach(w=>w.terminate()); if(this.url) URL.revokeObjectURL(this.url); }
+}
+function getPool(){
+  if(!poolInst){ const hc=navigator.hardwareConcurrency||4; poolInst=new Pool(Math.max(2,Math.min(8,hc-1))); }
+  return poolInst;
+}
+
+/* ======================= Encoding detection ======================= */
+const COMMON_TRAD=new Set(Array.from('的一是不了人我在有他中大上個到們為子和你地出也時年得就那要下以生會自著去之過家學對可她裡後小麼心多天而能好都然沒日於起還發成事只作當想看文無開手十用主行方又如前所本見經頭面公同三已老從動兩長知民樣現分將外但身些與高意進把法此實回二理美點月明其種聲全工己話兒者向情部正名定女問力機給等幾很業最間新什打便位因重被走電四第門相次東政海口使教西再平真聽世氣信北少關並內加化由卻代軍產入先山無度更別或總係資料金額號銀行帳戶統編類型態風險權數暴債券證應收存放同業主權國家州府保險代理欄位表格備註說明檢核規則客稱期碼批餘利率擔品集團'));
+const COMMON_SIMP=new Set(Array.from('的一是不了人我在有他中大上个到们为子和你地出也时年得就那要下以生会自着去之过家学对可她里后小么心多天而能好都然没日于起还发成事只作当想看文无开手十用主行方又如前所本见经头面公同三已老从动两长知民样现分将外但身些与高意进把法此实回二理美点月明其种声全工己话儿者向情部正名定女问力机给等几很业最间新什打便位因重被走电四第门相次东政海口使教西再平真听世气信北少关并内加化由却代军产入先山无度更别或总系资料金额号银行账户统编类型态风险权数暴债券证应收存放同业主权国家州府保险代理栏位表格备注说明检核规则客称期码批余利率担品集团'));
+function scoreDecoded(txt){
+  let fffd=0,tr=0,sp=0,cjk=0;
+  for(let i=0;i<txt.length;i++){
+    const cp=txt.charCodeAt(i);
+    if(cp===0xFFFD) fffd++;
+    else if(cp>=0x4E00&&cp<=0x9FFF){ cjk++; const ch=txt[i]; if(COMMON_TRAD.has(ch)&&!COMMON_SIMP.has(ch)) tr++; else if(COMMON_SIMP.has(ch)&&!COMMON_TRAD.has(ch)) sp++; else if(COMMON_TRAD.has(ch)) { tr+=0.5; sp+=0.5; } }
+  }
+  return {fffd,tr,sp,cjk};
+}
+function detectEncoding(u8){
+  const n=u8.length;
+  if(n>=3&&u8[0]===0xEF&&u8[1]===0xBB&&u8[2]===0xBF) return {enc:'utf-8',conf:'high',note:'UTF-8 BOM'};
+  if(n>=2&&u8[0]===0xFF&&u8[1]===0xFE) return {enc:'utf-16le',conf:'high',note:'UTF-16LE BOM'};
+  if(n>=2&&u8[0]===0xFE&&u8[1]===0xFF) return {enc:'utf-16be',conf:'high',note:'UTF-16BE BOM'};
+  const m=Math.min(n,4096); let z0=0,z1=0; for(let i=0;i<m;i++) if(u8[i]===0){ if(i&1) z1++; else z0++; }
+  const half=m/2;
+  if(half>8&&z1/half>0.3&&z0/half<0.05) return {enc:'utf-16le',conf:'mid',note:'無 BOM 的 UTF-16LE'};
+  if(half>8&&z0/half>0.3&&z1/half<0.05) return {enc:'utf-16be',conf:'mid',note:'無 BOM 的 UTF-16BE'};
+  let ascii=true; for(let i=0;i<n;i++) if(u8[i]>=0x80){ ascii=false; break; }
+  if(ascii) return {enc:'utf-8',conf:'high',note:'純 ASCII'};
+  try{ new TextDecoder('utf-8',{fatal:true}).decode(u8,{stream:true}); return {enc:'utf-8',conf:'high',note:'嚴格 UTF-8 驗證通過'}; }catch(e){}
+  const dB=new TextDecoder('big5').decode(u8), dG=new TextDecoder('gb18030').decode(u8);
+  const a=scoreDecoded(dB), b=scoreDecoded(dG);
+  const sB=a.tr+0.3*a.sp-10*a.fffd, sG=b.sp+0.3*b.tr-10*b.fffd;
+  let na=0; for(let i=0;i<n;i++) if(u8[i]>=0x80) na++;
+  if(a.fffd/na>0.02&&b.fffd/na>0.02) return {enc:'windows-1252',conf:'low',note:'Big5/GB18030 皆有大量無法解碼字元'};
+  const bigWin=sB>=sG; const best=bigWin?a:b; const diff=Math.abs(sB-sG);
+  let conf='mid';
+  if(best.fffd===0&&(diff>=5||(Math.max(sB,sG)>=3&&Math.min(sB,sG)<Math.max(sB,sG)/2))) conf='high';
+  else if(best.fffd>0) conf='low';
+  return {enc:bigWin?'big5':'gb18030',conf,note:`Big5 ${sB.toFixed(1)} / GB18030 ${sG.toFixed(1)}${best.fffd?`，U+FFFD×${best.fffd}`:''}`};
+}
+const ENC_LIST=[['utf-8','UTF-8'],['big5','Big5 / CP950'],['utf-16le','UTF-16LE'],['utf-16be','UTF-16BE'],['gb18030','GB18030 / GBK'],['windows-1252','ASCII / Latin-1']];
+const encName=e=>(ENC_LIST.find(x=>x[0]===e)||[e,e])[1];
+const confBadge=c=>c==='high'?'<span class="badge ok">高</span>':c==='mid'?'<span class="badge warn">中</span>':'<span class="badge err">低</span>';
+
+/* ======================= Model: accumulate parse results ======================= */
+const keyOf=(schema,name)=>String(schema).toUpperCase()+'|'+String(name).toUpperCase();
+class Acc{
+  constructor(policy,defSchema){
+    this.policy=policy; this.defSchema=defSchema; this.tables=new Map(); this.p={indexes:[],tc:[],cc:[],alters:[]};
+    this.warnings=[]; this.stats={stmts:0,ignored:0}; this.dupes=0; this.unresolved=0;
+  }
+  warn(w){ if(this.warnings.length<2000) this.warnings.push(w); }
+  addFile(f,res){
+    this.stats.stmts+=res.stats.stmts; this.stats.ignored+=res.stats.ignored;
+    for(const w of res.warnings) this.warn(Object.assign({file:f.path},w));
+    for(const t of res.tables){
+      t.schema=t.schema||this.defSchema; t.fileId=f.id; t.fileSha=f.sha||null; t.filePath=f.path; t.fileMod=f.lastModified||0; t.order=f.order||0;
+      const k=keyOf(t.schema,t.name); const ex=this.tables.get(k);
+      if(!ex){ this.tables.set(k,t); continue; }
+      this.dupes++;
+      let useNew;
+      if(this.policy==='latest') useNew=t.fileMod>=ex.fileMod;
+      else if(this.policy==='path') useNew=t.order<ex.order||(t.order===ex.order);
+      else useNew=false;
+      const dl=(ex.dupes||[]).concat([{path:t.filePath,line:t.lineStart,mod:t.fileMod}]);
+      this.warn({file:f.path,line:t.lineStart,msg:`重複定義 ${t.schema}.${t.name}（${ex.filePath}:${ex.lineStart} 與 ${t.filePath}:${t.lineStart}），採用${useNew?t.filePath:ex.filePath}`,snippet:''});
+      if(useNew){ t.dupes=dl.concat([{path:ex.filePath,line:ex.lineStart,mod:ex.fileMod}]); this.tables.set(k,t); }
+      else ex.dupes=dl;
+    }
+    for(const x of res.indexes) this.p.indexes.push(Object.assign(x,{file:f.path}));
+    for(const x of res.tcomments) this.p.tc.push(x);
+    for(const x of res.ccomments) this.p.cc.push(x);
+    for(const x of res.alters) this.p.alters.push(x);
+  }
+  finalize(){
+    const byName=new Map();
+    for(const [k,t] of this.tables){ const u=t.name.toUpperCase(); if(!byName.has(u)) byName.set(u,[]); byName.get(u).push(t); }
+    const resolve=(schema,name)=>{
+      if(schema){ const x=this.tables.get(keyOf(schema,name)); if(x) return x; const l=byName.get(String(name).toUpperCase()); return l&&l.length===1&&(l[0].schema===this.defSchema)?l[0]:null; }
+      const l=byName.get(String(name).toUpperCase()); if(!l) return null; return l[0];
+    };
+    const miss=(kind,x)=>{ this.unresolved++; this.warn({file:x.file||'',line:x.line||0,msg:`${kind} 找不到對應資料表 ${x.schema?x.schema+'.':''}${x.table}`,snippet:''}); };
+    const colMap=t=>{ if(!t._cm){ t._cm=new Map(); for(const c of t.columns) t._cm.set(c.name.toUpperCase(),c); } return t._cm; };
+    const colOf=(t,name)=>colMap(t).get(String(name).toUpperCase());
+    for(const a of this.p.alters){
+      const t=resolve(a.schema,a.table); if(!t){ miss('ALTER TABLE',a); continue; }
+      if(a.kind==='pk'){ t.pk=a.cols; t.pkName=a.name; }
+      else if(a.kind==='uk') t.uks.push({name:a.name,cols:a.cols});
+      else if(a.kind==='fk') t.fks.push({name:a.name,cols:a.cols,refSchema:a.refSchema,refTable:a.refTable,refCols:a.refCols});
+      else if(a.kind==='check'){ t.checks.push({name:a.name,expr:a.expr,notnull:a.notnull}); if(a.notnull){ const c=colOf(t,a.notnull); if(c) c.nullable=false; } }
+      else if(a.kind==='nullable'){ const c=colOf(t,a.column); if(c) c.nullable=a.nullable; }
+      else if(a.kind==='addcol'){ if(!colOf(t,a.col.name)){ t.columns.push(a.col); colMap(t).set(a.col.name.toUpperCase(),a.col); } }
+    }
+    for(const c of this.p.tc){ const t=resolve(c.schema,c.table); if(t) t.comment=c.text; else miss('COMMENT ON TABLE',c); }
+    for(const c of this.p.cc){ const t=resolve(c.schema,c.table); if(!t){ miss('COMMENT ON COLUMN',c); continue; } const col=colOf(t,c.column); if(col) col.comment=c.text; else this.warn({file:'',line:0,msg:`COMMENT ON COLUMN 找不到欄位 ${t.name}.${c.column}`,snippet:''}); }
+    for(const x of this.p.indexes){ const t=resolve(x.schema,x.table); if(!t){ miss('CREATE INDEX',x); continue; } (t.indexes=t.indexes||[]); if(!t.indexes.some(i=>i.name===x.name)) t.indexes.push({name:x.name,cols:x.cols,unique:x.unique}); }
+    const out=[];
+    for(const t of this.tables.values()){
+      t.indexes=t.indexes||[]; delete t._cm;
+      const pkSet=new Set(t.pk.map(x=>x.toUpperCase()));
+      const ixSet=new Set(); t.indexes.forEach(i=>i.cols.forEach(c=>ixSet.add(String(c).toUpperCase())));
+      t.columns.forEach((c,i)=>{ c.pos=i+1; c.pk=pkSet.has(c.name.toUpperCase()); c.idx=ixSet.has(c.name.toUpperCase())||c.pk; });
+      out.push(t);
+      if(!t.columns.length) this.warn({file:t.filePath,line:t.lineStart,msg:`資料表 ${t.schema}.${t.name} 沒有解析到任何欄位`,snippet:''});
+    }
+    out.sort((a,b)=>a.schema.localeCompare(b.schema)||a.name.localeCompare(b.name));
+    return out;
+  }
+}
+function structHash(t){
+  const parts=t.columns.map(c=>[c.name,c.type,c.nullable?1:0,c.def||'',c.pk?1:0,c.comment||''].join('\u0001'));
+  parts.push('PK:'+t.pk.join(','));
+  parts.push('IX:'+(t.indexes||[]).map(i=>i.name+':'+i.cols.join(',')+':'+(i.unique?1:0)).sort().join(';'));
+  parts.push('TC:'+(t.comment||''));
+  return hash53(parts.join('\u0002'));
+}
+
+/* ======================= Snapshot model (in-memory) ======================= */
+function annKey(t,c){ return (t.schema+'.'+t.name+'.'+(c.columnName||c.name)).toUpperCase(); }
+function annText(a){ return a?[a.businessName,a.meaning,(a.tags||[]).join(' '),a.knownIssues,(a.sourceMeaning||[]).map(x=>x.source+' '+x.meaning).join(' ')].filter(Boolean).join(' '):''; }
+function colHay(t,c){ const a=S.ann.get(annKey(t,c)); return (t.name+' '+c.name+' '+(t.comment||'')+' '+(c.comment||'')+' '+c.type+' '+annText(a)).toLowerCase(); }
+function buildModel(tbs,colSets,ixSets,snapId){
+  const byId=new Map(); const M={id:snapId,tables:[],byKey:new Map(),colIndex:new Map(),flat:[],nCols:0,nIdx:0};
+  for(const t of tbs){ t.cols=[]; t.indexes=[]; byId.set(t.id,t); }
+  for(const rec of colSets){
+    const t=byId.get(rec.id); if(!t) continue;
+    t.cols=rec.cols.map(x=>({id:t.id+'|'+x.n,tableId:t.id,columnName:x.n,columnNameUpper:x.n.toUpperCase(),pos:x.p,type:x.ty,dtype:x.dt,length:x.l,precision:x.pr,scale:x.s,unit:x.u,nullable:x.nl,def:x.d,pk:x.pk,idx:x.ix,comment:x.cm||''}));
+  }
+  for(const rec of ixSets){ const t=byId.get(rec.id); if(t){ t.indexes=rec.list; M.nIdx+=rec.list.length; } }
+  tbs.sort((a,b)=>a.schema.localeCompare(b.schema)||a.name.localeCompare(b.name));
+  for(const t of tbs){
+    t.cols.sort((a,b)=>a.pos-b.pos);
+    M.byKey.set(keyOf(t.schema,t.name),t); M.nCols+=t.cols.length;
+    for(const c of t.cols){
+      let l=M.colIndex.get(c.columnNameUpper); if(!l){ l=[]; M.colIndex.set(c.columnNameUpper,l); } l.push({t,c});
+      M.flat.push({t,c});
+    }
+  }
+  M.tables=tbs; return M;
+}
+async function loadModel(snapId){
+  const rng=prefixRange(snapId+'|');
+  const [tbs,cols,idxs]=await Promise.all([dbAll('tables',rng),dbAll('columns',rng),dbAll('indexes',rng)]);
+  return buildModel(tbs,cols,idxs,snapId);
+}
+function rebuildHay(M){ for(const x of M.flat) x.c.h=colHay(x.t,x.c); }
+async function loadSnapshot(id){
+  busy('載入 Snapshot…'); const t0=performance.now();
+  try{
+    const M=await loadModel(id); rebuildHay(M); S.M=M; S.cur=id; await setSet('curSnap',id);
+    S.curTable=null; S.curCol=null; S.sql={t:null,sel:new Set(),tpl:S.sql?S.sql.tpl:'select',join:null}; S.searchRes=null; S.lk&&(S.lk.res=null);
+    $('#snapSel').value=id; dbg('loaded',M.tables.length,M.nCols,performance.now()-t0);
+    updateStat(); renderTree(); renderTable(); renderDetail();
+    if(S.tab==='search') runSearchUI(); refreshTabViews();
+  }finally{ busy(); }
+}
+async function refreshSnapshots(){
+  S.snapshots=(await dbAll('snapshots')).sort((a,b)=>b.createdAt-a.createdAt);
+  const sel=$('#snapSel'); sel.innerHTML=S.snapshots.length?S.snapshots.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}${s.status&&s.status!=='DONE'?' ['+s.status+']':''} · ${esc(s.stats?s.stats.tables+' 表':'')}</option>`).join(''):'<option value="">（尚無 Snapshot）</option>';
+  if(S.cur) sel.value=S.cur;
+}
+function updateStat(){ $('#statLine').textContent=S.M?`${S.M.tables.length.toLocaleString()} 表 · ${S.M.nCols.toLocaleString()} 欄`:''; }
+
+/* ======================= Import pipeline ======================= */
+const BIG_FILE=4*1024*1024;
+function decodeBuf(buf,enc){ const u8=new Uint8Array(buf); const d=new TextDecoder(enc,{fatal:false}); return d.decode(u8); }
+function countBad(text){ let n=0,lines=[]; let ln=1; for(let i=0;i<text.length;i++){ const c=text.charCodeAt(i); if(c===10) ln++; else if(c===0xFFFD){ n++; if(lines.length<8&&lines[lines.length-1]!==ln) lines.push(ln); } } return {n,lines}; }
+function mergeRes(a,b){
+  a.tables.push(...b.tables); a.indexes.push(...b.indexes); a.tcomments.push(...b.tcomments); a.ccomments.push(...b.ccomments); a.alters.push(...b.alters);
+  for(const w of b.warnings) if(a.warnings.length<500) a.warnings.push(w);
+  a.stats.stmts+=b.stats.stmts; a.stats.ignored+=b.stats.ignored; return a;
+}
+async function parseStream(file,enc,job,pool){
+  const sd=getSD(); const sp=new sd.Splitter(); const dec=new TextDecoder(enc,{fatal:false});
+  const reader=file.stream().getReader(); const total=sd.newOut(); let batch=[]; const inflight=[]; let bad=0; const parts=[]; let seq=0;
+  const flush=()=>{ if(!batch.length) return; const stmts=batch, my=seq++; batch=[]; inflight.push(pool.run({type:'parseStmts',stmts}).then(r=>{ parts[my]=r; })); };
+  for(;;){
+    const {done,value}=await reader.read();
+    if(job.cancel){ try{ reader.cancel(); }catch(e){} break; }
+    const text=done?dec.decode():dec.decode(value,{stream:true});
+    if(text.indexOf('\uFFFD')>=0) bad+=countBad(text).n;
+    const stmts=sp.feed(text,done); for(const s of stmts) batch.push(s);
+    if(value) job.bytesDone+=value.length;
+    if(batch.length>=50) flush();
+    while(inflight.length>=pool.size*2) await inflight.shift();
+    if(done) break;
+  }
+  flush(); await Promise.all(inflight);
+  for(const r of parts) if(r) mergeRes(total,r);   // 依原始語句順序合併，ALTER 套用順序才確定
+  return {res:total,bad:{n:bad,lines:[]}};
+}
+async function sha256hex(buf){ const d=await crypto.subtle.digest('SHA-256',buf); return Array.from(new Uint8Array(d)).map(b=>b.toString(16).padStart(2,'0')).join(''); }
+
+class BatchWriter{
+  constructor(n){ this.n=n; this.buf=[]; this.cnt=0; this.chain=Promise.resolve(); this.error=null; }
+  add(store,val){ this.buf.push([store,val]); if(store==='files') this.cnt++; }
+  async maybeFlush(){ if(this.cnt>=this.n) await this.flush(); }
+  flush(){
+    const items=this.buf; this.buf=[]; this.cnt=0; if(!items.length) return this.chain;
+    this.chain=this.chain.then(()=>{ const stores=[...new Set(items.map(x=>x[0]))]; const tx=db.transaction(stores,'readwrite'); for(const [s,v] of items) tx.objectStore(s).put(v); return txDone(tx); }).catch(err=>{ if(!this.error) this.error=err; });
+    return this.chain;
+  }
+  async flushAll(){ await this.flush(); await this.chain; if(this.error) throw this.error; }
+}
+const PARSER_VER=2;   // 解析器行為改變時遞增，舊的解析快取會自動失效
+async function runImport(src,entries,opts){
+  if(S.job){ toast('已有匯入作業進行中，請等待完成或先取消','err'); return null; }
+  try{ return await runImportCore(src,entries,opts); }
+  catch(err){
+    S.job=null; renderImportProgress();
+    if(err&&(err.name==='QuotaExceededError'||/quota/i.test(err.message||''))) throw new Error('瀏覽器儲存空間不足。請到「設定」清除解析快取與原文、刪除不用的 Snapshot，或改用較小的資料範圍。');
+    throw err;
+  }
+}
+async function runImportCore(src,entries,opts){
+  const pool=getPool(); const t0=performance.now(); const useCache=src.persist!==false;
+  const snapId=(opts.mode==='update'&&S.cur&&S.snapshots.some(s=>s.id===S.cur))?S.cur:'s_'+uid();
+  const job={id:'j_'+uid(),startedAt:Date.now(),status:'RUNNING',cancel:false,done:0,total:entries.length,ok:0,fail:0,skipped:0,reused:0,bytesDone:0,
+    bytesTotal:entries.reduce((a,e)=>a+e.size,0),files:[],cur:'',phase:'讀取與解析',snapId};
+  S.job=job; renderImportProgress();
+  try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+  const prevFiles=new Map(); if(opts.incremental&&src.id){ for(const f of await dbAllIdx('files','sourceId',src.id)) prevFiles.set(f.id,f); }
+  const acc=new Acc(opts.policy,getSet('defaultSchema'));
+  const queue=entries.map((e,i)=>Object.assign({},e,{order:i}));
+  const encCount={};
+  const keepText=getSet('keepText');
+  const writer=new BatchWriter(40);
+  async function processEntry(e){
+    const fid=src.id+'|'+e.path; const rec={path:e.path,size:e.size,enc:'',conf:'',status:'OK',tables:0,err:'',bad:0};
+    job.cur=e.path;
+    try{
+      let res=null, enc=e.enc&&e.enc!=='auto'?e.enc:(e.detected?e.detected.enc:'utf-8'); let conf=e.enc&&e.enc!=='auto'?'manual':(e.detected?e.detected.conf:'');
+      const pv=prevFiles.get(fid); let cache=null;
+      if(pv&&opts.incremental){ cache=await dbGet('parseCache',fid); if(cache&&(cache.v!==PARSER_VER||(e.enc&&e.enc!=='auto'&&cache.enc!==e.enc))) cache=null; }
+      let sha=pv?pv.sha256:'', text=null, reused=false;
+      if(cache&&pv.size===e.size&&pv.lastModified===e.lastModified){ res=cache.result; enc=cache.enc; sha=pv.sha256; reused=true; }
+      else if(e.size<=BIG_FILE){
+        const buf=await e.file.arrayBuffer(); job.bytesDone+=buf.byteLength; sha=await sha256hex(buf);
+        if(!(e.enc&&e.enc!=='auto')){ const d2=detectEncoding(new Uint8Array(buf)); if(d2.enc!==enc||d2.conf!==conf){ enc=d2.enc; conf=d2.conf; } }
+        if(cache&&pv.sha256===sha){ res=cache.result; enc=cache.enc; reused=true; }
+        else{
+          text=decodeBuf(buf,enc); const b=countBad(text); rec.bad=b.n; rec.badLines=b.lines;
+          res=await pool.run({type:'parseText',text});
+        }
+      } else {
+        const r=await parseStream(e.file,enc,job,pool); res=r.res; rec.bad=r.bad.n; sha='';
+      }
+      if(reused){ job.reused++; job.bytesDone+=e.size; }
+      rec.enc=enc; rec.conf=conf; rec.tables=res.tables.length; rec.warnings=res.warnings.length;
+      encCount[enc]=(encCount[enc]||0)+1;
+      if(job.cancel) return;
+      acc.addFile({id:fid,path:e.path,lastModified:e.lastModified,order:e.order,sha:sha?'sha:'+sha:null},typeof structuredClone==='function'?structuredClone(res):JSON.parse(JSON.stringify(res)));
+      // 寫入檔案紀錄 / 解析快取 / 原文
+      if(useCache) writer.add('files',{id:fid,sourceId:src.id,path:e.path,size:e.size,lastModified:e.lastModified,sha256:sha,enc,conf,snapshotId:snapId,status:'OK',tables:rec.tables,bad:rec.bad});
+      if(!reused&&useCache) writer.add('parseCache',{id:fid,v:PARSER_VER,enc,result:res,size:e.size,lastModified:e.lastModified});
+      if(!reused&&text!==null&&keepText) writer.add('fileContents',{fileId:sha?'sha:'+sha:fid,text:text.replace(/\r\n?/g,'\n')});   // 以內容雜湊為鍵：不同 Snapshot 的原文不會互相覆蓋
+      await writer.maybeFlush();
+      job.ok++;
+    }catch(err){ rec.status='FAIL'; rec.err=String(err&&err.message||err); job.fail++; acc.warn({file:e.path,line:0,msg:'檔案處理失敗：'+rec.err,snippet:''}); }
+    finally{ job.done++; job.files.push(rec); }
+  }
+  const conc=Math.max(2,pool.size*2);
+  const ticker=setInterval(renderImportProgress,200);
+  await Promise.all(Array.from({length:conc},async()=>{ while(queue.length&&!job.cancel){ await processEntry(queue.shift()); } }));
+  clearInterval(ticker); await writer.flushAll();
+  if(job.cancel&&opts.mode==='update'&&snapId===S.cur){ S.job=null; renderImport(); toast('已取消；現有 Snapshot 未被修改'); return null; }
+  S.impOpts.name='';
+  job.phase='合併與寫入'; renderImportProgress(); await tick();
+  job.t={parse:performance.now()-t0}; const tf=performance.now();
+  const tables=acc.finalize();
+  tables.forEach(t=>{ t.structHash=structHash(t); });
+  job.t.finalize=performance.now()-tf; const tw=performance.now();
+  if(opts.mode==='update'&&snapId===S.cur){ const ps=S.snapshots.find(s=>s.id===snapId); if(ps) await dbPut('snapshots',Object.assign({},ps,{status:'WRITING'})); await dbDelPrefix(['tables','columns','indexes'],snapId+'|'); }
+  const BATCH=100; let written=0, nCols=0, nIdx=0;
+  for(let i=0;i<tables.length;i+=BATCH){
+    const tbRows=[],colRows=[],ixRows=[];
+    for(const t of tables.slice(i,i+BATCH)){
+      const id=snapId+'|'+t.schema+'|'+t.name;
+      tbRows.push({id,snapshotId:snapId,schema:t.schema,name:t.name,nameU:t.name.toUpperCase(),comment:t.comment||'',pk:t.pk,pkName:t.pkName,uks:t.uks,fks:t.fks,checks:t.checks,partition:t.partition,
+        fileId:t.fileId,fileSha:t.fileSha||null,filePath:t.filePath,lineStart:t.lineStart,lineEnd:t.lineEnd,columnCount:t.columns.length,structHash:t.structHash,dupes:t.dupes||null});
+      colRows.push({id,snapshotId:snapId,cols:t.columns.map(c=>({n:c.name,p:c.pos,ty:c.type,dt:c.dtype,l:c.length,pr:c.precision,s:c.scale,u:c.unit,nl:c.nullable,d:c.def,pk:c.pk,ix:c.idx,cm:c.comment||''}))});
+      if(t.indexes.length) ixRows.push({id,snapshotId:snapId,list:t.indexes.map(x=>({name:x.name,cols:x.cols,unique:x.unique}))});
+      nCols+=t.columns.length; nIdx+=t.indexes.length;
+    }
+    const tx=db.transaction(['tables','columns','indexes'],'readwrite');
+    const a=tx.objectStore('tables'),b=tx.objectStore('columns'),c=tx.objectStore('indexes');
+    tbRows.forEach(r=>a.put(r)); colRows.forEach(r=>b.put(r)); ixRows.forEach(r=>c.put(r));
+    await txDone(tx); written+=tbRows.length;
+    job.written=written; job.totalTables=tables.length; renderImportProgress(); await tick();
+  }
+  job.t.write=performance.now()-tw;
+  job.ms=performance.now()-t0; job.status=job.cancel?'PARTIAL':(job.fail&&!job.ok?'FAILED':'DONE');
+  const stats={t:job.t,tables:tables.length,columns:nCols,indexes:nIdx,files:job.total,ok:job.ok,fail:job.fail,reused:job.reused,ms:Math.round(job.ms),dupes:acc.dupes};
+  const prevSnap=S.snapshots.find(s=>s.id===snapId);
+  await dbPut('snapshots',{id:snapId,name:opts.name||(prevSnap&&prevSnap.name)||('Snapshot '+fmtDate(Date.now())),createdAt:prevSnap?prevSnap.createdAt:Date.now(),updatedAt:Date.now(),sourceIds:[src.id],status:job.status,stats,warnings:acc.warnings.slice(0,500)});
+  const report={id:job.id,startedAt:job.startedAt,endedAt:Date.now(),status:job.status,snapshotId:snapId,sourceName:src.name,stats,encCount,files:job.files,warnings:acc.warnings,unresolved:acc.unresolved,statements:acc.stats};
+  await dbPut('importJobs',report);
+  if(src.id&&src.persist){ src.lastSnapshotId=snapId; src.lastScan=Date.now(); await dbPut('sources',src); }
+  S.lastReport=report; job.phase='完成';
+  await refreshSnapshots(); await loadSnapshot(snapId);
+  S.job=null; renderImport();
+  toast(`匯入${job.status==='DONE'?'完成':'結束（'+job.status+'）'}：${tables.length.toLocaleString()} 張表、${nCols.toLocaleString()} 個欄位，耗時 ${fmtMs(job.ms)}`,job.status==='DONE'?'ok':'');
+  return report;
+}
+
+/* ======================= File scanning ======================= */
+function scanFilter(o){
+  const exts=(o.exts||'').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+  const ex=(o.exclude||'').split(',').map(s=>s.trim()).filter(Boolean).map(g=>({g,re:globToRe(g),path:g.includes('/')}));
+  const nf=(o.nameFilter||'').split(',').map(s=>s.trim()).filter(Boolean).map(g=>g.includes('*')||g.includes('?')?globToRe(g):new RegExp(g.replace(/[.+^${}()|[\]\\]/g,'\\$&'),'i'));
+  return {
+    dirOk:p=>!ex.some(x=>x.path?x.re.test(p):p.split('/').some(seg=>x.re.test(seg))),
+    fileOk:p=>{
+      if(ex.some(x=>x.path?x.re.test(p):p.split('/').some(seg=>x.re.test(seg)))) return false;
+      const name=p.split('/').pop().toLowerCase(); const dot=name.lastIndexOf('.'); const ext=dot>=0?name.slice(dot):'';
+      if(exts.length&&!exts.includes(ext)) return false;
+      if(nf.length&&!nf.some(r=>r.test(name))) return false;
+      return true;
+    }
+  };
+}
+async function walkHandle(dir,base,o,flt,out,prog){
+  for await(const [name,h] of dir.entries()){
+    const p=base+name;
+    if(h.kind==='directory'){ if(o.recursive&&flt.dirOk(p)) await walkHandle(h,p+'/',o,flt,out,prog); }
+    else if(flt.fileOk(p)){ out.push({path:p,handle:h}); prog&&prog(out.length); }
+  }
+}
+async function walkEntry(entry,base,o,flt,out){
+  if(entry.isFile){ const p=base+entry.name; if(flt.fileOk(p)) out.push({path:p,entry}); }
+  else if(entry.isDirectory){
+    const p=base+entry.name; if(base&&!flt.dirOk(p)) return;
+    if(base&&!o.recursive) return;
+    const rd=entry.createReader(); let all=[];
+    for(;;){ const part=await new Promise((res,rej)=>rd.readEntries(res,rej)); if(!part.length) break; all=all.concat(part); }
+    for(const ch of all) await walkEntry(ch,p+'/',o,flt,out);
+  }
+}
+async function resolveFiles(list,maxBytes,prog){
+  const out=[]; let i=0, skipped=0;
+  const worker=async()=>{ while(i<list.length){ const it=list[i++]; try{ const f=it.file||(it.handle?await it.handle.getFile():await new Promise((res,rej)=>it.entry.file(res,rej)));
+    if(f.size>maxBytes){ skipped++; continue; }
+    out.push({path:it.path,file:f,size:f.size,lastModified:f.lastModified,include:true,enc:'auto'}); }catch(e){ skipped++; } if(prog&&i%25===0) prog(i); } };
+  await Promise.all(Array.from({length:8},worker)); out.sort((a,b)=>a.path.localeCompare(b.path)); out.skipped=skipped; return out;
+}
+function trimToLines(u8,isHead,isTail){
+  let a=0,b=u8.length;
+  if(!isHead){ while(a<b&&u8[a]!==10) a++; a++; }          // 0x0A 在 Big5/GBK/UTF-8 中不會是尾位元組，可安全重新對齊
+  if(!isTail){ while(b>a&&u8[b-1]!==10) b--; }
+  return a<b?u8.subarray(a,b):new Uint8Array(0);
+}
+async function detectFile(file){
+  const SZ=file.size, C=196608;
+  if(SZ<=C*2) return detectEncoding(new Uint8Array(await file.arrayBuffer()));
+  const head=new Uint8Array(await file.slice(0,C).arrayBuffer());
+  const h=detectEncoding(head); if(/BOM/.test(h.note||'')||h.enc==='utf-16le'||h.enc==='utf-16be') return h;
+  const parts=[head]; const spots=[0.35,0.7]; 
+  for(const f of spots){ const st=Math.floor(SZ*f); parts.push(trimToLines(new Uint8Array(await file.slice(st,st+65536).arrayBuffer()),false,false)); }
+  parts.push(trimToLines(new Uint8Array(await file.slice(SZ-C,SZ).arrayBuffer()),false,true));
+  const sep=new Uint8Array([10]); let tot=0; parts.forEach(p=>tot+=p.length+1); const all=new Uint8Array(tot); let o=0; for(const p of parts){ all.set(p,o); o+=p.length; all[o++]=10; }
+  const r=detectEncoding(all); r.note=(r.note||'')+'（多段取樣）'; return r;
+}
+async function detectAll(entries,prog){
+  let i=0; const worker=async()=>{ while(i<entries.length){ const e=entries[i++]; try{ e.detected=await detectFile(e.file); }catch(err){ e.detected={enc:'utf-8',conf:'low',note:'讀取失敗'}; } if(prog&&i%25===0) prog(i); } };
+  await Promise.all(Array.from({length:8},worker));
+}
+
+/* ======================= Tabs / router ======================= */
+const TABS=[['explorer','📂 Explorer'],['lookup','🧭 欄位反查'],['search','🔎 搜尋'],['import','📥 匯入'],['diff','🔀 Diff'],['relations','🔗 關聯'],['sql','🧰 SQL'],['settings','⚙ 設定']];
+function buildTabs(){ $('#tabs').innerHTML=TABS.map(([k,l])=>`<button data-tab="${k}">${l}</button>`).join(''); }
+function showTab(name,noHash){
+  S.tab=name;
+  $$('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.tab===name));
+  $$('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+name));
+  if(name==='import') renderImport();
+  else if(name==='lookup') renderLookup();
+  else if(name==='diff') renderDiff();
+  else if(name==='relations') renderRelations();
+  else if(name==='sql') renderSQL();
+  else if(name==='settings') renderSettings();
+  refreshTabViews();
+  if(!noHash){ if(name!=='explorer') setHash('#/tab/'+name); else if(/^#\/tab\//.test(location.hash)) setHash(S.curTable?'#/table/'+encodeURIComponent(S.curTable.schema)+'/'+encodeURIComponent(S.curTable.name):'#/'); }
+}
+function refreshTabViews(){ requestAnimationFrame(()=>Object.values(S.vl).forEach(v=>{ if(v&&v.el&&v.el.isConnected) v.paint(); })); }
+let selfHash=null;
+const normHash=h=>{ try{ return decodeURIComponent(h||''); }catch(e){ return h||''; } };
+function setHash(h){ if(normHash(location.hash)===normHash(h)) return; selfHash=normHash(h); location.hash=h; }
+function applyHash(){
+  const h=decodeURIComponent(location.hash||''); let m;
+  if((m=/^#\/table\/([^/]+)\/([^?]+)(?:\?col=(.+))?$/.exec(h))&&S.M){
+    const t=S.M.byKey.get(keyOf(m[1],m[2]));
+    if(t){ const c=m[3]?t.cols.find(x=>x.columnNameUpper===m[3].toUpperCase()):null; selectTable(t,c,true); showTab('explorer',true); }
+  } else if((m=/^#\/tab\/(\w+)$/.exec(h))&&TABS.some(x=>x[0]===m[1])) showTab(m[1],true);
+}
+
+/* ======================= Explorer: tree ======================= */
+S.treeState=new Map();
+function buildTreeRows(){
+  const M=S.M; const rows=[]; if(!M) return rows;
+  const f=$('#treeFilter').value.trim().toUpperCase(); const grp=getSet('groupPrefix');
+  if(!f){
+    const pins=getSet('pins').map(k=>M.byKey.get(k)).filter(Boolean);
+    if(pins.length){ rows.push({k:'h',text:'📌 釘選'}); pins.forEach(t=>rows.push({k:'t',t,nog:true})); }
+    const rec=getSet('recents').map(k=>M.byKey.get(k)).filter(Boolean).slice(0,8);
+    if(rec.length){ rows.push({k:'h',text:'🕘 最近開啟'}); rec.forEach(t=>rows.push({k:'t',t,nog:true})); }
+  }
+  const by=new Map();
+  for(const t of M.tables){
+    if(f&&!(t.nameU.includes(f)||t.schema.toUpperCase().includes(f)||(t.comment||'').toUpperCase().includes(f))) continue;
+    if(!by.has(t.schema)) by.set(t.schema,[]); by.get(t.schema).push(t);
+  }
+  const multi=by.size>1;
+  if(by.size&&(pinsOrRec(rows))) rows.push({k:'h',text:'全部資料表'});
+  for(const [schema,list] of by){
+    const sk='s:'+schema; const open=!!f||(S.treeState.has(sk)?S.treeState.get(sk):!multi);
+    rows.push({k:'s',key:sk,schema,count:list.length,open});
+    if(!open) continue;
+    if(grp){
+      const g=new Map(); for(const t of list){ const i=t.name.indexOf('_'); const p=i>0?t.name.slice(0,i):'(其他)'; if(!g.has(p)) g.set(p,[]); g.get(p).push(t); }
+      for(const [p,l] of g){ const gk='g:'+schema+'|'+p; const go=!!f||S.treeState.get(gk)===true; rows.push({k:'g',key:gk,text:p,count:l.length,open:go}); if(go) l.forEach(t=>rows.push({k:'t',t})); }
+    } else list.forEach(t=>rows.push({k:'t',t,nog:true}));
+  }
+  return rows;
+}
+const pinsOrRec=rows=>rows.length>0;
+function renderTree(){
+  if(!S.vl.tree){
+    S.vl.tree=new VList($('#treeList'),{rowH:28,render:i=>{
+      const r=S.treeRows[i];
+      if(r.k==='h') return `<div class="r h">${esc(r.text)}</div>`;
+      if(r.k==='s') return `<div class="r sh" data-i="${i}">${r.open?'▾':'▸'} ${esc(r.schema)} <span class="badge">${r.count}</span></div>`;
+      if(r.k==='g') return `<div class="r gh" data-i="${i}">${r.open?'▾':'▸'} ${esc(r.text)} <span class="badge">${r.count}</span></div>`;
+      const t=r.t; const sel=S.curTable===t;
+      return `<div class="r tt ${r.nog?'nog':''} ${sel?'sel':''}" data-i="${i}" title="${esc(t.comment||'')}"><span class="t">${esc(t.name)}</span><span class="muted" style="margin-left:auto">${t.columnCount}</span></div>`;
+    },onClick:i=>{
+      const r=S.treeRows[i]; if(!r) return;
+      if(r.k==='s'||r.k==='g'){ S.treeState.set(r.key,!r.open); renderTree(true); }
+      else if(r.k==='t') selectTable(r.t);
+    }});
+  }
+  const keep=arguments[0]===true;
+  S.treeRows=buildTreeRows(); S.vl.tree.setCount(S.treeRows.length,keep);
+}
+function selectTable(t,col,fromHash){
+  S.curTable=t; S.curCol=col||null;
+  const k=keyOf(t.schema,t.name); const rec=[k].concat(getSet('recents').filter(x=>x!==k)).slice(0,12); setSet('recents',rec);
+  if(!fromHash) setHash('#/table/'+encodeURIComponent(t.schema)+'/'+encodeURIComponent(t.name)+(col?'?col='+encodeURIComponent(col.name):''));
+  if(S.tab!=='explorer') showTab('explorer',true);
+  S.vl.tree&&S.vl.tree.paint(); renderTable(); renderDetail();
+  if(S.treeRows){ const i=S.treeRows.findIndex(r=>r.k==='t'&&r.t===t); if(i>=0&&S.vl.tree) S.vl.tree.scrollTo(i); }
+}
+
+/* ======================= Explorer: columns ======================= */
+function renderTable(){
+  const t=S.curTable; const head=$('#tblHead');
+  if(!S.vl.cols){
+    S.vl.cols=new VList($('#colList'),{rowH:28,render:i=>{
+      const c=S.colView[i]; const sel=S.curCol===c; const a=S.ann.get(annKey(S.curTable,c));
+      return `<div class="r cg ${sel?'sel':''}" data-i="${i}"><span class="muted">${c.pos}</span><span class="${c.pk?'':''}" title="${esc(c.columnName)}">${c.pk?'🗝 ':''}<b>${esc(c.columnName)}</b></span><span class="mono" title="${esc(c.type)}">${esc(c.type)}</span><span>${c.nullable?'':'✓'}</span><span>${c.pk?'●':''}</span><span>${c.idx&&!c.pk?'○':''}</span><span title="${esc(c.comment)}">${a?'<span class="badge ac" title="有筆記">📝</span> ':''}${esc(c.comment)}</span></div>`;
+    },onClick:i=>{ S.curCol=S.colView[i]; S.vl.cols.paint(); renderDetail(); setHash('#/table/'+encodeURIComponent(S.curTable.schema)+'/'+encodeURIComponent(S.curTable.name)+'?col='+encodeURIComponent(S.curCol.name)); }});
+  }
+  if(!t){ head.innerHTML='<span class="muted">← 從左側選擇資料表，或使用上方搜尋</span>'; S.colView=[]; S.vl.cols.setCount(0); return; }
+  const pins=getSet('pins'); const pk=keyOf(t.schema,t.name); const pinned=pins.includes(pk);
+  head.innerHTML=`<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:15px">${esc(t.schema)}.${esc(t.name)}</b> <span class="muted">${esc(t.comment||'')}</span>
+   <span class="badge">${t.columnCount} 欄</span>${t.pk.length?`<span class="badge ac">PK(${esc(t.pk.join(','))})</span>`:'<span class="badge warn">無 PK</span>'}${t.dupes?'<span class="badge warn" title="多個檔案重複定義">⚠ 重複定義</span>':''}
+   <span style="flex:1"></span><button id="btnPin">${pinned?'取消釘選':'📌 釘選'}</button><button id="btnSrc">原始 DDL</button><button id="btnToSql">→ SQL</button></div>`;
+  const q=$('#colFilter').value.trim().toLowerCase(), fPk=$('#fPk').checked, fCm=$('#fCm').checked, fNn=$('#fNn').checked, fNote=$('#fNote').checked;
+  let v=t.cols.filter(c=>(!q||c.columnName.toLowerCase().includes(q)||c.comment.toLowerCase().includes(q)||c.type.toLowerCase().includes(q))&&(!fPk||c.pk)&&(!fCm||c.comment)&&(!fNn||!c.nullable)&&(!fNote||S.ann.has(annKey(t,c))));
+  const {k,d}=S.colSort;
+  const key={pos:c=>c.pos,name:c=>c.columnName,type:c=>c.type,nn:c=>c.nullable?1:0,pk:c=>c.pk?0:1,idx:c=>c.idx?0:1,cm:c=>c.comment}[k];
+  v=v.slice().sort((a,b)=>{ const x=key(a),y=key(b); return (x<y?-1:x>y?1:0)*d; });
+  S.colView=v; S.vl.cols.setCount(v.length,true);
+}
+function pinToggle(){
+  const k=keyOf(S.curTable.schema,S.curTable.name); let p=getSet('pins').slice(); const i=p.indexOf(k); if(i>=0) p.splice(i,1); else p.unshift(k);
+  setSet('pins',p); renderTree(true); renderTable();
+}
+
+/* ======================= Explorer: detail panel ======================= */
+function typeVariants(name){
+  const l=S.M.colIndex.get(String(name).toUpperCase())||[]; const m=new Map(); l.forEach(x=>m.set(x.c.type,(m.get(x.c.type)||0)+1)); return {list:l,variants:[...m.entries()].sort((a,b)=>b[1]-a[1])};
+}
+function renderDetail(){
+  const el=$('#detail'); const t=S.curTable, c=S.curCol;
+  if(!t){ el.innerHTML='<div class="muted">尚未選取資料表。<br><br>快捷鍵：<code>/</code> 搜尋、<code>Ctrl+K</code> 命令面板</div>'; return; }
+  if(!c){
+    const refBy=[]; for(const o of S.M.tables) for(const f of o.fks||[]) if((f.refTable||'').toUpperCase()===t.nameU) refBy.push(o);
+    el.innerHTML=`<h3 style="margin-top:0">${esc(t.name)}</h3>
+    <div class="kv"><div>Schema</div><div>${esc(t.schema)}</div><div>表註解</div><div>${esc(t.comment||'—')}</div><div>欄位數</div><div>${t.columnCount}</div>
+    <div>主鍵</div><div class="mono">${esc(t.pk.join(', ')||'—')}${t.pkName?' <span class="muted">('+esc(t.pkName)+')</span>':''}</div>
+    <div>唯一鍵</div><div class="mono">${t.uks&&t.uks.length?t.uks.map(u=>esc(u.cols.join(','))).join('<br>'):'—'}</div>
+    <div>外鍵</div><div class="mono">${t.fks&&t.fks.length?t.fks.map(f=>esc(f.cols.join(','))+' → '+esc(f.refTable)+'('+esc(f.refCols.join(','))+')').join('<br>'):'—'}</div>
+    <div>被參照</div><div>${refBy.length?refBy.slice(0,20).map(o=>`<a href="#/table/${encodeURIComponent(o.schema)}/${encodeURIComponent(o.name)}">${esc(o.name)}</a>`).join('、'):'—'}</div>
+    <div>索引</div><div class="mono">${t.indexes.length?t.indexes.map(i=>esc(i.name)+(i.unique?' (U)':'')+': '+esc(i.cols.join(','))).join('<br>'):'—'}</div>
+    <div>分割</div><div class="mono">${t.partition?esc(t.partition.type+' ('+t.partition.cols.join(',')+')'):'—'}</div>
+    <div>來源</div><div class="mono" style="word-break:break-all">${esc(t.filePath||'')}:${t.lineStart||''}</div></div>
+    ${t.dupes?`<h4>⚠ 重複定義</h4><div class="mono muted">${t.dupes.map(d=>esc(d.path)+':'+d.line).join('<br>')}</div>`:''}`;
+    return;
+  }
+  const a=S.ann.get(annKey(t,c))||{}; const tv=typeVariants(c.columnName);
+  const sm=(a.sourceMeaning||[]).map(x=>x.source+'='+x.meaning).join('\n');
+  el.innerHTML=`<h3 style="margin-top:0">${esc(c.columnName)} <span class="muted mono" style="font-weight:400">${esc(c.type)}</span></h3>
+  <div class="kv"><div>資料表</div><div>${esc(t.name)}</div><div>Nullable</div><div>${c.nullable?'可為 NULL':'NOT NULL'}</div><div>Default</div><div class="mono">${esc(c.def||'—')}</div>
+  <div>PK / 索引</div><div>${c.pk?'PK ':''}${c.idx?'有索引':''}${!c.pk&&!c.idx?'—':''}</div><div>註解</div><div>${esc(c.comment||'—')}</div></div>
+  <h4>出現於 ${tv.list.length} 張表 ${tv.variants.length>1?'<span class="badge warn">型態不一致</span>':''} <button data-lk="${esc(c.columnName)}" style="float:right" title="到欄位反查查看完整清單">🧭 反查</button></h4>
+  <div class="sticky-note">${tv.variants.map(([ty,n])=>`<span class="badge">${esc(ty)} ×${n}</span>`).join(' ')}</div>
+  <div style="max-height:110px;overflow:auto;margin-top:6px">${tv.list.slice(0,60).map(x=>`<a href="#/table/${encodeURIComponent(x.t.schema)}/${encodeURIComponent(x.t.name)}?col=${encodeURIComponent(x.c.name)}" title="${esc(x.c.type)}">${esc(x.t.name)}</a>`).join('、')}${tv.list.length>60?' …':''}</div>
+  <h4>📝 欄位筆記 <span class="muted" style="font-weight:400;font-size:12px">（重新匯入 DDL 不會被覆蓋）</span></h4>
+  <div class="kv" style="grid-template-columns:78px 1fr;align-items:start">
+   <div>業務名稱</div><input id="anBn" value="${esc(a.businessName||'')}">
+   <div>業務意義</div><textarea id="anMe" rows="3">${esc(a.meaning||'')}</textarea>
+   <div>依 SOURCE</div><textarea id="anSm" rows="3" placeholder="BOND=發行人&#10;LOAN=借款人">${esc(sm)}</textarea>
+   <div>標籤</div><input id="anTg" value="${esc((a.tags||[]).join(', '))}" placeholder="以逗號分隔">
+   <div>已知問題</div><textarea id="anKi" rows="2">${esc(a.knownIssues||'')}</textarea>
+   <div>範例值</div><input id="anSv" value="${esc((a.sampleValues||[]).join(', '))}">
+   <div>狀態</div><select id="anSt">${['DRAFT','CONFIRMED','DEPRECATED'].map(s=>`<option ${a.status===s||(!a.status&&s==='DRAFT')?'selected':''}>${s}</option>`).join('')}</select></div>
+  <div class="row"><button class="pri" id="anSave">儲存筆記</button>${S.ann.has(annKey(t,c))?'<button class="dng" id="anDel">刪除</button>':''}</div>`;
+}
+async function saveAnn(){
+  const t=S.curTable,c=S.curCol; if(!t||!c) return;
+  const split=s=>s.split(/[,，、]/).map(x=>x.trim()).filter(Boolean);
+  const a={key:annKey(t,c),schema:t.schema,table:t.name,column:c.columnName,businessName:$('#anBn').value.trim(),meaning:$('#anMe').value.trim(),
+    sourceMeaning:$('#anSm').value.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{ const i=l.search(/[=＝:：]/); return i<0?{source:'',meaning:l}:{source:l.slice(0,i).trim(),meaning:l.slice(i+1).trim()}; }),
+    tags:split($('#anTg').value),knownIssues:$('#anKi').value.trim(),sampleValues:split($('#anSv').value),status:$('#anSt').value,updatedAt:Date.now()};
+  const empty=!a.businessName&&!a.meaning&&!a.sourceMeaning.length&&!a.tags.length&&!a.knownIssues&&!a.sampleValues.length;
+  if(empty){ await dbDel('annotations',a.key); S.ann.delete(a.key); }
+  else{ await dbPut('annotations',a); S.ann.set(a.key,a); }
+  S.annTs=Date.now(); c.h=colHay(t,c); S.vl.cols.paint(); renderDetail(); toast(empty?'筆記已清除':'筆記已儲存','ok');
+}
+async function delAnn(){ const k=annKey(S.curTable,S.curCol); await dbDel('annotations',k); S.ann.delete(k); S.annTs=Date.now(); S.curCol.h=colHay(S.curTable,S.curCol); S.vl.cols.paint(); renderDetail(); toast('筆記已刪除'); }
+async function showSource(){
+  const t=S.curTable; if(!t) return;
+  let rec=t.fileSha?await dbGet('fileContents',t.fileSha):null; if(!rec&&t.fileId) rec=await dbGet('fileContents',t.fileId);
+  if(!rec){ modal(`<h3>原始 DDL</h3><p class="muted">來源：<code>${esc(t.filePath||'')}:${t.lineStart||''}</code></p><p>未保存原文（檔案過大，或設定中已關閉「保留原文」）。</p><button onclick="closeModal()">關閉</button>`); return; }
+  const lines=rec.text.split('\n'); const a=Math.max(1,(t.lineStart||1)-1), b=Math.min(lines.length,(t.lineEnd||t.lineStart||1)+1);
+  const body=lines.slice(a-1,b).map((l,i)=>`<span class="muted">${String(a+i).padStart(5)} │</span> ${esc(l.replace(/\uFFFD/g,'\u0001'))}`.replace(/\u0001/g,'<span style="background:var(--err);color:#fff">�</span>')).join('\n');
+  modal(`<h3>原始 DDL　<span class="muted" style="font-size:13px;font-weight:400">${esc(t.filePath)}　行 ${t.lineStart}–${t.lineEnd}</span></h3><pre class="sql">${body}</pre><div class="row"><button id="cpSrc">複製</button><button onclick="closeModal()">關閉</button></div>`,m=>{ $('#cpSrc',m).onclick=()=>{ navigator.clipboard.writeText(lines.slice(a-1,b).join('\n')); toast('已複製','ok'); }; });
+}
+
+/* ======================= Search ======================= */
+function parseQuery(q){
+  const o={exact:[],type:[],table:[],schema:[],tag:[],text:[]};
+  for(const raw of q.trim().split(/\s+/).filter(Boolean)){
+    const lo=raw.toLowerCase();
+    if(raw[0]==='='&&raw.length>1) o.exact.push(raw.slice(1).toUpperCase());
+    else if(lo.startsWith('type:')&&raw.length>5) o.type.push(raw.slice(5).toUpperCase());
+    else if(lo.startsWith('table:')&&raw.length>6) o.table.push(wildRe(raw.slice(6)));
+    else if(lo.startsWith('schema:')&&raw.length>7) o.schema.push(wildRe(raw.slice(7)));
+    else if(lo.startsWith('tag:')&&raw.length>4) o.tag.push(raw.slice(4).toLowerCase());
+    else o.text.push(lo);
+  }
+  return o;
+}
+function doSearch(q){
+  const M=S.M; const o=parseQuery(q); const res={q,tables:[],cols:[],o,capped:false};
+  if(!M) return res;
+  const tOk=t=>o.table.every(r=>r.test(t.name))&&o.schema.every(r=>r.test(t.schema));
+  const hasCol=o.exact.length||o.type.length||o.tag.length||o.text.length;
+  if(!hasCol){ for(const t of M.tables) if(tOk(t)) res.tables.push(t); return res; }
+  if(!o.exact.length&&!o.type.length&&!o.tag.length){
+    for(const t of M.tables){ if(!tOk(t)) continue; const h=(t.name+' '+(t.comment||'')).toLowerCase(); if(o.text.every(x=>h.includes(x))) res.tables.push(t); }
+  }
+  const cap=100000;
+  for(const {t,c} of M.flat){
+    if(!tOk(t)) continue;
+    if(o.exact.length&&!o.exact.every(x=>c.columnNameUpper===x)) continue;
+    if(o.type.length&&!o.type.every(x=>c.dtype.toUpperCase().includes(x)||c.type.toUpperCase().includes(x))) continue;
+    if(o.tag.length){ const a=S.ann.get(annKey(t,c)); if(!a||!o.tag.every(x=>(a.tags||[]).some(g=>g.toLowerCase().includes(x)))) continue; }
+    if(o.text.length&&!o.text.every(x=>c.h.includes(x))) continue;
+    res.cols.push({t,c}); if(res.cols.length>=cap){ res.capped=true; break; }
+  }
+  return res;
+}
+function runSearchUI(){
+  const q=$('#search').value; if(!q.trim()) return;
+  const t0=performance.now(); const r=doSearch(q); r.ms=performance.now()-t0; S.searchRes=r;
+  r.rows=r.tables.map(t=>({k:'t',t})).concat(r.cols.map(x=>({k:'c',t:x.t,c:x.c})));
+  let sum=`<b>${r.tables.length.toLocaleString()}</b> 張表、<b>${r.cols.length.toLocaleString()}</b> 個欄位符合 <span class="muted">（${r.ms.toFixed(0)} ms${r.capped?'，已截斷於 100,000 筆':''}）</span>`;
+  if(r.o.exact.length&&r.cols.length){
+    const m=new Map(); r.cols.forEach(x=>m.set(x.c.type,(m.get(x.c.type)||0)+1)); const vs=[...m.entries()].sort((a,b)=>b[1]-a[1]);
+    sum+=`<div style="margin-top:6px">出現於 <b>${new Set(r.cols.map(x=>x.t)).size}</b> 張表；型態分布：${vs.map(([k,n])=>`<span class="badge ${vs.length>1?'warn':'ok'}">${esc(k)} ×${n}</span>`).join(' ')} ${vs.length>1?'<span class="badge err">⚠ 型態／長度不一致</span>':'<span class="badge ok">✔ 一致</span>'}</div>`;
+  }
+  $('#searchSum').innerHTML=sum;
+  if(!S.vl.search){
+    S.vl.search=new VList($('#searchList'),{rowH:30,render:i=>{
+      const x=S.searchRes.rows[i];
+      if(x.k==='t') return `<div class="r" data-i="${i}"><span class="badge ac">表</span><b>${esc(x.t.schema)}.${esc(x.t.name)}</b><span class="muted t">${esc(x.t.comment||'')}</span></div>`;
+      return `<div class="r" data-i="${i}"><span class="mono">${esc(x.t.name)}.<b>${esc(x.c.columnName)}</b></span><span class="mono muted">${esc(x.c.type)}</span>${x.c.pk?'<span class="badge">PK</span>':''}<span class="t muted">${esc(x.c.comment)}</span></div>`;
+    },onClick:i=>{ const x=S.searchRes.rows[i]; selectTable(x.t,x.c||null); }});
+  }
+  S.vl.search.setCount(r.rows.length);
+}
+
+/* ======================= Command palette ======================= */
+function paletteCmds(){
+  const c=TABS.map(([k,l])=>({label:'前往：'+l,fn:()=>showTab(k)}));
+  c.push({label:'切換深色／淺色主題',fn:toggleTheme},{label:'匯出完整備份 JSON',fn:exportJSON},{label:'匯出目前資料表 Markdown',fn:()=>exportMD('cur')},{label:'匯出全部資料字典 Markdown',fn:()=>exportMD('all')},{label:'匯出欄位清單 CSV',fn:exportCSV},{label:'清除所有資料…',fn:wipeDialog});
+  return c;
+}
+let palSel=0, palItems=[];
+function palRender(){
+  const q=$('#palIn').value.trim().toLowerCase(); palItems=paletteCmds().filter(x=>!q||x.label.toLowerCase().includes(q)); palSel=Math.min(palSel,Math.max(0,palItems.length-1));
+  $('#palList').innerHTML=palItems.map((x,i)=>`<div class="it ${i===palSel?'on':''}" data-i="${i}">${esc(x.label)}</div>`).join('')||'<div class="muted" style="padding:6px">無符合指令</div>';
+}
+function openPalette(){ $('#palette').classList.add('on'); $('#palIn').value=''; palSel=0; palRender(); $('#palIn').focus(); }
+function closePalette(){ $('#palette').classList.remove('on'); }
+function runPal(i){ const x=palItems[i]; closePalette(); if(x) x.fn(); }
+function toggleTheme(){ const cur=document.documentElement.dataset.theme; setSet('theme',cur==='dark'?'light':'dark'); applyTheme(); }
+function applyTheme(){ let t=getSet('theme'); if(t==='auto') t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'; document.documentElement.dataset.theme=t; }
+
+/* ======================= Diff ======================= */
+function diffTable(a,b){
+  const ch=[]; const ma=new Map(a.cols.map(c=>[c.columnNameUpper,c])), mb=new Map(b.cols.map(c=>[c.columnNameUpper,c]));
+  for(const c of b.cols){
+    const x=ma.get(c.columnNameUpper);
+    if(!x){ ch.push({k:'c+',c,text:`+ 欄位 ${c.columnName}  ${c.type}${c.nullable?'':' NOT NULL'}${c.def?' DEFAULT '+c.def:''}`}); continue; }
+    if(x.type!==c.type) ch.push({k:'c~',c,old:x,what:'type',text:`~ ${c.columnName}  型態 ${x.type} → ${c.type}`});
+    if(x.nullable!==c.nullable) ch.push({k:'c~',c,old:x,what:'null',text:`~ ${c.columnName}  Nullable ${x.nullable?'NULL':'NOT NULL'} → ${c.nullable?'NULL':'NOT NULL'}`});
+    if((x.def||'')!==(c.def||'')) ch.push({k:'c~',c,old:x,what:'def',text:`~ ${c.columnName}  Default ${x.def||'(無)'} → ${c.def||'(無)'}`});
+    if((x.comment||'')!==(c.comment||'')) ch.push({k:'cm',c,old:x,text:`# ${c.columnName}  註解「${x.comment||''}」→「${c.comment||''}」`});
+  }
+  for(const c of a.cols) if(!mb.has(c.columnNameUpper)) ch.push({k:'c-',c,text:`- 欄位 ${c.columnName}  ${c.type}`});
+  if(a.pk.join(',')!==b.pk.join(',')) ch.push({k:'pk',text:`⚿ PK (${a.pk.join(',')||'無'}) → (${b.pk.join(',')||'無'})`});
+  const ia=new Map(a.indexes.map(i=>[i.name,i])), ib=new Map(b.indexes.map(i=>[i.name,i]));
+  for(const [n,i] of ib){ const x=ia.get(n); if(!x) ch.push({k:'ix',text:`⚿ 新增索引 ${n} (${i.cols.join(',')})`}); else if(x.cols.join(',')!==i.cols.join(',')||x.unique!==i.unique) ch.push({k:'ix',text:`⚿ 索引 ${n} (${x.cols.join(',')}) → (${i.cols.join(',')})`}); }
+  for(const [n,i] of ia) if(!ib.has(n)) ch.push({k:'ix',text:`⚿ 移除索引 ${n} (${i.cols.join(',')})`});
+  if((a.comment||'')!==(b.comment||'')) ch.push({k:'cm',tbl:true,val:b.comment||'',text:`# 表註解「${a.comment||''}」→「${b.comment||''}」`});
+  return ch;
+}
+function diffModels(A,B){
+  const r={added:[],removed:[],changed:[],same:0,skippedByHash:0};
+  for(const [k,tb] of B.byKey){
+    const ta=A.byKey.get(k);
+    if(!ta) r.added.push(tb);
+    else if(ta.structHash===tb.structHash){ r.same++; r.skippedByHash++; }
+    else{ const ch=diffTable(ta,tb); if(ch.length) r.changed.push({a:ta,b:tb,changes:ch}); else r.same++; }
+  }
+  for(const [k,ta] of A.byKey) if(!B.byKey.has(k)) r.removed.push(ta);
+  return r;
+}
+const clsOf={'c+':'add','c-':'del','c~':'chg','cm':'cm','pk':'ix','ix':'ix'};
+function diffLines(r){
+  const L=[];
+  r.added.forEach(t=>L.push({cls:'add hd',text:`[+] 新增資料表 ${t.schema}.${t.name}（${t.columnCount} 欄）`}));
+  r.removed.forEach(t=>L.push({cls:'del hd',text:`[-] 刪除資料表 ${t.schema}.${t.name}（${t.columnCount} 欄）`}));
+  r.changed.forEach(x=>{ L.push({cls:'hd',text:`[~] ${x.b.schema}.${x.b.name}　（${x.changes.length} 項差異）`}); x.changes.forEach(c=>L.push({cls:clsOf[c.k]||'',text:'    '+c.text})); });
+  return L;
+}
+function alterDraft(r){
+  const o=['-- ALTER 草稿（僅供參考，請人工審閱後再使用）'];
+  r.added.forEach(t=>o.push(`-- [新增表] ${tref(t)}：請使用完整 CREATE TABLE`));
+  r.removed.forEach(t=>o.push(`-- [刪除表] DROP TABLE ${tref(t)};  -- 請人工確認`));
+  r.changed.forEach(x=>{
+    const T=tref(x.b);
+    x.changes.forEach(c=>{
+      if(c.k==='c+') o.push(`ALTER TABLE ${T} ADD (${qid(c.c.columnName)} ${c.c.type}${c.c.def?' DEFAULT '+c.c.def:''}${c.c.nullable?'':' NOT NULL'});`);
+      else if(c.k==='c-') o.push(`ALTER TABLE ${T} DROP COLUMN ${qid(c.c.columnName)};`);
+      else if(c.k==='c~'){ if(c.what==='type') o.push(`ALTER TABLE ${T} MODIFY (${qid(c.c.columnName)} ${c.c.type});`); else if(c.what==='null') o.push(`ALTER TABLE ${T} MODIFY (${qid(c.c.columnName)} ${c.c.nullable?'NULL':'NOT NULL'});`); else o.push(`ALTER TABLE ${T} MODIFY (${qid(c.c.columnName)} DEFAULT ${c.c.def||'NULL'});`); }
+      else if(c.k==='cm'&&c.tbl) o.push(`COMMENT ON TABLE ${T} IS '${String(c.val).replace(/'/g,"''")}';`);
+      else if(c.k==='cm'&&c.c) o.push(`COMMENT ON COLUMN ${T}.${qid(c.c.columnName)} IS '${String(c.c.comment||'').replace(/'/g,"''")}';`);
+      else if(c.k==='pk'||c.k==='ix') o.push('-- '+c.text);
+    });
+  });
+  return o.join('\n');
+}
+S.diff={a:null,b:null,r:null,lines:[]};
+function renderDiff(){
+  const opts=S.snapshots.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}（${esc(fmtDate(s.createdAt))}）</option>`).join('');
+  const box=$('#diffBox');
+  box.innerHTML=`<div class="card"><h3>Snapshot 比較</h3>
+  <div class="row"><label>舊版 A <select id="dfA">${opts}</select></label><label>新版 B <select id="dfB">${opts}</select></label><button class="pri" id="dfRun">比較</button>
+  <button id="dfMd" ${S.diff.r?'':'disabled'}>匯出 Markdown</button><button id="dfAlter" ${S.diff.r?'':'disabled'}>ALTER 草稿</button></div>
+  <div class="sticky-note">先以每張表的 structural hash 篩選，hash 相同的表直接略過，只逐欄比較有差異者。</div>
+  <div id="dfSum" style="margin-top:8px"></div></div>
+  <div class="card" style="padding:0"><div id="dfList" style="height:55vh"></div></div>`;
+  if(S.snapshots.length<2){ $('#dfSum').innerHTML='<span class="badge warn">至少需要兩個 Snapshot 才能比較（匯入時選擇「建立新 Snapshot」）</span>'; }
+  const a=S.diff.a||(S.snapshots[1]&&S.snapshots[1].id), b=S.diff.b||(S.snapshots[0]&&S.snapshots[0].id);
+  if(a) $('#dfA').value=a; if(b) $('#dfB').value=b;
+  S.vl.diff=new VList($('#dfList'),{rowH:24,render:i=>{ const l=S.diff.lines[i]; return `<div class="r dl ${l.cls}" style="height:24px">${esc(l.text)}</div>`; }});
+  S.vl.diff.setCount(S.diff.lines.length); if(S.diff.r) showDiffSum();
+}
+function showDiffSum(){ const r=S.diff.r; $('#dfSum').innerHTML=`<span class="badge ok">新增表 ${r.added.length}</span> <span class="badge err">刪除表 ${r.removed.length}</span> <span class="badge warn">變更表 ${r.changed.length}</span> <span class="badge">未變 ${r.same}（hash 略過 ${r.skippedByHash}）</span> <span class="muted">耗時 ${S.diff.ms.toFixed(0)} ms</span>`; }
+async function runDiff(){
+  const ida=$('#dfA').value, idb=$('#dfB').value; if(!ida||!idb){ toast('請選擇兩個 Snapshot','err'); return; }
+  if(ida===idb){ toast('請選擇不同的 Snapshot','err'); return; }
+  busy('比較中…'); await tick();
+  try{
+    const t0=performance.now();
+    const A=ida===S.cur?S.M:await loadModel(ida), B=idb===S.cur?S.M:await loadModel(idb);
+    const r=diffModels(A,B); S.diff={a:ida,b:idb,r,lines:diffLines(r),ms:performance.now()-t0};
+    renderDiff();
+  }finally{ busy(); }
+}
+function diffMarkdown(){
+  const r=S.diff.r, sa=S.snapshots.find(s=>s.id===S.diff.a), sb=S.snapshots.find(s=>s.id===S.diff.b);
+  const o=[`# Schema 變更報告`,``,`- 舊版 A：${sa?sa.name:''}`,`- 新版 B：${sb?sb.name:''}`,`- 新增表 ${r.added.length}／刪除表 ${r.removed.length}／變更表 ${r.changed.length}／未變 ${r.same}`,``];
+  if(r.added.length){ o.push('## 新增資料表',''); r.added.forEach(t=>o.push(`- ${t.schema}.${t.name}（${t.columnCount} 欄）`)); o.push(''); }
+  if(r.removed.length){ o.push('## 刪除資料表',''); r.removed.forEach(t=>o.push(`- ${t.schema}.${t.name}`)); o.push(''); }
+  if(r.changed.length){ o.push('## 變更資料表',''); r.changed.forEach(x=>{ o.push(`### ${x.b.schema}.${x.b.name}`,''); x.changes.forEach(c=>o.push('- `'+c.text.replace(/`/g,"'")+'`')); o.push(''); }); }
+  return o.join('\n');
+}
+
+/* ======================= Import UI ======================= */
+S.impOpts={name:'',mode:'new',policy:null,incremental:true};
+S.pasteText='';
+function encOptions(sel,withAuto){ return (withAuto?`<option value="auto" ${sel==='auto'?'selected':''}>自動</option>`:'')+ENC_LIST.map(([v,l])=>`<option value="${v}" ${sel===v?'selected':''}>${l}</option>`).join(''); }
+function scanOpts(){ return Object.assign({},DEFAULTS.scan,getSet('scan')); }
+async function renderImport(){
+  const box=$('#importBox'); const o=scanOpts(); const io=S.impOpts; if(!io.policy) io.policy=getSet('dupPolicy');
+  if(S.lastReport===undefined){ const all=await dbAll('importJobs'); S.lastReport=all.sort((a,b)=>b.startedAt-a.startedAt)[0]||null; }
+  S.sources=await dbAll('sources');
+  const hasFSA=!!window.showDirectoryPicker;
+  box.innerHTML=`
+  <div class="card"><h3>① 匯入選項</h3>
+    <div class="row"><label>Snapshot 名稱 <input data-opt="name" value="${esc(io.name)}" placeholder="留空自動命名"></label>
+    <label>模式 <select data-opt="mode"><option value="new" ${io.mode==='new'?'selected':''}>建立新 Snapshot（可做 Diff）</option><option value="update" ${io.mode==='update'?'selected':''}>更新目前 Snapshot（覆蓋）</option></select></label>
+    <label>重複定義 <select data-opt="policy"><option value="latest" ${io.policy==='latest'?'selected':''}>最新檔案優先</option><option value="path" ${io.policy==='path'?'selected':''}>路徑順序優先</option><option value="warn" ${io.policy==='warn'?'selected':''}>全部保留並警告</option></select></label>
+    <label><input type="checkbox" data-opt="incremental" ${io.incremental?'checked':''}>增量掃描（未變更檔案直接使用快取）</label></div></div>
+  <div class="card"><h3>② 選擇 SQL 來源</h3>
+    <div class="row"><button class="pri" data-act="pickDir">📁 選擇 SQL 資料夾${hasFSA?'':'（相容模式）'}</button><button data-act="pickFiles">📄 選擇檔案</button><button data-act="sample">🧪 載入範例 DDL</button></div>
+    <div class="dz" id="dz">或將 <b>資料夾／.sql 檔案</b> 拖放到這裡${hasFSA?'（Chrome / Edge 可保存資料夾授權，下次一鍵重新掃描）':'（此瀏覽器不支援資料夾授權保存，每次需重新選取）'}</div>
+    <details style="margin-top:10px"><summary>貼上 DDL 文字</summary><textarea id="pasteBox" rows="8" placeholder="貼上 CREATE TABLE / COMMENT ON / CREATE INDEX …">${esc(S.pasteText)}</textarea><div class="row"><button class="pri" data-act="paste">分析貼上的 DDL</button></div></details>
+    <input type="file" id="inDir" webkitdirectory multiple hidden><input type="file" id="inFiles" multiple hidden accept=".sql,.ddl,.txt,.pks,.pkb">
+  </div>
+  <div class="card"><h3>已登錄的來源資料夾</h3>${S.sources.filter(s=>s.persist!==false).length?`<table class="tb"><tr><th>名稱</th><th>授權</th><th>最後掃描</th><th>預設編碼</th><th></th></tr>${S.sources.filter(s=>s.persist!==false).map(s=>`<tr><td>${esc(s.name)}</td><td>${s.handle?'<span class="badge ok">已保存</span>':'<span class="badge warn">需重新選取</span>'}</td><td>${esc(fmtDate(s.lastScan))}</td>
+    <td><select data-srcenc="${esc(s.id)}">${encOptions(s.defaultEnc||'auto',true)}</select></td><td><button data-act="rescan" data-id="${esc(s.id)}" ${s.handle?'':'disabled'}>重新掃描</button> <button class="dng" data-act="rmsrc" data-id="${esc(s.id)}">移除</button></td></tr>`).join('')}</table>`:'<span class="muted">尚未登錄（Chrome / Edge 選擇資料夾後會出現在這裡）</span>'}</div>
+  <div class="card"><h3>掃描設定</h3><div class="row">
+    <label><input type="checkbox" data-scan="recursive" ${o.recursive?'checked':''}>包含子資料夾</label>
+    <label>副檔名 <input data-scan="exts" value="${esc(o.exts)}" size="26"></label>
+    <label>排除路徑 <input data-scan="exclude" value="${esc(o.exclude)}" size="26"></label>
+    <label>單檔上限(MB) <input type="number" data-scan="maxMB" value="${o.maxMB}" style="width:80px"></label>
+    <label>檔名篩選 <input data-scan="nameFilter" value="${esc(o.nameFilter)}" placeholder="例 ST1_*,CAL_*" size="18"></label></div></div>
+  <div id="impPrev"></div><div id="impProg"></div><div id="impRep"></div>`;
+  renderPreview(); renderImportProgress(); renderReport(); bindDrop();
+}
+function bindDrop(){
+  const dz=$('#dz'); if(!dz) return;
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{ e.preventDefault(); dz.classList.add('over'); }));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{ e.preventDefault(); dz.classList.remove('over'); }));
+  dz.addEventListener('drop',async e=>{
+    e.preventDefault();
+    const items=Array.from(e.dataTransfer.items||[]).filter(i=>i.kind==='file');
+    const picked=items.map(it=>({entry:it.webkitGetAsEntry?it.webkitGetAsEntry():null,hp:it.getAsFileSystemHandle?it.getAsFileSystemHandle():null}));
+    const files=Array.from(e.dataTransfer.files||[]);
+    try{
+      if(picked.length===1&&picked[0].entry&&picked[0].entry.isDirectory){
+        const h=picked[0].hp?await picked[0].hp:null;
+        if(h&&h.kind==='directory') return registerAndScan(h);
+        return scanEntryDir(picked[0].entry);
+      }
+      const list=[]; for(const p of picked){ if(p.entry&&p.entry.isDirectory){ await walkEntry(p.entry,'',Object.assign({},scanOpts(),{recursive:true}),scanFilter(scanOpts()),list); } else if(p.entry) list.push({path:p.entry.name,entry:p.entry}); }
+      if(!list.length) files.forEach(f=>list.push({path:f.name,file:f}));
+      await startPreview({id:'files',name:'手動選擇的檔案',persist:false},list);
+    }catch(err){ toast('讀取拖放內容失敗：'+err.message,'err'); }
+  });
+}
+async function scanEntryDir(entry){
+  const o=scanOpts(); const list=[]; await walkEntry(entry,'',o,scanFilter(o),list);
+  list.forEach(x=>{ x.path=x.path.split('/').slice(1).join('/'); });
+  await startPreview({id:'dir:'+entry.name,name:entry.name,handle:null,persist:true,defaultEnc:'auto'},list);
+}
+async function pickDir(){
+  if(window.showDirectoryPicker){ try{ const h=await showDirectoryPicker({mode:'read'}); await registerAndScan(h); }catch(e){ if(e.name!=='AbortError') toast('無法開啟資料夾：'+e.message,'err'); } }
+  else $('#inDir').click();
+}
+async function registerAndScan(handle){
+  const all=await dbAll('sources'); let src=null;
+  for(const s of all){ try{ if(s.handle&&await s.handle.isSameEntry(handle)){ src=s; break; } }catch(e){} }
+  if(!src){ src={id:'src_'+uid(),name:handle.name,handle,persist:true,defaultEnc:'auto',createdAt:Date.now()}; await dbPut('sources',src); }
+  else if(src.handle!==handle){ src.handle=handle; await dbPut('sources',src); }
+  await scanSource(src);
+}
+async function scanSource(src){
+  try{
+    let perm=await src.handle.queryPermission({mode:'read'}); if(perm!=='granted') perm=await src.handle.requestPermission({mode:'read'});
+    if(perm!=='granted'){ toast('未取得資料夾讀取授權','err'); return; }
+  }catch(e){}
+  busy('掃描資料夾中…'); await tick();
+  try{
+    const o=scanOpts(); const list=[]; await walkHandle(src.handle,'',o,scanFilter(o),list,n=>{ if(n%100===0) $('#busyMsg').textContent='掃描資料夾中…已找到 '+n+' 個檔案'; });
+    await startPreview(src,list);
+  }catch(e){ toast('掃描失敗：'+e.message,'err'); } finally{ busy(); }
+}
+async function startPreview(src,list){
+  busy('讀取檔案資訊與偵測編碼…'); await tick();
+  try{
+    const o=scanOpts(); const entries=await resolveFiles(list,o.maxMB*1048576);
+    await detectAll(entries,n=>{ $('#busyMsg').textContent=`偵測編碼 ${n}/${entries.length}`; });
+    if(src.defaultEnc&&src.defaultEnc!=='auto') entries.forEach(e=>{ e.enc=src.defaultEnc; });
+    S.preview={src,entries,filter:'',lowOnly:false,skipped:entries.skipped||0};
+    if(!entries.length) toast('沒有符合條件的檔案（請檢查副檔名／排除條件）','err');
+    showTab('import'); renderPreview();
+  }finally{ busy(); }
+}
+function previewView(){ const P=S.preview; const f=P.filter.toLowerCase(); P.view=P.entries.filter(e=>(!f||e.path.toLowerCase().includes(f))&&(!P.lowOnly||(e.detected&&e.detected.conf!=='high'&&e.enc==='auto'))); }
+function renderPreview(keepScroll){
+  const el=$('#impPrev'); if(!el) return; const P=S.preview;
+  const keepTop=keepScroll&&S.vl.prev&&S.vl.prev.el.isConnected?S.vl.prev.el.scrollTop:0;
+  if(!P){ el.innerHTML=''; return; }
+  previewView(); const inc=P.entries.filter(e=>e.include); const tot=inc.reduce((a,e)=>a+e.size,0);
+  const low=P.entries.filter(e=>e.detected&&e.detected.conf!=='high'&&e.enc==='auto').length;
+  const encs={}; P.entries.forEach(e=>{ const k=e.enc==='auto'?e.detected.enc:e.enc; encs[k]=(encs[k]||0)+1; });
+  el.innerHTML=`<div class="card"><h3>③ 預覽：${esc(P.src.name)}</h3>
+   <div class="row"><span class="badge ac">${P.entries.length} 個檔案</span><span class="badge">已勾選 ${inc.length}（${fmtBytes(tot)}）</span>${Object.entries(encs).map(([k,n])=>`<span class="badge">${esc(encName(k))} ×${n}</span>`).join('')}${low?`<span class="badge warn">${low} 個待確認編碼</span>`:''}${P.skipped?`<span class="badge err">${P.skipped} 個超過大小上限已略過</span>`:''}</div>
+   <div class="row"><input id="pvFilter" placeholder="篩選路徑…" value="${esc(P.filter)}"><label><input type="checkbox" id="pvLow" ${P.lowOnly?'checked':''}>只看待確認編碼</label>
+    <button data-act="pvAll">全選（目前篩選）</button><button data-act="pvNone">全不選</button>
+    <label>批次設定編碼 <select id="pvBulk"><option value="">—</option>${encOptions('',true).replace('<option value="" ','<option ')}</select></label>
+    <span style="flex:1"></span><button class="pri" data-act="pvStart" ${S.job?'disabled':''}>▶ 開始分析（${inc.length}）</button><button data-act="pvCancel">取消</button></div>
+   <div id="pvList" style="height:${Math.min(420,60+Math.min(P.view.length,12)*30)}px;border:1px solid var(--bd);border-radius:8px"></div></div>`;
+  S.vl.prev=new VList($('#pvList'),{rowH:30,render:i=>{
+    if(!S.preview||!S.preview.view[i]) return '';
+    const e=S.preview.view[i]; const det=e.detected||{};
+    return `<div class="r" data-i="${i}" style="cursor:default"><input type="checkbox" data-k="inc" ${e.include?'checked':''}><span class="t mono" style="flex:1" title="${esc(e.path)}">${esc(e.path)}</span><span class="muted">${fmtBytes(e.size)}</span>
+     <select data-k="enc" style="width:130px">${encOptions(e.enc,true)}</select><span style="width:150px" title="${esc(det.note||'')}">${esc(encName(det.enc||''))} ${confBadge(det.conf)}</span><button data-k="cmp" title="雙欄預覽不同編碼">⇄</button></div>`;
+  },onChange:(i,ev)=>{
+    const e=S.preview.view[i]; const k=ev.target.dataset.k;
+    if(k==='inc'){ e.include=ev.target.checked; updatePreviewHead(); }
+    else if(k==='enc'){ e.enc=ev.target.value; renderPreview(true); }
+  },onClick:(i,ev)=>{ if(ev.target.dataset.k==='cmp') comparePreview(S.preview.view[i]); }});
+  S.vl.prev.setCount(P.view.length);
+  if(keepTop){ S.vl.prev.el.scrollTop=keepTop; S.vl.prev.paint(); }
+}
+function updatePreviewHead(){ const inc=S.preview.entries.filter(e=>e.include); const b=$('[data-act=pvStart]'); if(b) b.textContent=`▶ 開始分析（${inc.length}）`; }
+async function comparePreview(e){
+  const buf=new Uint8Array(await e.file.slice(0,262144).arrayBuffer());
+  const mk=(enc)=>{ const t=new TextDecoder(enc).decode(buf); const lines=t.split('\n'); const pick=[]; for(let i=0;i<lines.length&&pick.length<40;i++) if(/[^\x00-\x7f]/.test(lines[i])) pick.push((i+1)+': '+lines[i].slice(0,160)); return (pick.length?pick:lines.slice(0,40)).join('\n'); };
+  const draw=m=>{ const l=$('#cmpL',m).value,r=$('#cmpR',m).value; $('#cmpOutL',m).textContent=mk(l); $('#cmpOutR',m).textContent=mk(r); };
+  modal(`<h3>編碼雙欄預覽　<span class="muted mono" style="font-size:13px;font-weight:400">${esc(e.path)}</span></h3><div class="muted">只顯示含中文／非 ASCII 的行（如 COMMENT ON），請檢查哪一側沒有亂碼。偵測結果：${esc(encName(e.detected.enc))}（${esc(e.detected.note||'')}）</div>
+   <div class="grid2" style="margin-top:8px"><div><select id="cmpL">${encOptions(e.detected.enc,false)}</select><pre class="sql" id="cmpOutL"></pre></div><div><select id="cmpR">${encOptions(e.detected.enc==='big5'?'utf-8':'big5',false)}</select><pre class="sql" id="cmpOutR"></pre></div></div>
+   <div class="row"><button id="cmpUseL">採用左側</button><button id="cmpUseR">採用右側</button><button onclick="closeModal()">關閉</button></div>`,m=>{
+    draw(m); $('#cmpL',m).onchange=$('#cmpR',m).onchange=()=>draw(m);
+    $('#cmpUseL',m).onclick=()=>{ e.enc=$('#cmpL',m).value; closeModal(); renderPreview(); };
+    $('#cmpUseR',m).onclick=()=>{ e.enc=$('#cmpR',m).value; closeModal(); renderPreview(); };
+  });
+}
+function renderImportProgress(){
+  const el=$('#impProg'); const j=S.job; if(!el) return; if(!j){ el.innerHTML=''; return; }
+  const writing=j.phase==='合併與寫入'; const pct=writing?(j.totalTables?j.written/j.totalTables:0):(j.bytesTotal?Math.min(1,j.bytesDone/j.bytesTotal):(j.total?j.done/j.total:0));
+  const el_ms=Date.now()-j.startedAt; const eta=pct>0.02&&pct<1?el_ms/pct*(1-pct):0;
+  el.innerHTML=`<div class="card"><h3>匯入進度　<span class="badge ac">${esc(j.phase)}</span></h3><div class="bar"><i style="width:${(pct*100).toFixed(1)}%"></i></div>
+   <div class="row"><span>${(pct*100).toFixed(0)}%</span><span class="muted">檔案 ${j.done}/${j.total}　成功 ${j.ok}　失敗 ${j.fail}　快取重用 ${j.reused}　${fmtBytes(j.bytesDone)} / ${fmtBytes(j.bytesTotal)}</span><span class="muted">已耗時 ${fmtMs(el_ms)}${eta?'　預估剩餘 '+fmtMs(eta):''}</span>${writing?`<span class="muted">寫入 ${j.written||0}/${j.totalTables||0} 張表</span>`:''}</div>
+   <div class="mono muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(j.cur)}</div><div class="row"><button class="dng" data-act="jobCancel" ${j.cancel?'disabled':''}>${j.cancel?'取消中…':'取消（保留已完成部分）'}</button></div></div>`;
+}
+function renderReport(){
+  const el=$('#impRep'); const r=S.lastReport; if(!el) return; if(!r){ el.innerHTML=''; return; }
+  const bad=r.files.filter(f=>f.status==='FAIL'||f.conf==='low'||f.bad>0);
+  el.innerHTML=`<div class="card"><h3>最近一次匯入報告　<span class="badge ${r.status==='DONE'?'ok':'warn'}">${esc(r.status)}</span></h3>
+   <div class="row"><span class="muted">${esc(fmtDate(r.startedAt))}　來源：${esc(r.sourceName||'')}</span></div>
+   <div class="row"><span class="badge">檔案 ${r.stats.files}（成功 ${r.stats.ok}／失敗 ${r.stats.fail}／快取 ${r.stats.reused||0}）</span><span class="badge ac">${r.stats.tables.toLocaleString()} 表</span><span class="badge ac">${r.stats.columns.toLocaleString()} 欄</span><span class="badge">${r.stats.indexes.toLocaleString()} 索引</span><span class="badge">${fmtMs(r.stats.ms)}</span>${r.stats.dupes?`<span class="badge warn">重複定義 ${r.stats.dupes}</span>`:''}${r.unresolved?`<span class="badge warn">孤立語句 ${r.unresolved}</span>`:''}</div>
+   <div class="row">編碼分布：${Object.entries(r.encCount||{}).map(([k,n])=>`<span class="badge">${esc(encName(k))} ×${n}</span>`).join(' ')||'—'}</div>
+   <div class="row"><button data-act="repCsv">匯出 CSV</button><button data-act="repMd">匯出 Markdown</button></div>
+   ${bad.length?`<h4>需要留意的檔案（${bad.length}）</h4><table class="tb"><tr><th>檔案</th><th>編碼</th><th>狀態</th></tr>${bad.slice(0,100).map(f=>`<tr><td class="mono">${esc(f.path)}</td><td>${esc(encName(f.enc))} ${confBadge(f.conf==='manual'?'high':f.conf)}</td><td>${f.status==='FAIL'?'<span class="badge err">失敗</span> '+esc(f.err):''}${f.bad?`<span class="badge warn">U+FFFD ×${f.bad}${f.badLines&&f.badLines.length?'（行 '+f.badLines.join(',')+'）':''}</span>`:''}</td></tr>`).join('')}</table>`:''}
+   ${r.warnings.length?`<h4>解析警告（${r.warnings.length}）</h4><div style="max-height:260px;overflow:auto"><table class="tb"><tr><th>檔案</th><th>行</th><th>訊息</th></tr>${r.warnings.slice(0,200).map(w=>`<tr><td class="mono">${esc(w.file||'')}</td><td>${w.line||''}</td><td>${esc(w.msg)}<div class="mono muted">${esc(w.snippet||'')}</div></td></tr>`).join('')}</table></div>`:''}</div>`;
+}
+function reportCsv(){ const r=S.lastReport; const rows=[['type','path','line','enc','confidence','status','message']]; r.files.forEach(f=>rows.push(['file',f.path,'',f.enc,f.conf,f.status,f.err||(f.bad?'U+FFFD x'+f.bad:'')])); r.warnings.forEach(w=>rows.push(['warning',w.file||'',w.line||'','','','',w.msg])); return '\ufeff'+rows.map(x=>x.map(csvCell).join(',')).join('\r\n'); }
+function reportMd(){ const r=S.lastReport; return `# 匯入報告\n\n- 時間：${fmtDate(r.startedAt)}\n- 來源：${r.sourceName||''}\n- 狀態：${r.status}\n- 檔案：${r.stats.files}（成功 ${r.stats.ok}／失敗 ${r.stats.fail}）\n- 表 ${r.stats.tables}／欄 ${r.stats.columns}／索引 ${r.stats.indexes}\n- 耗時：${fmtMs(r.stats.ms)}\n- 編碼：${Object.entries(r.encCount||{}).map(([k,n])=>encName(k)+'×'+n).join('、')}\n\n## 警告\n\n${r.warnings.map(w=>`- \`${w.file||''}:${w.line||''}\` ${w.msg}`).join('\n')||'（無）'}\n`; }
+function startImportFromPreview(){
+  const P=S.preview; const entries=P.entries.filter(e=>e.include); if(!entries.length){ toast('請至少勾選一個檔案','err'); return; }
+  const io=S.impOpts; const name=io.name.trim()||('Snapshot '+new Date().toLocaleString('zh-TW',{hour12:false}));
+  S.preview=null; renderPreview();
+  runImport(P.src,entries,{name,mode:io.mode,policy:io.policy,incremental:io.incremental}).catch(err=>{ console.error(err); S.job=null; renderImportProgress(); toast('匯入失敗：'+err.message,'err'); });
+}
+const SAMPLE_DDL=`--------------------------------------------------------
+--  DDL for Table ST1_ACDTL
+--------------------------------------------------------
+  CREATE TABLE "BIS"."ST1_ACDTL"
+   (	"DATADATE" DATE,
+	"YEAR_MONTH" VARCHAR2(6 BYTE),
+	"CUST_ID" VARCHAR2(10 BYTE) NOT NULL ENABLE,
+	"SOURCE" VARCHAR2(20 BYTE),
+	"EXPOSURE_TYPE" VARCHAR2(2 BYTE),
+	"RISK_WEIGHT" NUMBER(8,3),
+	"AMT" NUMBER(18,3) DEFAULT 0,
+	 CONSTRAINT "PK_ST1_ACDTL" PRIMARY KEY ("DATADATE", "CUST_ID")
+  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS
+  TABLESPACE "USERS"  ENABLE
+   ) SEGMENT CREATION IMMEDIATE PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING TABLESPACE "USERS";
+  CREATE TABLE "BIS"."CAL_CR3000_DETAIL"
+   (	"SS_SEQ" VARCHAR2(20 BYTE) NOT NULL ENABLE,
+	"CUST_ID" VARCHAR2(8 BYTE),
+	"ISSUER_ID" VARCHAR2(10 BYTE),
+	"SOURCE" VARCHAR2(20 BYTE),
+	"EXPOSURE_TYPE" VARCHAR2(2 BYTE),
+	"RISK_WEIGHT" NUMBER(8,3),
+	"INDUSTRY_TYPE" VARCHAR2(6 BYTE)
+   ) SEGMENT CREATION IMMEDIATE TABLESPACE "USERS";
+COMMENT ON TABLE "BIS"."ST1_ACDTL" IS '會計餘額明細';
+COMMENT ON COLUMN "BIS"."ST1_ACDTL"."CUST_ID" IS '客戶統編（債券類為發行人）';
+COMMENT ON COLUMN "BIS"."ST1_ACDTL"."SOURCE" IS '資料來源（LOAN/BOND/NB…）';
+COMMENT ON COLUMN "BIS"."ST1_ACDTL"."RISK_WEIGHT" IS '風險權數';
+COMMENT ON TABLE "BIS"."CAL_CR3000_DETAIL" IS '信用風險標準法暴險明細';
+COMMENT ON COLUMN "BIS"."CAL_CR3000_DETAIL"."ISSUER_ID" IS '發行人統編';
+COMMENT ON COLUMN "BIS"."CAL_CR3000_DETAIL"."EXPOSURE_TYPE" IS '暴險類別';
+CREATE INDEX "BIS"."IX_CR3000_CUST" ON "BIS"."CAL_CR3000_DETAIL" ("SS_SEQ","CUST_ID");
+`;
+async function importPaste(text,name){
+  const file=new File([text],name||'pasted.sql',{type:'text/plain',lastModified:Date.now()});
+  const e={path:file.name,file,size:file.size,lastModified:file.lastModified,include:true,enc:'auto',detected:{enc:'utf-8',conf:'high',note:'貼上文字'}};
+  const io=S.impOpts; if(!io.policy) io.policy=getSet('dupPolicy');
+  await runImport({id:'paste:'+uid(),name:'貼上文字',persist:false},[e],{name:io.name.trim()||('貼上 '+new Date().toLocaleString('zh-TW',{hour12:false})),mode:io.mode,policy:io.policy,incremental:false});
+}
+function bindImportEvents(){
+  const box=$('#importBox');
+  box.addEventListener('click',async e=>{
+    const b=e.target.closest('[data-act]'); if(!b) return; const a=b.dataset.act;
+    try{
+      if(a==='pickDir') await pickDir();
+      else if(a==='pickFiles') $('#inFiles').click();
+      else if(a==='sample') await importPaste(SAMPLE_DDL,'sample.sql');
+      else if(a==='paste'){ const t=$('#pasteBox').value; if(!t.trim()){ toast('請先貼上 DDL','err'); return; } S.pasteText=t; await importPaste(t,'pasted.sql'); }
+      else if(a==='rescan'){ const s=(await dbGet('sources',b.dataset.id)); if(s&&s.handle) await scanSource(s); }
+      else if(a==='rmsrc'){ if(confirm('移除此來源登錄？（不會刪除既有 Snapshot）')){ await dbDel('sources',b.dataset.id); renderImport(); } }
+      else if(a==='pvAll'){ S.preview.view.forEach(x=>x.include=true); renderPreview(); }
+      else if(a==='pvNone'){ S.preview.entries.forEach(x=>x.include=false); renderPreview(); }
+      else if(a==='pvStart') startImportFromPreview();
+      else if(a==='pvCancel'){ S.preview=null; renderPreview(); }
+      else if(a==='jobCancel'){ if(S.job){ S.job.cancel=true; renderImportProgress(); } }
+      else if(a==='repCsv') download('import-report.csv',reportCsv(),'text/csv;charset=utf-8');
+      else if(a==='repMd') download('import-report.md',reportMd(),'text/markdown;charset=utf-8');
+    }catch(err){ console.error(err); toast(err.message||String(err),'err'); }
+  });
+  box.addEventListener('change',async e=>{
+    const t=e.target;
+    if(t.dataset.opt){ const k=t.dataset.opt; S.impOpts[k]=t.type==='checkbox'?t.checked:t.value; if(k==='policy') setSet('dupPolicy',t.value); }
+    else if(t.dataset.scan){ const k=t.dataset.scan; const o=scanOpts(); o[k]=t.type==='checkbox'?t.checked:(t.type==='number'?(+t.value||500):t.value); await setSet('scan',o); }
+    else if(t.dataset.srcenc){ const s=await dbGet('sources',t.dataset.srcenc); if(s){ s.defaultEnc=t.value; await dbPut('sources',s); toast('已設定此來源的預設編碼'); } }
+    else if(t.id==='pvLow'){ S.preview.lowOnly=t.checked; renderPreview(); }
+    else if(t.id==='pvBulk'){ const v=t.value; if(v){ S.preview.view.forEach(x=>{ if(x.include) x.enc=v; }); renderPreview(true); } }
+    else if(t.id==='inDir'){
+      const fl=Array.from(t.files); if(!fl.length) return; const root=fl[0].webkitRelativePath.split('/')[0]; const o=scanOpts(); const flt=scanFilter(o);
+      const list=[]; for(const f of fl){ const p=f.webkitRelativePath.split('/').slice(1).join('/'); if(!o.recursive&&p.includes('/')) continue; if(flt.fileOk(p)) list.push({path:p,file:f}); }
+      t.value=''; await startPreview({id:'dir:'+root,name:root,handle:null,persist:true,defaultEnc:'auto'},list);
+    }
+    else if(t.id==='inFiles'){ const fl=Array.from(t.files); t.value=''; await startPreview({id:'files',name:'手動選擇的檔案',persist:false},fl.map(f=>({path:f.name,file:f}))); }
+  });
+  box.addEventListener('input',e=>{
+    if(e.target.id==='pvFilter'){ S.preview.filter=e.target.value; clearTimeout(S._pvT); S._pvT=setTimeout(()=>{ previewView(); S.vl.prev.setCount(S.preview.view.length); },150); }
+    else if(e.target.id==='pasteBox') S.pasteText=e.target.value;
+    else if(e.target.dataset&&e.target.dataset.opt==='name') S.impOpts.name=e.target.value;
+  });
+}
+
+/* ======================= Relations ======================= */
+async function loadRelations(){ S.rel=new Map((await dbAll('relations')).map(r=>[r.id,r])); }
+const relId=(a,b)=>{ const x=keyOf(a.schema,a.name),y=keyOf(b.schema,b.name); return x<y?x+'>'+y:y+'>'+x; };
+function excludeSet(){ return new Set(getSet('excludeCols').map(x=>x.toUpperCase())); }
+function getClusters(){
+  const M=S.M; if(!M) return []; const ex=excludeSet(); const key=[...ex].join(',');
+  if(M._cl&&M._clKey===key) return M._cl;
+  const rows=[]; for(const [name,list] of M.colIndex){ if(ex.has(name)||list.length<2) continue; const v=new Map(); list.forEach(x=>v.set(x.c.type,(v.get(x.c.type)||0)+1)); rows.push({name,count:list.length,variants:[...v.entries()].sort((a,b)=>b[1]-a[1]),bad:v.size>1}); }
+  rows.sort((a,b)=>(b.bad-a.bad)||(b.count-a.count)||a.name.localeCompare(b.name)); M._cl=rows; M._clKey=key; return rows;
+}
+function relatedTo(t){
+  const M=S.M, ex=excludeSet(); const map=new Map();
+  const add=(o,col,oc,conf)=>{ const k=keyOf(o.schema,o.name); let e=map.get(k); if(!e){ e={t:o,pairs:[],conf:conf,pkHit:false}; map.set(k,e); } e.pairs.push([col,oc]); const rank={High:3,Medium:2,Low:1}; if(rank[conf]>rank[e.conf]) e.conf=conf; };
+  for(const f of t.fks||[]){ const o=M.byKey.get(keyOf(f.refSchema||t.schema,f.refTable)); if(o) f.cols.forEach((cn,i)=>{ add(o,{columnName:cn,type:''},{columnName:f.refCols[i]||cn,type:''},'High'); }); }
+  for(const o of M.tables) for(const f of o.fks||[]) if(o!==t&&(f.refTable||'').toUpperCase()===t.nameU) f.cols.forEach((cn,i)=>add(o,{columnName:f.refCols[i]||cn,type:''},{columnName:cn,type:''},'High'));
+  for(const c of t.cols){
+    if(ex.has(c.columnNameUpper)) continue;
+    const l=M.colIndex.get(c.columnNameUpper)||[]; if(l.length>400&&!c.pk) continue;
+    for(const {t:o,c:oc} of l){ if(o===t) continue; const same=oc.type===c.type; const suf=/_(ID|NO|CODE)$/.test(c.columnNameUpper);
+      if(same){ add(o,c,oc,'Medium'); if(c.pk||oc.pk){ const e=map.get(keyOf(o.schema,o.name)); e.pkHit=true; } } else if(suf&&oc.dtype===c.dtype) add(o,c,oc,'Low'); }
+  }
+  const rank={High:3,Medium:2,Low:1}; const arr=[...map.values()];
+  arr.forEach(e=>{ const st=S.rel.get(relId(t,e.t)); e.status=st?st.status:''; });
+  arr.sort((a,b)=>((b.status==='confirmed')-(a.status==='confirmed'))||((a.status==='rejected')-(b.status==='rejected'))||(rank[b.conf]-rank[a.conf])||(b.pkHit-a.pkHit)||(b.pairs.length-a.pairs.length)||a.t.name.localeCompare(b.t.name));
+  return arr;
+}
+S.relSel=null; S.relFilter=''; S.relBad=false;
+function renderRelations(){
+  const box=$('#relBox'); if(!S.M){ box.innerHTML='<div class="card muted">請先匯入 DDL</div>'; return; }
+  const cl=getClusters(); const t=S.curTable;
+  box.innerHTML=`<div class="card"><h3>同名欄位群集</h3><div class="sticky-note">以「同名且型態相容」的欄位群集取代兩兩配對，避免 1,000 張表時產生大量雜訊。不一致的群集排在最前面。排除清單可在「設定」調整。</div>
+   <div class="row"><input id="rlFilter" placeholder="篩選欄位名稱…" value="${esc(S.relFilter)}"><label><input type="checkbox" id="rlBad" ${S.relBad?'checked':''}>只看型態／長度不一致</label><span class="muted" id="rlCnt"></span></div>
+   <div class="grid2"><div style="height:340px;border:1px solid var(--bd);border-radius:8px" id="rlList"></div><div id="rlDetail" style="max-height:340px;overflow:auto"></div></div></div>
+   <div class="card"><h3>資料表關聯推測${t?'：'+esc(t.name):''}</h3>${t?'<div id="rlTable"></div>':'<span class="muted">請先在 Explorer 選取一張資料表</span>'}</div>
+   <div class="card"><h3>已確認的關聯</h3><div id="rlConf"></div></div>`;
+  const view=()=>cl.filter(r=>(!S.relBad||r.bad)&&(!S.relFilter||r.name.includes(S.relFilter.toUpperCase())));
+  let cur=view(); $('#rlCnt').textContent=cur.length.toLocaleString()+' 個群集';
+  S.vl.rel=new VList($('#rlList'),{rowH:28,render:i=>{ const r=cur[i]; return `<div class="r ${S.relSel===r.name?'sel':''}" data-i="${i}"><b class="mono">${esc(r.name)}</b><span class="badge">${r.count} 表</span>${r.bad?'<span class="badge err">不一致</span>':''}<span class="muted t">${esc(r.variants.map(v=>v[0]+'×'+v[1]).join('  '))}</span></div>`; },
+    onClick:i=>{ S.relSel=cur[i].name; S.vl.rel.paint(); clusterDetail(cur[i]); }});
+  S.vl.rel.setCount(cur.length);
+  $('#rlFilter').oninput=debounce(e=>{ S.relFilter=e.target.value.trim(); cur=view(); $('#rlCnt').textContent=cur.length.toLocaleString()+' 個群集'; S.vl.rel.setCount(cur.length); },150);
+  $('#rlBad').onchange=e=>{ S.relBad=e.target.checked; cur=view(); $('#rlCnt').textContent=cur.length.toLocaleString()+' 個群集'; S.vl.rel.setCount(cur.length); };
+  if(S.relSel){ const r=cl.find(x=>x.name===S.relSel); if(r) clusterDetail(r); } else $('#rlDetail').innerHTML='<span class="muted">點選左側群集查看各資料表的型態</span>';
+  if(t) renderTableRel(t);
+  renderConfirmed();
+}
+function clusterDetail(r){
+  const l=S.M.colIndex.get(r.name)||[]; const g=new Map(); l.forEach(x=>{ if(!g.has(x.c.type)) g.set(x.c.type,[]); g.get(x.c.type).push(x); });
+  $('#rlDetail').innerHTML=`<h4 style="margin-top:0">${esc(r.name)} <span class="muted">出現於 ${l.length} 張表</span></h4>`+[...g.entries()].sort((a,b)=>b[1].length-a[1].length).map(([ty,xs])=>`<div><span class="badge ${g.size>1?'warn':'ok'}">${esc(ty)} ×${xs.length}</span><div style="margin:4px 0 10px;max-height:120px;overflow:auto">${xs.slice(0,200).map(x=>`<a href="#/table/${encodeURIComponent(x.t.schema)}/${encodeURIComponent(x.t.name)}?col=${encodeURIComponent(x.c.name)}">${esc(x.t.name)}</a>`).join('、')}${xs.length>200?' …':''}</div></div>`).join('');
+}
+function renderTableRel(t){
+  const arr=relatedTo(t); const shown=arr.filter(e=>e.status!=='rejected'); const rej=arr.length-shown.length;
+  $('#rlTable').innerHTML=`<div class="muted" style="margin-bottom:6px">共 ${arr.length} 張候選資料表${rej?`（已否決 ${rej} 張未顯示）`:''}；信心度：High＝已宣告 FK、Medium＝同名且型態相同、Low＝同尾碼(_ID/_NO/_CODE) 且基本型態相容。</div>
+  <div style="max-height:320px;overflow:auto"><table class="tb"><tr><th>資料表</th><th>信心</th><th>共同欄位</th><th></th></tr>${shown.slice(0,300).map(e=>`<tr><td><a href="#/table/${encodeURIComponent(e.t.schema)}/${encodeURIComponent(e.t.name)}">${esc(e.t.name)}</a> ${e.status==='confirmed'?'<span class="badge ok">✔ 已確認</span>':''}</td><td><span class="badge ${e.conf==='High'?'ok':e.conf==='Medium'?'ac':'warn'}">${e.conf}</span>${e.pkHit?' <span class="badge">含PK</span>':''}</td><td class="mono">${(()=>{ const u=[...new Set(e.pairs.map(p=>p[0].columnName))]; return esc(u.slice(0,6).join(', '))+(u.length>6?' …':''); })()}</td>
+   <td><button data-rel="confirmed" data-o="${esc(keyOf(e.t.schema,e.t.name))}">✔ 確認</button> <button data-rel="rejected" data-o="${esc(keyOf(e.t.schema,e.t.name))}">✖ 否決</button></td></tr>`).join('')}</table></div>`;
+}
+function renderConfirmed(){
+  const l=[...S.rel.values()].filter(r=>r.status==='confirmed'); $('#rlConf').innerHTML=l.length?`<table class="tb"><tr><th>資料表 A</th><th>資料表 B</th><th>確認時間</th><th></th></tr>${l.map(r=>`<tr><td>${esc(r.fromTable)}</td><td>${esc(r.toTable)}</td><td>${esc(fmtDate(r.at))}</td><td><button data-relx="${esc(r.id)}">移除</button></td></tr>`).join('')}</table>`:'<span class="muted">尚無</span>';
+}
+async function setRel(oKey,status){
+  const t=S.curTable, o=S.M.byKey.get(oKey); if(!t||!o) return; const id=relId(t,o);
+  const pairs=(relatedTo(t).find(e=>e.t===o)||{pairs:[]}).pairs.map(p=>p[0].columnName);
+  const r={id,fromTable:id.split('>')[0],toTable:id.split('>')[1],status,cols:pairs,at:Date.now()}; await dbPut('relations',r); S.rel.set(id,r); renderTableRel(t); renderConfirmed();
+}
+
+/* ======================= SQL helper ======================= */
+S.sql={t:null,sel:new Set(),tpl:'select',join:null};
+function sqlParamsCond(t,alias){
+  const names=new Set(t.cols.map(c=>c.columnNameUpper)); const w=[];
+  if(getSet('sqlSsSeq')&&names.has('SS_SEQ')) w.push(`${alias}.SS_SEQ = :SS_SEQ`);
+  if(getSet('sqlDatadate')&&names.has('DATADATE')) w.push(`${alias}.DATADATE = :DATADATE`);
+  return w;
+}
+function genSQL(){
+  const t=S.sql.t; if(!t) return '-- 請先選擇資料表'; const T=tref(t); const sel=t.cols.filter(c=>S.sql.sel.has(c.columnName)); const cols=sel.length?sel:t.cols;
+  const w=sqlParamsCond(t,'t'); const where=w.length?'\nWHERE '+w.join('\n  AND '):''; const and=w.length?'\n  AND ':'\nWHERE ';
+  const lob=c=>/LOB|LONG|RAW|XML/.test(c.dtype);
+  switch(S.sql.tpl){
+    case 'select': return `SELECT\n${cols.map(c=>'  t.'+qid(c.columnName)).join(',\n')}\nFROM ${T} t${where};`;
+    case 'profile': { const cs=cols.filter(c=>!lob(c)); if(!cs.length) return '-- 沒有可分析的欄位'; return cs.map(c=>`SELECT '${c.columnName.replace(/'/g,"''")}' AS COLUMN_NAME,\n       COUNT(*) AS TOTAL_CNT,\n       COUNT(t.${qid(c.columnName)}) AS NOT_NULL_CNT,\n       COUNT(*) - COUNT(t.${qid(c.columnName)}) AS NULL_CNT,\n       COUNT(DISTINCT t.${qid(c.columnName)}) AS DISTINCT_CNT,\n       TO_CHAR(MIN(t.${qid(c.columnName)})) AS MIN_VAL,\n       TO_CHAR(MAX(t.${qid(c.columnName)})) AS MAX_VAL\nFROM ${T} t${where}`).join('\nUNION ALL\n')+';'; }
+    case 'top': return cols.filter(c=>!lob(c)).map(c=>`-- ${c.columnName} 值分布 Top 20\nSELECT t.${qid(c.columnName)} AS VAL, COUNT(*) AS CNT\nFROM ${T} t${where}\nGROUP BY t.${qid(c.columnName)}\nORDER BY CNT DESC\nFETCH FIRST 20 ROWS ONLY;`).join('\n\n');
+    case 'pkdup': { if(!t.pk.length) return '-- 此資料表沒有 PK，請自行選擇欄位（改用「SELECT」範本並加入 GROUP BY）'; const p=t.pk.map(x=>'t.'+qid(x)); return `SELECT ${p.join(', ')}, COUNT(*) AS DUP_CNT\nFROM ${T} t${where}\nGROUP BY ${p.join(', ')}\nHAVING COUNT(*) > 1\nORDER BY DUP_CNT DESC;`; }
+    case 'len': { const cs=cols.filter(c=>/CHAR|CLOB/.test(c.dtype)); if(!cs.length) return '-- 選取的欄位中沒有字元型態欄位'; return cs.map(c=>`-- ${c.columnName} 長度分布（例如統編是否為 8 碼）\nSELECT LENGTH(TRIM(t.${qid(c.columnName)})) AS LEN, COUNT(*) AS CNT\nFROM ${T} t${where}\nGROUP BY LENGTH(TRIM(t.${qid(c.columnName)}))\nORDER BY LEN;`).join('\n\n'); }
+    case 'join': {
+      const o=S.sql.join; if(!o) return '-- 請於右側選擇要 JOIN 的資料表'; const ex=excludeSet(); const rel=S.rel.get(relId(t,o)); let pairs=[];
+      if(rel&&rel.cols&&rel.cols.length) pairs=rel.cols.filter(n=>t.cols.some(c=>c.columnName===n)&&o.cols.some(c=>c.columnName===n));
+      if(!pairs.length) pairs=t.cols.filter(c=>!ex.has(c.columnNameUpper)&&o.cols.some(x=>x.columnNameUpper===c.columnNameUpper)).map(c=>c.columnName);
+      if(!pairs.length) return `-- ${t.name} 與 ${o.name} 沒有同名欄位可作為 JOIN 條件，請自行指定`;
+      const ow=sqlParamsCond(o,'b');
+      return `SELECT a.*, b.*\nFROM ${T} a\nJOIN ${tref(o)} b\n  ON ${pairs.map(n=>`a.${qid(n)} = b.${qid(n)}`).join('\n AND ')}\nWHERE 1 = 1${sqlParamsCond(t,'a').map(x=>'\n  AND '+x).join('')}${ow.map(x=>'\n  AND '+x).join('')};\n-- JOIN 條件依${rel&&rel.status==='confirmed'?'已確認關聯':'同名欄位推測'}產生，請人工確認`;
+    }
+  }
+  return '';
+}
+function renderSQL(){
+  const box=$('#sqlBox'); if(!S.M){ box.innerHTML='<div class="card muted">請先匯入 DDL</div>'; return; }
+  if(!S.sql.t||!S.M.tables.includes(S.sql.t)) S.sql.t=S.curTable&&S.M.tables.includes(S.curTable)?S.curTable:null;
+  const t=S.sql.t;
+  box.innerHTML=`<div class="card"><h3>SQL 小幫手</h3><div class="sticky-note">只產生 SQL（Oracle 語法），不會執行；全部在本機瀏覽器內完成。</div>
+  <div class="row"><label>資料表 <input id="sqT" list="sqTL" value="${t?esc(t.schema+'.'+t.name):''}" size="38" placeholder="輸入表名挑選"></label><datalist id="sqTL">${S.M.tables.length<=5000?S.M.tables.map(x=>`<option value="${esc(x.schema+'.'+x.name)}">`).join(''):''}</datalist>
+  <label>範本 <select id="sqTpl">${[['select','SELECT'],['profile','Profiling（Null/Distinct/Min/Max）'],['top','Top Values'],['pkdup','PK 重複檢查'],['len','長度分布檢查'],['join','JOIN 草稿']].map(([v,l])=>`<option value="${v}" ${S.sql.tpl===v?'selected':''}>${l}</option>`).join('')}</select></label>
+  ${S.sql.tpl==='join'?`<label>JOIN 對象 <input id="sqJ" list="sqTL" value="${S.sql.join?esc(S.sql.join.schema+'.'+S.sql.join.name):''}" size="30"></label>`:''}
+  <label><input type="checkbox" id="sqP1" ${getSet('sqlSsSeq')?'checked':''}>加入 :SS_SEQ</label><label><input type="checkbox" id="sqP2" ${getSet('sqlDatadate')?'checked':''}>加入 :DATADATE</label></div></div>
+  ${t?`<div class="grid2"><div class="card"><h3>選擇欄位 <span class="muted" style="font-weight:400">（未勾選＝全部）</span></h3><div class="row"><button id="sqAll">全選</button><button id="sqNone">清除</button><button id="sqPk">只選 PK</button></div><div style="max-height:380px;overflow:auto">${t.cols.map(c=>`<label style="display:block"><input type="checkbox" data-c="${esc(c.columnName)}" ${S.sql.sel.has(c.columnName)?'checked':''}> <span class="mono">${esc(c.columnName)}</span> <span class="muted">${esc(c.type)}</span></label>`).join('')}</div></div>
+  <div class="card"><h3>輸出 <button id="sqCopy">複製</button></h3><pre class="sql" id="sqOut"></pre></div></div>`:'<div class="card muted">請輸入並選擇一張資料表</div>'}`;
+  if(t) $('#sqOut').textContent=genSQL();
+}
+function bindSqlEvents(){
+  const box=$('#sqlBox');
+  box.addEventListener('change',e=>{
+    const t=e.target;
+    if(t.id==='sqT'){ const v=t.value.trim().toUpperCase(); const f=S.M.tables.find(x=>(x.schema+'.'+x.name).toUpperCase()===v)||S.M.tables.find(x=>x.nameU===v); if(f){ S.sql.t=f; S.sql.sel=new Set(); renderSQL(); } else toast('找不到資料表','err'); }
+    else if(t.id==='sqJ'){ const v=t.value.trim().toUpperCase(); S.sql.join=S.M.tables.find(x=>(x.schema+'.'+x.name).toUpperCase()===v)||S.M.tables.find(x=>x.nameU===v)||null; renderSQL(); }
+    else if(t.id==='sqTpl'){ S.sql.tpl=t.value; renderSQL(); }
+    else if(t.id==='sqP1'){ setSet('sqlSsSeq',t.checked); renderSQL(); }
+    else if(t.id==='sqP2'){ setSet('sqlDatadate',t.checked); renderSQL(); }
+    else if(t.dataset.c){ if(t.checked) S.sql.sel.add(t.dataset.c); else S.sql.sel.delete(t.dataset.c); $('#sqOut').textContent=genSQL(); }
+  });
+  box.addEventListener('click',e=>{
+    const id=e.target.id;
+    if(id==='sqCopy'){ navigator.clipboard.writeText($('#sqOut').textContent); toast('已複製 SQL','ok'); }
+    else if(id==='sqAll'){ S.sql.t.cols.forEach(c=>S.sql.sel.add(c.columnName)); renderSQL(); }
+    else if(id==='sqNone'){ S.sql.sel=new Set(); renderSQL(); }
+    else if(id==='sqPk'){ S.sql.sel=new Set(S.sql.t.cols.filter(c=>c.pk).map(c=>c.columnName)); renderSQL(); }
+  });
+}
+
+/* ======================= Export / backup ======================= */
+const todayStr=()=>new Date().toISOString().slice(0,10);
+async function exportJSON(){
+  busy('匯出備份中…'); await tick();
+  try{
+    const parts=['{"app":"SchemaDetective","version":3,"exportedAt":'+Date.now()+',"stores":{']; let first=true;
+    for(const s of ['snapshots','tables','columns','indexes','relations','annotations','settings','sources','importJobs']){
+      let rows=await dbAll(s); if(s==='sources') rows=rows.map(r=>Object.assign({},r,{handle:null}));
+      parts.push((first?'':',')+JSON.stringify(s)+':'+JSON.stringify(rows)); first=false;
+    }
+    parts.push('}}'); download('schema-detective-backup-'+todayStr()+'.json',new Blob(parts,{type:'application/json'}));
+    toast('備份已匯出（不含解析快取與原文）','ok');
+  }catch(e){ toast('匯出失敗：'+e.message,'err'); } finally{ busy(); }
+}
+async function importJSON(file){
+  busy('還原備份中…'); await tick();
+  try{
+    const j=JSON.parse(await file.text()); if(j.app!=='SchemaDetective'||!j.stores) throw new Error('不是 Schema Detective 備份檔');
+    let n=0;
+    for(const [s,rows0] of Object.entries(j.stores)){
+      if(!STORES.includes(s)) continue; let rows=rows0;
+      if(s==='sources'){ const cur=new Map((await dbAll('sources')).map(x=>[x.id,x])); rows=rows0.filter(r=>!(cur.get(r.id)&&cur.get(r.id).handle)); }   // 不覆蓋已保存的資料夾授權
+      for(let i=0;i<rows.length;i+=2000){ await dbPutMany(s,rows.slice(i,i+2000)); n+=Math.min(2000,rows.length-i); $('#busyMsg').textContent=`還原 ${s}… ${n.toLocaleString()} 筆`; await tick(); }
+    }
+    const st=await dbAll('settings'); S.settings={}; st.forEach(x=>S.settings[x.key]=x.value);
+    await loadAnn(); await loadRelations(); await refreshSnapshots(); applyTheme();
+    if(S.snapshots.length) await loadSnapshot(S.snapshots[0].id);
+    toast('備份已還原','ok'); renderSettings();
+  }catch(e){ toast('還原失敗：'+e.message,'err'); } finally{ busy(); }
+}
+function mdTable(t){
+  const o=[`## ${t.schema}.${t.name}`,``]; if(t.comment) o.push(t.comment,'');
+  o.push(`- 欄位數：${t.columnCount}`,`- PK：${t.pk.join(', ')||'無'}`); if(t.filePath) o.push(`- 來源：\`${t.filePath}:${t.lineStart}\``); o.push('');
+  o.push('| # | 欄位 | 型態 | Null | PK | Default | 註解 | 業務名稱 / 筆記 |','|---|---|---|---|---|---|---|---|');
+  for(const c of t.cols){ const a=S.ann.get(annKey(t,c)); const note=a?[a.businessName,a.meaning,(a.sourceMeaning||[]).map(x=>x.source+'='+x.meaning).join('；'),a.knownIssues?'⚠ '+a.knownIssues:''].filter(Boolean).join('；'):'';
+    o.push(`| ${c.pos} | ${c.columnName} | ${c.type} | ${c.nullable?'Y':'N'} | ${c.pk?'●':''} | ${(c.def||'').replace(/\|/g,'\\|')} | ${(c.comment||'').replace(/\|/g,'\\|')} | ${note.replace(/\|/g,'\\|').replace(/\n/g,' ')} |`); }
+  o.push(''); return o.join('\n');
+}
+function exportMD(scope){
+  if(!S.M){ toast('尚無資料','err'); return; }
+  if(scope==='cur'){ if(!S.curTable){ toast('請先選擇資料表','err'); return; } download(S.curTable.name+'.md',mdTable(S.curTable),'text/markdown;charset=utf-8'); return; }
+  const parts=[`# 資料字典\n\n產生時間：${fmtDate(Date.now())}　共 ${S.M.tables.length} 張表\n\n`]; for(const t of S.M.tables) parts.push(mdTable(t)+'\n');
+  download('data-dictionary-'+todayStr()+'.md',new Blob(parts,{type:'text/markdown;charset=utf-8'}));
+}
+function exportCSV(){
+  if(!S.M){ toast('尚無資料','err'); return; }
+  const parts=['\ufeffschema,table,table_comment,pos,column,type,nullable,default,pk,comment,business_name,tags,status\r\n'];
+  let buf=[]; for(const {t,c} of S.M.flat){ const a=S.ann.get(annKey(t,c))||{}; buf.push([t.schema,t.name,t.comment,c.pos,c.columnName,c.type,c.nullable?'Y':'N',c.def,c.pk?'Y':'',c.comment,a.businessName,(a.tags||[]).join(';'),a.status].map(csvCell).join(',')); if(buf.length>=5000){ parts.push(buf.join('\r\n')+'\r\n'); buf=[]; } }
+  parts.push(buf.join('\r\n')); download('columns-'+todayStr()+'.csv',new Blob(parts,{type:'text/csv;charset=utf-8'}));
+}
+function wipeDialog(){
+  modal(`<h3 style="color:var(--err)">清除所有資料</h3><p>這會刪除所有 Snapshot、筆記、關聯、來源登錄與快取，且<b>無法復原</b>。建議先匯出備份。</p><p>請輸入 <code>DELETE</code> 以確認：</p><div class="row"><input id="wipeIn"><button class="dng" id="wipeGo" disabled>確認清除</button><button onclick="closeModal()">取消</button></div>`,m=>{
+    $('#wipeIn',m).oninput=e=>{ $('#wipeGo',m).disabled=e.target.value!=='DELETE'; };
+    $('#wipeGo',m).onclick=async()=>{ await dbClearAll(); closeModal(); toast('已清除所有資料','ok'); setTimeout(()=>location.reload(),600); };
+  });
+}
+
+/* ======================= Stress test generator ======================= */
+const B5MAP={'資':'b8ea','料':'aec6','金':'aaf7','額':'c342','號':'b8b9','銀':'bbc8','行':'a6e6','帳':'b162','戶':'a4e1','統':'b2ce','編':'bd73','類':'c3fe','型':'abac','態':'ba41','風':'adb7','險':'c049','權':'c576','數':'bcc6','暴':'bcc9','債':'b6c5','券':'a8e9','證':'c3d2','發':'b56f','應':'c0b3','收':'a6ac','存':'a673','放':'a9f1','同':'a650','業':'b77e','主':'a544','國':'b0ea','家':'ae61','州':'a67b','政':'ac46','府':'a9b2','保':'ab4f','代':'a54e','理':'b27a','部':'b3a1','欄':'c4e6','位':'a6ec','表':'aaed','格':'aee6','備':'b3c6','註':'b5f9','說':'bba1','明':'a9fa','客':'abc8','名':'a657','稱':'bad9','日':'a4e9','期':'b4c1','碼':'bd58','批':'a7e5','次':'a6b8','餘':'be6c','利':'a751','率':'b276','擔':'bee1','品':'ab7e','間':'b6a1','產':'b2a3','別':'a74f','集':'b6b0','團':'b9ce','中':'a4a4','度':'abd7'};
+const B5CHARS=Object.keys(B5MAP);
+function encodeText(s,enc){
+  if(enc==='big5'){ const out=[]; for(const ch of s){ const cp=ch.codePointAt(0); if(cp<128) out.push(cp); else if(B5MAP[ch]){ const h=B5MAP[ch]; out.push(parseInt(h.slice(0,2),16),parseInt(h.slice(2),16)); } else out.push(63); } return new Uint8Array(out); }
+  if(enc==='utf-16le'){ const u=new Uint16Array(s.length+1); u[0]=0xFEFF; for(let i=0;i<s.length;i++) u[i+1]=s.charCodeAt(i); return new Uint8Array(u.buffer); }
+  if(enc==='utf-8-bom'){ const b=new TextEncoder().encode(s); const o=new Uint8Array(b.length+3); o.set([0xEF,0xBB,0xBF]); o.set(b,3); return o; }
+  return new TextEncoder().encode(s);
+}
+function mulberry(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function genStress(o){
+  const rng=mulberry(o.seed||12345); const ri=(a,b)=>a+Math.floor(rng()*(b-a+1)); const pick=a=>a[ri(0,a.length-1)];
+  const shared=['ISSUER_ID','SOURCE','EXPOSURE_TYPE','RISK_WEIGHT','SS_SEQ','INDUSTRY_TYPE','AMT','GROUP_ID','CURRENCY'];
+  const types=['VARCHAR2(20 BYTE)','VARCHAR2(50 BYTE)','NUMBER(18,3)','NUMBER(10)','DATE','CHAR(1 BYTE)','NUMBER','VARCHAR2(100 BYTE)','TIMESTAMP(6)'];
+  const word=()=>Array.from({length:ri(3,6)},()=>pick(B5CHARS)).join('');
+  const tables=[];
+  for(let i=0;i<o.tables;i++){
+    const name='TBL_'+String(i+1).padStart(5,'0'); const n=ri(o.min,o.max);
+    const cols=[{n:'DATADATE',t:'DATE'},{n:'CUST_ID',t:rng()<0.03?'VARCHAR2(8 BYTE)':'VARCHAR2(10 BYTE)',nn:true}];
+    const used=new Set(['DATADATE','CUST_ID']);
+    for(const s of shared) if(rng()<0.25){ used.add(s); cols.push({n:s,t:s==='RISK_WEIGHT'?'NUMBER(8,3)':s==='AMT'?'NUMBER(18,3)':'VARCHAR2(20 BYTE)'}); }
+    for(let k=1;cols.length<n;k++){ const cn='COL_'+k; cols.push({n:cn,t:pick(types)}); }
+    const lines=cols.map(c=>`\t"${c.n}" ${c.t}${c.nn?' NOT NULL ENABLE':''}`);
+    lines.push(`\t CONSTRAINT "PK_${name}" PRIMARY KEY ("DATADATE", "CUST_ID")\n  USING INDEX PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS \n  STORAGE(INITIAL 65536 NEXT 1048576 MINEXTENTS 1 MAXEXTENTS 2147483645\n  PCTINCREASE 0 FREELISTS 1 FREELIST GROUPS 1 BUFFER_POOL DEFAULT FLASH_CACHE DEFAULT CELL_FLASH_CACHE DEFAULT)\n  TABLESPACE "USERS"  ENABLE`);
+    const ddl=`--------------------------------------------------------\n--  DDL for Table ${name}\n--------------------------------------------------------\n\n  CREATE TABLE "BIS"."${name}" \n   (${lines.join(', \n')}\n   ) SEGMENT CREATION IMMEDIATE \n  PCTFREE 10 PCTUSED 40 INITRANS 1 MAXTRANS 255 NOCOMPRESS LOGGING\n  TABLESPACE "USERS" ;\n`;
+    let cm=`COMMENT ON TABLE "BIS"."${name}" IS '${word()}';\n`; for(const c of cols) cm+=`COMMENT ON COLUMN "BIS"."${name}"."${c.n}" IS '${word()}';\n`;
+    const ix=`CREATE INDEX "BIS"."IX_${name}_1" ON "BIS"."${name}" ("CUST_ID") PCTFREE 10 INITRANS 2 MAXTRANS 255 COMPUTE STATISTICS TABLESPACE "USERS" ;\n`;
+    tables.push({name,ddl,cm,ix});
+  }
+  return tables;
+}
+async function runStress(o,downloadOnly){
+  busy('產生測試 DDL…'); await tick();
+  try{
+    const tbs=genStress(o); const encs=o.enc==='mixed'?['utf-8','big5','utf-8-bom','utf-16le']:[o.enc];
+    const files=[]; const now=Date.now();
+    if(o.layout==='single'){
+      const enc=o.enc==='mixed'?'utf-8':o.enc;
+      const text=tbs.map(t=>t.ddl).join('\n')+'\n'+tbs.map(t=>t.cm).join('')+tbs.map(t=>t.ix).join('');
+      files.push({name:'stress_all.sql',bytes:encodeText(text,enc)});
+    } else tbs.forEach((t,i)=>files.push({name:'stress/'+t.name+'.sql',bytes:encodeText(t.ddl+'\n'+t.cm+t.ix,encs[i%encs.length])}));
+    if(downloadOnly){ files.forEach((f,i)=>{ if(i<1) download(f.name.split('/').pop(),new Blob([f.bytes])); }); busy(); toast(o.layout==='single'?'已下載單一大檔':'僅下載第一個檔案（多檔模式請直接匯入）'); return; }
+    const entries=files.map(f=>{ const file=new File([f.bytes],f.name.split('/').pop(),{lastModified:now}); return {path:f.name,file,size:file.size,lastModified:now,include:true,enc:'auto'}; });
+    $('#busyMsg').textContent='偵測編碼…'; await detectAll(entries); busy(); showTab('import');
+    runImport({id:'stress:'+uid(),name:'壓力測試',persist:false},entries,{name:`壓力測試 ${o.tables} 表 ${o.layout==='single'?'單檔':'多檔'} ${o.enc}`,mode:'new',policy:'latest',incremental:false}).catch(err=>{ console.error(err); S.job=null; renderImportProgress(); toast('壓力測試失敗：'+err.message,'err'); });
+  }catch(e){ busy(); toast('產生失敗：'+e.message,'err'); }
+}
+
+/* ======================= Settings ======================= */
+async function renderSettings(){
+  const box=$('#setBox'); let est=null, persisted=false;
+  try{ est=await navigator.storage.estimate(); persisted=await navigator.storage.persisted(); }catch(e){}
+  let orphans=[]; if(S.M){ const keys=new Set(S.M.flat.map(x=>annKey(x.t,x.c))); orphans=[...S.ann.keys()].filter(k=>!keys.has(k)); }
+  const th=getSet('theme');
+  box.innerHTML=`
+  <div class="card"><h3>一般</h3><div class="row"><label>主題 <select id="stTheme">${[['auto','跟隨系統'],['light','淺色'],['dark','深色']].map(([v,l])=>`<option value="${v}" ${th===v?'selected':''}>${l}</option>`).join('')}</select></label>
+   <label>預設 Schema（DDL 未帶 Schema 時） <input id="stDefSchema" value="${esc(getSet('defaultSchema'))}"></label>
+   <label><input type="checkbox" id="stKeep" ${getSet('keepText')?'checked':''}>匯入時保留原始 DDL 文字（供「原始 DDL」檢視；大於 4 MB 的檔案不保存）</label></div></div>
+  <div class="card"><h3>關聯推測排除欄位</h3><div class="sticky-note">這些共用欄位不會參與「同名欄位群集」與關聯推測（逗號或換行分隔）。</div><textarea id="stExcl" rows="3">${esc(getSet('excludeCols').join(', '))}</textarea></div>
+  <div class="card"><h3>Snapshot 管理</h3>${S.snapshots.length?`<table class="tb"><tr><th>名稱</th><th>建立時間</th><th>內容</th><th>狀態</th><th></th></tr>${S.snapshots.map(s=>`<tr><td><input data-sname="${esc(s.id)}" value="${esc(s.name)}" style="width:100%"></td><td>${esc(fmtDate(s.createdAt))}</td><td>${s.stats?`${s.stats.tables.toLocaleString()} 表 / ${s.stats.columns.toLocaleString()} 欄`:''}</td><td>${s.id===S.cur?'<span class="badge ac">使用中</span> ':''}<span class="badge ${s.status==='DONE'?'ok':'warn'}">${esc(s.status||'')}</span></td><td><button data-sload="${esc(s.id)}">載入</button> <button class="dng" data-sdel="${esc(s.id)}">刪除</button></td></tr>`).join('')}</table>`:'<span class="muted">尚無 Snapshot</span>'}</div>
+  <div class="card"><h3>儲存空間與備份</h3><div class="row"><span class="muted">${est?`已使用 ${fmtBytes(est.usage)} / 配額 ${fmtBytes(est.quota)}　`:''}${persisted?'<span class="badge ok">已申請持久儲存</span>':'<span class="badge warn">未持久化</span>'}</span><button id="stPersist">申請持久儲存</button><button id="stClearCache">清除解析快取與原文</button></div>
+   <div class="row"><button id="stExpJson">匯出完整備份 JSON</button><label class="row" style="margin:0">還原備份 <input type="file" id="stImpJson" accept=".json"></label><button id="stExpMd">匯出資料字典 Markdown</button><button id="stExpCsv">匯出欄位清單 CSV</button></div></div>
+  <div class="card"><h3>孤兒筆記 <span class="badge ${orphans.length?'warn':''}">${orphans.length}</span></h3><div class="sticky-note">欄位在目前 Snapshot 中已不存在，但筆記仍保留（不會被刪除）。</div>${orphans.length?`<div class="mono" style="max-height:140px;overflow:auto">${orphans.slice(0,200).map(esc).join('<br>')}</div>`:''}</div>
+  <div class="card"><h3>🧪 開發者工具：壓力測試產生器</h3><div class="sticky-note">於瀏覽器內隨機產生 Oracle DDL（含中文 COMMENT、PK、INDEX），直接走正式匯入流程並顯示耗時。Big5 編碼使用內建字表（僅涵蓋產生器用字）。</div>
+   <div class="row"><label>表數 <input type="number" id="ssN" value="1000" style="width:90px"></label><label>每表欄位數 <input type="number" id="ssMin" value="20" style="width:70px">～<input type="number" id="ssMax" value="80" style="width:70px"></label>
+   <label>型式 <select id="ssLay"><option value="single">單一大檔（COMMENT 在檔尾）</option><option value="multi">每張表一個檔案</option></select></label>
+   <label>編碼 <select id="ssEnc"><option value="utf-8">UTF-8</option><option value="big5">Big5</option><option value="utf-16le">UTF-16LE</option><option value="mixed">混合（多檔）</option></select></label>
+   <button class="pri" id="ssGo">產生並匯入</button><button id="ssDl">下載單檔</button></div></div>
+  <div class="card"><h3 style="color:var(--err)">危險區</h3><button class="dng" id="stWipe">清除所有資料…</button></div>
+  <div class="muted" style="font-size:12px">Schema Detective v${APP_VER}　·　100% 本機處理，不使用任何外部網路請求</div>`;
+}
+function bindSettingsEvents(){
+  const box=$('#setBox');
+  box.addEventListener('change',async e=>{
+    const t=e.target;
+    if(t.id==='stTheme'){ await setSet('theme',t.value); applyTheme(); }
+    else if(t.id==='stDefSchema') await setSet('defaultSchema',t.value.trim()||'(default)');
+    else if(t.id==='stKeep') await setSet('keepText',t.checked);
+    else if(t.id==='stExcl'){ await setSet('excludeCols',t.value.split(/[,\n，]/).map(x=>x.trim().toUpperCase()).filter(Boolean)); toast('排除清單已更新','ok'); }
+    else if(t.dataset.sname){ const s=S.snapshots.find(x=>x.id===t.dataset.sname); if(s){ s.name=t.value.trim()||s.name; await dbPut('snapshots',s); await refreshSnapshots(); toast('已重新命名'); } }
+    else if(t.id==='stImpJson'&&t.files[0]) await importJSON(t.files[0]);
+  });
+  box.addEventListener('click',async e=>{
+    const b=e.target.closest('button'); if(!b) return; const id=b.id;
+    try{
+      if(b.dataset.sload) await loadSnapshot(b.dataset.sload).then(renderSettings);
+      else if(b.dataset.sdel){
+        if(!confirm('確定刪除此 Snapshot？（筆記與關聯不受影響）')) return; busy('刪除中…'); const sid=b.dataset.sdel;
+        await dbDelPrefix(['tables','columns','indexes'],sid+'|'); await dbDel('snapshots',sid); await refreshSnapshots();
+        if(S.cur===sid){ S.cur=null; S.M=null; S.curTable=null; S.curCol=null; if(S.snapshots.length) await loadSnapshot(S.snapshots[0].id); else { updateStat(); renderTree(); renderTable(); renderDetail(); } }
+        busy(); renderSettings(); toast('已刪除');
+      }
+      else if(id==='stPersist'){ const ok=await navigator.storage.persist(); toast(ok?'已啟用持久儲存':'瀏覽器未允許持久儲存',ok?'ok':'err'); renderSettings(); }
+      else if(id==='stClearCache'){ const tx=db.transaction(['parseCache','fileContents'],'readwrite'); tx.objectStore('parseCache').clear(); tx.objectStore('fileContents').clear(); await txDone(tx); toast('已清除（下次重新掃描將重新解析）','ok'); }
+      else if(id==='stExpJson') await exportJSON();
+      else if(id==='stExpMd') exportMD('all');
+      else if(id==='stExpCsv') exportCSV();
+      else if(id==='stWipe') wipeDialog();
+      else if(id==='ssGo'||id==='ssDl'){
+        const o={tables:Math.max(1,+$('#ssN').value||1000),min:Math.max(2,+$('#ssMin').value||20),max:Math.max(2,+$('#ssMax').value||80),layout:$('#ssLay').value,enc:$('#ssEnc').value};
+        if(o.max<o.min) o.max=o.min; await runStress(o,id==='ssDl');
+      }
+    }catch(err){ busy(); console.error(err); toast(err.message||String(err),'err'); }
+  });
+}
+
+/* ======================= Init ======================= */
+async function loadAnn(){ S.ann=new Map((await dbAll('annotations')).map(a=>[a.key,a])); S.annTs=Date.now(); }
+function bindGlobal(){
+  $('#tabs').addEventListener('click',e=>{ const b=e.target.closest('[data-tab]'); if(b) showTab(b.dataset.tab); });
+  $('#snapSel').addEventListener('change',e=>{ if(e.target.value) loadSnapshot(e.target.value); });
+  $('#btnTheme').onclick=toggleTheme; $('#btnPal').onclick=openPalette;
+  $('#search').addEventListener('input',debounce(()=>{ const v=$('#search').value; if(v.trim()){ if(S.tab!=='search') showTab('search',true); runSearchUI(); } else if(S.tab==='search') showTab('explorer'); },150));
+  $('#search').addEventListener('keydown',e=>{ if(e.key==='Enter'){ if($('#search').value.trim()){ if(S.tab!=='search') showTab('search',true); runSearchUI(); } } if(e.key==='Escape'){ e.target.blur(); } });
+  $('#treeFilter').addEventListener('input',debounce(()=>renderTree(),150));
+  $('#grpPrefix').checked=!!getSet('groupPrefix');
+  $('#grpPrefix').addEventListener('change',e=>{ setSet('groupPrefix',e.target.checked); renderTree(); });
+  ['colFilter','fPk','fCm','fNn','fNote'].forEach(id=>$('#'+id).addEventListener(id==='colFilter'?'input':'change',debounce(()=>renderTable(),120)));
+  $('#colHead').addEventListener('click',e=>{ const s=e.target.closest('[data-s]'); if(!s) return; const k=s.dataset.s; S.colSort=S.colSort.k===k?{k,d:-S.colSort.d}:{k,d:1}; renderTable(); });
+  $('#tblHead').addEventListener('click',e=>{
+    const id=e.target.id; if(id==='btnPin') pinToggle(); else if(id==='btnSrc') showSource();
+    else if(id==='btnToSql'){ S.sql.t=S.curTable; S.sql.sel=new Set(); showTab('sql'); }
+  });
+  $('#detail').addEventListener('click',e=>{ if(e.target.id==='anSave') saveAnn(); else if(e.target.id==='anDel') delAnn(); else if(e.target.dataset.lk) openLookup(e.target.dataset.lk); });
+  $('#relBox').addEventListener('click',async e=>{ const b=e.target.closest('button'); if(!b) return; if(b.dataset.rel) await setRel(b.dataset.o,b.dataset.rel); else if(b.dataset.relx){ await dbDel('relations',b.dataset.relx); S.rel.delete(b.dataset.relx); renderConfirmed(); if(S.curTable) renderTableRel(S.curTable); } });
+  $('#diffBox').addEventListener('click',e=>{
+    const id=e.target.id; if(id==='dfRun') runDiff();
+    else if(id==='dfMd'&&S.diff.r) download('schema-diff-'+todayStr()+'.md',diffMarkdown(),'text/markdown;charset=utf-8');
+    else if(id==='dfAlter'&&S.diff.r){ const t=alterDraft(S.diff.r); modal(`<h3>ALTER 草稿</h3><div class="sticky-note">僅供參考，請人工審閱後再使用；本工具不會執行任何 SQL。</div><pre class="sql">${esc(t)}</pre><div class="row"><button id="cpAlt">複製</button><button onclick="closeModal()">關閉</button></div>`,m=>{ $('#cpAlt',m).onclick=()=>{ navigator.clipboard.writeText(t); toast('已複製','ok'); }; }); }
+  });
+  bindImportEvents(); bindSqlEvents(); bindSettingsEvents(); bindLookup();
+  $('#overlay').addEventListener('mousedown',e=>{ if(e.target.id==='overlay') closeModal(); });
+  $('#palIn').addEventListener('input',()=>{ palSel=0; palRender(); });
+  $('#palIn').addEventListener('keydown',e=>{ if(e.key==='ArrowDown'){ palSel=Math.min(palItems.length-1,palSel+1); palRender(); e.preventDefault(); } else if(e.key==='ArrowUp'){ palSel=Math.max(0,palSel-1); palRender(); e.preventDefault(); } else if(e.key==='Enter') runPal(palSel); });
+  $('#palList').addEventListener('click',e=>{ const it=e.target.closest('[data-i]'); if(it) runPal(+it.dataset.i); });
+  document.addEventListener('mousedown',e=>{ if(!e.target.closest('#palette')&&!e.target.closest('#btnPal')) closePalette(); });
+  document.addEventListener('keydown',e=>{
+    const typing=/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement&&document.activeElement.tagName);
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){ e.preventDefault(); openPalette(); }
+    else if(e.key==='/'&&!typing){ e.preventDefault(); $('#search').focus(); $('#search').select(); }
+    else if(e.key==='Escape'){ if($('#overlay').classList.contains('on')) closeModal(); closePalette(); }
+  });
+  window.addEventListener('hashchange',()=>{ if(selfHash!==null&&normHash(location.hash)===selfHash){ selfHash=null; return; } selfHash=null; applyHash(); });
+  window.addEventListener('beforeunload',e=>{ if(S.job){ e.preventDefault(); e.returnValue=''; } });
+  matchMedia('(prefers-color-scheme: dark)').addEventListener&&matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{ if(getSet('theme')==='auto') applyTheme(); });
+}
+async function init(){
+  try{ await openDB(); }
+  catch(e){ document.body.innerHTML='<div style="padding:30px;font:16px sans-serif">無法開啟 IndexedDB：'+esc(e.message||e)+'<br>請確認瀏覽器未停用網站儲存，且不是無痕模式。</div>'; return; }
+  (await dbAll('settings')).forEach(x=>S.settings[x.key]=x.value);
+  applyTheme(); buildTabs(); bindGlobal();
+  await Promise.all([loadAnn(),loadRelations()]); await refreshSnapshots();
+  const last=getSet('curSnap'); const id=S.snapshots.some(s=>s.id===last)?last:(S.snapshots[0]&&S.snapshots[0].id);
+  renderTree(); renderTable(); renderDetail();
+  if(id) await loadSnapshot(id);
+  if(location.hash) applyHash();
+  if(!S.M&&!/^#\/tab\//.test(location.hash)) showTab('import'); else if(S.tab==='explorer') showTab('explorer',true);
+  window.__SD_READY=true;
+}
+window.addEventListener('DOMContentLoaded',init);
+window.addEventListener('unhandledrejection',e=>{ console.error(e.reason); toast('發生錯誤：'+(e.reason&&e.reason.message||e.reason),'err'); });
+
+/* ======================= 欄位反查（Column Lookup） ======================= */
+S.lk={text:'',mode:'exact',logic:'any',cmt:false,schema:'',rows:[],res:null,sugIdx:-1,sug:[]};
+const LK_SEP=/[\s,，、;；|]+/;
+const escRe=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+
+/** 把輸入文字切成查詢項：支援逗號／空白／換行分隔、引號、TABLE.COLUMN（取最後一段）、* ? 萬用字元 */
+function lkTokens(text){
+  const out=[], seen=new Set();
+  for(let raw of String(text||'').split(LK_SEP)){
+    raw=raw.replace(/^["'`\[\(]+|["'`\]\)]+$/g,'');
+    if(!raw) continue;
+    if(raw.includes('.')&&!/[*?]/.test(raw)){ const p=raw.split('.').filter(Boolean); raw=(p[p.length-1]||'').replace(/^["'`]+|["'`]+$/g,''); }
+    if(!raw) continue;
+    const u=raw.toUpperCase(); if(seen.has(u)) continue; seen.add(u);
+    out.push({raw,u,l:raw.toLowerCase(),wild:/[*?]/.test(raw)});
+  }
+  return out;
+}
+function lkNames(M,tok,mode){
+  if(tok.wild){ const re=wildRe(tok.u); const r=[]; for(const n of M.colIndex.keys()) if(re.test(n)) r.push(n); return r; }
+  if(mode==='exact') return M.colIndex.has(tok.u)?[tok.u]:[];
+  const r=[];
+  for(const n of M.colIndex.keys()){ if(mode==='contains'?n.includes(tok.u):mode==='prefix'?n.startsWith(tok.u):n.endsWith(tok.u)) r.push(n); }
+  return r;
+}
+function lkAnnCols(M){ // 業務筆記 → 實際欄位物件（建立一次）
+  if(M._annCols&&M._annSize===S.ann.size&&M._annTs===S.annTs) return M._annCols;
+  const out=[]; for(const a of S.ann.values()){ const t=M.byKey.get(keyOf(a.schema,a.table)); if(!t) continue; const c=t.cols.find(x=>x.columnNameUpper===String(a.column).toUpperCase()); if(c) out.push({t,c,text:annText(a).toLowerCase()}); }
+  M._annCols=out; M._annSize=S.ann.size; M._annTs=S.annTs; return out;
+}
+function lkHits(M,tok,L){
+  const out=[], seen=new Set(); const sch=L.schema;
+  for(const n of lkNames(M,tok,L.mode)) for(const x of M.colIndex.get(n)){ if(sch&&x.t.schema!==sch) continue; seen.add(x.c); out.push({t:x.t,c:x.c,by:'name'}); }
+  if(L.cmt&&!tok.wild){
+    for(const x of M.flat){
+      if(sch&&x.t.schema!==sch) continue; const c=x.c; if(seen.has(c)) continue;
+      const cl=c._cl||(c._cl=(c.comment||'').toLowerCase());
+      if(cl&&cl.includes(tok.l)){ seen.add(c); out.push({t:x.t,c,by:'comment'}); }
+    }
+    for(const a of lkAnnCols(M)){ if(sch&&a.t.schema!==sch) continue; if(seen.has(a.c)) continue; if(a.text.includes(tok.l)){ seen.add(a.c); out.push({t:a.t,c:a.c,by:'note'}); } }
+  }
+  return out;
+}
+function lev(a,b,max){
+  if(Math.abs(a.length-b.length)>max) return max+1;
+  let prev=Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    const cur=[i]; let rowMin=i;
+    for(let j=1;j<=b.length;j++){ const v=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); cur[j]=v; if(v<rowMin) rowMin=v; }
+    if(rowMin>max) return max+1; prev=cur;
+  }
+  return prev[b.length];
+}
+function lkNameList(M){ if(!M._names) M._names=[...M.colIndex.entries()].map(([n,l])=>[n,l.length]).sort((a,b)=>b[1]-a[1]||(a[0]<b[0]?-1:1)); return M._names; }
+/** 找不到時的相近名稱：包含關係（忽略底線）優先，其次編輯距離 ≤ 2 */
+function lkSuggest(M,tok){
+  const u=tok.u.replace(/[*?]/g,''); if(!u) return [];
+  const un=u.replace(/_/g,''); const res=[];
+  for(const [n,cnt] of lkNameList(M)){ const nn=n.replace(/_/g,''); if(nn.includes(un)||(nn.length>=3&&un.includes(nn))){ res.push([n,cnt]); if(res.length>=6) break; } }
+  if(res.length<6){ for(const [n,cnt] of lkNameList(M)){ if(res.some(r=>r[0]===n)) continue; if(lev(n,u,2)<=2){ res.push([n,cnt]); if(res.length>=6) break; } } }
+  return res;
+}
+/** 輸入中的自動建議：前綴相符優先，其次包含 */
+function lkAuto(M,frag){
+  const u=frag.toUpperCase(); if(!u||/[*?]/.test(u)) return [];
+  const out=[]; const names=lkNameList(M);
+  for(const [n,c] of names){ if(n.startsWith(u)&&n!==u){ out.push([n,c]); if(out.length>=8) return out; } }
+  for(const [n,c] of names){ if(!n.startsWith(u)&&n.includes(u)){ out.push([n,c]); if(out.length>=8) break; } }
+  return out;
+}
+
+function runLookup(){
+  const M=S.M, L=S.lk; const toks=lkTokens(L.text);
+  L.res=null; L.rows=[];
+  if(!M||!toks.length){ renderLkOut(); return; }
+  const t0=performance.now(); const CAP=300000;
+  const per=toks.map(tok=>({tok,hits:lkHits(M,tok,L)}));
+  const useAll=toks.length>=2&&L.logic==='all';
+  const res={mode:useAll?'all':'any',toks,per,missing:per.filter(p=>!p.hits.length).map(p=>p.tok),capped:false,tables:new Set(),nCols:0};
+  const tcmp=(a,b)=>a.t.schema.localeCompare(b.t.schema)||a.t.name.localeCompare(b.t.name);
+  if(!useAll){
+    const groups=new Map(), seen=new Set();
+    for(const p of per) for(const h of p.hits){
+      if(seen.has(h.c)) continue; seen.add(h.c);
+      let g=groups.get(h.c.columnNameUpper); if(!g){ g={name:h.c.columnName,hits:[]}; groups.set(h.c.columnNameUpper,g); } g.hits.push(h);
+    }
+    const arr=[...groups.values()].sort((a,b)=>b.hits.length-a.hits.length||(a.name<b.name?-1:1));
+    for(const g of arr){
+      g.hits.sort(tcmp); const v=new Map(); g.hits.forEach(h=>v.set(h.c.type,(v.get(h.c.type)||0)+1));
+      g.variants=[...v.entries()].sort((a,b)=>b[1]-a[1]); g.bad=v.size>1;
+      if(L.rows.length<CAP){ L.rows.push({k:'g',name:g.name,count:new Set(g.hits.map(h=>h.t)).size,variants:g.variants,bad:g.bad}); for(const h of g.hits){ if(L.rows.length>=CAP){ res.capped=true; break; } L.rows.push({k:'r',t:h.t,c:h.c,by:h.by}); } }
+      g.hits.forEach(h=>res.tables.add(h.t)); res.nCols+=g.hits.length;
+    }
+    res.groups=arr;
+  } else {
+    const maps=per.map(p=>{ const m=new Map(); for(const h of p.hits){ if(!m.has(h.t)) m.set(h.t,[]); m.get(h.t).push(h.c); } return m; });
+    let common=[...maps[0].keys()].filter(t=>maps.every(m=>m.has(t)));
+    common.sort((a,b)=>a.schema.localeCompare(b.schema)||a.name.localeCompare(b.name));
+    res.allTables=common;
+    // 無交集時，提供「命中最多個欄位」的資料表
+    if(!common.length){
+      const cnt=new Map(); maps.forEach((m,i)=>m.forEach((_,t)=>{ cnt.set(t,(cnt.get(t)||0)+1); }));
+      res.partial=[...cnt.entries()].sort((a,b)=>b[1]-a[1]||a[0].name.localeCompare(b[0].name)).slice(0,15).map(([t,n])=>({t,n,cols:maps.map((m,i)=>m.has(t)?toks[i].raw:null).filter(Boolean)}));
+    }
+    L.rows.push({k:'h',text:`同時包含 ${toks.map(t=>t.raw).join('、')} 的資料表：${common.length.toLocaleString()} 張`});
+    for(const t of common){ if(L.rows.length>=CAP){ res.capped=true; break; } L.rows.push({k:'a',t,cs:maps.map(m=>m.get(t))}); res.tables.add(t); }
+    res.nCols=common.reduce((a,t)=>a+maps.reduce((s,m)=>s+m.get(t).length,0),0);
+  }
+  res.ms=performance.now()-t0; L.res=res; renderLkOut();
+}
+function renderLkOut(){
+  const L=S.lk, r=L.res, el=$('#lkSum');
+  if(!S.M){ el.innerHTML='<span class="muted">請先到「匯入」載入 DDL。</span>'; setLkRows(); return; }
+  if(!r){ el.innerHTML=`<span class="muted">輸入欄位名稱即可查出哪些資料表使用它（共 ${S.M.colIndex.size.toLocaleString()} 種欄位名稱、${S.M.tables.length.toLocaleString()} 張表）。可一次輸入多個，例如 <code>CUST_ID, ISSUER_ID</code>；也可用 <code>CUST*</code> 萬用字元。</span>`; setLkRows(); return; }
+  let h='';
+  if(r.mode==='any'){
+    const bad=r.groups.filter(g=>g.bad).length;
+    h+=`找到 <b>${r.groups.length.toLocaleString()}</b> 個欄位名稱，出現於 <b>${r.tables.size.toLocaleString()}</b> 張資料表（共 ${r.nCols.toLocaleString()} 個欄位）<span class="muted">　${r.ms.toFixed(0)} ms${r.capped?'；結果過多，僅顯示前 300,000 列':''}</span>`;
+    if(bad) h+=`　<span class="badge err">⚠ ${bad} 個欄位名稱的型態／長度不一致</span>`; else if(r.groups.length) h+=`　<span class="badge ok">✔ 型態一致</span>`;
+  } else {
+    h+=`同時包含全部 ${r.toks.length} 個欄位的資料表：<b>${r.allTables.length.toLocaleString()}</b> 張<span class="muted">　${r.ms.toFixed(0)} ms</span>`;
+  }
+  h+='<div class="row" style="margin-top:6px">'+r.per.map(p=>{
+    const nt=new Set(p.hits.map(x=>x.t)).size;
+    return p.hits.length?`<span class="badge ok">${esc(p.tok.raw)} → ${nt.toLocaleString()} 表</span>`:`<span class="badge err">${esc(p.tok.raw)} → 找不到</span>`;
+  }).join('')+'</div>';
+  for(const tok of r.missing){
+    const s=lkSuggest(S.M,tok);
+    h+=`<div class="row" style="margin:4px 0"><span class="muted">「${esc(tok.raw)}」沒有符合的欄位${L.cmt?'（含註解）':''}。</span>${s.length?'<span class="muted">是不是要找：</span>'+s.map(([n,c])=>`<button data-sug="${esc(tok.raw)}\u0001${esc(n)}" title="出現於 ${c} 張表">${esc(n)} <span class="muted">(${c})</span></button>`).join(''):''}</div>`;
+  }
+  if(r.mode==='all'&&!r.allTables.length&&r.partial&&r.partial.length){
+    h+=`<div class="muted" style="margin-top:6px">沒有任何資料表同時包含全部欄位。命中最多的資料表：${r.partial.slice(0,8).map(x=>`<a href="#/table/${encodeURIComponent(x.t.schema)}/${encodeURIComponent(x.t.name)}">${esc(x.t.name)}</a>（${esc(x.cols.join('、'))}）`).join('；')}</div>`;
+  }
+  el.innerHTML=h; setLkRows();
+}
+function setLkRows(){
+  if(!S.vl.lk){
+    S.vl.lk=new VList($('#lkList'),{rowH:30,render:i=>{
+      const r=S.lk.rows[i]; if(!r) return '';
+      if(r.k==='g') return `<div class="r gh2" data-i="${i}" style="cursor:default"><b class="mono">${esc(r.name)}</b><span class="badge">${r.count.toLocaleString()} 表</span>${r.bad?'<span class="badge err">⚠ 型態／長度不一致</span>':'<span class="badge ok">型態一致</span>'}<span class="muted t">${esc(r.variants.map(v=>v[0]+' ×'+v[1]).join('　'))}</span></div>`;
+      if(r.k==='h') return `<div class="r gh2" data-i="${i}" style="cursor:default"><b>${esc(r.text)}</b></div>`;
+      if(r.k==='r'){
+        const c=r.c,t=r.t,a=S.ann.get(annKey(t,c));
+        return `<div class="r lg" data-i="${i}"><span class="t" title="${esc(t.schema+'.'+t.name)}">${esc(t.schema)}.<b>${esc(t.name)}</b></span><span class="mono t">${esc(c.columnName)}</span><span class="mono t" title="${esc(c.type)}">${esc(c.type)}</span><span>${c.nullable?'':'✓'}</span><span>${c.pk?'●':''}</span><span class="t" title="${esc(c.comment)}">${r.by!=='name'?`<span class="badge warn">${r.by==='note'?'筆記':'註解'}命中</span> `:''}${a&&a.businessName?`<span class="badge ac">${esc(a.businessName)}</span> `:''}${esc(c.comment)}</span></div>`;
+      }
+      const t=r.t, cs=r.cs.map(x=>x[0]);
+      return `<div class="r lg" data-i="${i}"><span class="t" title="${esc(t.schema+'.'+t.name)}">${esc(t.schema)}.<b>${esc(t.name)}</b></span><span class="mono t">${esc(cs.map(c=>c.columnName).join(', '))}</span><span class="mono t" title="${esc(cs.map(c=>c.type).join(', '))}">${esc(cs.map(c=>c.type).join(', '))}</span><span></span><span>${cs.some(c=>c.pk)?'●':''}</span><span class="t muted">${esc(t.comment||'')}</span></div>`;
+    },onClick:i=>{ const r=S.lk.rows[i]; if(!r) return; if(r.k==='r') selectTable(r.t,r.c); else if(r.k==='a') selectTable(r.t,r.cs[0][0]); }});
+  }
+  S.vl.lk.setCount(S.lk.rows.length);
+  $('#lkHead').innerHTML=S.lk.res&&S.lk.res.mode==='all'?'<span>資料表</span><span>符合欄位</span><span>型態</span><span></span><span>PK</span><span>資料表註解</span>':'<span>資料表</span><span>欄位</span><span>型態</span><span>N</span><span>PK</span><span>註解／筆記</span>';
+  const has=!!(S.lk.res&&S.lk.rows.length);
+  $('#lkCopy').disabled=!has; $('#lkCsv').disabled=!has;
+}
+function lkTableList(){
+  const set=new Set(); S.lk.rows.forEach(r=>{ if(r.t) set.add(r.t); });
+  return [...set].sort((a,b)=>a.schema.localeCompare(b.schema)||a.name.localeCompare(b.name));
+}
+function lkCsv(){
+  const L=S.lk, r=L.res; if(!r) return; const rows=[];
+  if(r.mode==='all'){ rows.push(['schema','table','matched_columns','types','table_comment']); for(const x of L.rows) if(x.k==='a') rows.push([x.t.schema,x.t.name,x.cs.map(c=>c[0].columnName).join(';'),x.cs.map(c=>c[0].type).join(';'),x.t.comment]); }
+  else { rows.push(['column','schema','table','type','nullable','pk','comment','business_name','matched_by']); for(const x of L.rows) if(x.k==='r'){ const a=S.ann.get(annKey(x.t,x.c))||{}; rows.push([x.c.columnName,x.t.schema,x.t.name,x.c.type,x.c.nullable?'Y':'N',x.c.pk?'Y':'',x.c.comment,a.businessName,x.by]); } }
+  download('column-lookup-'+todayStr()+'.csv','\ufeff'+rows.map(x=>x.map(csvCell).join(',')).join('\r\n'),'text/csv;charset=utf-8');
+}
+function lkSetText(t,run){ S.lk.text=t; const el=$('#lkIn'); if(el) el.value=t; if(run!==false) runLookup(); }
+function openLookup(text,opts){
+  Object.assign(S.lk,{mode:'exact',logic:'any'},opts||{}); S.lk.text=text; showTab('lookup'); // renderLookup 會同步控制項並查詢
+}
+function renderLookup(){
+  const L=S.lk; $('#lkIn').value=L.text; $('#lkMode').value=L.mode; $('#lkLogic').value=L.logic; $('#lkCmt').checked=L.cmt;
+  const sel=$('#lkSch'); const schemas=S.M?[...new Set(S.M.tables.map(t=>t.schema))].sort():[];
+  if(L.schema&&!schemas.includes(L.schema)) L.schema='';
+  sel.innerHTML='<option value="">全部 Schema</option>'+schemas.map(s=>`<option ${s===L.schema?'selected':''} value="${esc(s)}">${esc(s)}</option>`).join('');
+  runLookup(); setTimeout(()=>{ if(S.tab==='lookup') $('#lkIn').focus(); },0);
+}
+/* 輸入建議：針對游標所在的詞 */
+function lkTokenAtCaret(el){
+  const v=el.value, pos=el.selectionStart==null?v.length:el.selectionStart; let a=pos,b=pos;
+  while(a>0&&!LK_SEP.test(v[a-1])) a--; while(b<v.length&&!LK_SEP.test(v[b])) b++;
+  return {a,b,frag:v.slice(a,b).replace(/^["'`]+/,'')};
+}
+function showSug(){
+  const box=$('#lkSugBox'), el=$('#lkIn'); if(!S.M||document.activeElement!==el){ box.style.display='none'; return; }
+  const {frag}=lkTokenAtCaret(el); const list=frag.length>=1?lkAuto(S.M,frag):[];
+  S.lk.sug=list; S.lk.sugIdx=-1;
+  if(!list.length){ box.style.display='none'; return; }
+  box.innerHTML=list.map(([n,c],i)=>`<div class="it" data-sug-i="${i}"><span class="mono">${esc(n)}</span> <span class="muted">${c.toLocaleString()} 表</span></div>`).join(''); box.style.display='block';
+}
+function pickSug(i){
+  const el=$('#lkIn'), pick=S.lk.sug[i]; if(!pick) return; const {a,b}=lkTokenAtCaret(el);
+  const v=el.value.slice(0,a)+pick[0]+el.value.slice(b); el.value=v; const np=a+pick[0].length; el.setSelectionRange(np,np);
+  S.lk.text=v; $('#lkSugBox').style.display='none'; S.lk.sugIdx=-1; runLookup();
+}
+function bindLookup(){
+  const L=S.lk, deb=debounce(()=>{ L.text=$('#lkIn').value; runLookup(); },200);
+  $('#lkIn').addEventListener('input',()=>{ deb(); showSug(); });
+  $('#lkIn').addEventListener('focus',showSug);
+  $('#lkIn').addEventListener('blur',()=>setTimeout(()=>{ $('#lkSugBox').style.display='none'; },150));
+  $('#lkIn').addEventListener('click',showSug);
+  $('#lkIn').addEventListener('keydown',e=>{
+    const box=$('#lkSugBox'), open=box.style.display==='block';
+    if(open&&e.key==='ArrowDown'){ e.preventDefault(); L.sugIdx=Math.min(L.sug.length-1,L.sugIdx+1); }
+    else if(open&&e.key==='ArrowUp'){ e.preventDefault(); L.sugIdx=Math.max(-1,L.sugIdx-1); }
+    else if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); if(open&&L.sugIdx>=0) pickSug(L.sugIdx); else { L.text=$('#lkIn').value; runLookup(); box.style.display='none'; } return; }
+    else if(e.key==='Escape'&&open){ e.stopPropagation(); box.style.display='none'; return; }
+    else return;
+    $$('#lkSugBox .it').forEach((x,i)=>x.classList.toggle('on',i===L.sugIdx));
+  });
+  $('#lkSugBox').addEventListener('mousedown',e=>{ const it=e.target.closest('[data-sug-i]'); if(it){ e.preventDefault(); pickSug(+it.dataset.sugI); } });
+  const chg=()=>{ L.mode=$('#lkMode').value; L.logic=$('#lkLogic').value; L.cmt=$('#lkCmt').checked; L.schema=$('#lkSch').value; L.text=$('#lkIn').value; runLookup(); };
+  ['lkMode','lkLogic','lkCmt','lkSch'].forEach(id=>$('#'+id).addEventListener('change',chg));
+  $('#lkRun').onclick=()=>{ L.text=$('#lkIn').value; runLookup(); };
+  $('#lkClear').onclick=()=>{ lkSetText(''); $('#lkIn').focus(); };
+  $('#lkCopy').onclick=()=>{ const l=lkTableList(); navigator.clipboard.writeText(l.map(t=>t.schema+'.'+t.name).join('\n')).then(()=>toast(`已複製 ${l.length} 張資料表名稱`,'ok')); };
+  $('#lkCsv').onclick=lkCsv;
+  $('#lkSum').addEventListener('click',e=>{
+    const b=e.target.closest('[data-sug]'); if(!b) return; const [oldT,newT]=b.dataset.sug.split('\u0001');
+    const re=new RegExp('(^|[\\s,，、;；|"\'`.])'+escRe(oldT)+'(?=$|[\\s,，、;；|"\'`])','i');
+    lkSetText($('#lkIn').value.replace(re,(m,p1)=>p1+newT));
+  });
+}
+
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style></body>
+</html>
