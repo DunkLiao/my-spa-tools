@@ -1,0 +1,2309 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:; worker-src blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Outlier Hunter｜異常值獵人</title>
+<style>
+:root{
+  --bg:#f5f6f8;--panel:#ffffff;--panel2:#f0f2f5;--line:#d9dde3;--text:#1f2933;--dim:#6b7785;--accent:#2563eb;--accent2:#dbe7ff;
+  --sev3:#d13438;--sev2:#f7630c;--sev1:#c19c00;--ok:#107c10;--shadow:0 4px 18px rgba(0,0,0,.12);
+  --sev3bg:rgba(209,52,56,.16);--sev2bg:rgba(247,99,12,.16);--sev1bg:rgba(193,156,0,.18);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]){
+  --bg:#12151a;--panel:#1b1f26;--panel2:#242a33;--line:#343b46;--text:#e6e9ee;--dim:#98a2b0;--accent:#6ea0ff;--accent2:#1f2f52;
+  --sev3:#ff6b6e;--sev2:#ff9a52;--sev1:#e3c13a;--ok:#5fd35f;--shadow:0 4px 18px rgba(0,0,0,.5);
+  --sev3bg:rgba(255,107,110,.18);--sev2bg:rgba(255,154,82,.18);--sev1bg:rgba(227,193,58,.18);}}
+:root[data-theme=dark]{
+  --bg:#12151a;--panel:#1b1f26;--panel2:#242a33;--line:#343b46;--text:#e6e9ee;--dim:#98a2b0;--accent:#6ea0ff;--accent2:#1f2f52;
+  --sev3:#ff6b6e;--sev2:#ff9a52;--sev1:#e3c13a;--ok:#5fd35f;--shadow:0 4px 18px rgba(0,0,0,.5);
+  --sev3bg:rgba(255,107,110,.18);--sev2bg:rgba(255,154,82,.18);--sev1bg:rgba(227,193,58,.18);}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.45 "Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;background:var(--bg);color:var(--text)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:5px 11px}
+button:hover{background:var(--panel2)}
+button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+button.pri:hover{filter:brightness(1.1)}
+button.danger{color:var(--sev3);border-color:var(--sev3)}
+button.ghost{border-color:transparent;background:transparent}
+button:disabled{opacity:.45;cursor:not-allowed}
+input[type=text],input[type=number],select,textarea{border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:4px 8px;min-width:0}
+textarea{width:100%;resize:vertical}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+#app{display:grid;grid-template-columns:240px 1fr;grid-template-rows:48px 1fr;height:100vh}
+#top{grid-column:1/3;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--panel);border-bottom:1px solid var(--line)}
+#top h1{font-size:17px;margin:0 8px 0 0;white-space:nowrap}
+#top .sp{flex:1}
+#side{background:var(--panel);border-right:1px solid var(--line);overflow:auto;padding:10px;display:flex;flex-direction:column;gap:6px}
+#side h3{margin:10px 0 2px;font-size:11px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;display:flex;justify-content:space-between;align-items:center}
+.item{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent}
+.item:hover{background:var(--panel2)}
+.item.on{background:var(--accent2);border-color:var(--accent)}
+.item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item small{color:var(--dim)}
+.item button{padding:0 6px;border:none;background:transparent;color:var(--dim)}
+.item button:hover{color:var(--sev3)}
+#main{display:flex;flex-direction:column;min-width:0;min-height:0}
+#tabs{display:flex;gap:2px;padding:8px 14px 0;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+#tabs button{border:none;border-bottom:3px solid transparent;border-radius:0;background:transparent;padding:8px 12px}
+#tabs button.on{border-bottom-color:var(--accent);font-weight:600}
+#view{flex:1;overflow:auto;padding:14px;min-height:0}
+#view.noscroll{overflow:hidden;display:flex;flex-direction:column}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:12px}
+.card h4{margin:0 0 8px;font-size:14px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.grid{display:grid;gap:10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.kpi b{display:block;font-size:22px}
+.kpi span{color:var(--dim);font-size:12px}
+.dim{color:var(--dim)}.small{font-size:12px}
+.sev3{color:var(--sev3)}.sev2{color:var(--sev2)}.sev1{color:var(--sev1)}
+.tag{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;background:var(--panel2);border:1px solid var(--line)}
+.tag.s3{background:var(--sev3bg);border-color:var(--sev3);color:var(--sev3)}
+.tag.s2{background:var(--sev2bg);border-color:var(--sev2);color:var(--sev2)}
+.tag.s1{background:var(--sev1bg);border-color:var(--sev1);color:var(--sev1)}
+.tag.err{background:var(--sev3bg);color:var(--sev3);border-color:var(--sev3)}
+.tag.ok{color:var(--ok);border-color:var(--ok)}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:5px 8px;text-align:left;vertical-align:top}
+table.t th{background:var(--panel2);position:sticky;top:0;font-weight:600;white-space:nowrap}
+table.t td.n{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{overflow:auto;max-height:420px;border:1px solid var(--line);border-radius:8px}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{border:1px solid var(--line);border-radius:14px;padding:2px 10px;cursor:pointer;background:var(--panel);user-select:none;font-size:12px}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.rule{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;margin-bottom:10px;background:var(--panel)}
+.rule.off{opacity:.55}
+.rule .hd{display:flex;gap:8px;align-items:center;padding:8px 10px;cursor:pointer}
+.rule .hd .ti{flex:1;font-weight:600}
+.rule .bd{padding:4px 12px 12px;border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.fld label{display:block;font-size:12px;color:var(--dim);margin-bottom:2px}
+.fld.wide{grid-column:1/-1}
+.fld input[type=text],.fld input[type=number],.fld select{width:100%}
+.addbar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+/* table */
+.tbwrap{display:grid;grid-template-columns:1fr 380px;gap:12px;flex:1;min-height:0}
+.tbleft{display:flex;flex-direction:column;min-width:0;min-height:0}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.vt{flex:1;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel);position:relative;min-height:200px}
+.vt .head{position:sticky;top:0;z-index:3;display:flex;background:var(--panel2);border-bottom:1px solid var(--line)}
+.vt .spacer{position:relative}
+.vt .r{position:absolute;left:0;display:flex;height:30px;border-bottom:1px solid var(--line);cursor:pointer}
+.vt .r:hover{background:var(--panel2)}
+.vt .r.cur{background:var(--accent2)}
+.vt .c{flex:none;padding:5px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.vt .head .c{font-weight:600;cursor:default}
+.vt .c.num{text-align:right;font-variant-numeric:tabular-nums}
+.vt .c.hl3{background:var(--sev3bg);color:var(--sev3);font-weight:600}
+.vt .c.hl2{background:var(--sev2bg);color:var(--sev2);font-weight:600}
+.vt .c.hl1{background:var(--sev1bg);color:var(--sev1)}
+.why{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;min-height:0}
+.why h4{margin:0 0 6px}
+.hit{border-left:4px solid var(--line);padding:4px 8px;margin:6px 0;background:var(--panel2);border-radius:0 6px 6px 0;font-size:13px;word-break:break-word}
+.hit.s3{border-color:var(--sev3)}.hit.s2{border-color:var(--sev2)}.hit.s1{border-color:var(--sev1)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;font-size:12px;margin:8px 0}
+.kv .k{color:var(--dim)}.kv .hlv{color:var(--sev3);font-weight:600}
+.stbtns{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.stbtns button.on{outline:2px solid var(--accent)}
+/* modal */
+#modal-root{position:fixed;inset:0;pointer-events:none;z-index:50}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;pointer-events:auto;padding:20px}
+.modal{background:var(--panel);border-radius:12px;box-shadow:var(--shadow);max-width:min(1000px,96vw);width:100%;max-height:92vh;display:flex;flex-direction:column}
+.modal.sm{max-width:480px}
+.modal header{padding:12px 16px;border-bottom:1px solid var(--line);font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.modal .body{padding:14px 16px;overflow:auto}
+.modal footer{padding:10px 16px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--dim)}
+.drop.over{border-color:var(--accent);background:var(--accent2)}
+.bar{height:10px;background:var(--panel2);border-radius:5px;overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--accent);transition:width .15s}
+.hbar{display:flex;align-items:center;gap:8px;margin:3px 0;font-size:13px}
+.hbar .lb{width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:ui-monospace,Consolas,monospace}
+.hbar .tr{flex:1;height:14px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.hbar .tr i{display:block;height:100%;background:var(--accent)}
+.hbar.bad .tr i{background:var(--sev2)}
+.heat td{text-align:center;min-width:54px;font-size:12px;border:1px solid var(--bg)}
+.heat td.fl{outline:2px solid var(--sev3);outline-offset:-2px}
+.heat th.rh{text-align:left;position:sticky;left:0;z-index:2}
+canvas{width:100%;display:block}
+pre.code{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;overflow:auto;max-height:420px;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre}
+#toast{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:80}
+#toast div{background:var(--text);color:var(--bg);padding:9px 14px;border-radius:8px;box-shadow:var(--shadow);max-width:420px}
+#toast div.err{background:var(--sev3);color:#fff}
+.empty{text-align:center;color:var(--dim);padding:60px 20px}
+.empty h2{color:var(--text)}
+kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font:12px ui-monospace,monospace;background:var(--panel2)}
+@media (max-width:1000px){#app{grid-template-columns:1fr}#side{display:none}.tbwrap{grid-template-columns:1fr}}
+
+.fillbox{display:flex;flex-direction:column;flex:1;min-height:0;height:100%}
+.toolbar select{max-width:230px}
+
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <h1>🎯 Outlier Hunter</h1>
+    <span id="dsname" class="dim small"></span>
+    <span class="sp"></span>
+    <button id="btn-import" class="pri">＋ 匯入資料</button>
+    <button id="btn-theme" title="切換外觀" aria-label="切換外觀">🌗</button>
+    <button id="btn-set" title="設定" aria-label="設定">⚙</button>
+    <button id="btn-help" title="說明" aria-label="說明">❓</button>
+  </header>
+  <aside id="side" aria-label="資料集與 Hunt"></aside>
+  <main id="main">
+    <nav id="tabs" role="tablist"></nav>
+    <section id="view"></section>
+  </main>
+</div>
+<div id="modal-root"></div>
+<div id="toast" aria-live="polite"></div>
+<script id="worker-src" type="text/worker">
+'use strict';
+/* =====================================================================
+   Outlier Hunter — Engine (runs inside a Web Worker)
+   parser / type inference / dataset store / detectors / scorer
+   ===================================================================== */
+const CHUNK = 10000, SAMPLE = 10000, PREVIEW_BYTES = 1 << 20, MAXHIT = 300000, MAXRES = 300000;
+const MISS = new Set(['', 'NULL', 'null', 'Null', 'N/A', 'n/a', '#N/A', 'NaN', 'nan']);
+function isMiss(s) {
+  if (s === undefined || s === null) return true;
+  const n = s.length; if (n === 0) return true;
+  if (n > 4 && s.charCodeAt(0) > 32 && s.charCodeAt(n - 1) > 32) return false;   // longer than any token and not padded
+  return MISS.has(s) || MISS.has(s.trim());
+}
+const NUM_RE = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
+const isNumT = t => t === 'number' || t === 'integer';
+const tick = () => new Promise(r => setTimeout(r, 0));
+let ds = null, abortFlag = false, lastRun = null;
+
+function post(m, tr) { self.postMessage(m, tr || []); }
+function checkAbort() { if (abortFlag) { abortFlag = false; throw new Error('已取消'); } }
+
+/* ---------- number / date helpers ---------- */
+const POW10 = [1, 1e1, 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13, 1e14, 1e15];
+function fastNum(v) {                          // plain [+-]digits[.digits]; exact (<=15 digits) => identical to parseFloat
+  const n = v.length; let i = 0, c = v.charCodeAt(0), neg = false;
+  if (c === 45) { neg = true; i = 1; } else if (c === 43) i = 1;
+  let x = 0, digits = 0, frac = 0, dot = false;
+  for (; i < n; i++) {
+    c = v.charCodeAt(i);
+    if (c >= 48 && c <= 57) { x = x * 10 + (c - 48); digits++; if (dot) frac++; }
+    else if (c === 46 && !dot) dot = true;
+    else return undefined;
+  }
+  if (digits === 0 || digits > 15) return undefined;
+  if (frac) x /= POW10[frac];
+  return neg ? -x : x;
+}
+// returns number (valid) | NaN (missing) | null (unparsable)
+function parseNumStr(v, paren) {
+  if (v.length > 0 && v.length < 24) { const f = fastNum(v); if (f !== undefined) return f; }
+  const s0 = v.trim();
+  if (s0 === '' || MISS.has(s0)) return NaN;
+  let s = s0, neg = false;
+  if (paren && s.charCodeAt(0) === 40 && s.charCodeAt(s.length - 1) === 41) { neg = true; s = s.slice(1, -1).trim(); }
+  if (s.indexOf(',') >= 0) s = s.replace(/,/g, '');
+  if (NUM_RE.test(s)) { const x = +s; if (!isFinite(x)) return null; return neg ? -x : x; }
+  return null;
+}
+const DATE_RE = /^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[ T]\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?)?$/;
+function isDateStr(s) {
+  let m = DATE_RE.exec(s), y, mo, d;
+  if (m) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+  else if (/^\d{8}$/.test(s)) { y = +s.slice(0, 4); mo = +s.slice(4, 6); d = +s.slice(6, 8); }
+  else return false;
+  return y >= 1900 && y <= 2200 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31;
+}
+const BOOL_SET = new Set(['true', 'false', 'yes', 'no', 'y', 'n', 't', 'f']);
+
+/* ---------- encoding / delimiter ---------- */
+function trimTail(u8) {
+  const n = u8.length;
+  for (let k = 1; k <= 3 && k <= n; k++) {
+    const b = u8[n - k];
+    if ((b & 0xC0) === 0x80) continue;
+    const need = b >= 0xF0 ? 4 : b >= 0xE0 ? 3 : b >= 0xC0 ? 2 : 1;
+    if (need > k) return u8.subarray(0, n - k);
+    break;
+  }
+  return u8;
+}
+function detectEncoding(u8) {
+  if (u8[0] === 0xEF && u8[1] === 0xBB && u8[2] === 0xBF) return 'utf-8';
+  if (u8[0] === 0xFF && u8[1] === 0xFE) return 'utf-16le';
+  if (u8[0] === 0xFE && u8[1] === 0xFF) return 'utf-16be';
+  const probe = u8.subarray(0, Math.min(u8.length, 2000));
+  let zeros = 0, zEven = 0;
+  for (let i = 0; i < probe.length; i++) if (probe[i] === 0) { zeros++; if (i % 2 === 0) zEven++; }
+  if (probe.length > 20 && zeros / probe.length > 0.3) return zEven > zeros / 2 ? 'utf-16be' : 'utf-16le';
+  try { new TextDecoder('utf-8', { fatal: true }).decode(trimTail(u8)); return 'utf-8'; } catch (e) { /* not utf-8 */ }
+  return 'big5';
+}
+async function utf8Valid(file) {                 // validates the WHOLE file, not only the first block
+  const dec = new TextDecoder('utf-8', { fatal: true }), B = 8 * 1048576;
+  try {
+    for (let pos = 0; pos < file.size; pos += B) dec.decode(new Uint8Array(await file.slice(pos, pos + B).arrayBuffer()), { stream: pos + B < file.size });
+    dec.decode(); return true;
+  } catch (e) { return false; }
+}
+async function detectFileEnc(file, head) {
+  let enc = detectEncoding(head);
+  const bom = head[0] === 0xEF && head[1] === 0xBB && head[2] === 0xBF;
+  if (enc === 'utf-8' && !bom && file.size > head.length && !(await utf8Valid(file))) enc = 'big5';
+  return enc;
+}
+function detectDelim(text) {
+  const cands = [',', '\t', ';', '|'];
+  const per = []; let counts = {}; cands.forEach(c => counts[c] = 0);
+  let inQ = false;
+  for (let i = 0; i < text.length && per.length < 30; i++) {
+    const ch = text[i];
+    if (ch === '"') inQ = !inQ;
+    else if (!inQ) {
+      if (ch === '\n') { per.push(counts); counts = {}; cands.forEach(c => counts[c] = 0); }
+      else if (counts[ch] !== undefined) counts[ch]++;
+    }
+  }
+  if (!per.length) per.push(counts);
+  let best = ',', bs = 0;
+  for (const c of cands) {
+    const freq = new Map();
+    for (const p of per) freq.set(p[c], (freq.get(p[c]) || 0) + 1);
+    let mode = 0, mf = 0;
+    for (const [v, f] of freq) if (v > 0 && f > mf) { mode = v; mf = f; }
+    if (!mode) continue;
+    const sc = (mf / per.length) * (1 + Math.log(mode));
+    if (sc > bs) { bs = sc; best = c; }
+  }
+  return best;
+}
+
+/* ---------- streaming CSV parser (quotes, embedded newlines, "" escapes) ---------- */
+class CsvParser {
+  constructor(delim, onRow) {
+    this.d = delim.charCodeAt(0); this.onRow = onRow;
+    this.st = 0; this.buf = ''; this.row = []; this.fs = true; this.skipLF = false; this.stop = false;
+  }
+  _endField() { this.row.push(this.buf); this.buf = ''; this.fs = true; this.st = 0; }
+  _endRow() {
+    this._endField();
+    const r = this.row; this.row = [];
+    if (r.length === 1 && r[0] === '') return;          // blank line
+    this.onRow(r);
+  }
+  feed(s) {
+    const d = this.d, n = s.length; let i = 0;
+    while (i < n) {
+      if (this.stop) return;
+      let st = this.st;
+      if (st === 1) {                                     // inside quotes
+        const q = s.indexOf('"', i);
+        if (q < 0) { this.buf += s.slice(i); return; }
+        this.buf += s.slice(i, q); i = q + 1; this.st = 2; continue;
+      }
+      if (st === 2) {                                     // quote seen inside quoted field
+        if (s.charCodeAt(i) === 34) { this.buf += '"'; i++; this.st = 1; continue; }
+        this.st = 3; continue;
+      }
+      const c = s.charCodeAt(i);
+      if (this.skipLF) { this.skipLF = false; if (c === 10) { i++; continue; } }
+      if (st === 0 && this.fs && c === 34) { this.st = 1; this.fs = false; i++; continue; }
+      let j = i;
+      while (j < n) { const cc = s.charCodeAt(j); if (cc === d || cc === 10 || cc === 13) break; j++; }
+      if (j > i) { this.buf += s.slice(i, j); this.fs = false; }
+      i = j;
+      if (j < n) {
+        const cc = s.charCodeAt(j); i = j + 1;
+        if (cc === d) this._endField();
+        else { if (cc === 13) { if (s.charCodeAt(i) === 10) i++; else if (i >= n) this.skipLF = true; } this._endRow(); }
+      }
+    }
+  }
+  finish() {
+    if (this.stop) return;
+    if (this.buf !== '' || this.row.length > 0 || this.st !== 0) this._endRow();
+  }
+}
+
+/* ---------- type inference ---------- */
+const AMT_NAME_RE = /(AMT|AMOUNT|BAL|BALANCE|PRINCIPAL|EXPOSURE|VALUE|COST|PRICE|FEE|金額|餘額|本金|曝險|價值)/i;
+const ID_NAME_RE = /(^|_)(ID|NO|CODE|SEQ|NUM)$|統編|統一編號|代號|編號|帳號|身分證/i;
+function inferTypes(rows, ncols, headers, overrides, paren) {
+  const types = [];
+  for (let c = 0; c < ncols; c++) {
+    if (overrides && overrides[c] && overrides[c] !== 'auto') { types.push(overrides[c]); continue; }
+    let nn = 0, numOK = 0, intOK = 0, dateOK = 0, boolOK = 0, lead0 = 0;
+    const lens = new Set(), dist = new Set();
+    for (let r = 0; r < rows.length; r++) {
+      const v = rows[r][c];
+      if (v === undefined || isMiss(v)) continue;
+      nn++; const s = v.trim();
+      if (dist.size < 20000) dist.add(s);
+      const x = parseNumStr(s, paren);
+      if (x === x && x !== null) {
+        numOK++;
+        const cl = s.replace(/,/g, '');
+        if (/^[+-]?\d+$/.test(cl)) intOK++;
+        if (/^0\d+$/.test(cl)) lead0++;
+        lens.add(cl.length);
+      }
+      if (isDateStr(s)) dateOK++;
+      if (BOOL_SET.has(s.toLowerCase())) boolOK++;
+    }
+    let t = 'text';
+    if (nn === 0) t = 'text';
+    else if (dateOK / nn >= 0.95) t = 'date';
+    else if (numOK / nn >= 0.95) {
+      if (lead0 > 0) t = 'id';
+      else if (AMT_NAME_RE.test(headers[c] || '')) t = intOK === numOK ? 'integer' : 'number';
+      else if (intOK === numOK && lens.size === 1 && [...lens][0] >= 6 && dist.size / nn > 0.5) t = 'id';
+      else if (intOK === numOK && ID_NAME_RE.test(headers[c] || '') && dist.size / nn > 0.5) t = 'id';
+      else t = intOK === numOK ? 'integer' : 'number';
+    } else if (boolOK / nn >= 0.95) t = 'boolean';
+    types.push(t);
+  }
+  return types;
+}
+function cleanHeaders(row, header) {
+  const out = [], seen = new Map();
+  for (let i = 0; i < row.length; i++) {
+    let h = header ? String(row[i]).trim() : '';
+    if (!h) h = 'COL_' + (i + 1);
+    const k = h.toUpperCase();
+    if (seen.has(k)) { const n = seen.get(k) + 1; seen.set(k, n); h = h + '_' + n; } else seen.set(k, 1);
+    out.push(h);
+  }
+  return out;
+}
+
+/* ---------- chunk builder / ingest / finalize ---------- */
+function buildChunk(rows, types, headers, rowStart, paren, badCnt, badEx) {
+  const n = rows.length, nc = headers.length, cols = new Array(nc);
+  for (let c = 0; c < nc; c++) {
+    if (isNumT(types[c])) {
+      const a = new Float64Array(n);
+      for (let r = 0; r < n; r++) {
+        const v = rows[r][c], x = parseNumStr(v, paren);
+        if (x === null) {
+          a[r] = NaN; badCnt[c]++;
+          if (badEx[c].length < 8) badEx[c].push(v.length > 40 ? v.slice(0, 40) + '…' : v);
+        } else a[r] = x;
+      }
+      cols[c] = { t: 'num', data: a };
+    } else {
+      const map = new Map(), dict = [null], idx = new Uint32Array(n);
+      for (let r = 0; r < n; r++) {
+        const v = rows[r][c];
+        if (isMiss(v)) idx[r] = 0;
+        else { let id = map.get(v); if (id === undefined) { id = dict.length; dict.push(v); map.set(v, id); } idx[r] = id; }
+      }
+      cols[c] = { t: 'cat', dict, idx };
+    }
+  }
+  return { rowStart, n, cols };
+}
+function newBuilder(headers, types) {
+  return { headers, types, N: 0, cols: headers.map((h, i) => isNumT(types[i]) ? { parts: [] } : { parts: [], map: new Map(), dict: [null] }) };
+}
+function ingest(B, ch) {            // NOTE: remaps ch cat idx in place -> call AFTER posting the chunk
+  for (let c = 0; c < B.cols.length; c++) {
+    const col = ch.cols[c], bc = B.cols[c];
+    if (col.t === 'num') bc.parts.push(col.data);
+    else {
+      const remap = new Uint32Array(col.dict.length);
+      for (let k = 1; k < col.dict.length; k++) {
+        const v = col.dict[k]; let g = bc.map.get(v);
+        if (g === undefined) { g = bc.dict.length; bc.dict.push(v); bc.map.set(v, g); }
+        remap[k] = g;
+      }
+      const idx = col.idx; for (let i = 0; i < idx.length; i++) idx[i] = remap[idx[i]];
+      bc.parts.push(idx);
+    }
+  }
+  B.N += ch.n;
+}
+function finalize(B, meta) {
+  const N = B.N, cols = [], stats = [];
+  for (let c = 0; c < B.headers.length; c++) {
+    const bc = B.cols[c], num = isNumT(B.types[c]);
+    const data = num ? new Float64Array(N) : new Uint32Array(N);
+    let o = 0; for (const p of bc.parts) { data.set(p, o); o += p.length; }
+    bc.parts.length = 0;
+    const col = { name: B.headers[c], type: B.types[c], kind: num ? 'num' : 'cat', data };
+    if (!num) { col.dict = bc.dict; bc.map = null; }
+    cols.push(col); stats.push(colStats(col, N));
+  }
+  ds = { id: meta.id, name: meta.name, N, headers: B.headers, cols, keyCols: [] };
+  lastRun = null;
+  return stats;
+}
+function colStats(col, N) {
+  const s = { name: col.name, type: col.type };
+  if (col.kind === 'num') {
+    let n = 0, mean = 0, m2 = 0, mn = Infinity, mx = -Infinity; const x = col.data, dset = new Set();
+    for (let i = 0; i < N; i++) {
+      const v = x[i]; if (v !== v) continue;
+      if (dset.size < 51) dset.add(v);
+      n++; const dl = v - mean; mean += dl / n; m2 += dl * (v - mean);
+      if (v < mn) mn = v; if (v > mx) mx = v;
+    }
+    s.nulls = N - n; s.n = n; s.dcap = dset.size; s.min = n ? mn : null; s.max = n ? mx : null; s.mean = n ? mean : null; s.std = n > 1 ? Math.sqrt(m2 / (n - 1)) : null;
+  } else {
+    const cnt = new Uint32Array(col.dict.length), x = col.data;
+    for (let i = 0; i < N; i++) cnt[x[i]]++;
+    s.nulls = cnt[0]; s.n = N - cnt[0]; s.distinct = col.dict.length - 1;
+    const top = [];
+    for (let k = 1; k < cnt.length; k++) {
+      if (top.length < 5 || cnt[k] > top[top.length - 1][1]) {
+        top.push([col.dict[k], cnt[k]]); top.sort((a, b) => b[1] - a[1]); if (top.length > 5) top.pop();
+      }
+    }
+    s.top = top;
+  }
+  return s;
+}
+
+/* ---------- import ---------- */
+async function doImport(p, emit) {
+  abortFlag = false;
+  const { file, opts, datasetId } = p;
+  const size = file.size;
+  const enc = opts.enc && opts.enc !== 'auto' ? opts.enc : await detectFileEnc(file, new Uint8Array(await file.slice(0, PREVIEW_BYTES).arrayBuffer()));
+  let delim = opts.delim && opts.delim !== 'auto' ? opts.delim : null;
+  if (!delim) { const t = new TextDecoder(enc).decode(new Uint8Array(await file.slice(0, 65536).arrayBuffer())); delim = detectDelim(t); }
+  const dec = new TextDecoder(enc);
+  const paren = !!opts.parenNeg, header = opts.header !== false, badPolicy = opts.badRow || 'pad';
+  let headers = null, ncols = 0, types = null, B = null, chunkNo = 0, rowCount = 0, recNo = 0, badChars = 0;
+  const sample = [], chunkRows = [], badRows = { count: 0, examples: [] };
+  let badCnt = null, badEx = null;
+  const startTypes = () => {
+    types = inferTypes(sample, ncols, headers, opts.types, paren);
+    B = newBuilder(headers, types);
+    badCnt = new Array(ncols).fill(0); badEx = headers.map(() => []);
+  };
+  const flush = () => {
+    if (!chunkRows.length) return;
+    const ch = buildChunk(chunkRows, types, headers, rowCount, paren, badCnt, badEx);
+    ch.chunkNo = chunkNo++;
+    emit('chunk', { chunkNo: ch.chunkNo, rowStart: ch.rowStart, n: ch.n, cols: ch.cols });   // structured clone happens now
+    ingest(B, ch);
+    rowCount += ch.n; chunkRows.length = 0;
+  };
+  const addData = r => {
+    if (types === null) { sample.push(r); if (sample.length >= SAMPLE) { startTypes(); for (const q of sample) chunkRows.push(q); sample.length = 0; if (chunkRows.length >= CHUNK) flush(); } return; }
+    chunkRows.push(r); if (chunkRows.length >= CHUNK) flush();
+  };
+  const onRow = r => {
+    recNo++;
+    if (!headers) {
+      ncols = r.length; headers = cleanHeaders(r, header);
+      if (header) return;
+    }
+    if (r.length !== ncols) {
+      badRows.count++; if (badRows.examples.length < 10) badRows.examples.push(recNo);
+      if (badPolicy === 'skip') return;
+      if (r.length < ncols) { r = r.slice(); while (r.length < ncols) r.push(''); } else r = r.slice(0, ncols);
+    }
+    addData(r);
+  };
+  const parser = new CsvParser(delim, onRow);
+  const BLOCK = 4 * 1024 * 1024;
+  for (let pos = 0; pos < size; pos += BLOCK) {
+    const buf = await file.slice(pos, pos + BLOCK).arrayBuffer();
+    const txt = dec.decode(new Uint8Array(buf), { stream: pos + BLOCK < size });
+    for (let q = txt.indexOf('\uFFFD'); q >= 0; q = txt.indexOf('\uFFFD', q + 1)) badChars++;
+    parser.feed(txt);
+    emit('progress', { pct: Math.min(99, Math.round((pos + BLOCK) / size * 100)), rows: rowCount + chunkRows.length + sample.length });
+    await tick(); checkAbort();
+  }
+  parser.feed(dec.decode()); parser.finish();
+  if (!headers) throw new Error('檔案是空的或無法解析');
+  if (types === null) { startTypes(); for (const q of sample) chunkRows.push(q); sample.length = 0; }
+  flush();
+  if (rowCount === 0) throw new Error('沒有任何資料列');
+  const stats = finalize(B, { id: datasetId, name: opts.name || (file.name || 'dataset') });
+  stats.forEach((s, i) => { s.bad = badCnt[i]; s.badEx = badEx[i]; });
+  return { N: rowCount, nChunks: chunkNo, headers, types, stats, badRows, enc, delim, badChars };
+}
+
+/* ---------- preview ---------- */
+async function doPreview(p) {
+  const { file, opts } = p;
+  const head = new Uint8Array(await file.slice(0, PREVIEW_BYTES).arrayBuffer());
+  const detected = await detectFileEnc(file, head);
+  const enc = opts.enc && opts.enc !== 'auto' ? opts.enc : detected;
+  let text = new TextDecoder(enc).decode(file.size > PREVIEW_BYTES ? trimTail(head) : head);
+  if (file.size > PREVIEW_BYTES) { const k = text.lastIndexOf('\n'); if (k > 0) text = text.slice(0, k); }
+  const bad = text.length ? (text.match(/\uFFFD/g) || []).length / text.length : 0;
+  const delim = opts.delim && opts.delim !== 'auto' ? opts.delim : detectDelim(text);
+  const rows = []; const header = opts.header !== false;
+  const parser = new CsvParser(delim, r => { rows.push(r); if (rows.length >= 2001) parser.stop = true; });
+  parser.feed(text); parser.finish();
+  if (!rows.length) throw new Error('檔案是空的或無法解析');
+  const ncols = rows[0].length, headers = cleanHeaders(rows[0], header);
+  const data = (header ? rows.slice(1) : rows).filter(r => r.length === ncols);
+  const inferred = inferTypes(data, ncols, headers, null, !!opts.parenNeg);
+  const types = inferTypes(data, ncols, headers, opts.types, !!opts.parenNeg);
+  return { enc, detected, delim, badRatio: bad, headers, types, inferred, rows: data.slice(0, 100), size: file.size };
+}
+
+/* ---------- dataset load (from IndexedDB chunks) ---------- */
+let loadB = null;
+function loadBegin(p) { loadB = newBuilder(p.headers, p.types); loadB.meta = p; return true; }
+function loadChunk(p) { ingest(loadB, p.chunk); return true; }
+function loadEnd() { const m = loadB.meta; const st = finalize(loadB, { id: m.id, name: m.name }); loadB = null; return st; }
+
+/* ---------- misc numeric helpers ---------- */
+function quantileSorted(a, p) {
+  const n = a.length; if (!n) return NaN;
+  const h = (n - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
+  return a[lo] + (h - lo) * (a[hi] - a[lo]);
+}
+function lowerRank(a, v) {           // fraction of values <= v
+  let lo = 0, hi = a.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] <= v) lo = m + 1; else hi = m; }
+  return lo / a.length;
+}
+function fmtN(x) {
+  if (x === null || x === undefined || x !== x) return 'NULL';
+  if (!isFinite(x)) return String(x);
+  const a = Math.abs(x);
+  if (a !== 0 && (a < 0.0001 || a >= 1e15)) return x.toExponential(3);
+  let s = Number.isInteger(x) ? String(x) : String(Number(x.toPrecision(10))), neg = '';
+  if (s[0] === '-') { neg = '-'; s = s.slice(1); }
+  let ip = s, fp = ''; const dot = s.indexOf('.');
+  if (dot >= 0) { ip = s.slice(0, dot); fp = s.slice(dot + 1); }
+  if (fp.length > 6) {                                   // decimal half-up rounding on the shortest representation (matches Intl)
+    const up = fp.charCodeAt(6) >= 53; fp = fp.slice(0, 6);
+    if (up) { const t = (BigInt(ip + fp) + 1n).toString().padStart(7, '0'); ip = t.slice(0, -6); fp = t.slice(-6); }
+  }
+  fp = fp.replace(/0+$/, '');
+  if (neg && /^0*$/.test(ip) && !fp) neg = '';
+  if (ip.length > 3) ip = ip.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return neg + ip + (fp ? '.' + fp : '');
+}
+const pct = (p, d) => { const v = p * 100; return (v >= 10 ? v.toFixed(1) : v >= 0.1 ? v.toFixed(2) : v.toFixed(4)) + '%'; };
+const ratioSev = (r, low) => r < 0.1 ? 3 : r < 1 ? 2 : (low && r < 1.25) ? 1 : 0;
+function colIdx(name) {
+  const i = ds.headers.indexOf(name);
+  if (i < 0) throw new Error('找不到欄位：' + name);
+  return i;
+}
+function cellStr(ci, row) {
+  const c = ds.cols[ci];
+  if (c.kind === 'num') { const v = c.data[row]; return v !== v ? '' : String(v); }
+  const v = c.dict[c.data[row]]; return v === null ? '' : v;
+}
+
+/* ---------- filter mask ---------- */
+function buildMask(filters) {
+  if (!filters || !filters.length) return null;
+  const N = ds.N, mask = new Uint8Array(N).fill(1);
+  for (const f of filters) {
+    if (!f.col) continue;
+    const ci = colIdx(f.col), c = ds.cols[ci], op = f.op, val = f.val == null ? '' : String(f.val);
+    if (c.kind === 'cat') {
+      const ok = new Uint8Array(c.dict.length);
+      const list = op === 'in' ? new Set(val.split(/[,\n，]/).map(s => s.trim()).filter(s => s !== '')) : null;
+      for (let k = 0; k < c.dict.length; k++) {
+        const v = c.dict[k]; let t = false;
+        if (op === 'null') t = k === 0;
+        else if (op === 'notnull') t = k !== 0;
+        else if (k === 0) t = op === '!=' || op === 'notin';
+        else switch (op) {
+          case '=': t = v.trim() === val.trim(); break;
+          case '!=': t = v.trim() !== val.trim(); break;
+          case 'in': t = list.has(v.trim()); break;
+          case 'notin': t = !list.has(v.trim()); break;
+          case 'contains': t = v.toLowerCase().includes(val.toLowerCase()); break;
+          case '>': t = v > val; break; case '>=': t = v >= val; break;
+          case '<': t = v < val; break; case '<=': t = v <= val; break;
+        }
+        ok[k] = t ? 1 : 0;
+      }
+      for (let i = 0; i < N; i++) if (!ok[c.data[i]]) mask[i] = 0;
+    } else {
+      const x = c.data, num = Number(val), list = op === 'in' ? new Set(val.split(/[,\n，]/).map(s => Number(s.trim()))) : null;
+      for (let i = 0; i < N; i++) {
+        const v = x[i], isn = v !== v; let t = false;
+        switch (op) {
+          case 'null': t = isn; break; case 'notnull': t = !isn; break;
+          case '=': t = v === num; break; case '!=': t = isn || v !== num; break;
+          case 'in': t = list.has(v); break; case 'notin': t = isn || !list.has(v); break;
+          case '>': t = v > num; break; case '>=': t = v >= num; break;
+          case '<': t = v < num; break; case '<=': t = v <= num; break;
+          case 'contains': t = !isn && String(v).includes(val); break;
+        }
+        if (!t) mask[i] = 0;
+      }
+    }
+  }
+  return mask;
+}
+
+/* ---------- column coding (categorical ids / numeric bins) ---------- */
+function edgeBins(name, edges) {
+  const labels = ['(空值)'], atoms = [{ c: name, isNull: true }];
+  const m = edges.length;
+  for (let k = 0; k <= m; k++) {
+    if (k === 0) { labels.push('< ' + fmtN(edges[0])); atoms.push({ c: name, hi: edges[0] }); }
+    else if (k === m) { labels.push('≥ ' + fmtN(edges[m - 1])); atoms.push({ c: name, lo: edges[m - 1] }); }
+    else { labels.push(fmtN(edges[k - 1]) + ' ~ ' + fmtN(edges[k])); atoms.push({ c: name, lo: edges[k - 1], hi: edges[k] }); }
+  }
+  return { labels, atoms };
+}
+function sortedNonNull(x, N) {
+  let n = 0; for (let i = 0; i < N; i++) if (x[i] === x[i]) n++;
+  const step = n > 2000000 ? Math.ceil(n / 1000000) : 1;
+  const a = new Float64Array(Math.ceil(n / step)); let o = 0, k = 0;
+  for (let i = 0; i < N; i++) { const v = x[i]; if (v === v) { if (k % step === 0) a[o++] = v; k++; } }
+  return { a: a.subarray(0, o).sort(), est: step > 1 };
+}
+function codeColumn(ci, bin) {
+  const c = ds.cols[ci], N = ds.N;
+  if (c.kind === 'cat') {
+    return { name: c.name, codes: c.data, size: c.dict.length, kind: 'cat',
+      labels: c.dict.map((v, i) => i === 0 ? '(空值)' : v),
+      atom: i => i === 0 ? { c: c.name, isNull: true } : { c: c.name, eq: c.dict[i] } };
+  }
+  const x = c.data, codes = new Uint32Array(N);
+  let mode = bin || 'auto';
+  if (mode === 'auto' || mode === 'distinct') {
+    const cap = mode === 'auto' ? 20 : 5000, set = new Set();
+    for (let i = 0; i < N; i++) { const v = x[i]; if (v === v) { set.add(v); if (set.size > cap) break; } }
+    if (set.size <= cap) {
+      const d = [...set].sort((a, b) => a - b), m = new Map(d.map((v, i) => [v, i + 1]));
+      for (let i = 0; i < N; i++) { const v = x[i]; codes[i] = v === v ? m.get(v) : 0; }
+      const labels = ['(空值)', ...d.map(fmtN)];
+      return { name: c.name, codes, size: labels.length, kind: 'num', labels,
+        atom: i => i === 0 ? { c: c.name, isNull: true } : { c: c.name, eqn: d[i - 1] } };
+    }
+    if (mode === 'distinct') throw new Error('欄位 ' + c.name + ' 相異值超過 5,000 種，請改用分箱');
+    mode = 'q10';
+  }
+  let edges;
+  if (mode[0] === 'q') {
+    const q = Math.max(2, +mode.slice(1) || 10), { a } = sortedNonNull(x, N); edges = [];
+    for (let k = 1; k < q; k++) { const e = quantileSorted(a, k / q); if (!edges.length || e > edges[edges.length - 1]) edges.push(e); }
+  } else edges = mode.slice(5).split(/[,\s，]+/).map(Number).filter(v => v === v).sort((a, b) => a - b).filter((v, i, arr) => !i || v !== arr[i - 1]);
+  if (!edges.length) throw new Error('欄位 ' + c.name + ' 無法分箱（切點為空）');
+  for (let i = 0; i < N; i++) {
+    const v = x[i]; if (v !== v) { codes[i] = 0; continue; }
+    let lo = 0, hi = edges.length; while (lo < hi) { const m = (lo + hi) >> 1; if (edges[m] <= v) lo = m + 1; else hi = m; }
+    codes[i] = 1 + lo;
+  }
+  const { labels, atoms } = edgeBins(c.name, edges);
+  return { name: c.name, codes, size: labels.length, kind: 'num', labels, atom: i => atoms[i] };
+}
+function combine(cs, mask, o) {
+  const N = ds.N, gid = new Int32Array(N).fill(-1), m = new Map(), decode = [], k = cs.length;
+  let prod = 1; for (const c of cs) prod *= c.size;
+  const numeric = prod <= 9007199254740991;
+  for (let i = 0; i < N; i++) {
+    if (mask && !mask[i]) continue;
+    let key, skip = false;
+    if (numeric) {
+      key = 0;
+      for (let j = 0; j < k; j++) { const cd = cs[j].codes[i]; if (o.skipNull && cd === 0) { skip = true; break; } key = key * cs[j].size + cd; }
+    } else {
+      const parts = new Array(k);
+      for (let j = 0; j < k; j++) { const cd = cs[j].codes[i]; if (o.skipNull && cd === 0) { skip = true; break; } parts[j] = cd; }
+      if (!skip) key = parts.join('\u0001');
+    }
+    if (skip) continue;
+    let g = m.get(key);
+    if (g === undefined) {
+      g = decode.length;
+      if (g >= o.maxCombos) throw new Error('相異組合超過 ' + o.maxCombos.toLocaleString('en-US') + ' 種，請減少欄位或改用分箱');
+      m.set(key, g); decode.push(cs.map(c => c.codes[i]));
+    }
+    gid[i] = g;
+  }
+  return { gid, n: decode.length, decode };
+}
+
+/* ---------- hits ---------- */
+function addHit(ctx, row, ri, sev, text) {
+  if (ctx.ruleHits[ri] >= MAXHIT) { ctx.trunc[ri] = true; return; }
+  let a = ctx.hits.get(row); if (!a) { a = []; ctx.hits.set(row, a); }
+  a.push([ri, sev, text]); ctx.ruleHits[ri]++;
+}
+const SEV_NAME = ['', '低', '高', '嚴重'];
+
+/* ---------- numeric detectors ---------- */
+function runNum(rule, ri, ctx) {
+  const m = rule.type, ci = colIdx(rule.column), col = ds.cols[ci];
+  if (col.kind !== 'num') throw new Error('欄位 ' + rule.column + ' 不是數值欄位（可到匯入設定改成數值型態）');
+  const x = col.data, N = ds.N, mask = ctx.mask, low = ctx.includeLow;
+  const log = !!rule.log && m !== 'range' && m !== 'pct';
+  const minG = m === 'range' ? 0 : (rule.minGroup != null ? +rule.minGroup : 20);
+  const grouped = rule.groupBy && rule.groupBy.length && m !== 'range';
+  const gcs = grouped ? rule.groupBy.map(n => codeColumn(colIdx(n), 'auto')) : null;
+  const g = grouped ? combine(gcs, mask, { skipNull: false, maxCombos: 5000 }) : { gid: null, n: 1, decode: [[]] };
+  const glabel = gi => grouped ? g.decode[gi].map((cd, j) => gcs[j].name + '=' + gcs[j].labels[cd]).join(', ') : '';
+  const gatoms = gi => grouped ? g.decode[gi].map((cd, j) => gcs[j].atom(cd)) : [];
+  const cnt = new Uint32Array(g.n); let skipNP = 0;
+  for (let i = 0; i < N; i++) {
+    if (mask && !mask[i]) continue; const v = x[i]; if (v !== v) continue;
+    if (log && v <= 0) { skipNP++; continue; }
+    const gi = g.gid ? g.gid[i] : 0; if (gi < 0) continue; cnt[gi]++;
+  }
+  const arrs = Array.from(cnt, c => new Float64Array(c)), pos = new Uint32Array(g.n);
+  for (let i = 0; i < N; i++) {
+    if (mask && !mask[i]) continue; const v = x[i]; if (v !== v) continue;
+    if (log && v <= 0) continue;
+    const gi = g.gid ? g.gid[i] : 0; if (gi < 0) continue;
+    arrs[gi][pos[gi]++] = log ? Math.log10(v) : v;
+  }
+  const k = rule.k != null ? +rule.k : 1.5, t = rule.t != null ? +rule.t : (m === 'mad' ? 3.5 : 3);
+  const pl = rule.pl != null ? +rule.pl : 1, ph = rule.ph != null ? +rule.ph : 99;
+  const back = v => log ? Math.pow(10, v) : v;
+  const P = new Array(g.n), groups = [], warn = new Set(); let skippedG = 0, est = false;
+  for (let gi = 0; gi < g.n; gi++) {
+    const arr = arrs[gi], n = arr.length, label = glabel(gi);
+    const info = { label, atoms: gatoms(gi), n };
+    if (m === 'range') {
+      info.lo = rule.min === '' || rule.min == null ? null : +rule.min; info.hi = rule.max === '' || rule.max == null ? null : +rule.max;
+      info.gtag = '[n=' + fmtN(n) + '] '; P[gi] = info; groups.push(info); continue;
+    }
+    if (n < minG) { info.skipped = '樣本不足（n=' + n + ' < ' + minG + '）'; groups.push(info); skippedG++; continue; }
+    let mn = Infinity, mx = -Infinity; for (let i = 0; i < n; i++) { if (arr[i] < mn) mn = arr[i]; if (arr[i] > mx) mx = arr[i]; }
+    info.min = back(mn); info.max = back(mx);
+    if (m === 'zscore') {
+      let mean = 0, m2 = 0; for (let i = 0; i < n; i++) { const dl = arr[i] - mean; mean += dl / (i + 1); m2 += dl * (arr[i] - mean); }
+      const sd = n > 1 ? Math.sqrt(m2 / (n - 1)) : 0;
+      if (!(sd > 0)) { info.skipped = 'σ=0（近乎常數，建議改用 Rare Category）'; groups.push(info); skippedG++; continue; }
+      info.mean = back(mean); info.sd = sd; info.lo = back(mean - t * sd); info.hi = back(mean + t * sd);
+      info.p = { mean, sd };
+    } else {
+      let sorted = arr;
+      if (n > 2000000) { const step = Math.ceil(n / 1000000), s2 = new Float64Array(Math.ceil(n / step)); for (let i = 0, o = 0; i < n; i += step) s2[o++] = arr[i]; sorted = s2; est = true; }
+      else sorted = Float64Array.from(arr);
+      sorted.sort();
+      const q1 = quantileSorted(sorted, 0.25), q3 = quantileSorted(sorted, 0.75), med = quantileSorted(sorted, 0.5);
+      info.q1 = back(q1); info.q3 = back(q3); info.median = back(med);
+      if (m === 'iqr') {
+        const iqr = q3 - q1;
+        if (!(iqr > 0)) { info.skipped = 'IQR=0（近乎常數，建議改用 Rare Category）'; groups.push(info); skippedG++; continue; }
+        info.lo = back(q1 - k * iqr); info.hi = back(q3 + k * iqr); info.p = { q1, q3, iqr, sorted };
+      } else if (m === 'mad') {
+        const dev = new Float64Array(sorted.length); for (let i = 0; i < dev.length; i++) dev[i] = Math.abs(sorted[i] - med);
+        dev.sort(); const mad = quantileSorted(dev, 0.5); let scale;
+        if (mad > 0) scale = mad / 0.6745;
+        else {
+          let s = 0; for (let i = 0; i < dev.length; i++) s += dev[i]; const mean = s / dev.length;
+          if (!(mean > 0)) { info.skipped = 'MAD 與 MeanAD 皆為 0（近乎常數）'; groups.push(info); skippedG++; continue; }
+          scale = 1.253314 * mean; info.meanAD = true; warn.add('部分分組 MAD=0，已改用 MeanAD 版本計算');
+        }
+        info.lo = back(med - t * scale); info.hi = back(med + t * scale); info.p = { med, scale, sorted };
+      } else if (m === 'pct') {
+        const a = quantileSorted(sorted, pl / 100), b = quantileSorted(sorted, ph / 100);
+        if (!(b > a)) { info.skipped = 'P' + pl + ' 與 P' + ph + ' 相同（近乎常數）'; groups.push(info); skippedG++; continue; }
+        info.lo = back(a); info.hi = back(b); info.p = { a, b, span: b - a, sorted };
+      }
+    }
+    info.gtag = grouped ? '[' + info.label + '，n=' + fmtN(info.n) + '] ' : '[n=' + fmtN(info.n) + '] ';
+    if (m === 'iqr') info.base = 'IQR（k=' + k + '）：Q1=' + fmtN(info.q1) + '、Q3=' + fmtN(info.q3) + '，合理範圍 [' + fmtN(info.lo) + ', ' + fmtN(info.hi) + ']，';
+    else if (m === 'zscore') info.base = '（門檻 ±' + t + '）：平均 ' + fmtN(info.mean) + '、σ=' + fmtN(info.sd) + (log ? '（log10 空間）' : '');
+    else if (m === 'mad') info.base = '（門檻 ±' + t + '）：中位數 ' + fmtN(info.median) + (info.meanAD ? '（MAD=0，改用 MeanAD）' : '');
+    else if (m === 'pct') info.base = '超出 P' + pl + '~P' + ph + ' 範圍 [' + fmtN(info.lo) + ', ' + fmtN(info.hi) + ']';
+    P[gi] = info; groups.push(info);
+  }
+  const gh = new Uint32Array(g.n), cn = rule.column;
+  for (let i = 0; i < N; i++) {
+    if (mask && !mask[i]) continue; const raw = x[i]; if (raw !== raw) continue;
+    if (log && raw <= 0) continue;
+    const gi = g.gid ? g.gid[i] : 0; if (gi < 0) continue;
+    const I = P[gi]; if (!I) continue;
+    const v = log ? Math.log10(raw) : raw, p = I.p; let sev = 0, d = 0, txt = '';
+    if (m === 'iqr') {
+      d = v > p.q3 ? (v - p.q3) / p.iqr : v < p.q1 ? (p.q1 - v) / p.iqr : 0;
+      sev = d >= Math.max(3, 2 * k) ? 3 : d >= k ? 2 : (low && d >= 0.8 * k) ? 1 : 0;
+      if (sev) txt = I.base + (sev === 1 ? '已接近邊界（≥ 門檻 80%）' : (raw > I.hi ? '高於上界' : '低於下界') + '，偏離 ' + d.toFixed(2) + ' 倍 IQR');
+    } else if (m === 'zscore') {
+      d = Math.abs((v - p.mean) / p.sd);
+      sev = d > Math.max(5, t) ? 3 : d >= t ? 2 : (low && d >= 0.8 * t) ? 1 : 0;
+      if (sev) txt = 'Z-Score = ' + ((v - p.mean) / p.sd).toFixed(2) + I.base;
+    } else if (m === 'mad') {
+      const z = (v - p.med) / p.scale; d = Math.abs(z);
+      sev = d >= 2 * t ? 3 : d >= t ? 2 : (low && d >= 0.8 * t) ? 1 : 0;
+      if (sev) txt = (log ? 'log-' : '') + 'MAD 修正 Z = ' + z.toFixed(2) + I.base;
+    } else if (m === 'pct') {
+      if (v < p.a - 0.5 * p.span || v > p.b + 0.5 * p.span) sev = 3; else if (v < p.a || v > p.b) sev = 2;
+      if (sev) txt = I.base;
+    } else {
+      const lo = I.lo, hi = I.hi; let dist = 0;
+      if (lo !== null && raw < lo) dist = lo - raw; else if (hi !== null && raw > hi) dist = raw - hi;
+      if (dist > 0) {
+        sev = (lo !== null && hi !== null && hi > lo && dist >= hi - lo) ? 3 : 2;
+        txt = '超出固定範圍 [' + (lo === null ? '-∞' : fmtN(lo)) + ', ' + (hi === null ? '+∞' : fmtN(hi)) + ']';
+      }
+    }
+    if (!sev) continue;
+    let rk = '';
+    if (p && p.sorted) { const r = lowerRank(p.sorted, v) * 100; rk = '；位於' + (grouped ? '組內' : '全體') + '第 ' + (r >= 99.99 ? '99.99+' : r.toFixed(2)) + ' 百分位'; }
+    gh[gi]++;
+    addHit(ctx, i, ri, sev, cn + ' = ' + fmtN(raw) + ' ' + (I.gtag || '') + txt + rk);
+  }
+  groups.forEach((I, gi) => { delete I.p; delete I.base; delete I.gtag; I.hits = gh[gi] || 0; });
+  const w = [...warn];
+  if (skippedG) w.push(skippedG + ' 個分組被略過（樣本不足或近乎常數）');
+  if (skipNP) w.push('有 ' + skipNP.toLocaleString('en-US') + ' 筆 ≤0 的值不適用 log，已略過');
+  if (est) w.push('分位數為抽樣估計值');
+  if (!groups.some(I => !I.skipped)) w.push('沒有任何分組可以計算，此規則未產生結果');
+  ctx.num[ri] = { ci, gid: g.gid, log, groups, method: m };
+  return { type: m, column: cn, groupBy: grouped ? rule.groupBy : [], log, groups: groups.slice(0, 500), groupsTotal: groups.length, warnings: w };
+}
+
+/* ---------- categorical detectors ---------- */
+function asCat(ci) {
+  const c = ds.cols[ci];
+  if (c.kind === 'cat') return c;
+  const cc = codeColumn(ci, 'distinct');
+  return { name: c.name, kind: 'cat', numeric: true, data: cc.codes, dict: [null, ...cc.labels.slice(1)] };
+}
+function catCounts(ci, mask, cc) {
+  const c = cc || ds.cols[ci], N = ds.N, cnt = new Uint32Array(c.dict.length), x = c.data;
+  for (let i = 0; i < N; i++) { if (mask && !mask[i]) continue; cnt[x[i]]++; }
+  let total = 0, distinct = 0; for (let k = 1; k < cnt.length; k++) { total += cnt[k]; if (cnt[k]) distinct++; }
+  return { cnt, total, distinct };
+}
+const highCard = (distinct, total) => distinct > 100 && distinct / total > 0.5;
+function runRareCat(rule, ri, ctx) {
+  const ci = colIdx(rule.column), c = asCat(ci);
+  const { cnt, total, distinct } = catCounts(ci, ctx.mask, c), w = [];
+  if (total < 20) return { type: 'rarecat', column: rule.column, warnings: ['樣本不足（n=' + total + '）'] };
+  if (highCard(distinct, total)) return { type: 'rarecat', column: rule.column, warnings: ['高基數欄位（' + distinct.toLocaleString('en-US') + ' 種相異值），已自動略過；可改用 Pattern 規則'] };
+  const minShare = (rule.minSharePct != null ? +rule.minSharePct : 0.1) / 100, maxCount = rule.maxCount != null ? +rule.maxCount : 3;
+  const sevId = new Uint8Array(cnt.length), txt = new Array(cnt.length), flagged = [];
+  for (let id = 1; id < cnt.length; id++) {
+    const n = cnt[id]; if (!n) continue;
+    const share = n / total, r = share / minShare; let s = 0;
+    if (n <= maxCount || share < minShare) s = (r < 0.1 || n === 1) ? 3 : 2;
+    else if (ctx.includeLow && r < 1.25) s = 1;
+    if (s) {
+      sevId[id] = s;
+      txt[id] = rule.column + ' = "' + c.dict[id] + '" 僅出現 ' + n.toLocaleString('en-US') + ' 次（占 ' + pct(share) + '），門檻 < ' + pct(minShare) + ' 或 ≤ ' + maxCount + ' 次';
+      if (s >= 2 && flagged.length < 1000) flagged.push(c.dict[id]);
+    }
+  }
+  scanCat(ctx, ri, c, sevId, txt);
+  let flaggedN = 0; for (let id = 1; id < sevId.length; id++) if (sevId[id] >= 2) flaggedN++;
+  return { type: 'rarecat', column: rule.column, numeric: !!c.numeric, distinct, total, flagged, flaggedN, warnings: w };
+}
+function scanCat(ctx, ri, c, sevId, txt) {
+  const N = ds.N, x = c.data, mask = ctx.mask;
+  for (let i = 0; i < N; i++) { if (mask && !mask[i]) continue; const id = x[i]; if (id && sevId[id]) addHit(ctx, i, ri, sevId[id], txt[id]); }
+}
+function runSingleton(rule, ri, ctx) {
+  const ci = colIdx(rule.column), c = asCat(ci);
+  const { cnt, total, distinct } = catCounts(ci, ctx.mask, c);
+  if (total < 20) return { type: 'singleton', column: rule.column, warnings: ['樣本不足（n=' + total + '）'] };
+  if (highCard(distinct, total) || distinct / total > 0.5) return { type: 'singleton', column: rule.column, warnings: ['高基數欄位（相異值占比 ' + pct(distinct / total) + '），已自動略過'] };
+  const sevId = new Uint8Array(cnt.length), txt = new Array(cnt.length), flagged = [];
+  for (let id = 1; id < cnt.length; id++) if (cnt[id] === 1) {
+    sevId[id] = 2; txt[id] = rule.column + ' = "' + c.dict[id] + '" 在欄位中只出現 1 次（Singleton）'; if (flagged.length < 1000) flagged.push(c.dict[id]);
+  }
+  scanCat(ctx, ri, c, sevId, txt);
+  let flaggedN = 0; for (let id = 1; id < sevId.length; id++) if (sevId[id] >= 2) flaggedN++;
+  return { type: 'singleton', column: rule.column, numeric: !!c.numeric, distinct, total, flagged, flaggedN, warnings: [] };
+}
+function runUnexpected(rule, ri, ctx) {
+  const ci = colIdx(rule.column), c = ds.cols[ci];
+  const allowed = String(rule.allowed || '').split(/[\n,，]/).map(s => s.trim()).filter(s => s !== '');
+  if (!allowed.length) throw new Error('請先填入允許值清單');
+  const N = ds.N, mask = ctx.mask;
+  if (c.kind === 'cat') {
+    const set = new Set(allowed), sevId = new Uint8Array(c.dict.length), txt = new Array(c.dict.length);
+    for (let id = 1; id < c.dict.length; id++) if (!set.has(c.dict[id].trim())) { sevId[id] = 2; txt[id] = rule.column + ' = "' + c.dict[id] + '" 不在允許值清單內（' + allowed.length + ' 個允許值）'; }
+    scanCat(ctx, ri, c, sevId, txt);
+  } else {
+    const set = new Set(allowed.map(Number)), x = c.data;
+    for (let i = 0; i < N; i++) { if (mask && !mask[i]) continue; const v = x[i]; if (v === v && !set.has(v)) addHit(ctx, i, ri, 2, rule.column + ' = ' + fmtN(v) + ' 不在允許值清單內（' + allowed.length + ' 個允許值）'); }
+  }
+  return { type: 'unexpected', column: rule.column, allowed, warnings: [] };
+}
+
+/* ---------- pattern / format ---------- */
+function shapeOf(s) {
+  let o = '';
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (ch >= '0' && ch <= '9') o += '9'; else if (ch >= 'A' && ch <= 'Z') o += 'A'; else if (ch >= 'a' && ch <= 'z') o += 'a';
+    else if (ch >= '\u4e00' && ch <= '\u9fff') o += '中'; else o += ch;
+  }
+  return o;
+}
+const RE_LEAD = /^\s|\s$/, RE_FULL = /[\uFF01-\uFF5E\u3000]/, RE_CTRL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/, RE_INVIS = /[\u200B-\u200F\u2028-\u202F\u2060\uFEFF\u00A0]/;
+function runPattern(rule, ri, ctx) {
+  const ci = colIdx(rule.column), c = ds.cols[ci];
+  if (c.kind !== 'cat') throw new Error('Pattern 僅適用類別/文字欄位：' + rule.column);
+  const { cnt, total } = catCounts(ci, ctx.mask), D = c.dict.length;
+  if (total < 20) return { type: 'pattern', column: rule.column, warnings: ['樣本不足（n=' + total + '）'] };
+  const minShare = (rule.minSharePct != null ? +rule.minSharePct : 0.5) / 100, w = [];
+  const doShape = rule.shape !== false, doLen = !!rule.length, doDirty = rule.dirty !== false;
+  const shapes = new Array(D), sCount = new Map(), lCount = new Map();
+  for (let id = 1; id < D; id++) {
+    if (!cnt[id]) continue;
+    const s = c.dict[id], sh = shapeOf(s); shapes[id] = sh;
+    sCount.set(sh, (sCount.get(sh) || 0) + cnt[id]); lCount.set(s.length, (lCount.get(s.length) || 0) + cnt[id]);
+  }
+  if (doShape && sCount.size > 5000) { w.push('字元模式超過 5,000 種（可能是自由文字欄位），已略過形狀檢查'); }
+  const useShape = doShape && sCount.size <= 5000;
+  let topShape = '', tsn = 0; for (const [k, v] of sCount) if (v > tsn) { tsn = v; topShape = k; }
+  let topLen = 0, tln = 0; for (const [k, v] of lCount) if (v > tln) { tln = v; topLen = k; }
+  const sevId = new Uint8Array(D), txt = new Array(D), badShapes = [], badLens = []; let dirtyN = 0;
+  const flagShape = new Map(), flagLen = new Map();
+  if (useShape) for (const [sh, n] of sCount) { const r = n / total / minShare, s = ratioSev(r, ctx.includeLow); if (s) { flagShape.set(sh, s); if (s >= 2) badShapes.push(sh); } }
+  if (doLen) for (const [l, n] of lCount) { const r = n / total / minShare, s = ratioSev(r, ctx.includeLow); if (s) { flagLen.set(l, s); if (s >= 2) badLens.push(l); } }
+  for (let id = 1; id < D; id++) {
+    if (!cnt[id]) continue;
+    const s = c.dict[id], parts = []; let sev = 0;
+    if (useShape && flagShape.has(shapes[id])) {
+      const sh = shapes[id], n = sCount.get(sh), sv = flagShape.get(sh);
+      parts.push('形狀 "' + sh + '" 僅占 ' + pct(n / total) + '（主流形狀 "' + topShape + '" 占 ' + pct(tsn / total) + '）'); sev = Math.max(sev, sv);
+    }
+    if (doLen && flagLen.has(s.length)) {
+      parts.push('長度 ' + s.length + ' 僅占 ' + pct(lCount.get(s.length) / total) + '（主流長度 ' + topLen + ' 占 ' + pct(tln / total) + '）'); sev = Math.max(sev, flagLen.get(s.length));
+    }
+    if (doDirty) {
+      const f = [];
+      if (RE_LEAD.test(s)) f.push('前後空白'); if (RE_FULL.test(s)) f.push('全形字元'); if (RE_CTRL.test(s)) f.push('控制字元'); if (RE_INVIS.test(s)) f.push('不可見字元');
+      if (f.length) { parts.push('含' + f.join('、')); sev = Math.max(sev, 2); dirtyN++; }
+    }
+    if (sev) { sevId[id] = sev; txt[id] = rule.column + ' = ' + JSON.stringify(s) + '：' + parts.join('；'); }
+  }
+  scanCat(ctx, ri, c, sevId, txt);
+  return { type: 'pattern', column: rule.column, total, shapes: sCount.size, topShape, badShapes: badShapes.slice(0, 200), badShapesN: badShapes.length, badLens, dirty: doDirty && dirtyN > 0, warnings: w };
+}
+
+/* ---------- rare combination ---------- */
+function runCombo(rule, ri, ctx) {
+  const names = rule.columns || [];
+  if (names.length < 2 || names.length > 4) throw new Error('Rare Combination 需選擇 2~4 個欄位');
+  const bins = rule.bins || {};
+  const cs = names.map(n => codeColumn(colIdx(n), bins[n] || 'auto'));
+  const skipNull = rule.skipNull !== false;
+  const g = combine(cs, ctx.mask, { skipNull, maxCombos: 500000 });
+  const counts = new Uint32Array(g.n); let total = 0, N = ds.N;
+  for (let i = 0; i < N; i++) { const q = g.gid[i]; if (q >= 0) { counts[q]++; total++; } }
+  if (total < 20) return { type: 'combo', columns: names, warnings: ['樣本不足（n=' + total + '）'] };
+  const minSup = rule.minSupportPct === '' ? 0 : rule.minSupportPct == null ? 0.001 : +rule.minSupportPct / 100;
+  const cond = (rule.condCols || []).filter(n => names.includes(n));
+  const useCond = cond.length > 0 && cond.length < names.length;
+  const cthr = (rule.condPct != null ? +rule.condPct : 1) / 100, cmin = rule.minCondCount != null ? +rule.minCondCount : 30;
+  let gA = null, cntA = null, repA = null;
+  const aIdx = useCond ? cond.map(n => names.indexOf(n)) : [], bIdx = useCond ? names.map((n, j) => j).filter(j => !aIdx.includes(j)) : [];
+  if (useCond) {
+    const ca = aIdx.map(j => cs[j]);
+    gA = combine(ca, ctx.mask, { skipNull, maxCombos: 500000 });
+    cntA = new Uint32Array(gA.n); repA = new Int32Array(g.n).fill(-1);
+    for (let i = 0; i < N; i++) { const q = g.gid[i]; if (q >= 0) { const a = gA.gid[i]; if (a >= 0) { cntA[a]++; if (repA[q] < 0) repA[q] = a; } } }
+  }
+  const lab = (codes, js) => js.map(j => names[j] + '=' + cs[j].labels[codes[j]]).join(' + ');
+  const sevG = new Uint8Array(g.n), txtG = new Array(g.n), flagged = [], low = ctx.includeLow; let nFlag = 0;
+  for (let q = 0; q < g.n; q++) {
+    const n = counts[q], dc = g.decode[q]; let s = 0, parts = [];
+    if (minSup > 0) {
+      const sup = n / total, sv = ratioSev(sup / minSup, low);
+      if (sv) { s = sv; parts.push('組合 [' + lab(dc, names.map((_, j) => j)) + '] 僅出現 ' + n.toLocaleString('en-US') + ' 筆（占 ' + pct(sup) + '，門檻 < ' + pct(minSup) + '）'); }
+    }
+    if (useCond && repA[q] >= 0 && cntA[repA[q]] >= cmin) {
+      const a = cntA[repA[q]], pa = n / a, sv = ratioSev(pa / cthr, low);
+      if (sv) { s = Math.max(s, sv); parts.push('在 [' + lab(dc, aIdx) + '] 的前提下，[' + lab(dc, bIdx) + '] 的條件機率僅 ' + pct(pa) + '（' + n.toLocaleString('en-US') + '/' + a.toLocaleString('en-US') + '，門檻 < ' + pct(cthr) + '）'); }
+    }
+    if (s) { sevG[q] = s; txtG[q] = parts.join('；'); nFlag++; if (s >= 2) flagged.push(q); }
+  }
+  for (let i = 0; i < N; i++) { const q = g.gid[i]; if (q >= 0 && sevG[q]) addHit(ctx, i, ri, sevG[q], txtG[q]); }
+  flagged.sort((a, b) => counts[a] - counts[b]);
+  const top = flagged.slice(0, 300).map(q => ({ count: counts[q], support: counts[q] / total, atoms: g.decode[q].map((cd, j) => cs[j].atom(cd)), label: lab(g.decode[q], names.map((_, j) => j)) }));
+  return { type: 'combo', columns: names, combos: g.n, total, flaggedCombos: nFlag, flagged: top, warnings: skipNull ? [] : ['已將空值視為一個類別'] };
+}
+
+/* ---------- run a hunt ---------- */
+function ruleKey(ri) { return ri; }
+async function doRun(p, emit) {
+  abortFlag = false;
+  if (!ds) throw new Error('尚未載入資料集');
+  const rules = p.rules || [], N = ds.N;
+  const ctx = { mask: buildMask(p.filters), includeLow: p.includeLow !== false, hits: new Map(), ruleHits: new Array(rules.length).fill(0), trunc: new Array(rules.length).fill(false), num: {} };
+  let counted = N; if (ctx.mask) { counted = 0; for (let i = 0; i < N; i++) counted += ctx.mask[i]; }
+  const ruleStats = [];
+  for (let ri = 0; ri < rules.length; ri++) {
+    const r = rules[ri];
+    emit('progress', { phase: 'run', pct: Math.round(ri / Math.max(1, rules.length) * 100), text: '執行規則 ' + (ri + 1) + '/' + rules.length + '：' + (r.name || r.type) });
+    await tick(); checkAbort();
+    if (r.enabled === false) { ruleStats.push({ type: r.type, skipped: true, warnings: ['已停用'] }); continue; }
+    try {
+      let st;
+      switch (r.type) {
+        case 'iqr': case 'zscore': case 'mad': case 'pct': case 'range': st = runNum(r, ri, ctx); break;
+        case 'rarecat': st = runRareCat(r, ri, ctx); break;
+        case 'singleton': st = runSingleton(r, ri, ctx); break;
+        case 'unexpected': st = runUnexpected(r, ri, ctx); break;
+        case 'pattern': st = runPattern(r, ri, ctx); break;
+        case 'combo': st = runCombo(r, ri, ctx); break;
+        default: throw new Error('未知的規則類型：' + r.type);
+      }
+      st.hits = ctx.ruleHits[ri];
+      if (ctx.trunc[ri]) (st.warnings = st.warnings || []).push('命中數超過 ' + MAXHIT.toLocaleString('en-US') + '，僅保留前段結果；請調整門檻');
+      ruleStats.push(st);
+    } catch (e) { ruleStats.push({ type: r.type, error: e.message || String(e), hits: 0, warnings: [] }); }
+  }
+  emit('progress', { phase: 'score', pct: 95, text: '彙整分數…' });
+  await tick(); checkAbort();
+  const wts = rules.map(r => r.weight != null && r.weight !== '' ? +r.weight : 1);
+  const rows = [];
+  for (const [row, hs] of ctx.hits) {
+    let sc = 0, sv = 0; for (const h of hs) { sc += wts[h[0]] * h[1]; if (h[1] > sv) sv = h[1]; }
+    rows.push([row, sc, sv]);
+  }
+  rows.sort((a, b) => b[1] - a[1] || a[0] - b[0]);
+  const keyCols = (p.keyCols || []).map(colIdx);
+  const keyOf = row => keyCols.length ? keyCols.map(ci => cellStr(ci, row)).join('|') : String(row);
+  const wl = p.excludeWL !== false && p.wl && p.wl.length ? new Set(p.wl) : null;
+  let excluded = 0; const results = []; let truncated = false;
+  for (const [row, sc, sv] of rows) {
+    const k = keyOf(row);
+    if (wl && wl.has(k)) { excluded++; ctx.hits.delete(row); continue; }
+    if (results.length >= MAXRES) { truncated = true; ctx.hits.delete(row); continue; }
+    const hs = ctx.hits.get(row);
+    results.push({ r: row, sc, sv, ru: [...new Set(hs.map(h => h[0]))], w: hs, k });
+  }
+  let keyDup = 0;
+  if (keyCols.length) { const kc = new Map(); for (const r of results) kc.set(r.k, (kc.get(r.k) || 0) + 1); for (const v of kc.values()) if (v > 1) keyDup += v; }
+  lastRun = { ctx, rules, ruleStats, token: p.token };
+  const sevCounts = [0, 0, 0, 0]; for (const r of results) sevCounts[r.sv]++;
+  return { N, counted, flagged: results.length, excluded, truncated, sevCounts, results, ruleStats, keyDup };
+}
+
+/* ---------- queries used by views ---------- */
+function getRows(ids) {
+  const out = new Array(ids.length), nc = ds.cols.length;
+  for (let j = 0; j < ids.length; j++) {
+    const r = ids[j], a = new Array(nc);
+    for (let c = 0; c < nc; c++) {
+      const col = ds.cols[c];
+      if (col.kind === 'num') { const v = col.data[r]; a[c] = v !== v ? null : v; } else a[c] = col.dict[col.data[r]];
+    }
+    out[j] = a;
+  }
+  return out;
+}
+function searchRows(p) {
+  const q = String(p.q || '').toLowerCase(), ids = p.ids, out = [], nc = ds.cols.length;
+  for (let j = 0; j < ids.length; j++) {
+    const r = ids[j];
+    for (let c = 0; c < nc; c++) {
+      const col = ds.cols[c]; let s;
+      if (col.kind === 'num') { const v = col.data[r]; if (v !== v) continue; s = String(v); } else { const v = col.dict[col.data[r]]; if (v === null) continue; s = v.toLowerCase(); }
+      if (s.includes(q)) { out.push(r); break; }
+    }
+  }
+  return out;
+}
+function histData(p) {
+  if (!lastRun || lastRun.token !== p.token) throw new Error('需要重新執行：運算引擎中沒有這次結果的資料');
+  const rc = lastRun.ctx.num[p.ri]; if (!rc) throw new Error('此規則沒有可顯示的分布');
+  const x = ds.cols[rc.ci].data, N = ds.N, mask = lastRun.ctx.mask, gi = p.gi || 0, log = rc.log;
+  const vals = [], rows = [];
+  for (let i = 0; i < N; i++) {
+    if (mask && !mask[i]) continue; const v = x[i]; if (v !== v) continue;
+    if (log && v <= 0) continue;
+    if (rc.gid && rc.gid[i] !== gi) continue;
+    vals.push(log ? Math.log10(v) : v); rows.push(i);
+  }
+  const n = vals.length; if (!n) throw new Error('此分組沒有資料');
+  let mn = Infinity, mx = -Infinity; for (const v of vals) { if (v < mn) mn = v; if (v > mx) mx = v; }
+  const B = 60, cnt = new Array(B).fill(0), hit = new Array(B).fill(0), span = mx - mn || 1;
+  for (let j = 0; j < n; j++) {
+    let b = Math.floor((vals[j] - mn) / span * B); if (b >= B) b = B - 1; cnt[b]++;
+    const hs = lastRun.ctx.hits.get(rows[j]); if (hs && hs.some(h => h[0] === p.ri)) hit[b]++;
+  }
+  const s = Float64Array.from(vals).sort(), q1 = quantileSorted(s, .25), med = quantileSorted(s, .5), q3 = quantileSorted(s, .75), iqr = q3 - q1;
+  let wl = mn, wh = mx; const fl = q1 - 1.5 * iqr, fh = q3 + 1.5 * iqr;
+  for (let i = 0; i < n; i++) if (s[i] >= fl) { wl = s[i]; break; } for (let i = n - 1; i >= 0; i--) if (s[i] <= fh) { wh = s[i]; break; }
+  const info = rc.groups[gi] || {}, t = v => v === null || v === undefined ? null : (log ? Math.log10(v) : v);
+  return { n, min: mn, max: mx, cnt, hit, lo: t(info.lo), hi: t(info.hi), log, box: { min: mn, q1, med, q3, max: mx, wl, wh }, label: info.label || '' };
+}
+function matrixData(p) {
+  const a = codeColumn(colIdx(p.a), p.binA || 'auto'), b = codeColumn(colIdx(p.b), p.binB || 'auto'), N = ds.N, mask = buildMask(p.filters), top = p.top || 25;
+  const ma = new Map(), mb = new Map(), cell = new Map(), hits = new Set(p.flag || []);
+  for (let i = 0; i < N; i++) {
+    if (mask && !mask[i]) continue; const ca = a.codes[i], cb = b.codes[i];
+    ma.set(ca, (ma.get(ca) || 0) + 1); mb.set(cb, (mb.get(cb) || 0) + 1);
+    const key = ca * b.size + cb; let e = cell.get(key); if (!e) { e = [0, 0]; cell.set(key, e); }
+    e[0]++; if (hits.has(i)) e[1]++;
+  }
+  const pick = (m, c) => [...m.entries()].sort((x, y) => y[1] - x[1]).slice(0, top).map(e => e[0]);
+  const ra = pick(ma, a), cb2 = pick(mb, b);
+  return { rows: ra.map(k => a.labels[k]), cols: cb2.map(k => b.labels[k]), cells: ra.map(r => cb2.map(c => cell.get(r * b.size + c) || [0, 0])), totalA: ma.size, totalB: mb.size, N: [...ma.values()].reduce((s, v) => s + v, 0) };
+}
+function patternData(p) {
+  const ci = colIdx(p.col), c = ds.cols[ci];
+  if (c.kind !== 'cat') throw new Error('Pattern View 僅適用類別/文字欄位');
+  const { cnt, total } = catCounts(ci, buildMask(p.filters)), m = new Map();
+  for (let id = 1; id < cnt.length; id++) {
+    if (!cnt[id]) continue; const sh = shapeOf(c.dict[id]); let e = m.get(sh);
+    if (!e) { e = { shape: sh, count: 0, example: c.dict[id] }; m.set(sh, e); } e.count += cnt[id];
+  }
+  const arr = [...m.values()].sort((a, b) => b.count - a.count);
+  return { total, distinct: arr.length, items: arr.slice(0, 40).map(e => ({ shape: e.shape, count: e.count, share: e.count / total, example: e.example })) };
+}
+function dumpCsv(p, emit) {
+  const q = s => /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  const N = ds.N, step = 20000;
+  emit('part', ds.headers.map(q).join(',') + '\n');
+  for (let s = 0; s < N; s += step) {
+    const e = Math.min(N, s + step), lines = [];
+    for (let r = s; r < e; r++) {
+      const f = new Array(ds.cols.length);
+      for (let c = 0; c < f.length; c++) f[c] = q(cellStr(c, r));
+      lines.push(f.join(','));
+    }
+    emit('part', lines.join('\n') + '\n');
+  }
+  return true;
+}
+
+/* ---------- RPC ---------- */
+const H = {
+  preview: doPreview, import: doImport, loadBegin, loadChunk, loadEnd, run: doRun,
+  rows: p => getRows(p.ids), search: searchRows, hist: histData, matrix: matrixData, pattern: patternData, dump: dumpCsv,
+  unload: () => { ds = null; lastRun = null; return true; },
+  info: () => ds ? { id: ds.id, N: ds.N } : null
+};
+self.onmessage = async e => {
+  const m = e.data;
+  if (m.cmd === 'abort') { abortFlag = true; return; }
+  const { id, cmd, payload } = m;
+  try {
+    const out = await H[cmd](payload || {}, (evt, data) => post({ id, evt, data }));
+    post({ id, done: true, result: out });
+  } catch (err) { post({ id, error: (err && err.message) || String(err) }); }
+};
+
+</script>
+<script>
+'use strict';
+/* =====================================================================
+   Outlier Hunter — UI part 1: utils / IndexedDB / worker client / state
+   ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+function el(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  if (props) for (const [k, v] of Object.entries(props)) {
+    if (v === undefined || v === null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+    else if (k.startsWith('on') && typeof v === 'function') e.addEventListener(k.slice(2), v);
+    else if (k === 'for') e.htmlFor = v;
+    else if (k.startsWith('data-') || k.startsWith('aria-') || k === 'role') e.setAttribute(k, v === true ? '' : v);
+    else if (k in e) e[k] = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) { if (c === null || c === undefined || c === false) continue; e.append(c.nodeType ? c : document.createTextNode(String(c))); }
+  return e;
+}
+const uid = p => p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const fmt = x => x === null || x === undefined || x !== x ? '∅' : typeof x === 'number' ? (Number.isInteger(x) ? x.toLocaleString('en-US') : Number(x.toPrecision(10)).toLocaleString('en-US', { maximumFractionDigits: 6 })) : String(x);
+const pctS = (a, b) => b ? (a / b * 100).toFixed(a / b < 0.01 ? 3 : 2) + '%' : '0%';
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function toast(msg, kind) {
+  const d = el('div', { class: kind === 'err' ? 'err' : '' }, msg); $('#toast').append(d);
+  setTimeout(() => d.remove(), kind === 'err' ? 7000 : 3200);
+}
+function download(name, text, mime) {
+  const blob = text instanceof Blob ? text : new Blob([text], { type: mime || 'text/plain;charset=utf-8' });
+  const a = el('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+const isNumType = t => t === 'number' || t === 'integer';
+
+/* ---------- modal / busy ---------- */
+function modal(title, body, buttons, opts) {
+  opts = opts || {};
+  const bg = el('div', { class: 'modal-bg' });
+  const close = () => { bg.remove(); if (opts.onClose) opts.onClose(); };
+  const m = el('div', { class: 'modal' + (opts.small ? ' sm' : ''), role: 'dialog', 'aria-modal': 'true' },
+    el('header', null, el('span', null, title), el('button', { class: 'ghost', onclick: close, 'aria-label': '關閉' }, '✕')),
+    el('div', { class: 'body' }, body),
+    buttons && buttons.length ? el('footer', null, buttons.map(b => el('button', { class: b.cls || '', onclick: async () => { const r = b.fn ? await b.fn(close) : undefined; if (r !== false && !b.keep) close(); } }, b.label))) : null);
+  bg.append(m); $('#modal-root').append(bg);
+  bg.addEventListener('mousedown', e => { if (e.target === bg && !opts.sticky) close(); });
+  return { close, el: m };
+}
+function busy(text, onCancel) {
+  const txt = el('div', null, text), bar = el('i', { style: { width: '0%' } });
+  const m = modal('處理中', el('div', null, txt, el('div', { class: 'bar', style: { marginTop: '10px' } }, bar), el('div', { class: 'small dim', style: { marginTop: '6px' } }, onCancel ? '取消會在下一個檢查點生效' : '')),
+    onCancel ? [{ label: '取消', cls: 'danger', keep: true, fn: () => { onCancel(); return false; } }] : [], { small: true, sticky: true });
+  return { update(t, p) { if (t) txt.textContent = t; if (p != null) bar.style.width = Math.max(0, Math.min(100, p)) + '%'; }, close: m.close };
+}
+function confirmDlg(msg, okLabel) {
+  return new Promise(res => {
+    let done = false; const fin = v => { if (!done) { done = true; res(v); } };
+    modal('確認', el('div', null, msg), [{ label: '取消', fn: () => fin(false) }, { label: okLabel || '確定', cls: 'danger', fn: () => fin(true) }], { small: true, onClose: () => fin(false) });
+  });
+}
+
+/* ---------- IndexedDB ---------- */
+const DB_NAME = 'OutlierHunterDB', DB_VER = 1; let DB;
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, DB_VER);
+    r.onupgradeneeded = () => {
+      const d = r.result, mk = (n, kp, idx) => { const s = d.createObjectStore(n, { keyPath: kp }); (idx || []).forEach(i => s.createIndex(i, i)); };
+      mk('datasets', 'datasetId', ['name', 'createdAt']); mk('chunks', ['datasetId', 'chunkNo'], ['datasetId']);
+      mk('columns', ['datasetId', 'colName'], ['datasetId']); mk('hunts', 'huntId', ['datasetId', 'updatedAt']);
+      mk('results', ['huntId', 'rowId'], ['huntId', 'score']); mk('triage', ['datasetId', 'rowKey'], ['datasetId', 'status']);
+      mk('whitelist', ['huntId', 'rowKey'], ['huntId']); mk('settings', 'key');
+    };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+    r.onblocked = () => rej(new Error('資料庫被其他分頁佔用，請關閉其他 Outlier Hunter 分頁'));
+  });
+}
+const rq = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const txDone = t => new Promise((res, rej) => { t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error || new Error('交易中止')); });
+const dbGet = (s, k) => rq(DB.transaction(s).objectStore(s).get(k));
+const dbAll = (s) => rq(DB.transaction(s).objectStore(s).getAll());
+const dbByIdx = (s, i, k) => rq(DB.transaction(s).objectStore(s).index(i).getAll(k));
+const dbPut = (s, v) => { const t = DB.transaction(s, 'readwrite'); t.objectStore(s).put(v); return txDone(t); };
+const dbDel = (s, k) => { const t = DB.transaction(s, 'readwrite'); t.objectStore(s).delete(k); return txDone(t); };
+function dbPutMany(s, arr) {
+  const t = DB.transaction(s, 'readwrite'), st = t.objectStore(s);
+  for (const v of arr) st.put(v); return txDone(t);
+}
+function dbDelByIdx(s, i, k) {
+  return new Promise((res, rej) => {
+    const t = DB.transaction(s, 'readwrite'), st = t.objectStore(s), c = st.index(i).openKeyCursor(IDBKeyRange.only(k));
+    c.onsuccess = () => { const cur = c.result; if (cur) { st.delete(cur.primaryKey); cur.continue(); } };
+    t.oncomplete = () => res(); t.onerror = () => rej(t.error);
+  });
+}
+const dbClearAll = () => Promise.all(['datasets', 'chunks', 'columns', 'hunts', 'results', 'triage', 'whitelist', 'settings'].map(s => { const t = DB.transaction(s, 'readwrite'); t.objectStore(s).clear(); return txDone(t); }));
+
+/* ---------- worker client ---------- */
+let worker; const pend = new Map(); let rid = 0;
+function startWorker() {
+  const src = $('#worker-src').textContent;
+  worker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+  worker.onmessage = e => {
+    const m = e.data, p = pend.get(m.id); if (!p) return;
+    if (m.evt) { if (p.onEvt) p.onEvt(m.evt, m.data); }
+    else if (m.error) { pend.delete(m.id); p.rej(new Error(m.error)); }
+    else if (m.done) { pend.delete(m.id); p.res(m.result); }
+  };
+  worker.onerror = e => { toast('Worker 錯誤：' + (e.message || '未知'), 'err'); };
+}
+function call(cmd, payload, o) {
+  o = o || {};
+  return new Promise((res, rej) => { const id = ++rid; pend.set(id, { res, rej, onEvt: o.onEvt }); worker.postMessage({ id, cmd, payload }, o.tr || []); });
+}
+const abortWorker = () => worker.postMessage({ cmd: 'abort' });
+
+/* ---------- state ---------- */
+const S = {
+  prefs: { schema: 'bis', unit: 'raw', theme: 'auto', includeLow: true },
+  datasets: [], ds: null, loaded: null, hunts: [], hunt: null,
+  results: [], ruleStats: [], runInfo: null, triage: new Map(), wl: new Set(),
+  tab: 'hunt', view: [], sel: new Set(), cur: -1, rowCache: new Map(),
+  filt: { sev: { 3: true, 2: true, 1: true }, status: 'all', rule: 'all', q: '', sort: 'score' }, qIds: null
+};
+const STATUS = { new: ['⬜', 'New 未檢視', '未檢視'], confirmed: ['🔴', 'Confirmed 確認異常', '確認'], fp: ['🟢', 'False Positive 誤判', '誤判'], pending: ['🟡', 'Pending 待確認', '待確認'], ignored: ['⚪', 'Ignored 忽略', '忽略'] };
+const SEVI = ['', '🟡', '🟠', '🔴'], SEVN = ['', '低', '高', '嚴重'];
+const colMeta = n => S.ds && S.ds.columns.find(c => c.name === n);
+const colNum = n => { const c = colMeta(n); return !!c && isNumType(c.type); };
+const colNames = kind => S.ds ? S.ds.columns.filter(c => kind === 'num' ? isNumType(c.type) : kind === 'cat' ? !isNumType(c.type) : true).map(c => c.name) : [];
+
+async function loadPrefs() {
+  const p = await dbGet('settings', 'prefs'); if (p) Object.assign(S.prefs, p.value);
+  applyTheme();
+}
+const savePrefs = () => dbPut('settings', { key: 'prefs', value: S.prefs });
+function applyTheme() { document.documentElement.dataset.theme = S.prefs.theme === 'auto' ? '' : S.prefs.theme; }
+
+/* ---------- dataset lifecycle ---------- */
+async function refreshDatasets() {
+  S.datasets = (await dbAll('datasets')).sort((a, b) => b.createdAt - a.createdAt);
+}
+async function openDataset(id, quiet) {
+  if (S.loaded === id && S.ds && S.ds.datasetId === id) return;
+  const meta = await dbGet('datasets', id); if (!meta) throw new Error('找不到資料集');
+  const b = quiet ? null : busy('載入資料集到運算引擎…');
+  try {
+    await call('unload');
+    await call('loadBegin', { id, name: meta.name, headers: meta.headers, types: meta.types });
+    for (let i = 0; i < meta.nChunks; i++) {
+      const ch = await dbGet('chunks', [id, i]); if (!ch) throw new Error('資料區塊遺失：' + i);
+      const tr = ch.cols.map(c => c.t === 'num' ? c.data.buffer : c.idx.buffer);
+      await call('loadChunk', { chunk: ch }, { tr });
+      if (b) b.update('載入資料集到運算引擎…', (i + 1) / meta.nChunks * 100);
+    }
+    const stats = await call('loadEnd');
+    meta.columns = meta.columns.map((c, i) => Object.assign({}, c, stats[i], { bad: c.bad, badEx: c.badEx }));
+    S.ds = meta; S.loaded = id; S.rowCache = new Map(); dbPut('settings', { key: 'last', value: id }).catch(() => { });
+    S.triage = new Map((await dbByIdx('triage', 'datasetId', id)).map(t => [t.rowKey, t]));
+    S.hunts = (await dbByIdx('hunts', 'datasetId', id)).sort((a, b) => b.updatedAt - a.updatedAt);
+    S.hunt = null; S.results = []; S.ruleStats = []; S.runInfo = null; S.wl = new Set(); S.sel = new Set(); S.cur = -1;
+    if (S.hunts.length) await openHunt(S.hunts[0].huntId); else await newHunt('Hunt 1');
+  } finally { if (b) b.close(); }
+}
+async function deleteDataset(id) {
+  if (S.persistP) await S.persistP;
+  const hs = await dbByIdx('hunts', 'datasetId', id);
+  for (const h of hs) { await dbDelByIdx('results', 'huntId', h.huntId); await dbDelByIdx('whitelist', 'huntId', h.huntId); await dbDel('hunts', h.huntId); }
+  await dbDelByIdx('chunks', 'datasetId', id); await dbDelByIdx('columns', 'datasetId', id);
+  await dbDelByIdx('triage', 'datasetId', id); await dbDel('datasets', id);
+  if (S.loaded === id) { await call('unload'); S.loaded = null; S.ds = null; S.hunt = null; S.hunts = []; S.results = []; S.ruleStats = []; S.runInfo = null; }
+  await refreshDatasets();
+}
+
+/* ---------- hunts ---------- */
+async function newHunt(name, src) {
+  const now = Date.now();
+  const h = Object.assign({ huntId: uid('h'), datasetId: S.ds.datasetId, name: name || 'Hunt ' + (S.hunts.length + 1), rules: [], filters: [], keyCols: [], includeLow: S.prefs.includeLow, excludeWL: true, createdAt: now, updatedAt: now, lastRun: null }, src || {});
+  h.huntId = uid('h'); h.datasetId = S.ds.datasetId; h.updatedAt = now; h.lastRun = null;
+  await dbPut('hunts', h); S.hunts.unshift(h); await openHunt(h.huntId); return h;
+}
+async function openHunt(id) {
+  if (S.persistP) await S.persistP;
+  const h = S.hunts.find(x => x.huntId === id) || await dbGet('hunts', id); if (!h) return;
+  S.hunt = h; S.sel = new Set(); S.cur = -1; S.qIds = null; S.filt.q = ''; S.filt.rule = 'all'; S.filt.status = 'all';
+  S.wl = new Set((await dbByIdx('whitelist', 'huntId', id)).map(w => w.rowKey));
+  const recs = await dbByIdx('results', 'huntId', id);
+  S.results = recs.map(r => ({ r: r.rowId, sc: r.score, sv: r.sv, ru: r.ru, w: r.w, k: r.k })).sort((a, b) => b.sc - a.sc || a.r - b.r);
+  S.ruleStats = h.lastRun ? h.lastRun.ruleStats || [] : []; S.runInfo = h.lastRun || null;
+  computeViewSync();
+}
+const saveHuntNow = () => { if (!S.hunt) return Promise.resolve(); S.hunt.updatedAt = Date.now(); return dbPut('hunts', S.hunt); };
+const saveHuntSoon = debounce(() => saveHuntNow().catch(e => toast('儲存失敗：' + e.message, 'err')), 400);
+
+/* =====================================================================
+   Outlier Hunter — UI part 2: import wizard / sidebar / hunt editor
+   ===================================================================== */
+
+/* ---------- import ---------- */
+function jsonToCsvBlob(text) {
+  let data = JSON.parse(text);
+  if (!Array.isArray(data)) { const k = Object.keys(data).find(x => Array.isArray(data[x])); if (!k) throw new Error('JSON 需為物件陣列（Array of Objects）'); data = data[k]; }
+  const keys = []; const seen = new Set();
+  for (const o of data) if (o && typeof o === 'object') for (const k of Object.keys(o)) if (!seen.has(k)) { seen.add(k); keys.push(k); }
+  if (!keys.length) throw new Error('JSON 內沒有可用的欄位');
+  const q = v => { if (v === null || v === undefined) return ''; if (typeof v === 'object') v = JSON.stringify(v); v = String(v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const lines = [keys.map(q).join(',')];
+  for (const o of data) lines.push(keys.map(k => q(o ? o[k] : '')).join(','));
+  return new Blob([lines.join('\r\n')], { type: 'text/csv' });
+}
+async function importFile(file, opts, datasetId, onProgress) {
+  datasetId = datasetId || uid('ds'); const saves = []; let replaced = false;
+  try {
+    const res = await call('import', { file, opts, datasetId }, { onEvt: (evt, d) => {
+      if (evt === 'chunk') { const pr = dbPut('chunks', { datasetId, chunkNo: d.chunkNo, rowStart: d.rowStart, n: d.n, cols: d.cols }); pr.catch(() => { }); saves.push(pr); }
+      else if (evt === 'progress' && onProgress) onProgress(d);
+    } });
+    replaced = true;
+    await Promise.all(saves);
+    const meta = { datasetId, name: opts.name || file.name || 'dataset', fileName: file.name || 'pasted', size: file.size, enc: res.enc, delim: res.delim, rows: res.N, nChunks: res.nChunks, badChars: res.badChars || 0,
+      headers: res.headers, types: res.types, columns: res.stats, badRows: res.badRows, createdAt: Date.now(), opts: { types: res.types, parenNeg: !!opts.parenNeg, header: opts.header !== false, delim: res.delim, enc: res.enc } };
+    await dbPut('datasets', meta);
+    await dbPutMany('columns', res.stats.map(s => ({ datasetId, colName: s.name, type: s.type, stats: s }))).catch(() => { });
+    return meta;
+  } catch (e) {
+    await Promise.allSettled(saves);
+    await dbDelByIdx('chunks', 'datasetId', datasetId).catch(() => { });
+    if (replaced) {                                  // the engine already swapped to the new data: put it back in sync
+      try { if (S.ds) { S.loaded = null; await openDataset(S.ds.datasetId, true); } else await call('unload'); } catch (e2) { /* ignore */ }
+    }
+    if (e && e.name === 'QuotaExceededError') throw new Error('瀏覽器儲存空間不足，請先刪除不用的資料集再匯入');
+    throw e;
+  }
+}
+async function afterImport(meta) {
+  await refreshDatasets();
+  dbPut('settings', { key: 'last', value: meta.datasetId }).catch(() => { });
+  S.ds = meta; S.loaded = meta.datasetId; S.rowCache = new Map(); S.triage = new Map(); S.hunts = []; S.wl = new Set(); S.results = []; S.ruleStats = []; S.runInfo = null; S.sel = new Set(); S.cur = -1;
+  await newHunt('Hunt 1'); S.tab = 'data'; render();
+}
+
+function openImportWizard(initialFile) {
+  const W = { file: null, name: '', enc: 'auto', delim: 'auto', header: true, parenNeg: false, badRow: 'pad', types: [], pv: null, paste: false, err: '' };
+  const body = el('div'); let dlg;
+  async function setFile(f) {
+    try {
+      W.err = '';
+      if (/\.json$/i.test(f.name || '')) f = Object.assign(jsonToCsvBlob(await f.text()), { name: f.name.replace(/\.json$/i, '.csv') });
+      W.file = f; W.name = (f.name || 'pasted').replace(/\.[^.]+$/, ''); W.types = []; W.enc = 'auto'; W.delim = 'auto';
+      await preview();
+    } catch (e) { W.err = e.message; W.file = null; W.pv = null; draw(); }
+  }
+  async function preview() {
+    try { W.pv = await call('preview', { file: W.file, opts: { enc: W.enc, delim: W.delim, header: W.header, parenNeg: W.parenNeg, types: W.types } }); W.err = ''; }
+    catch (e) { W.err = e.message; W.pv = null; }
+    draw();
+  }
+  function draw() {
+    body.replaceChildren();
+    if (W.err) body.append(el('div', { class: 'tag err', style: { marginBottom: '8px' } }, W.err));
+    const input = el('input', { type: 'file', accept: '.csv,.tsv,.txt,.json,text/*', style: { display: 'none' }, onchange: e => { if (e.target.files[0]) setFile(e.target.files[0]); } });
+    const drop = el('div', { class: 'drop' }, el('div', { style: { fontSize: '15px', marginBottom: '8px' } }, W.file ? '已選擇：' + (W.file.name || '貼上的文字') + '（' + (W.file.size / 1048576).toFixed(2) + ' MB）' : '把 CSV / TSV / TXT / JSON 拖放到這裡'),
+      el('div', { class: 'row', style: { justifyContent: 'center' } }, el('button', { onclick: () => input.click() }, '選擇檔案'), el('button', { onclick: () => { W.paste = !W.paste; draw(); } }, '貼上文字')), input);
+    ['dragover', 'dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+    drop.addEventListener('drop', e => { if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+    body.append(drop);
+    if (W.paste) {
+      const ta = el('textarea', { rows: 6, placeholder: '貼上含表頭的 CSV / TSV 文字' });
+      body.append(el('div', { style: { margin: '8px 0' } }, ta, el('button', { onclick: () => { if (!ta.value.trim()) return; const b = new Blob([ta.value], { type: 'text/csv' }); b.name = 'pasted.csv'; setFile(b); } }, '使用貼上的文字')));
+    }
+    if (!W.pv) return;
+    const pv = W.pv;
+    const sel = (opts, val, fn) => { const s = el('select', { onchange: e => fn(e.target.value) }, opts.map(([v, l]) => el('option', { value: v }, l))); s.value = val; return s; };
+    body.append(el('div', { class: 'row', style: { margin: '12px 0 6px' } },
+      el('label', null, '資料集名稱 ', el('input', { type: 'text', value: W.name, oninput: e => W.name = e.target.value })),
+      el('label', null, '編碼 ', sel([['auto', '自動（' + pv.detected + '）'], ['utf-8', 'UTF-8'], ['big5', 'Big5 / CP950'], ['gb18030', 'GB18030（簡體）'], ['utf-16le', 'UTF-16 LE'], ['utf-16be', 'UTF-16 BE']], W.enc, v => { W.enc = v; preview(); })),
+      el('label', null, '分隔 ', sel([['auto', '自動（' + (pv.delim === '\t' ? 'Tab' : pv.delim) + '）'], [',', '逗號 ,'], ['\t', 'Tab'], [';', '分號 ;'], ['|', '直線 |']], W.delim, v => { W.delim = v; preview(); })),
+      el('label', null, el('input', { type: 'checkbox', checked: W.header, onchange: e => { W.header = e.target.checked; W.types = []; preview(); } }), ' 第一列是表頭'),
+      el('label', null, el('input', { type: 'checkbox', checked: W.parenNeg, onchange: e => { W.parenNeg = e.target.checked; preview(); } }), ' (1,000) 視為負數'),
+      el('label', null, '欄位數不符 ', sel([['pad', '補空值/截斷'], ['skip', '略過該列']], W.badRow, v => W.badRow = v))));
+    if (pv.badRatio > 0.0005) body.append(el('div', { class: 'tag err' }, '⚠ 偵測到亂碼（' + (pv.badRatio * 100).toFixed(2) + '%），請切換編碼再確認'));
+    else body.append(el('div', { class: 'small dim' }, '編碼：' + pv.enc + '　亂碼比例 0%　欄位 ' + pv.headers.length + '　預覽 ' + pv.rows.length + ' 列（型態以前 2,000 列推測，匯入時以前 10,000 列為準）'));
+    const th = el('tr', null, pv.headers.map(h => el('th', null, h))), tr = el('tr', null, pv.headers.map((h, i) => el('td', null,
+      sel([['auto', '自動：' + pv.inferred[i]], ['number', 'number'], ['integer', 'integer'], ['text', 'text'], ['id', 'id（文字）'], ['date', 'date'], ['boolean', 'boolean']], W.types[i] || 'auto', v => { W.types[i] = v === 'auto' ? undefined : v; }))));
+    const tb = pv.rows.slice(0, 8).map(r => el('tr', null, pv.headers.map((h, i) => el('td', null, String(r[i] === undefined ? '' : r[i]).slice(0, 40)))));
+    body.append(el('div', { class: 'scroll', style: { marginTop: '8px', maxHeight: '320px' } }, el('table', { class: 't' }, el('thead', null, th, tr), el('tbody', null, tb))));
+    body.append(el('div', { class: 'small dim', style: { marginTop: '6px' } }, '提醒：有前導 0 的代碼（如統編）會自動視為 id，不參與數值統計。'));
+  }
+  dlg = modal('匯入資料', body, [{ label: '取消' }, { label: '開始匯入', cls: 'pri', keep: true, fn: async close => {
+    if (!W.pv) { toast('請先選擇檔案', 'err'); return false; }
+    close(); let cancelled = false;
+    const b = busy('匯入中…', () => { cancelled = true; abortWorker(); });
+    try {
+      const types = W.pv.headers.map((h, i) => W.types[i] || 'auto');
+      const meta = await importFile(W.file, { enc: W.pv.enc, delim: W.pv.delim, header: W.header, parenNeg: W.parenNeg, badRow: W.badRow, types, name: W.name || 'dataset' }, null, d => b.update('匯入中… ' + (d.rows || 0).toLocaleString('en-US') + ' 列', d.pct));
+      b.close(); await afterImport(meta);
+      toast('匯入完成：' + meta.rows.toLocaleString('en-US') + ' 列 × ' + meta.headers.length + ' 欄');
+      if (meta.badChars) toast('⚠ 資料中有 ' + meta.badChars.toLocaleString('en-US') + ' 個亂碼字元（�）。請刪除此資料集，改選正確的編碼後重新匯入。', 'err');
+    } catch (e) { b.close(); if (!cancelled) toast('匯入失敗：' + e.message, 'err'); else toast('已取消匯入'); }
+    return false;
+  } }]);
+  draw();
+  if (initialFile) setFile(initialFile);
+}
+
+/* ---------- sidebar ---------- */
+async function renderSide() {
+  const side = $('#side'); side.replaceChildren();
+  side.append(el('h3', null, '資料集', el('button', { class: 'ghost', title: '匯入資料', onclick: () => openImportWizard() }, '＋')));
+  if (!S.datasets.length) side.append(el('div', { class: 'small dim' }, '尚未匯入資料'));
+  for (const d of S.datasets) {
+    side.append(el('div', { class: 'item' + (S.ds && S.ds.datasetId === d.datasetId ? ' on' : ''), onclick: async () => { try { await openDataset(d.datasetId); S.tab = S.tab === 'data' ? 'data' : 'hunt'; render(); } catch (e) { toast(e.message, 'err'); } } },
+      el('span', { class: 'nm', title: d.name }, d.name), el('small', null, d.rows.toLocaleString('en-US')),
+      el('button', { title: '刪除', onclick: async e => { e.stopPropagation(); if (await confirmDlg('刪除資料集「' + d.name + '」與其所有 Hunt、結果和複核紀錄？此動作無法復原。', '刪除')) { await deleteDataset(d.datasetId); render(); } } }, '🗑')));
+  }
+  if (S.ds) {
+    side.append(el('h3', null, 'Hunts', el('button', { class: 'ghost', title: '新增 Hunt', onclick: async () => { await newHunt(); S.tab = 'hunt'; render(); } }, '＋')));
+    for (const h of S.hunts) {
+      side.append(el('div', { class: 'item' + (S.hunt && S.hunt.huntId === h.huntId ? ' on' : ''), onclick: async () => { await openHunt(h.huntId); render(); } },
+        el('span', { class: 'nm', title: h.name }, h.name), el('small', null, h.lastRun ? h.lastRun.flagged.toLocaleString('en-US') : ''),
+        el('button', { title: '複製', onclick: async e => { e.stopPropagation(); await newHunt(h.name + ' 副本', { rules: JSON.parse(JSON.stringify(h.rules)), filters: JSON.parse(JSON.stringify(h.filters)), keyCols: h.keyCols.slice(), includeLow: h.includeLow, excludeWL: h.excludeWL }); S.tab = 'hunt'; render(); } }, '⧉'),
+        el('button', { title: '刪除', onclick: async e => {
+          e.stopPropagation(); if (!(await confirmDlg('刪除 Hunt「' + h.name + '」與其結果？', '刪除'))) return;
+          await dbDelByIdx('results', 'huntId', h.huntId); await dbDelByIdx('whitelist', 'huntId', h.huntId); await dbDel('hunts', h.huntId);
+          S.hunts = S.hunts.filter(x => x.huntId !== h.huntId);
+          if (S.hunt && S.hunt.huntId === h.huntId) { if (S.hunts.length) await openHunt(S.hunts[0].huntId); else await newHunt('Hunt 1'); }
+          render();
+        } }, '🗑')));
+    }
+  }
+  const est = el('div', { class: 'small dim', style: { marginTop: 'auto', paddingTop: '10px' } }, '');
+  side.append(est);
+  if (navigator.storage && navigator.storage.estimate) navigator.storage.estimate().then(e => { est.textContent = '儲存空間：' + (e.usage / 1048576).toFixed(1) + ' MB / ' + (e.quota / 1073741824).toFixed(1) + ' GB　🔒 資料只存在本機'; }).catch(() => { });
+}
+
+/* ---------- hunt editor ---------- */
+const RD = {
+  iqr: { n: 'IQR 四分位距', kind: 'num', help: '偏態資料的通用預設；金額類欄位建議勾選 log。', f: [['column', 'numcol', '欄位'], ['groupBy', 'anycols', '分組欄位（選填，組內各自計算）'], ['k', 'num', 'k 倍數', 1.5], ['log', 'bool', '先取 log10（僅 >0）', false], ['minGroup', 'num', '最小組樣本數', 20]] },
+  zscore: { n: 'Z-Score', kind: 'num', help: '適合接近常態分布的資料；σ=0 時自動略過。', f: [['column', 'numcol', '欄位'], ['groupBy', 'anycols', '分組欄位（選填）'], ['t', 'num', '|Z| 門檻', 3], ['log', 'bool', '先取 log10（僅 >0）', false], ['minGroup', 'num', '最小組樣本數', 20]] },
+  mad: { n: 'Modified Z (MAD)', kind: 'num', help: '最耐極端值污染；MAD=0 時自動改用 MeanAD。', f: [['column', 'numcol', '欄位'], ['groupBy', 'anycols', '分組欄位（選填）'], ['t', 'num', '門檻', 3.5], ['log', 'bool', '先取 log10（僅 >0）', false], ['minGroup', 'num', '最小組樣本數', 20]] },
+  pct: { n: 'Percentile 頭尾', kind: 'num', help: '直接取頭尾百分位（一定會標出約 (下+上) % 的資料）。', f: [['column', 'numcol', '欄位'], ['groupBy', 'anycols', '分組欄位（選填）'], ['pl', 'num', '下百分位', 1], ['ph', 'num', '上百分位', 99], ['minGroup', 'num', '最小組樣本數', 20]] },
+  range: { n: 'Fixed Range 固定範圍', kind: 'num', help: '依業務邊界檢查，例如風險權數只能介於 0 到 15。', f: [['column', 'numcol', '欄位'], ['min', 'text', '最小值（可留空）', ''], ['max', 'text', '最大值（可留空）', '']] },
+  rarecat: { n: 'Rare Category 罕見類別', kind: 'cat', help: '某個值占比低於門檻，或出現次數很少。高基數欄位自動略過。', f: [['column', 'anycol', '欄位'], ['minSharePct', 'num', '占比門檻 %', 0.1], ['maxCount', 'num', '或次數 ≤', 3]] },
+  unexpected: { n: 'Unexpected Value 不在清單', kind: 'cat', help: '貼上允許值清單，清單外的值視為異常。', f: [['column', 'anycol', '欄位'], ['allowed', 'textarea', '允許值（換行或逗號分隔）', '']] },
+  singleton: { n: 'Singleton 只出現一次', kind: 'cat', help: '只出現 1 次的值；高基數欄位自動略過。', f: [['column', 'anycol', '欄位']] },
+  combo: { n: 'Rare Combination 罕見組合', kind: 'combo', help: '核心功能：找「單欄正常、組合罕見」的紀錄。可再指定條件欄位 A，檢查 P(B|A)。', f: [['columns', 'anycols', '組合欄位（選 2~4 欄）'], ['bins', 'bins', ''], ['minSupportPct', 'num', '最小支持度 %（留空＝不檢查）', 0.1, true], ['condCols', 'condcols', '條件欄位 A（選填，必須是上面選的欄位子集）'], ['condPct', 'num', '條件機率門檻 %', 1], ['minCondCount', 'num', 'A 的最少筆數', 30], ['skipNull', 'bool', '排除含空值的列', true]] },
+  pattern: { n: 'Pattern / Format 格式', kind: 'fmt', help: '把字串轉成形狀（數字→9、大寫→A、小寫→a、中文→中），找罕見形狀、長度、髒字元。', f: [['column', 'catcol', '欄位（文字/代碼）'], ['minSharePct', 'num', '形狀/長度占比門檻 %', 0.5], ['shape', 'bool', '形狀檢查', true], ['length', 'bool', '長度檢查', false], ['dirty', 'bool', '髒字元檢查（前後空白/全形/控制/不可見）', true]] }
+};
+const RULE_GROUPS = [['數值', ['iqr', 'zscore', 'mad', 'pct', 'range']], ['類別', ['rarecat', 'unexpected', 'singleton']], ['組合 / 格式', ['combo', 'pattern']]];
+S.openRules = new Set();
+
+const lowCard = () => S.ds ? S.ds.columns.filter(c => isNumType(c.type) ? (c.dcap >= 2 && c.dcap <= 20) : (c.distinct >= 2 && c.distinct <= 30)).map(c => c.name) : [];
+function makeRule(type) {
+  const def = RD[type], r = { id: uid('r'), type, enabled: true, weight: 1 };
+  for (const [k, t, , d] of def.f) if (d !== undefined) r[k] = d;
+  const num = colNames('num'), cat = colNames('cat'), all = colNames();
+  for (const [k, t] of def.f) {
+    if (t === 'numcol') r[k] = num[0] || '';
+    if (t === 'catcol') r[k] = cat[0] || '';
+    if (t === 'anycol') r[k] = (type === 'rarecat' || type === 'singleton' ? (S.ds.columns.find(c => !isNumType(c.type) && c.distinct >= 2 && c.distinct <= 200) || {}).name || cat[0] || all[0] : all[0]) || '';
+    if (t === 'anycols' || t === 'condcols') r[k] = [];
+  }
+  if (type === 'combo') { const lc = lowCard(); r.columns = lc.length >= 2 ? lc.slice(0, 3) : all.slice(0, Math.min(2, all.length)); r.bins = {}; }
+  return r;
+}
+function ruleSummary(r) {
+  if (r.type === 'combo') return (r.columns || []).join(' + ');
+  return (r.column || '') + (r.groupBy && r.groupBy.length ? '  by ' + r.groupBy.join(',') : '') + (r.log ? '  log' : '');
+}
+function runRules() { return S.runInfo && S.runInfo.rules ? S.runInfo.rules : []; }
+const statFor = r => S.ruleStats.find(s => s.rid === r.id);
+
+function chips(options, selected, onChange, max) {
+  const wrap = el('div', { class: 'chips' });
+  options.forEach(o => {
+    const on = selected.includes(o);
+    wrap.append(el('span', { class: 'chip' + (on ? ' on' : ''), role: 'checkbox', 'aria-checked': on, tabIndex: 0, onclick: () => {
+      let s = selected.slice(); if (on) s = s.filter(x => x !== o); else { if (max && s.length >= max) { toast('最多選 ' + max + ' 個'); return; } s.push(o); }
+      onChange(s);
+    }, onkeydown: e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.target.click(); } } }, o));
+  });
+  return wrap;
+}
+function fieldInput(rule, spec, rebuild) {
+  const [k, t, label, def, allowEmpty] = spec, change = () => { saveHuntSoon(); };
+  const wrap = el('div', { class: 'fld' + (t === 'textarea' || t === 'anycols' || t === 'bins' || t === 'condcols' ? ' wide' : '') });
+  if (t === 'bool') return wrap.append(el('label', { style: { display: 'flex', gap: '6px', alignItems: 'center', color: 'var(--text)', marginTop: '18px' } }, el('input', { type: 'checkbox', checked: !!rule[k], onchange: e => { rule[k] = e.target.checked; change(); } }), label)), wrap;
+  if (t === 'bins') {
+    const nums = (rule.columns || []).filter(colNum); if (!nums.length) return wrap;
+    wrap.append(el('label', null, '數值欄位分箱方式（組合偵測時數值需先分箱）'));
+    rule.bins = rule.bins || {};
+    nums.forEach(n => {
+      const cur = rule.bins[n] || 'auto', isCuts = cur.startsWith('cuts:');
+      const s = el('select', { onchange: e => { rule.bins[n] = e.target.value === 'cuts' ? 'cuts:' : e.target.value; change(); rebuild(); } },
+        [['auto', '自動（≤20 種相異值用 Distinct，否則 10 分位）'], ['distinct', 'Distinct 逐值'], ['q5', '5 分位'], ['q10', '10 分位'], ['cuts', '自訂切點']].map(([v, l]) => el('option', { value: v }, l)));
+      s.value = isCuts ? 'cuts' : cur;
+      wrap.append(el('div', { class: 'row', style: { marginTop: '4px' } }, el('span', { style: { minWidth: '130px' } }, n), s,
+        isCuts ? el('input', { type: 'text', placeholder: '例：0, 0.2, 0.5, 1', value: cur.slice(5), oninput: e => { rule.bins[n] = 'cuts:' + e.target.value; change(); } }) : null));
+    });
+    return wrap;
+  }
+  wrap.append(el('label', null, label));
+  if (t === 'numcol' || t === 'catcol' || t === 'anycol') {
+    const names = t === 'numcol' ? colNames('num') : t === 'catcol' ? colNames('cat') : colNames();
+    const s = el('select', { onchange: e => { rule[k] = e.target.value; change(); rebuild(); } }, el('option', { value: '' }, '— 選擇欄位 —'), names.map(n => el('option', { value: n }, n))); s.value = rule[k] || ''; wrap.append(s);
+  } else if (t === 'anycols') {
+    const max = rule.type === 'combo' ? 4 : 3;
+    wrap.append(chips(colNames().filter(n => n !== rule.column), rule[k] || [], v => { rule[k] = v; if (k === 'columns') rule.condCols = (rule.condCols || []).filter(x => v.includes(x)); change(); rebuild(); }, max));
+  } else if (t === 'condcols') {
+    wrap.append(chips(rule.columns || [], rule[k] || [], v => { rule[k] = v; change(); rebuild(); }));
+  } else if (t === 'num') {
+    wrap.append(el('input', { type: 'number', step: 'any', value: rule[k] === undefined || rule[k] === null ? '' : rule[k], placeholder: String(def), oninput: e => {
+      const v = e.target.value; if (v === '') { if (allowEmpty) rule[k] = ''; else delete rule[k]; } else rule[k] = Number(v); change(); } }));
+  } else if (t === 'text') {
+    wrap.append(el('input', { type: 'text', value: rule[k] === undefined ? '' : rule[k], oninput: e => { rule[k] = e.target.value; change(); } }));
+  } else if (t === 'textarea') {
+    wrap.append(el('textarea', { rows: 4, value: rule[k] || '', oninput: e => { rule[k] = e.target.value; change(); } }));
+  }
+  return wrap;
+}
+function ruleCard(rule, idx) {
+  const def = RD[rule.type], open = S.openRules.has(rule.id), st = statFor(rule);
+  const card = el('div', { class: 'rule' + (rule.enabled === false ? ' off' : ''), 'data-rid': rule.id });
+  const rebuild = () => { const n = ruleCard(rule, S.hunt.rules.indexOf(rule)); card.replaceWith(n); };
+  const mv = d => { const a = S.hunt.rules, i = a.indexOf(rule), j = i + d; if (j < 0 || j >= a.length) return; [a[i], a[j]] = [a[j], a[i]]; saveHuntSoon(); renderView(); };
+  let tag = null;
+  if (st) tag = st.error ? el('span', { class: 'tag err', title: st.error }, '錯誤') : el('span', { class: 'tag' + (st.hits ? ' s2' : '') }, '命中 ' + (st.hits || 0).toLocaleString('en-US'));
+  card.append(el('div', { class: 'hd', onclick: e => { if (e.target.closest('button,input')) return; open ? S.openRules.delete(rule.id) : S.openRules.add(rule.id); rebuild(); } },
+    el('span', null, open ? '▾' : '▸'), el('span', { class: 'ti' }, (idx + 1) + '. ' + def.n, el('span', { class: 'dim small', style: { fontWeight: 400, marginLeft: '10px' } }, ruleSummary(rule))), tag,
+    el('label', { class: 'small', title: '規則權重（分數 = Σ 權重 × 嚴重度）' }, '權重 ', el('input', { type: 'number', step: 'any', style: { width: '56px' }, value: rule.weight, oninput: e => { rule.weight = e.target.value === '' ? 1 : Number(e.target.value); saveHuntSoon(); } })),
+    el('label', { class: 'small' }, el('input', { type: 'checkbox', checked: rule.enabled !== false, onchange: e => { rule.enabled = e.target.checked; saveHuntSoon(); rebuild(); } }), ' 啟用'),
+    el('button', { class: 'ghost', title: '上移', onclick: () => mv(-1) }, '↑'), el('button', { class: 'ghost', title: '下移', onclick: () => mv(1) }, '↓'),
+    el('button', { class: 'ghost', title: '複製', onclick: () => { const c = JSON.parse(JSON.stringify(rule)); c.id = uid('r'); S.hunt.rules.splice(idx + 1, 0, c); saveHuntSoon(); renderView(); } }, '⧉'),
+    el('button', { class: 'ghost', title: '刪除', onclick: () => { S.hunt.rules = S.hunt.rules.filter(r => r !== rule); saveHuntSoon(); renderView(); } }, '🗑')));
+  if (open) {
+    const bd = el('div', { class: 'bd' }, el('div', { class: 'fld wide small dim' }, def.help));
+    def.f.forEach(spec => bd.append(fieldInput(rule, spec, rebuild)));
+    if (st && (st.error || (st.warnings && st.warnings.length))) bd.append(el('div', { class: 'fld wide' }, st.error ? el('div', { class: 'tag err' }, st.error) : null, (st.warnings || []).map(w => el('div', { class: 'small sev1' }, '⚠ ' + w))));
+    card.append(bd);
+  }
+  return card;
+}
+function suggestRules() {
+  const cols = S.ds.columns, out = [], low = [];
+  for (const c of cols) {
+    const num = isNumType(c.type);
+    if (num) {
+      if ((c.dcap || 99) <= 1) continue;
+      if ((c.dcap || 99) <= 20) { low.push(c.name); continue; }
+      if (!(c.std > 0) || out.filter(r => r.type === 'mad').length >= 6) continue;
+      const r = makeRule('mad'); r.column = c.name; r.log = c.min > 0 && c.mean > 0 && c.max / c.mean > 20; out.push(r);
+    } else if (c.type === 'id' || c.type === 'date') {
+      const r = makeRule('pattern'); r.column = c.name; out.push(r);
+    } else if (c.distinct > 1 && c.distinct <= 200 && c.n > 0) { low.push(c.name); const r = makeRule('rarecat'); r.column = c.name; out.push(r); }
+  }
+  const lc = lowCard(); if (lc.length >= 2) { const r = makeRule('combo'); r.columns = lc.slice(0, 3); r.bins = {}; out.push(r); }
+  return out.slice(0, 14);
+}
+function renderHunt(v) {
+  const h = S.hunt;
+  const rebuildAll = () => renderView();
+  v.append(el('div', { class: 'card' },
+    el('div', { class: 'row' },
+      el('label', null, 'Hunt 名稱 ', el('input', { type: 'text', value: h.name, style: { width: '240px' }, oninput: e => { h.name = e.target.value; saveHuntSoon(); } })),
+      el('label', null, el('input', { type: 'checkbox', checked: h.includeLow, onchange: e => { h.includeLow = e.target.checked; saveHuntSoon(); } }), ' 包含邊界區（低嚴重度 🟡）'),
+      el('label', null, el('input', { type: 'checkbox', checked: h.excludeWL, onchange: e => { h.excludeWL = e.target.checked; saveHuntSoon(); } }), ' 排除白名單（' + S.wl.size + '）'),
+      S.wl.size ? el('button', { onclick: async () => { if (await confirmDlg('清空此 Hunt 的白名單？', '清空')) { await dbDelByIdx('whitelist', 'huntId', h.huntId); S.wl = new Set(); renderView(); } } }, '清空白名單') : null,
+      el('span', { style: { flex: 1 } }),
+      el('button', { onclick: () => { const r = suggestRules(); if (!r.length) { toast('沒有可建議的規則'); return; } h.rules.push(...r); r.forEach(x => S.openRules.delete(x.id)); saveHuntSoon(); renderView(); toast('已加入 ' + r.length + ' 條建議規則，可自行調整'); } }, '✨ 一鍵建議規則'),
+      el('button', { class: 'pri', onclick: runHunt }, '▶ 執行 Hunt')),
+    el('div', { class: 'fld', style: { marginTop: '10px' } }, el('label', { class: 'small dim' }, '業務 Key 欄位（用於複核與白名單跨批次比對；不選則使用列號）'), chips(colNames(), h.keyCols, s => { h.keyCols = s; saveHuntSoon(); if (S.wl.size || S.triage.size) toast('注意：既有的複核紀錄與白名單是用舊 Key 記錄的，變更 Key 後可能對不上'); renderView(); }, 4))));
+  /* filters */
+  const OPS = [['=', '='], ['!=', '≠'], ['in', '在清單 IN'], ['notin', '不在清單'], ['>', '>'], ['>=', '≥'], ['<', '<'], ['<=', '≤'], ['contains', '包含'], ['null', '為空'], ['notnull', '不為空']];
+  const fbox = el('div', { class: 'card' }, el('h4', null, '資料範圍篩選（選填，所有條件 AND）'));
+  h.filters.forEach((f, i) => {
+    const cs = el('select', { onchange: e => { f.col = e.target.value; saveHuntSoon(); } }, el('option', { value: '' }, '— 欄位 —'), colNames().map(n => el('option', { value: n }, n))); cs.value = f.col || '';
+    const os = el('select', { onchange: e => { f.op = e.target.value; saveHuntSoon(); renderView(); } }, OPS.map(([v, l]) => el('option', { value: v }, l))); os.value = f.op || '=';
+    fbox.append(el('div', { class: 'row', style: { marginBottom: '6px' } }, cs, os, f.op === 'null' || f.op === 'notnull' ? null : el('input', { type: 'text', value: f.val || '', placeholder: '值（IN 用逗號分隔）', oninput: e => { f.val = e.target.value; saveHuntSoon(); } }), el('button', { class: 'ghost', onclick: () => { h.filters.splice(i, 1); saveHuntSoon(); renderView(); } }, '✕')));
+  });
+  fbox.append(el('button', { onclick: () => { h.filters.push({ col: '', op: '=', val: '' }); renderView(); } }, '＋ 新增條件'));
+  v.append(fbox);
+  /* add rules */
+  const add = el('div', { class: 'card' }, el('h4', null, '新增規則'));
+  RULE_GROUPS.forEach(([g, types]) => add.append(el('div', { class: 'addbar' }, el('span', { class: 'dim small', style: { width: '80px' } }, g), types.map(t => el('button', { onclick: () => { const r = makeRule(t); h.rules.push(r); S.openRules.add(r.id); saveHuntSoon(); renderView(); } }, '＋ ' + RD[t].n)))));
+  v.append(add);
+  if (!h.rules.length) v.append(el('div', { class: 'empty' }, el('h2', null, '還沒有規則'), el('div', null, '點上方的「＋」加入規則，或使用「✨ 一鍵建議規則」，再按「▶ 執行 Hunt」。')));
+  h.rules.forEach((r, i) => v.append(ruleCard(r, i)));
+}
+
+function persistResults(h, results) {          // one atomic transaction: either the whole run is stored or nothing changes
+  S.persistP = (S.persistP || Promise.resolve()).then(() => persistBG(new Promise((res, rej) => {
+    const t = DB.transaction(['results', 'hunts'], 'readwrite'), st = t.objectStore('results'), cur0 = st.index('huntId').openKeyCursor(IDBKeyRange.only(h.huntId));
+    cur0.onsuccess = () => {
+      const cur = cur0.result;
+      if (cur) { st.delete(cur.primaryKey); cur.continue(); return; }
+      for (const r of results) st.put({ huntId: h.huntId, rowId: r.r, score: r.sc, sv: r.sv, ru: r.ru, w: r.w, k: r.k });
+      h.updatedAt = Date.now(); t.objectStore('hunts').put(h);
+    };
+    t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error || new Error('交易中止'));
+  })));
+}
+window.addEventListener('beforeunload', e => { if (S.persisting) { e.preventDefault(); e.returnValue = ''; } });
+async function runHunt() {
+  const h = S.hunt; if (!h.rules.length) { toast('請先新增規則', 'err'); return; }
+  if (!h.rules.some(r => r.enabled !== false)) { toast('所有規則都已停用', 'err'); return; }
+  await saveHuntNow(); let cancelled = false;
+  const b = busy('執行偵測…', () => { cancelled = true; abortWorker(); });
+  try {
+    const rules = JSON.parse(JSON.stringify(h.rules)), token = uid('run');
+    const res = await call('run', { token, rules, filters: h.filters.filter(f => f.col), keyCols: h.keyCols, includeLow: h.includeLow, excludeWL: h.excludeWL, wl: [...S.wl] }, { onEvt: (e, d) => { if (e === 'progress') b.update(d.text, d.pct); } });
+    res.ruleStats.forEach((s, i) => { s.rid = rules[i].id; });
+    h.lastRun = { at: Date.now(), N: res.N, counted: res.counted, flagged: res.flagged, excluded: res.excluded, truncated: res.truncated, sevCounts: res.sevCounts, keyDup: res.keyDup || 0, token, ruleStats: res.ruleStats, rules, filters: JSON.parse(JSON.stringify(h.filters.filter(f => f.col))), keyCols: h.keyCols.slice() };
+    persistResults(h, res.results);
+    S.results = res.results; S.ruleStats = res.ruleStats; S.runInfo = h.lastRun; S.sel = new Set(); S.cur = -1; S.qIds = null; S.filt.q = ''; S.filt.rule = 'all';
+    computeViewSync(); b.close();
+    const errs = res.ruleStats.filter(s => s.error).length;
+    toast('完成：' + res.flagged.toLocaleString('en-US') + ' 筆異常（' + (res.counted ? (res.flagged / res.counted * 100).toFixed(2) : 0) + '%）' + (errs ? '，' + errs + ' 條規則有錯誤' : ''), errs ? 'err' : '');
+    S.tab = 'summary'; render();
+  } catch (e) { b.close(); if (cancelled || e.message === '已取消') toast('已取消偵測'); else toast('偵測失敗：' + e.message, 'err'); renderView(); }
+}
+
+/* =====================================================================
+   Outlier Hunter — UI part 3: results views (summary / table / why / charts)
+   ===================================================================== */
+function computeViewSync() {
+  const f = S.filt; let a = S.results;
+  a = a.filter(r => f.sev[r.sv]);
+  if (f.status !== 'all') a = a.filter(r => ((S.triage.get(r.k) || {}).status || 'new') === f.status);
+  if (f.rule !== 'all') { const ri = +f.rule; a = a.filter(r => r.ru.includes(ri)); }
+  if (f.q && S.qIds) a = a.filter(r => S.qIds.has(r.r));
+  if (f.sort === 'row') a = a.slice().sort((x, y) => x.r - y.r);
+  else if (f.sort === 'sev') a = a.slice().sort((x, y) => y.sv - x.sv || y.sc - x.sc || x.r - y.r);
+  S.view = a;
+  if (S.cur >= a.length) S.cur = a.length - 1;
+}
+function persistBG(p) {                         // fire-and-forget IndexedDB write, tracked for beforeunload
+  S.persisting = (S.persisting || 0) + 1;
+  return p.catch(e => toast('儲存失敗：' + e.message, 'err')).finally(() => { S.persisting--; });
+}
+function setStatus(items, status) {             // memory first (instant UI), persistence in background
+  const now = Date.now(), dsid = S.ds.datasetId;
+  const recs = items.map(r => ({ datasetId: dsid, rowKey: r.k, status, note: (S.triage.get(r.k) || {}).note || '', updatedAt: now }));
+  recs.forEach(x => S.triage.set(x.rowKey, x)); persistBG(dbPutMany('triage', recs)); return Promise.resolve();
+}
+function setNote(item, note) {
+  const old = S.triage.get(item.k) || {}, rec = { datasetId: S.ds.datasetId, rowKey: item.k, status: old.status || 'new', note, updatedAt: Date.now() };
+  S.triage.set(item.k, rec); persistBG(dbPut('triage', rec)); return Promise.resolve();
+}
+const statusOf = k => (S.triage.get(k) || {}).status || 'new';
+
+/* ---------- value formatting ---------- */
+function unitDiv(ci) {
+  const c = S.ds.columns[ci]; if (!c || !isNumType(c.type) || c.type === 'integer' && c.max < 1e6 || !(Math.abs(c.max) >= 1e6)) return null;
+  return S.prefs.unit === 'yi' ? [1e8, '億'] : S.prefs.unit === 'million' ? [1e6, '百萬'] : null;
+}
+function fmtCell(ci, v) {
+  if (v === null || v === undefined) return '∅';
+  if (typeof v === 'number') { const cm = S.ds.columns[ci]; if (cm && cm.type === 'integer' && cm.dcap <= 20) return String(v); const u = unitDiv(ci); if (u) return (v / u[0]).toLocaleString('en-US', { maximumFractionDigits: 4 }); return fmt(v); }
+  return v;
+}
+function ruleCols(rule) { return !rule ? [] : rule.type === 'combo' ? (rule.columns || []) : rule.column ? [rule.column] : []; }
+
+/* ---------- Summary ---------- */
+function renderSummary(v) {
+  const ri = S.runInfo;
+  if (!ri) { v.append(el('div', { class: 'empty' }, el('h2', null, '尚未執行'), el('div', null, '請先到「規則」頁設定規則並執行 Hunt。'))); return; }
+  const rules = ri.rules, sc = ri.sevCounts, flagged = ri.flagged, counted = ri.counted;
+  const tri = { new: 0, confirmed: 0, fp: 0, pending: 0, ignored: 0 }; S.results.forEach(r => tri[statusOf(r.k)]++);
+  v.append(el('div', { class: 'kpis' },
+    el('div', { class: 'kpi' }, el('b', null, counted.toLocaleString('en-US')), el('span', null, '檢查列數' + (counted !== ri.N ? '（篩選後，全部 ' + ri.N.toLocaleString('en-US') + '）' : ''))),
+    el('div', { class: 'kpi' }, el('b', null, flagged.toLocaleString('en-US')), el('span', null, '異常列 ' + pctS(flagged, counted) + (ri.excluded ? '　白名單排除 ' + ri.excluded : ''))),
+    el('div', { class: 'kpi' }, el('b', { class: 'sev3' }, '🔴 ' + sc[3].toLocaleString('en-US')), el('span', null, '嚴重')),
+    el('div', { class: 'kpi' }, el('b', { class: 'sev2' }, '🟠 ' + sc[2].toLocaleString('en-US')), el('span', null, '高')),
+    el('div', { class: 'kpi' }, el('b', { class: 'sev1' }, '🟡 ' + sc[1].toLocaleString('en-US')), el('span', null, '低（邊界區）')),
+    el('div', { class: 'kpi' }, el('b', null, tri.confirmed + ' / ' + tri.fp + ' / ' + tri.pending), el('span', null, '確認 / 誤判 / 待確認　（未檢視 ' + tri.new + '）'))));
+  if (ri.keyDup) v.append(el('div', { class: 'tag err', style: { marginBottom: '10px', whiteSpace: 'normal' } }, '⚠ 有 ' + ri.keyDup.toLocaleString('en-US') + ' 筆異常列與其他列共用相同的業務 Key：複核狀態與白名單會一併套用到同 Key 的列。建議改選能唯一識別一列的 Key 欄位組合。'));
+  if (ri.truncated) v.append(el('div', { class: 'tag err', style: { marginBottom: '10px' } }, '⚠ 異常列超過上限，只保留分數最高的前 300,000 筆，建議調高門檻'));
+  const tot = Math.max(1, flagged);
+  v.append(el('div', { class: 'card' }, el('h4', null, '嚴重度分布'), el('div', { style: { display: 'flex', height: '14px', borderRadius: '7px', overflow: 'hidden', background: 'var(--panel2)' } },
+    [[3, 'var(--sev3)'], [2, 'var(--sev2)'], [1, 'var(--sev1)']].map(([s, c]) => el('div', { style: { width: sc[s] / tot * 100 + '%', background: c }, title: SEVN[s] + ' ' + sc[s] })))));
+  const rows = rules.map((r, i) => {
+    const st = S.ruleStats[i] || {}, def = RD[r.type];
+    return el('tr', null, el('td', null, i + 1), el('td', null, def ? def.n : r.type), el('td', null, ruleSummary(r)), el('td', { class: 'n' }, (st.hits || 0).toLocaleString('en-US')),
+      el('td', null, st.error ? el('span', { class: 'tag err' }, st.error) : st.skipped ? el('span', { class: 'tag' }, '已停用') : el('span', { class: 'tag ok' }, '完成'), (st.warnings || []).map(w => el('div', { class: 'small sev1' }, '⚠ ' + w))),
+      el('td', null, el('button', { class: 'ghost', onclick: () => { S.filt.rule = String(i); computeViewSync(); S.tab = 'table'; render(); } }, '檢視')));
+  });
+  v.append(el('div', { class: 'card' }, el('h4', null, '規則命中'), el('div', { class: 'scroll' }, el('table', { class: 't' }, el('thead', null, el('tr', null, ['#', '規則', '欄位', '命中', '狀態', ''].map(h => el('th', null, h)))), el('tbody', null, rows)))));
+  /* details per rule */
+  rules.forEach((r, i) => {
+    const st = S.ruleStats[i]; if (!st || st.error || st.skipped) return; let body = null;
+    if (st.groups) {
+      const unit = x => x === null || x === undefined ? '—' : fmt(x);
+      body = el('div', { class: 'scroll' }, el('table', { class: 't' }, el('thead', null, el('tr', null, ['分組', 'n', '下界', '上界', 'min', 'max', '命中'].map(h => el('th', null, h)))),
+        el('tbody', null, st.groups.slice(0, 200).map(g => el('tr', null, el('td', null, g.label || '（全體）'), el('td', { class: 'n' }, fmt(g.n)), g.skipped ? el('td', { colSpan: 5, class: 'dim' }, g.skipped) : [el('td', { class: 'n' }, unit(g.lo)), el('td', { class: 'n' }, unit(g.hi)), el('td', { class: 'n' }, unit(g.min)), el('td', { class: 'n' }, unit(g.max)), el('td', { class: 'n' }, fmt(g.hits))])))));
+    } else if (st.flagged && st.flagged.length) {
+      if (r.type === 'combo') body = el('div', { class: 'scroll' }, el('table', { class: 't' }, el('thead', null, el('tr', null, ['罕見組合', '筆數', '占比'].map(h => el('th', null, h)))), el('tbody', null, st.flagged.slice(0, 100).map(f => el('tr', null, el('td', null, f.label), el('td', { class: 'n' }, fmt(f.count)), el('td', { class: 'n' }, (f.support * 100).toFixed(4) + '%'))))));
+      else body = el('div', { class: 'small' }, '被標記的值：', st.flagged.slice(0, 60).map(x => el('span', { class: 'tag', style: { margin: '2px' } }, x)), st.flagged.length > 60 ? ' …' : '');
+    } else if (r.type === 'pattern' && st.badShapes && st.badShapes.length) body = el('div', { class: 'small' }, '罕見形狀：', st.badShapes.slice(0, 40).map(x => el('span', { class: 'tag', style: { margin: '2px', fontFamily: 'monospace' } }, x)));
+    if (body) v.append(el('details', { class: 'card' }, el('summary', { style: { cursor: 'pointer', fontWeight: 600 } }, (i + 1) + '. ' + RD[r.type].n + '　' + ruleSummary(r) + (st.combos ? '　（' + st.combos.toLocaleString('en-US') + ' 種組合，' + (st.flaggedCombos || 0) + ' 種罕見）' : '')), el('div', { style: { marginTop: '8px' } }, body)));
+  });
+  /* top 10 */
+  v.append(el('div', { class: 'card' }, el('h4', null, 'Top 10 最高分紀錄'), S.results.slice(0, 10).map(r => el('div', { class: 'hit s' + r.sv, style: { cursor: 'pointer' }, onclick: () => { S.filt = { sev: { 3: true, 2: true, 1: true }, status: 'all', rule: 'all', q: '', sort: 'score' }; S.qIds = null; computeViewSync(); S.cur = S.view.findIndex(x => x.r === r.r); S.tab = 'table'; render(); } },
+    el('b', null, SEVI[r.sv] + ' 分數 ' + r.sc + '　列 #' + (r.r + 1) + (r.k !== String(r.r) ? '　Key ' + r.k : '')), el('div', { class: 'small' }, r.w.slice().sort((a, b) => b[1] - a[1])[0][2])))));
+}
+
+/* ---------- Table + Why ---------- */
+const ROWH = 30, COLW = 124;
+function renderTable(v) {
+  if (!S.runInfo) { v.append(el('div', { class: 'empty' }, el('h2', null, '尚未執行'), el('div', null, '請先到「規則」頁執行 Hunt。'))); return; }
+  if (!S.results.length) { v.append(el('div', { class: 'empty' }, el('h2', null, '沒有異常紀錄 🎉'), el('div', null, '可以調整規則門檻後重新執行。'))); return; }
+  v.classList.add('noscroll');
+  const runR = runRules(), nc = S.ds.headers.length;
+  const hitCols = []; runR.forEach(r => ruleCols(r).forEach(n => { const i = S.ds.headers.indexOf(n); if (i >= 0 && !hitCols.includes(i)) hitCols.push(i); }));
+  const order = [...hitCols, ...S.ds.headers.map((_, i) => i).filter(i => !hitCols.includes(i))];
+  const fixed = [['', 30], ['狀態', 54], ['分數', 66], ['列#', 74], ['規則數', 66]], totalW = fixed.reduce((a, b) => a + b[1], 0) + order.length * COLW;
+  const sevBox = [3, 2, 1].map(s => el('label', { class: 'small' }, el('input', { type: 'checkbox', checked: S.filt.sev[s], onchange: e => { S.filt.sev[s] = e.target.checked; refresh(true); } }), ' ' + SEVI[s] + SEVN[s]));
+  const stSel = el('select', { onchange: e => { S.filt.status = e.target.value; refresh(true); } }, el('option', { value: 'all' }, '全部狀態'), Object.entries(STATUS).map(([k, [i, l]]) => el('option', { value: k }, i + ' ' + l))); stSel.value = S.filt.status;
+  const ruleSel = el('select', { onchange: e => { S.filt.rule = e.target.value; refresh(true); } }, el('option', { value: 'all' }, '全部規則'), runR.map((r, i) => el('option', { value: i }, (i + 1) + '. ' + RD[r.type].n + ' ' + ruleSummary(r)))); ruleSel.value = S.filt.rule;
+  const sortSel = el('select', { onchange: e => { S.filt.sort = e.target.value; refresh(true); } }, [['score', '依分數'], ['sev', '依嚴重度'], ['row', '依列號']].map(([v2, l]) => el('option', { value: v2 }, l))); sortSel.value = S.filt.sort;
+  const unitSel = el('select', { title: '大額數值顯示單位', onchange: e => { S.prefs.unit = e.target.value; savePrefs(); S.rowCache = S.rowCache; paint(); renderWhy(); buildHead(); } }, [['raw', '原值'], ['million', '百萬'], ['yi', '億']].map(([v2, l]) => el('option', { value: v2 }, '單位：' + l))); unitSel.value = S.prefs.unit;
+  const search = el('input', { type: 'text', placeholder: '搜尋內容 / Key / 備註…', value: S.filt.q, style: { width: '190px' }, oninput: debounce(async e => { await doSearch(e.target.value.trim()); }, 350) });
+  const info = el('span', { class: 'small dim' }), batchSel = el('select', null, Object.entries(STATUS).map(([k, [i, l]]) => el('option', { value: k }, i + ' ' + l)));
+  batchSel.value = 'confirmed';
+  const applySel = el('button', { onclick: async () => { const items = S.view.filter(r => S.sel.has(r.r)); if (!items.length) { toast('尚未勾選任何列'); return; } await setStatus(items, batchSel.value); S.sel.clear(); refresh(true); toast('已標記 ' + items.length + ' 筆'); } }, '套用到勾選');
+  const applyAll = el('button', { onclick: async () => { if (!S.view.length) return; if (!(await confirmDlg('將目前篩選出的 ' + S.view.length.toLocaleString('en-US') + ' 筆全部標記為「' + STATUS[batchSel.value][1] + '」？', '套用'))) return; await setStatus(S.view, batchSel.value); refresh(true); toast('已標記 ' + S.view.length.toLocaleString('en-US') + ' 筆'); } }, '套用到全部篩選結果');
+  const vt = el('div', { class: 'vt', tabIndex: 0 }), head = el('div', { class: 'head', style: { width: totalW + 'px' } }), spacer = el('div', { class: 'spacer' });
+  vt.append(head, spacer);
+  const why = el('div', { class: 'why' });
+  v.append(el('div', { class: 'tbwrap' }, el('div', { class: 'tbleft' }, el('div', { class: 'toolbar' }, sevBox, stSel, ruleSel, sortSel, search, unitSel), el('div', { class: 'toolbar' }, info, el('span', { style: { flex: 1 } }), '批次標記：', batchSel, applySel, applyAll), vt), why));
+  function buildHead() {
+    head.replaceChildren();
+    const chk = el('input', { type: 'checkbox', title: '勾選目前篩選結果', onchange: e => { if (e.target.checked) S.view.forEach(r => S.sel.add(r.r)); else S.sel.clear(); paint(); updInfo(); } });
+    head.append(el('div', { class: 'c', style: { width: '30px' } }, chk));
+    fixed.slice(1).forEach(([l, w]) => head.append(el('div', { class: 'c', style: { width: w + 'px' } }, l)));
+    order.forEach(i => { const u = unitDiv(i); head.append(el('div', { class: 'c', style: { width: COLW + 'px' }, title: S.ds.headers[i] + ' (' + S.ds.columns[i].type + ')' }, S.ds.headers[i] + (u ? '（' + u[1] + '）' : ''))); });
+  }
+  function updInfo() { info.textContent = '顯示 ' + S.view.length.toLocaleString('en-US') + ' / 共 ' + S.results.length.toLocaleString('en-US') + ' 筆異常　已勾選 ' + S.sel.size + '　快速鍵：J/K 移動　C 確認　F 誤判　P 待確認　I 忽略　N 備註'; }
+  let fetchT = null; const need = new Set();
+  function schedFetch() {
+    if (fetchT) return;
+    fetchT = setTimeout(async () => {
+      fetchT = null; const ids = [...need].slice(0, 300); need.clear(); if (!ids.length) return;
+      try {
+        const rows = await call('rows', { ids }); if (S.rowCache.size > 6000) S.rowCache.clear();
+        ids.forEach((id, j) => S.rowCache.set(id, rows[j])); paint(); if (S.cur >= 0 && ids.includes((S.view[S.cur] || {}).r)) renderWhy();
+      } catch (e) { toast(e.message, 'err'); }
+    }, 30);
+  }
+  function hitMap(item) { const m = {}; for (const [ri, sev] of item.w) ruleCols(runR[ri]).forEach(n => { if (!m[n] || m[n] < sev) m[n] = sev; }); return m; }
+  function paint() {
+    const n = S.view.length; spacer.style.height = n * ROWH + 'px'; spacer.style.width = totalW + 'px';
+    const first = Math.max(0, Math.floor(vt.scrollTop / ROWH) - 3), last = Math.min(n, Math.ceil((vt.scrollTop + vt.clientHeight) / ROWH) + 3);
+    spacer.replaceChildren(); const frag = document.createDocumentFragment();
+    for (let i = first; i < last; i++) {
+      const it = S.view[i], data = S.rowCache.get(it.r); if (!data) need.add(it.r);
+      const hm = hitMap(it), st = statusOf(it.k);
+      const r = el('div', { class: 'r' + (i === S.cur ? ' cur' : ''), style: { top: i * ROWH + 'px', width: totalW + 'px' }, onclick: () => selectIdx(i, false) },
+        el('div', { class: 'c', style: { width: '30px' }, onclick: e => e.stopPropagation() }, el('input', { type: 'checkbox', checked: S.sel.has(it.r), onchange: e => { e.target.checked ? S.sel.add(it.r) : S.sel.delete(it.r); updInfo(); } })),
+        el('div', { class: 'c', style: { width: '54px' }, title: STATUS[st][1] }, STATUS[st][0]),
+        el('div', { class: 'c num', style: { width: '66px' } }, SEVI[it.sv] + ' ' + it.sc), el('div', { class: 'c num', style: { width: '74px' } }, it.r + 1), el('div', { class: 'c num', style: { width: '66px' } }, it.ru.length));
+      order.forEach(ci => {
+        const val = data ? data[ci] : undefined, hs = hm[S.ds.headers[ci]];
+        r.append(el('div', { class: 'c' + (typeof val === 'number' ? ' num' : '') + (hs ? ' hl' + hs : ''), style: { width: COLW + 'px' }, title: data ? String(val) : '' }, data ? fmtCell(ci, val) : '…'));
+      });
+      frag.append(r);
+    }
+    spacer.append(frag); if (need.size) schedFetch();
+  }
+  function selectIdx(i, scroll) {
+    if (i < 0 || i >= S.view.length) return; S.cur = i;
+    if (scroll) { const top = i * ROWH + 30; if (top < vt.scrollTop + 30) vt.scrollTop = i * ROWH; else if (top + ROWH > vt.scrollTop + vt.clientHeight) vt.scrollTop = top + ROWH - vt.clientHeight; }
+    paint(); renderWhy();
+  }
+  function renderWhy() {
+    why.replaceChildren(); const it = S.view[S.cur];
+    if (!it) { why.append(el('div', { class: 'dim' }, el('h4', null, 'Why Panel'), '點選左側一列，這裡會列出它為什麼被判定為異常。', el('div', { style: { marginTop: '10px' } }, '快速鍵：', el('kbd', null, 'J'), ' / ', el('kbd', null, 'K'), ' 上下移動；', el('kbd', null, 'C'), ' 確認；', el('kbd', null, 'F'), ' 誤判；', el('kbd', null, 'P'), ' 待確認；', el('kbd', null, 'I'), ' 忽略；', el('kbd', null, 'N'), ' 備註'))); return; }
+    const tri = S.triage.get(it.k) || {}, st = tri.status || 'new', data = S.rowCache.get(it.r), hm = hitMap(it);
+    if (!data) { need.add(it.r); schedFetch(); }
+    why.append(el('h4', null, SEVI[it.sv] + ' 列 #' + (it.r + 1) + '  分數 ' + it.sc)); if (it.k !== String(it.r)) why.append(el('div', { class: 'small dim' }, 'Key：' + it.k));
+    it.w.slice().sort((a, b) => b[1] - a[1]).forEach(([ri, sev, txt]) => why.append(el('div', { class: 'hit s' + sev }, el('div', { class: 'small dim' }, '✔ ' + (runR[ri] ? RD[runR[ri].type].n + '　' + ruleSummary(runR[ri]) : '規則 ' + (ri + 1)) + '　' + SEVN[sev]), txt)));
+    why.append(el('div', { class: 'stbtns' }, Object.entries(STATUS).map(([k, [i, l, sh]]) => el('button', { class: k === st ? 'on' : '', title: l, onclick: async () => { await setStatus([it], k); if (S.filt.status !== 'all') { refresh(true); } else { paint(); renderWhy(); } } }, i + ' ' + sh))));
+    if (S.wl.has(it.k)) why.append(el('div', { class: 'row small', style: { margin: '6px 0' } }, el('span', { class: 'tag ok' }, '🟢 已在白名單（下次執行時排除）'), el('button', { onclick: () => { S.wl.delete(it.k); persistBG(dbDel('whitelist', [S.hunt.huntId, it.k])); renderWhy(); toast('已移出白名單'); } }, '移出白名單')));
+    const ta = el('textarea', { rows: 3, id: 'note-box', placeholder: '備註…', value: tri.note || '', onchange: async e => { await setNote(it, e.target.value); toast('備註已儲存'); } });
+    why.append(ta, el('div', { class: 'row', style: { marginTop: '6px' } },
+      el('button', { onclick: async () => { await setStatus([it], 'fp'); S.wl.add(it.k); persistBG(dbPut('whitelist', { huntId: S.hunt.huntId, rowKey: it.k })); toast('已標為誤判並加入白名單（下次執行時排除）'); if (S.filt.status !== 'all') refresh(true); else { paint(); renderWhy(); } } }, '🟢 誤判並加入白名單'),
+      el('button', { onclick: () => selectIdx(S.cur - 1, true) }, '◀'), el('button', { onclick: () => selectIdx(S.cur + 1, true) }, '▶')));
+    const kv = el('div', { class: 'kv' });
+    if (data) S.ds.headers.forEach((h, i) => { kv.append(el('div', { class: 'k' }, h), el('div', { class: hm[h] ? 'hlv' : '' }, data[i] === null ? '∅' : fmtCell(i, data[i]))); });
+    else kv.append(el('div', { class: 'dim' }, '載入中…'));
+    why.append(el('h4', { style: { marginTop: '12px' } }, '完整欄位'), kv);
+  }
+  function refresh(reset) { if (document.activeElement && document.activeElement.tagName === 'SELECT') document.activeElement.blur(); computeViewSync(); if (reset) vt.scrollTop = 0; updInfo(); paint(); renderWhy(); }
+  vt.addEventListener('scroll', () => requestAnimationFrame(paint));
+  S.tbl = { selectIdx, refresh, renderWhy, vt };
+  buildHead(); updInfo(); paint(); renderWhy();
+  if (S.cur >= 0) selectIdx(S.cur, true);
+}
+async function doSearch(q) {
+  S.filt.q = q; const my = S.searchSeq = (S.searchSeq || 0) + 1;     // ignore answers of outdated searches
+  if (!q) { S.qIds = null; } else {
+    const ids = Int32Array.from(S.results.map(r => r.r)), out = new Set(await call('search', { q, ids })), lq = q.toLowerCase();
+    if (my !== S.searchSeq) return;
+    S.results.forEach(r => { if (r.k.toLowerCase().includes(lq) || ((S.triage.get(r.k) || {}).note || '').toLowerCase().includes(lq)) out.add(r.r); });
+    S.qIds = out;
+  }
+  if (S.tbl) S.tbl.refresh(true);
+}
+document.addEventListener('keydown', e => {
+  if (S.tab !== 'table' || !S.tbl || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.target.closest('input,textarea,select') && e.target.type !== 'checkbox') return;
+  if (document.querySelector('.modal-bg')) return;
+  const k = e.key.toLowerCase(), it = S.view[S.cur];
+  if (k === 'j' || k === 'arrowdown') { e.preventDefault(); S.tbl.selectIdx(Math.max(0, S.cur + 1), true); }
+  else if (k === 'k' || k === 'arrowup') { e.preventDefault(); S.tbl.selectIdx(Math.max(0, S.cur - 1), true); }
+  else if (it && 'cfpi'.includes(k) && k.length === 1) { const m = { c: 'confirmed', f: 'fp', p: 'pending', i: 'ignored' }[k]; setStatus([it], m).then(() => { S.filt.status !== 'all' ? S.tbl.refresh(false) : (S.tbl.selectIdx(S.cur, false)); }); }
+  else if (it && k === 'n') { e.preventDefault(); const t = $('#note-box'); if (t) t.focus(); }
+});
+
+/* ---------- charts ---------- */
+const cssv = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim() || '#888';
+function prepCanvas(cv, h) {
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth || 800; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = h + 'px';
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h); return [g, w];
+}
+const axisFmt = (x, log) => { const v = log ? Math.pow(10, x) : x, a = Math.abs(v); return a >= 1e8 ? (v / 1e8).toFixed(1) + '億' : a >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : a >= 1e4 ? (v / 1e3).toFixed(0) + 'k' : Number(v.toPrecision(3)).toString(); };
+function drawHist(cv, d, logY) {
+  const H = 260, [g, W] = prepCanvas(cv, H), L = 52, R = 12, T = 12, B = 28, pw = W - L - R, ph = H - T - B;
+  const txt = cssv('--dim'), acc = cssv('--accent'), red = cssv('--sev3'), line = cssv('--line');
+  const f = c => logY ? Math.log10(1 + c) : c, mx = Math.max(1, ...d.cnt.map(f)), bw = pw / d.cnt.length, span = d.max - d.min || 1;
+  g.font = '11px sans-serif'; g.fillStyle = txt; g.strokeStyle = line; g.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) { const y = T + ph - ph * i / 4, val = logY ? Math.pow(10, mx * i / 4) - 1 : mx * i / 4; g.beginPath(); g.moveTo(L, y); g.lineTo(W - R, y); g.stroke(); g.fillText(val >= 1000 ? (val / 1000).toFixed(1) + 'k' : Math.round(val), L - 6, y + 4); }
+  d.cnt.forEach((c, i) => { const h1 = f(c) / mx * ph, x = L + i * bw; g.fillStyle = acc; g.globalAlpha = .75; g.fillRect(x + 1, T + ph - h1, bw - 2, h1); g.globalAlpha = 1; if (d.hit[i]) { const hh = f(d.hit[i]) / mx * ph; g.fillStyle = red; g.fillRect(x + 1, T + ph - hh, bw - 2, hh); } });
+  g.textAlign = 'center'; g.fillStyle = txt; for (let i = 0; i <= 5; i++) { const val = d.min + span * i / 5; g.fillText(axisFmt(val, d.log), L + pw * i / 5, H - 10); }
+  [['lo', d.lo], ['hi', d.hi]].forEach(([n, b]) => { if (b === null || b === undefined || !isFinite(b)) return; if (b < d.min || b > d.max) return; const x = L + (b - d.min) / span * pw; g.strokeStyle = red; g.setLineDash([5, 4]); g.beginPath(); g.moveTo(x, T); g.lineTo(x, T + ph); g.stroke(); g.setLineDash([]); g.fillStyle = red; g.textAlign = 'left'; g.fillText((n === 'lo' ? '下界 ' : '上界 ') + axisFmt(b, d.log), x + 4, T + 11); });
+}
+function drawBox(cv, d) {
+  const H = 76, [g, W] = prepCanvas(cv, H), L = 52, R = 12, pw = W - L - R, span = d.max - d.min || 1, X = v => L + (v - d.min) / span * pw, b = d.box, y = 34;
+  const acc = cssv('--accent'), txt = cssv('--dim'), red = cssv('--sev3'); g.font = '11px sans-serif';
+  g.strokeStyle = txt; g.beginPath(); g.moveTo(X(b.wl), y); g.lineTo(X(b.q1), y); g.moveTo(X(b.q3), y); g.lineTo(X(b.wh), y); g.moveTo(X(b.wl), y - 8); g.lineTo(X(b.wl), y + 8); g.moveTo(X(b.wh), y - 8); g.lineTo(X(b.wh), y + 8); g.stroke();
+  g.fillStyle = acc; g.globalAlpha = .35; g.fillRect(X(b.q1), y - 12, Math.max(2, X(b.q3) - X(b.q1)), 24); g.globalAlpha = 1; g.strokeStyle = acc; g.strokeRect(X(b.q1), y - 12, Math.max(2, X(b.q3) - X(b.q1)), 24);
+  g.lineWidth = 2; g.beginPath(); g.moveTo(X(b.med), y - 12); g.lineTo(X(b.med), y + 12); g.stroke(); g.lineWidth = 1;
+  g.fillStyle = red; [b.min, b.max].forEach(v => { g.beginPath(); g.arc(X(v), y, 3.5, 0, 7); g.fill(); });
+  g.fillStyle = txt; g.textAlign = 'center'; g.fillText('Q1 ' + axisFmt(b.q1, d.log) + '　中位 ' + axisFmt(b.med, d.log) + '　Q3 ' + axisFmt(b.q3, d.log) + '　（紅點＝min/max，須線＝1.5×IQR 內最遠值）', W / 2, 66);
+}
+function needRerun(v) { v.append(el('div', { class: 'empty' }, el('h2', null, '需要重新執行'), el('div', null, '分布圖需要運算引擎中的最新結果。請到「規則」頁按「▶ 執行 Hunt」。'), el('button', { class: 'pri', style: { marginTop: '12px' }, onclick: runHunt }, '▶ 立即執行'))); }
+async function renderDist(v) {
+  if (!S.runInfo) { v.append(el('div', { class: 'empty' }, el('h2', null, '尚未執行'))); return; }
+  const cand = runRules().map((r, i) => [r, i]).filter(([r, i]) => S.ruleStats[i] && S.ruleStats[i].groups && ['iqr', 'zscore', 'mad', 'pct', 'range'].includes(r.type));
+  if (!cand.length) { v.append(el('div', { class: 'empty' }, el('h2', null, '沒有數值規則可顯示'))); return; }
+  const st = S.distSel || (S.distSel = { ri: cand[0][1], gi: 0, logY: true });
+  if (!cand.some(c => c[1] === st.ri)) { st.ri = cand[0][1]; st.gi = 0; }
+  const stat = S.ruleStats[st.ri], okG = stat.groups.map((g, i) => [g, i]).filter(([g]) => !g.skipped);
+  if (!okG.some(x => x[1] === st.gi)) st.gi = okG.length ? okG[0][1] : 0;
+  const rs = el('select', { onchange: e => { st.ri = +e.target.value; st.gi = 0; renderView(); } }, cand.map(([r, i]) => el('option', { value: i }, (i + 1) + '. ' + RD[r.type].n + ' ' + ruleSummary(r)))); rs.value = st.ri;
+  const gs = el('select', { onchange: e => { st.gi = +e.target.value; renderView(); } }, okG.map(([g, i]) => el('option', { value: i }, (g.label || '（全體）') + '　n=' + g.n))); gs.value = st.gi;
+  const hc = el('canvas'), bc = el('canvas'), meta = el('div', { class: 'small dim', style: { margin: '6px 0' } });
+  v.append(el('div', { class: 'card' }, el('div', { class: 'row' }, rs, stat.groups.length > 1 ? gs : null, el('label', null, el('input', { type: 'checkbox', checked: st.logY, onchange: e => { st.logY = e.target.checked; renderView(); } }), ' Y 軸對數刻度'), el('span', { class: 'small dim' }, '藍＝全部　紅＝被此規則標記　紅虛線＝上下界')), meta, hc, bc));
+  try {
+    const d = await call('hist', { ri: st.ri, gi: st.gi, token: S.runInfo.token });
+    meta.textContent = '分組：' + (d.label || '全體') + '　n=' + d.n.toLocaleString('en-US') + (d.log ? '　（X 軸為 log10 空間，標籤已換算回原值）' : '');
+    requestAnimationFrame(() => { drawHist(hc, d, st.logY); drawBox(bc, d); });
+  } catch (e) { v.replaceChildren(); needRerun(v); }
+}
+const BINOPTS = [['auto', '自動'], ['distinct', 'Distinct'], ['q5', '5 分位'], ['q10', '10 分位']];
+async function renderCombo(v) {
+  if (!S.ds) return; const names = colNames(), st = S.comboSel || (S.comboSel = {});
+  const cr = runRules().find(r => r.type === 'combo');
+  if (!st.a || !names.includes(st.a)) { st.a = cr ? cr.columns[0] : names[0]; st.b = cr ? cr.columns[1] : names[1] || names[0]; st.binA = 'auto'; st.binB = 'auto'; }
+  const pick = k => { const s = el('select', { onchange: e => { st[k] = e.target.value; renderView(); } }, names.map(n => el('option', { value: n }, n))); s.value = st[k]; return s; };
+  const bin = k => { const s = el('select', { onchange: e => { st[k] = e.target.value; renderView(); } }, BINOPTS.map(([x, l]) => el('option', { value: x }, l))); s.value = st[k]; return s; };
+  const box = el('div', { class: 'scroll', style: { maxHeight: '620px' } }, '計算中…');
+  v.append(el('div', { class: 'card' }, el('div', { class: 'row' }, '列：', pick('a'), colNum(st.a) ? bin('binA') : null, '欄：', pick('b'), colNum(st.b) ? bin('binB') : null, el('span', { class: 'small dim' }, '格內為筆數；紅框 ⚑＝該格含被「罕見組合」規則標記的列（沒有組合規則時為任一規則），僅顯示筆數最多的前 25 類')), box));
+  try {
+    const runR = runRules(), hasCombo = runR.some(r => r.type === 'combo');
+    const flag = (hasCombo ? S.results.filter(r => r.w.some(h => runR[h[0]] && runR[h[0]].type === 'combo')) : S.results).map(r => r.r);
+    const m = await call('matrix', { a: st.a, b: st.b, binA: st.binA, binB: st.binB, filters: S.runInfo ? S.runInfo.filters : [], flag });
+    const mxv = Math.max(1, ...m.cells.flat().map(c => c[0])); const col = n => 'rgba(37,99,235,' + (n ? 0.08 + 0.55 * Math.log10(1 + n) / Math.log10(1 + mxv) : 0) + ')';
+    box.replaceChildren(el('table', { class: 't heat' }, el('thead', null, el('tr', null, el('th', { class: 'rh' }, st.a + ' \\ ' + st.b), m.cols.map(c => el('th', { title: c }, String(c).slice(0, 14))))),
+      el('tbody', null, m.rows.map((r, i) => el('tr', null, el('th', { class: 'rh' }, String(r).slice(0, 24)), m.cells[i].map(([n, f]) => el('td', { class: f ? 'fl' : '', style: { background: col(n) }, title: n + ' 筆' + (f ? '（異常 ' + f + '）' : '') }, n ? n.toLocaleString('en-US') + (f ? ' ⚑' : '') : '')))))));
+    if (m.totalA > 25 || m.totalB > 25) box.append(el('div', { class: 'small dim', style: { padding: '6px' } }, '列有 ' + m.totalA + ' 類、欄有 ' + m.totalB + ' 類，僅顯示筆數最多的前 25 類。'));
+  } catch (e) { box.textContent = '無法計算：' + e.message; }
+}
+async function renderPattern(v) {
+  if (!S.ds) return; const names = colNames('cat'); if (!names.length) { v.append(el('div', { class: 'empty' }, el('h2', null, '沒有文字/代碼欄位'))); return; }
+  const st = S.patSel || (S.patSel = {}); if (!st.col || !names.includes(st.col)) { const pr = runRules().find(r => r.type === 'pattern'); st.col = pr && names.includes(pr.column) ? pr.column : names[0]; }
+  const s = el('select', { onchange: e => { st.col = e.target.value; renderView(); } }, names.map(n => el('option', { value: n }, n))); s.value = st.col;
+  const box = el('div', null, '計算中…');
+  v.append(el('div', { class: 'card' }, el('div', { class: 'row' }, '欄位：', s, el('span', { class: 'small dim' }, '形狀：數字→9　大寫→A　小寫→a　中文→中　其他字元保留')), box));
+  try {
+    const d = await call('pattern', { col: st.col, filters: S.runInfo ? S.runInfo.filters : [] }), mx = d.items[0] ? d.items[0].count : 1;
+    box.replaceChildren(el('div', { class: 'small dim', style: { margin: '6px 0' } }, '非空值 ' + d.total.toLocaleString('en-US') + ' 筆，共 ' + d.distinct + ' 種形狀'), ...d.items.map(it => el('div', { class: 'hbar' + (it.share < 0.005 ? ' bad' : '') }, el('div', { class: 'lb', title: it.shape }, JSON.stringify(it.shape)), el('div', { class: 'tr' }, el('i', { style: { width: Math.max(0.5, it.count / mx * 100) + '%' } })), el('div', { style: { width: '170px' }, class: 'small' }, it.count.toLocaleString('en-US') + '（' + (it.share * 100).toFixed(it.share < 0.01 ? 4 : 2) + '%）'), el('div', { class: 'small dim', style: { width: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }, title: it.example }, '例：' + it.example))));
+  } catch (e) { box.textContent = '無法計算：' + e.message; }
+}
+
+/* ---------- Data tab ---------- */
+async function renderData(v) {
+  const d = S.ds; if (!d) { v.append(el('div', { class: 'empty' }, el('h2', null, '尚未匯入資料'), el('button', { class: 'pri', onclick: () => openImportWizard() }, '匯入資料'))); return; }
+  v.append(el('div', { class: 'kpis' }, el('div', { class: 'kpi' }, el('b', null, d.rows.toLocaleString('en-US')), el('span', null, '列')), el('div', { class: 'kpi' }, el('b', null, d.headers.length), el('span', null, '欄')),
+    el('div', { class: 'kpi' }, el('b', null, d.enc), el('span', null, '編碼　分隔：' + (d.delim === '\t' ? 'Tab' : d.delim))), el('div', { class: 'kpi' }, el('b', null, (d.size / 1048576).toFixed(1) + ' MB'), el('span', null, d.fileName))));
+  if (d.badChars) v.append(el('div', { class: 'tag err', style: { marginBottom: '10px', whiteSpace: 'normal' } }, '⚠ 資料中有 ' + d.badChars.toLocaleString('en-US') + ' 個亂碼字元（�），可能是編碼選錯。請刪除此資料集，改選正確編碼後重新匯入。'));
+  if (d.badRows && d.badRows.count) v.append(el('div', { class: 'tag err', style: { marginBottom: '10px' } }, '⚠ 有 ' + d.badRows.count.toLocaleString('en-US') + ' 列欄位數與表頭不符（記錄編號例：' + d.badRows.examples.join(', ') + '），已依匯入設定處理'));
+  const rows = d.columns.map((c, i) => {
+    const n = isNumType(c.type), tot = d.rows; const badPct = c.bad ? c.bad / Math.max(1, tot) : 0;
+    return el('tr', null, el('td', null, i + 1), el('td', null, c.name), el('td', null, el('span', { class: 'tag' }, c.type)), el('td', { class: 'n' }, pctS(c.nulls || 0, tot)), el('td', { class: 'n' }, n ? (c.dcap > 50 ? '>50' : c.dcap) : fmt(c.distinct)),
+      el('td', { class: 'n' }, n ? fmt(c.min) : ''), el('td', { class: 'n' }, n ? fmt(c.max) : ''), el('td', { class: 'n' }, n ? fmt(c.mean) : ''), el('td', { class: 'n' }, n ? fmt(c.std) : ''),
+      el('td', null, c.bad ? el('span', { class: 'tag ' + (badPct > 0.05 ? 'err' : 's2'), title: '範例：' + (c.badEx || []).join(' | ') }, c.bad.toLocaleString('en-US') + ' 筆（' + (badPct * 100).toFixed(2) + '%）無法解析') : ''),
+      el('td', { class: 'small' }, !n && c.top ? c.top.map(t => String(t[0]).slice(0, 16) + '×' + t[1]).join('　') : ''));
+  });
+  v.append(el('div', { class: 'card' }, el('h4', null, '欄位概況'), el('div', { class: 'scroll', style: { maxHeight: '460px' } }, el('table', { class: 't' }, el('thead', null, el('tr', null, ['#', '欄位', '型態', '空值', '相異值', 'Min', 'Max', 'Mean', 'Std', '解析問題', 'Top 值'].map(h => el('th', null, h)))), el('tbody', null, rows)))));
+  const box = el('div', { class: 'card' }, el('h4', null, '前 30 列預覽'), '載入中…'); v.append(box);
+  try {
+    const data = await call('rows', { ids: Array.from({ length: Math.min(30, d.rows) }, (_, i) => i) });
+    box.replaceChildren(el('h4', null, '前 30 列預覽'), el('div', { class: 'scroll' }, el('table', { class: 't' }, el('thead', null, el('tr', null, d.headers.map(h => el('th', null, h)))), el('tbody', null, data.map(r => el('tr', null, r.map((x, i) => el('td', { class: typeof x === 'number' ? 'n' : '' }, x === null ? '∅' : fmtCell(i, x)))))))));
+  } catch (e) { box.append(e.message); }
+}
+
+/* =====================================================================
+   Outlier Hunter — UI part 4: export / SQL / backup / settings / shell
+   ===================================================================== */
+
+/* ---------- SQL generation ---------- */
+const qident = n => /^[A-Za-z][A-Za-z0-9_$#]*$/.test(n) ? n : '"' + String(n).replace(/"/g, '""') + '"';
+const sq = s => "'" + String(s).replace(/'/g, "''") + "'";
+const sn = x => String(Number(Number(x).toPrecision(12)));
+function atomSql(a) {
+  const c = 't.' + qident(a.c);
+  if (a.isNull) return c + ' IS NULL';
+  if (a.eq !== undefined) return 'TRIM(' + c + ') = ' + sq(String(a.eq).trim());
+  if (a.eqn !== undefined) return c + ' = ' + sn(a.eqn);
+  const p = []; if (a.lo !== undefined) p.push(c + ' >= ' + sn(a.lo)); if (a.hi !== undefined) p.push(c + ' < ' + sn(a.hi));
+  return p.join(' AND ');
+}
+function inList(c, vals, neg, numeric) {
+  const lit = v => numeric ? sn(String(v).replace(/,/g, '')) : sq(String(v).trim()), cc = numeric ? c : 'TRIM(' + c + ')', parts = [];
+  for (let i = 0; i < vals.length; i += 900) parts.push(cc + (neg ? ' NOT IN (' : ' IN (') + vals.slice(i, i + 900).map(lit).join(', ') + ')');
+  return parts.length === 1 ? parts[0] : '(' + parts.join(neg ? ' AND ' : ' OR ') + ')';
+}
+function shapeRegex(sh) {
+  let o = ''; for (const ch of sh) o += ch === '9' ? '[0-9]' : ch === 'A' ? '[A-Z]' : ch === 'a' ? '[a-z]' : ch === '中' ? '[一-龥]' : /[.^$*+?()[\]{}|\\]/.test(ch) ? '\\' + ch : ch;
+  return o;
+}
+function rulePredicate(rule, st, notes) {
+  const c = n => 't.' + qident(n);
+  if (!st || st.error || st.skipped) return null;
+  switch (rule.type) {
+    case 'iqr': case 'zscore': case 'mad': case 'pct': case 'range': {
+      const parts = [], cc = c(rule.column);
+      for (const g of st.groups || []) {
+        if (g.skipped) continue; const cond = [];
+        if (g.lo !== null && g.lo !== undefined) cond.push(cc + ' < ' + sn(g.lo)); if (g.hi !== null && g.hi !== undefined) cond.push(cc + ' > ' + sn(g.hi));
+        if (!cond.length) continue; let p = '(' + cond.join(' OR ') + ')'; if (st.log) p = cc + ' > 0 AND ' + p;
+        if (g.atoms && g.atoms.length) p = g.atoms.map(atomSql).join(' AND ') + ' AND ' + p; parts.push('(' + p + ')');
+      }
+      if (!parts.length) return null;
+      if (parts.length > 200) notes.push('注意：分組共 ' + parts.length + ' 組，僅輸出前 200 組的條件，請自行補齊其餘分組');
+      return parts.slice(0, 200).join('\n       OR ');
+    }
+    case 'rarecat': case 'singleton':
+      if (st.flaggedN > (st.flagged || []).length) notes.push('注意：被標記的值共 ' + st.flaggedN + ' 個，僅輸出前 ' + st.flagged.length + ' 個');
+      return st.flagged && st.flagged.length ? inList(c(rule.column), st.flagged, false, st.numeric) : null;
+    case 'unexpected': return st.allowed && st.allowed.length ? c(rule.column) + ' IS NOT NULL AND ' + inList(c(rule.column), st.allowed, true, colNum(rule.column)) : null;
+    case 'pattern': {
+      const cc = c(rule.column), p = [];
+      if (st.badShapesN > (st.badShapes || []).length) notes.push('注意：罕見形狀共 ' + st.badShapesN + ' 種，僅輸出前 ' + st.badShapes.length + ' 種');
+      if (st.badShapes && st.badShapes.length) p.push('REGEXP_LIKE(' + cc + ', ' + sq('^(' + st.badShapes.map(shapeRegex).join('|') + ')$') + ')');
+      if (st.badLens && st.badLens.length) p.push('LENGTH(' + cc + ') IN (' + st.badLens.join(', ') + ')');
+      if (st.dirty) p.push('(' + cc + " <> TRIM(" + cc + ") OR REGEXP_LIKE(" + cc + ", '[[:cntrl:]]'))");
+      return p.length ? p.join('\n       OR ') : null;
+    }
+    case 'combo': {
+      if (!st.flagged || !st.flagged.length) return null;
+      const parts = st.flagged.map(f => '(' + f.atoms.map(atomSql).join(' AND ') + ')');
+      if (st.flaggedCombos > st.flagged.length) notes.push('注意：罕見組合共 ' + st.flaggedCombos + ' 種，僅輸出最罕見的 ' + st.flagged.length + ' 種');
+      return parts.join('\n       OR ');
+    }
+  }
+  return null;
+}
+function filterSql(f) {
+  if (!f.col) return null; const c = 't.' + qident(f.col), num = colNum(f.col), v = f.val == null ? '' : String(f.val);
+  const lit = x => num ? sn(x) : sq(x.trim()), cc = num ? c : 'TRIM(' + c + ')', list = v.split(/[,\n，]/).map(s => s.trim()).filter(s => s !== '');
+  switch (f.op) {
+    case '=': return cc + ' = ' + lit(v); case '!=': return cc + ' <> ' + lit(v);
+    case 'in': return list.length ? cc + ' IN (' + list.map(lit).join(', ') + ')' : null; case 'notin': return list.length ? cc + ' NOT IN (' + list.map(lit).join(', ') + ')' : null;
+    case '>': case '>=': case '<': case '<=': return cc + ' ' + f.op + ' ' + lit(v);
+    case 'contains': return c + ' LIKE ' + sq('%' + v.replace(/[\\%_]/g, m => '\\' + m) + '%') + " ESCAPE '\\'"; case 'null': return c + ' IS NULL'; case 'notnull': return c + ' IS NOT NULL';
+  }
+  return null;
+}
+function buildSql(o) {
+  const ri = S.runInfo; if (!ri) return '-- 請先執行 Hunt';
+  const items = [];
+  ri.rules.forEach((r, i) => { if (r.enabled === false) return; const notes = [], p = rulePredicate(r, S.ruleStats[i], notes); if (p) items.push({ title: '[' + (i + 1) + '] ' + RD[r.type].n + '  ' + ruleSummary(r).replace(/[\r\n]+/g, ' '), p, notes }); });
+  const L = ['-- Outlier Hunter：' + S.hunt.name, '-- 門檻來自上次執行（' + new Date(ri.at).toLocaleString() + '），資料集：' + S.ds.name,
+    '-- 注意：SQL 只重現各規則的「標準門檻」（不含低嚴重度邊界區）；百分位／排名與評分不會輸出。', 'SELECT t.*', 'FROM ' + o.schema + '.' + o.table + ' t', 'WHERE 1 = 1'];
+  if (o.ssSeq) L.push('  AND t.SS_SEQ = :SS_SEQ');
+  (ri.filters || []).forEach(f => { const s = filterSql(f); if (s) L.push('  AND ' + s); });
+  if (!items.length) L.push('  AND 1 = 0  -- 沒有可轉換成 SQL 的規則');
+  else { L.push('  AND ('); items.forEach((x, i) => { L.push((i ? '    OR ' : '       ') + '-- ' + x.title); x.notes.forEach(n => L.push('       -- ' + n)); L.push('       (' + x.p + ')'); }); L.push('  )'); }
+  return L.join('\n') + ';';
+}
+
+/* ---------- export helpers ---------- */
+const safeTxt = s => /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+const csvq = s => { s = s === null || s === undefined ? '' : String(s); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+function maskVal(s) {
+  s = String(s); const n = s.length; if (n <= 2) return '*'.repeat(n);
+  if (n >= 7) { const k = Math.floor((n - 4) / 2); return s.slice(0, k) + '****' + s.slice(k + 4); }
+  return s[0] + '*'.repeat(n - 2) + s[n - 1];
+}
+async function exportCsv(scope, maskCols) {
+  const items = scope === 'all' ? S.results : S.view; if (!items.length) { toast('沒有可匯出的紀錄', 'err'); return; }
+  const b = busy('匯出 CSV…'), runR = runRules(), parts = ['\uFEFF' + ['列號', '業務Key', '分數', '嚴重度', '命中規則', '原因', '狀態', '備註', ...S.ds.headers].map(csvq).join(',') + '\r\n'];
+  const mi = new Set(maskCols.map(n => S.ds.headers.indexOf(n)));
+  try {
+    for (let i = 0; i < items.length; i += 20000) {
+      const sl = items.slice(i, i + 20000), rows = await call('rows', { ids: sl.map(r => r.r) }), lines = [];
+      sl.forEach((it, j) => {
+        const tri = S.triage.get(it.k) || {};
+        const head = [it.r + 1, it.k, it.sc, SEVN[it.sv], it.ru.map(x => runR[x] ? RD[runR[x].type].n + ':' + ruleSummary(runR[x]) : '').join(' | '), safeTxt(it.w.map(h => h[2]).join(' || ')), STATUS[tri.status || 'new'][1], safeTxt(tri.note || '')];
+        lines.push(head.concat(rows[j].map((x, c) => x === null ? '' : mi.has(c) ? maskVal(x) : x)).map(csvq).join(','));
+      });
+      parts.push(lines.join('\r\n') + '\r\n'); b.update('匯出 CSV… ' + Math.min(i + 20000, items.length).toLocaleString('en-US') + ' / ' + items.length.toLocaleString('en-US'), (i + 20000) / items.length * 100);
+    }
+    download('outlier-hunter_' + S.hunt.name.replace(/[^\w\u4e00-\u9fff-]+/g, '_') + '.csv', new Blob(parts, { type: 'text/csv;charset=utf-8' }));
+    toast('已匯出 ' + items.length.toLocaleString('en-US') + ' 筆');
+  } catch (e) { toast('匯出失敗：' + e.message, 'err'); } finally { b.close(); }
+}
+async function exportMd(maskCols) {
+  const ri = S.runInfo; if (!ri) { toast('請先執行 Hunt', 'err'); return; }
+  const top = S.results.slice(0, 50), rows = top.length ? await call('rows', { ids: top.map(r => r.r) }) : [], mi = new Set(maskCols);
+  const L = ['# Outlier Hunter 報告', '', '- 資料集：' + S.ds.name + '（' + S.ds.rows.toLocaleString('en-US') + ' 列 × ' + S.ds.headers.length + ' 欄）', '- Hunt：' + S.hunt.name, '- 執行時間：' + new Date(ri.at).toLocaleString(),
+    '- 檢查列數：' + ri.counted.toLocaleString('en-US') + '　異常列：' + ri.flagged.toLocaleString('en-US') + '（' + pctS(ri.flagged, ri.counted) + '）',
+    '- 嚴重 ' + ri.sevCounts[3] + ' ／ 高 ' + ri.sevCounts[2] + ' ／ 低 ' + ri.sevCounts[1], '', '## 規則與命中', '', '| # | 規則 | 欄位 | 命中 | 狀態 |', '|---|---|---|---:|---|'];
+  ri.rules.forEach((r, i) => { const st = S.ruleStats[i] || {}; L.push('| ' + (i + 1) + ' | ' + RD[r.type].n + ' | ' + ruleSummary(r).replace(/\|/g, '/') + ' | ' + (st.hits || 0) + ' | ' + (st.error ? '錯誤：' + st.error : (st.warnings || []).join('；') || '完成') + ' |'); });
+  ri.rules.forEach((r, i) => {
+    const st = S.ruleStats[i]; if (!st || !st.groups) return;
+    L.push('', '### 統計門檻：' + RD[r.type].n + '　' + ruleSummary(r), '', '| 分組 | n | 下界 | 上界 | 命中 |', '|---|---:|---:|---:|---:|');
+    st.groups.filter(g => !g.skipped).slice(0, 20).forEach(g => L.push('| ' + (g.label || '（全體）') + ' | ' + g.n + ' | ' + fmt(g.lo === undefined ? null : g.lo) + ' | ' + fmt(g.hi === undefined ? null : g.hi) + ' | ' + g.hits + ' |'));
+  });
+  L.push('', '## Top ' + top.length + ' 異常紀錄', '');
+  top.forEach((it, j) => {
+    L.push('### ' + SEVI[it.sv] + ' 列 #' + (it.r + 1) + '　分數 ' + it.sc + (it.k !== String(it.r) ? '　Key：' + it.k : ''), '');
+    it.w.slice().sort((a, b) => b[1] - a[1]).forEach(h => L.push('- ' + h[2]));
+    const hit = new Set(); it.w.forEach(h => ruleCols(ri.rules[h[0]]).forEach(n => hit.add(n)));
+    const vals = [...hit].filter(n => S.ds.headers.includes(n)).map(n => { const i = S.ds.headers.indexOf(n); const v = rows[j][i]; return n + '=' + (v === null ? '∅' : mi.has(n) ? maskVal(v) : v); });
+    if (vals.length) L.push('', '> ' + vals.join('　')); L.push('');
+  });
+  download('outlier-hunter_report.md', L.join('\n'), 'text/markdown;charset=utf-8'); toast('已匯出 Markdown 報告');
+}
+const huntToJson = h => ({ format: 'outlier-hunter-hunt', version: 1, hunt: { name: h.name, rules: h.rules, filters: h.filters, keyCols: h.keyCols, includeLow: h.includeLow, excludeWL: h.excludeWL } });
+async function importHuntJson(file) {
+  try {
+    const j = JSON.parse(await file.text()); if (j.format !== 'outlier-hunter-hunt' || !j.hunt) throw new Error('不是 Outlier Hunter 的 Hunt 設定檔');
+    const h = JSON.parse(JSON.stringify(j.hunt)); h.rules = (h.rules || []).map(r => Object.assign(r, { id: uid('r') }));
+    const missing = new Set(); h.rules.forEach(r => ruleCols(r).concat(r.groupBy || []).forEach(n => { if (n && !S.ds.headers.includes(n)) missing.add(n); }));
+    await newHunt(h.name || '匯入的 Hunt', h); S.tab = 'hunt'; render();
+    toast(missing.size ? '已匯入，但此資料集缺少欄位：' + [...missing].join(', ') : '已匯入 Hunt 設定', missing.size ? 'err' : '');
+  } catch (e) { toast('匯入失敗：' + e.message, 'err'); }
+}
+async function buildBackup(withData) {
+  if (S.persistP) await S.persistP;
+  const prevDs = S.loaded, prevHunt = S.hunt && S.hunt.huntId, b = busy('建立備份…'); const out = { format: 'outlier-hunter-backup', version: 1, createdAt: Date.now(), datasets: [], hunts: [], triage: [], whitelist: [], settings: S.prefs };
+  try {
+    const dss = await dbAll('datasets');
+    for (const d of dss) {
+      const item = { meta: d };
+      if (withData) {
+        b.update('匯出資料集：' + d.name);
+        if (S.loaded !== d.datasetId) await openDataset(d.datasetId, true);
+        const parts = []; await call('dump', {}, { onEvt: (e, t) => { if (e === 'part') parts.push(t); } }); item.csv = parts.join('');
+      }
+      out.datasets.push(item);
+    }
+    const hs = await dbAll('hunts'); hs.forEach(h => { const c = Object.assign({}, h, { lastRun: null }); out.hunts.push(c); });
+    out.triage = await dbAll('triage'); out.whitelist = await dbAll('whitelist');
+    return out;
+  } finally {
+    if (withData && prevDs && S.loaded !== prevDs) { try { b.update('還原目前的資料集…'); await openDataset(prevDs, true); if (prevHunt) await openHunt(prevHunt); render(); } catch (e) { toast('無法回到原本的資料集：' + e.message, 'err'); } }
+    b.close();
+  }
+}
+async function restoreBackup(file) {
+  const b = busy('還原備份…');
+  try {
+    const j = JSON.parse(await file.text()); if (j.format !== 'outlier-hunter-backup') throw new Error('不是 Outlier Hunter 的備份檔');
+    const ok = new Set((await dbAll('datasets')).map(d => d.datasetId));
+    for (const d of j.datasets) {
+      if (d.csv) {
+        b.update('匯入資料集：' + d.meta.name);
+        await dbDelByIdx('chunks', 'datasetId', d.meta.datasetId).catch(() => { });
+        const m = await importFile(new Blob([d.csv], { type: 'text/csv' }), { enc: 'utf-8', delim: ',', header: true, parenNeg: false, types: d.meta.opts && d.meta.opts.types || [], name: d.meta.name }, d.meta.datasetId);
+        await dbPut('datasets', Object.assign(m, { name: d.meta.name, fileName: d.meta.fileName, createdAt: d.meta.createdAt })); ok.add(d.meta.datasetId);
+      }
+    }
+    const hs = j.hunts.filter(h => ok.has(h.datasetId)); await dbPutMany('hunts', hs);
+    const hid = new Set(hs.map(h => h.huntId));
+    await dbPutMany('triage', j.triage.filter(t => ok.has(t.datasetId))); await dbPutMany('whitelist', j.whitelist.filter(w => hid.has(w.huntId)));
+    if (j.settings) { Object.assign(S.prefs, j.settings); await savePrefs(); applyTheme(); }
+    S.loaded = null; await refreshDatasets(); const skipped = j.datasets.filter(d => !d.csv && !ok.has(d.meta.datasetId)).length;
+    b.close(); if (S.datasets.length) await openDataset(S.datasets[0].datasetId);
+    toast('還原完成' + (skipped ? '（有 ' + skipped + ' 個資料集因備份不含資料而略過）' : '')); render();
+  } catch (e) { b.close(); toast('還原失敗：' + e.message, 'err'); }
+}
+
+/* ---------- export tab ---------- */
+function restoreButton() {
+  const rin = el('input', { type: 'file', accept: '.json', style: { display: 'none' }, onchange: e => { if (e.target.files[0]) restoreBackup(e.target.files[0]); e.target.value = ''; } });
+  return el('span', null, el('button', { onclick: () => rin.click() }, '⤒ 從備份還原'), rin);
+}
+function renderExport(v) {
+  if (!S.ds) { v.append(el('div', { class: 'empty' }, el('h2', null, '尚未匯入資料'), restoreButton())); return; }
+  const E = S.exp || (S.exp = { scope: 'view', mask: [], schema: S.prefs.schema, schemaCustom: '', table: '', ssSeq: true, withData: false });
+  if (E.forDs !== S.ds.datasetId) { E.forDs = S.ds.datasetId; E.mask = (E.mask || []).filter(n => S.ds.headers.includes(n)); E.table = S.ds.name.replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').toUpperCase() || 'YOUR_TABLE'; }
+  const hasRun = !!S.runInfo;
+  v.append(el('div', { class: 'card' }, el('h4', null, '異常紀錄（含命中原因、複核狀態與備註）'),
+    el('div', { class: 'row' }, el('label', null, '範圍 ', el('select', { onchange: e => E.scope = e.target.value }, el('option', { value: 'view' }, '目前篩選結果（' + S.view.length.toLocaleString('en-US') + '）'), el('option', { value: 'all' }, '全部異常（' + S.results.length.toLocaleString('en-US') + '）')))),
+    el('div', { class: 'fld', style: { margin: '8px 0' } }, el('label', { class: 'small dim' }, '遮罩欄位（中間 4 碼換成 ****，例：統編 12****78）'), chips(S.ds.headers, E.mask, s => { E.mask = s; renderView(); })),
+    el('div', { class: 'row' }, el('button', { class: 'pri', disabled: !hasRun, onclick: () => exportCsv(E.scope, E.mask) }, '⤓ CSV（UTF-8 BOM）'), el('button', { disabled: !hasRun, onclick: () => exportMd(E.mask) }, '⤓ Markdown 摘要報告'))));
+  const schemaSel = el('select', { onchange: e => { E.schema = e.target.value; renderView(); } }, ['bis', 'irb_dw', '自訂…'].map(x => el('option', { value: x }, x))); schemaSel.value = ['bis', 'irb_dw'].includes(E.schema) ? E.schema : '自訂…';
+  const pre = el('pre', { class: 'code' }, '');
+  const gen = () => { const sch = schemaSel.value === '自訂…' ? (E.schemaCustom || 'bis') : schemaSel.value; pre.textContent = buildSql({ schema: sch, table: E.table, ssSeq: E.ssSeq }); };
+  v.append(el('div', { class: 'card' }, el('h4', null, 'SQL WHERE（把偵測門檻轉回 Oracle 可執行的查詢）'),
+    el('div', { class: 'row' }, el('label', null, 'Schema ', schemaSel), schemaSel.value === '自訂…' ? el('input', { type: 'text', placeholder: 'schema 名稱', value: E.schemaCustom, oninput: e => { E.schemaCustom = e.target.value; gen(); } }) : null,
+      el('label', null, '資料表 ', el('input', { type: 'text', value: E.table, oninput: e => { E.table = e.target.value; gen(); } })),
+      el('label', null, el('input', { type: 'checkbox', checked: E.ssSeq, onchange: e => { E.ssSeq = e.target.checked; gen(); } }), ' 加入批次條件 t.SS_SEQ = :SS_SEQ'),
+      el('button', { disabled: !hasRun, onclick: () => navigator.clipboard.writeText(pre.textContent).then(() => toast('已複製 SQL'), () => toast('複製失敗，請手動選取', 'err')) }, '複製'), el('button', { disabled: !hasRun, onclick: () => download('outlier-hunter.sql', pre.textContent, 'text/plain;charset=utf-8') }, '⤓ .sql')), pre));
+  gen();
+  const hin = el('input', { type: 'file', accept: '.json', style: { display: 'none' }, onchange: e => { if (e.target.files[0]) importHuntJson(e.target.files[0]); e.target.value = ''; } });
+  v.append(el('div', { class: 'card' }, el('h4', null, 'Hunt 設定'), el('div', { class: 'row' }, el('button', { onclick: () => download('hunt_' + S.hunt.name.replace(/[^\w\u4e00-\u9fff-]+/g, '_') + '.json', JSON.stringify(huntToJson(S.hunt), null, 2), 'application/json') }, '⤓ 匯出目前 Hunt（JSON）'), el('button', { onclick: () => hin.click() }, '⤒ 匯入 Hunt JSON'), hin)));
+  v.append(el('div', { class: 'card' }, el('h4', null, '專案備份'), el('div', { class: 'row' },
+    el('label', null, el('input', { type: 'checkbox', checked: E.withData, onchange: e => E.withData = e.target.checked }), ' 包含資料集內容（大型資料集檔案會很大）'),
+    el('button', { onclick: async () => { try { const o = await buildBackup(E.withData); download('outlier-hunter-backup.json', JSON.stringify(o), 'application/json'); toast('備份完成'); } catch (e) { toast('備份失敗：' + e.message, 'err'); } } }, '⤓ 建立備份'),
+    restoreButton()),
+    el('div', { class: 'small dim', style: { marginTop: '6px' } }, '備份包含 Hunt 設定、複核狀態與白名單；異常結果可重新執行產生。')));
+  v.append(el('div', { class: 'card' }, el('h4', null, '資料與隱私'), el('div', { class: 'small dim', style: { marginBottom: '8px' } }, '本工具不發出任何網路請求；所有資料只存在這台電腦的瀏覽器 IndexedDB。'),
+    el('button', { class: 'danger', onclick: async () => { if (await confirmDlg('清除本工具在此瀏覽器內的全部資料（資料集、Hunt、結果、複核紀錄、設定）？此動作無法復原。', '全部清除')) { await call('unload'); await dbClearAll(); S.datasets = []; S.ds = null; S.loaded = null; S.hunts = []; S.hunt = null; S.results = []; S.ruleStats = []; S.runInfo = null; S.prefs = { schema: 'bis', unit: 'raw', theme: 'auto', includeLow: true }; applyTheme(); toast('已清除全部資料'); render(); } } }, '🗑 一鍵清除全部資料')));
+}
+
+/* ---------- settings / help ---------- */
+function openSettings() {
+  const P = S.prefs, sch = el('select', null, ['bis', 'irb_dw'].map(x => el('option', { value: x }, x)), el('option', { value: '_c' }, '自訂…')), cu = el('input', { type: 'text', placeholder: '自訂 schema', value: ['bis', 'irb_dw'].includes(P.schema) ? '' : P.schema });
+  sch.value = ['bis', 'irb_dw'].includes(P.schema) ? P.schema : '_c';
+  const th = el('select', null, [['auto', '跟隨系統'], ['light', '淺色'], ['dark', '深色']].map(([v, l]) => el('option', { value: v }, l))); th.value = P.theme;
+  const un = el('select', null, [['raw', '原值'], ['million', '百萬'], ['yi', '億']].map(([v, l]) => el('option', { value: v }, l))); un.value = P.unit;
+  const lo = el('input', { type: 'checkbox', checked: P.includeLow });
+  modal('設定', el('div', { class: 'grid' }, el('label', null, '預設 SQL schema　', sch, ' ', cu), el('label', null, '外觀　', th), el('label', null, '大額數值顯示單位　', un), el('label', null, lo, ' 新 Hunt 預設包含邊界區（低嚴重度）')),
+    [{ label: '取消' }, { label: '儲存', cls: 'pri', fn: async () => { P.schema = sch.value === '_c' ? (cu.value.trim() || 'bis') : sch.value; P.theme = th.value; P.unit = un.value; P.includeLow = lo.checked; await savePrefs(); applyTheme(); S.exp = null; render(); } }], { small: true });
+}
+function openHelp() {
+  modal('使用說明（v1.1）', el('div', { class: 'small', style: { lineHeight: 1.7 } },
+    el('p', null, el('b', null, '流程：'), '匯入資料 → 在「規則」頁加入偵測規則（或「✨ 一鍵建議規則」）→ ▶ 執行 → 在「異常列表」逐筆複核 → 匯出。'),
+    el('p', null, el('b', null, '嚴重度與分數：'), '🔴 嚴重＝3　🟠 高＝2　🟡 低（門檻 80% 以上的邊界區）＝1；列分數 = Σ（規則權重 × 嚴重度）。'),
+    el('p', null, el('b', null, '數值規則：'), 'IQR（Q1−k·IQR ~ Q3+k·IQR）、Z-Score、MAD 修正 Z（MAD=0 時自動改用 MeanAD）、Percentile、Fixed Range；金額建議勾選 log；可指定分組欄位，每組各自計算（樣本不足的組自動略過）。'),
+    el('p', null, el('b', null, '罕見組合：'), '選 2~4 欄，找「每個欄位單獨看都正常，但湊在一起很少見」的紀錄；可再指定條件欄位 A，檢查 P(B|A)。數值欄位會先分箱。'),
+    el('p', null, el('b', null, '格式：'), '字串轉形狀（數字→9、大寫→A、小寫→a、中文→中）後找罕見形狀、長度，以及前後空白、全形、控制與不可見字元。'),
+    el('p', null, el('b', null, '複核：'), 'J/K 上下移動，C 確認、F 誤判、P 待確認、I 忽略、N 備註。「誤判並加入白名單」之後再執行同一個 Hunt 會自動排除；建議在 Hunt 設定業務 Key 欄位，讓複核與白名單可以跨批次沿用。'),
+    el('p', null, el('b', null, '隱私：'), '資料完全在本機瀏覽器處理，不連網、不使用 API Key。')), [{ label: '關閉', cls: 'pri' }]);
+}
+
+/* ---------- shell ---------- */
+const TABS = [['hunt', '🎯 規則'], ['summary', '📊 摘要'], ['table', '📋 異常列表'], ['dist', '📈 分布'], ['combo', '🔥 組合矩陣'], ['pattern', '🔤 格式分布'], ['data', '🗂 資料'], ['export', '⤓ 匯出']];
+function renderTabs() {
+  const t = $('#tabs'); t.replaceChildren();
+  TABS.forEach(([k, l]) => t.append(el('button', { class: S.tab === k ? 'on' : '', role: 'tab', 'aria-selected': S.tab === k, onclick: () => { S.tab = k; render(); } },
+    l, k === 'table' && S.runInfo ? el('span', { class: 'tag', style: { marginLeft: '6px' } }, S.results.length.toLocaleString('en-US')) : null)));
+}
+function renderView() {
+  const root = $('#view'); root.className = S.tab === 'table' && S.ds && S.runInfo && S.results.length ? 'noscroll' : '';
+  const v = el('div', { class: S.tab === 'table' ? 'fillbox' : '' }); root.replaceChildren(v); S.tbl = null;
+  if (!S.ds && S.tab !== 'export') {
+    v.append(el('div', { class: 'empty' }, el('h2', null, '🎯 Outlier Hunter'), el('p', null, '把資料丟進來，選好欄位，找出值得人工複核的異常值與罕見組合。', el('br'), '全部在本機瀏覽器運算，不連網、不用 API Key。'),
+      el('div', { class: 'row', style: { justifyContent: 'center' } }, el('button', { class: 'pri', onclick: () => openImportWizard() }, '匯入資料'), restoreButton()), el('p', { class: 'small' }, '也可以直接把 CSV / TSV / TXT / JSON 檔拖放到視窗。')));
+    return;
+  }
+  const fns = { hunt: renderHunt, summary: renderSummary, table: renderTable, dist: renderDist, combo: renderCombo, pattern: renderPattern, data: renderData, export: renderExport };
+  try { const r = fns[S.tab](v); if (r && r.catch) r.catch(e => toast(e.message, 'err')); } catch (e) { toast('畫面錯誤：' + e.message, 'err'); console.error(e); }
+}
+function render() { renderSide(); renderTabs(); renderView(); $('#dsname').textContent = S.ds ? S.ds.name + '　' + S.ds.rows.toLocaleString('en-US') + ' 列' : ''; }
+
+async function init() {
+  try {
+    if (!window.indexedDB || !window.Worker) throw new Error('此瀏覽器不支援 IndexedDB 或 Web Worker');
+    DB = await openDB(); startWorker(); await loadPrefs();
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ }
+    await refreshDatasets();
+    if (S.datasets.length) { const last = await dbGet('settings', 'last'); const id = last && S.datasets.some(d => d.datasetId === last.value) ? last.value : S.datasets[0].datasetId; try { await openDataset(id); } catch (e) { toast(e.message, 'err'); } }
+  } catch (e) { toast('初始化失敗：' + e.message, 'err'); console.error(e); }
+  $('#btn-import').onclick = () => openImportWizard(); $('#btn-set').onclick = openSettings; $('#btn-help').onclick = openHelp;
+  $('#btn-theme').onclick = async () => { S.prefs.theme = { auto: 'light', light: 'dark', dark: 'auto' }[S.prefs.theme] || 'auto'; applyTheme(); await savePrefs(); toast('外觀：' + { auto: '跟隨系統', light: '淺色', dark: '深色' }[S.prefs.theme]); };
+  window.addEventListener('dragover', e => e.preventDefault());
+  window.addEventListener('drop', e => { e.preventDefault(); if (e.target.closest && e.target.closest('.modal')) return; if (e.dataTransfer.files[0]) openImportWizard(e.dataTransfer.files[0]); });
+  window.addEventListener('unhandledrejection', e => { toast('發生錯誤：' + ((e.reason && e.reason.message) || e.reason), 'err'); });
+  window.addEventListener('resize', debounce(() => { if (S.tab === 'dist' || S.tab === 'table') renderView(); }, 250));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { const m = [...document.querySelectorAll('.modal-bg')].pop(); if (m && !m.querySelector('.bar')) { const x = m.querySelector('header button'); if (x) x.click(); else m.remove(); } } });
+  render(); window.__ready = true;
+}
+init();
+
+
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;right:14px;bottom:70px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
