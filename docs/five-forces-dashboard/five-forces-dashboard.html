@@ -1,0 +1,2577 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>五力分析儀表板</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%233556d8'/%3E%3Cpath d='M16 6l8.6 6.3-3.3 10.1H10.7L7.4 12.3z' fill='none' stroke='white' stroke-width='2.2' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script>
+  // 首屏先套用主題，避免白閃
+  try {
+    var saved = localStorage.getItem('p5-theme') || 'auto';
+    var dark = saved === 'dark' || (saved === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  } catch (e) {}
+</script>
+<style>
+/* ── 1. tokens ─────────────────────────────────────────── */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #f3f5f9;
+  --surface-3: #e6eaf1;
+  --text: #141821;
+  --muted: #5a6373;
+  --border: #dce1e9;
+  --accent: #3556d8;
+  --on-accent: #ffffff;
+  --accent-soft: #e8ecfd;
+  --danger: #bf3a2f;
+  --ok: #1d8757;
+  --lvl-high: #bf3a2f;
+  --lvl-mid: #96650d;
+  --lvl-low: #1f7d57;
+  --lvl-none: #6f7a8a;
+  --lvl-high-bg: #fbeceb;
+  --lvl-mid-bg: #fdf4e3;
+  --lvl-low-bg: #e8f6ef;
+  --lvl-none-bg: #f1f3f7;
+  --radius: 14px;
+  --radius-sm: 9px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .05);
+}
+[data-theme="dark"] {
+  --bg: #0d1015;
+  --surface: #151a22;
+  --surface-2: #1b212b;
+  --surface-3: #242b37;
+  --text: #e6eaf1;
+  --muted: #98a3b4;
+  --border: #28303c;
+  --accent: #7f9bff;
+  --on-accent: #0b1020;
+  --accent-soft: #1d2747;
+  --danger: #ff7f70;
+  --ok: #4bcf95;
+  --lvl-high: #ff8172;
+  --lvl-mid: #f0b74a;
+  --lvl-low: #4fd39a;
+  --lvl-none: #77839a;
+  --lvl-high-bg: #33201d;
+  --lvl-mid-bg: #332a17;
+  --lvl-low-bg: #122e25;
+  --lvl-none-bg: #1c222c;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .35);
+}
+
+/* ── 2. base ───────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+#app { flex: 1 0 auto; }
+h1, h2, h3, p, ul, ol { margin: 0; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.muted { color: var(--muted); }
+.hint { color: var(--muted); font-size: 12.5px; }
+code {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11.5px; padding: 1px 5px; border-radius: 5px;
+  background: var(--surface-3); color: var(--text);
+}
+.num { font-variant-numeric: tabular-nums; }
+
+/* ── 3. layout ─────────────────────────────────────────── */
+.appbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 16px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 650; letter-spacing: .01em; }
+.brand__mark {
+  display: grid; place-items: center; width: 26px; height: 26px;
+  border-radius: 8px; background: var(--accent); color: var(--on-accent);
+  font-size: 13px; font-weight: 700;
+}
+.appbar__mid { flex: 1; min-width: 170px; max-width: 420px; }
+.appbar__actions { display: flex; align-items: center; gap: 6px; position: relative; margin-left: auto; }
+.viz-pair { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: 22px; align-items: start; }
+.viz-pair > div:first-child { align-self: center; }
+.viz-pair .chart-wrap { max-width: 430px; margin: 0 auto; }
+.shell {
+  max-width: 1400px; margin: 0 auto; padding: 16px;
+  display: grid; grid-template-columns: minmax(300px, 366px) minmax(0, 1fr);
+  gap: 16px; align-items: start;
+}
+.side {
+  display: grid; gap: 16px; position: sticky; top: 66px;
+  max-height: calc(100vh - 82px); overflow: auto; overscroll-behavior: contain;
+  padding-right: 2px;
+}
+.side::-webkit-scrollbar { width: 8px; }
+.side::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 8px; }
+.main-col { display: grid; gap: 16px; min-width: 0; }
+.foot {
+  max-width: 1400px; margin: 0 auto; padding: 4px 16px 34px;
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  color: var(--muted); font-size: 12.5px;
+}
+
+/* ── 4. components ─────────────────────────────────────── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow);
+}
+.card__title {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  font-size: 13px; font-weight: 650; color: var(--muted);
+  letter-spacing: .04em; margin-bottom: 12px;
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 38px; padding: 7px 13px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: 14px; text-decoration: none; white-space: nowrap;
+  transition: background .15s, border-color .15s, transform .06s;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn--primary { background: var(--accent); color: var(--on-accent); border-color: transparent; font-weight: 600; }
+.btn--primary:hover { background: var(--accent); filter: brightness(1.08); }
+.btn--ghost { background: transparent; border-color: transparent; }
+.btn--danger { background: var(--danger); color: #fff; border-color: transparent; font-weight: 600; }
+.btn--sm { min-height: 32px; padding: 4px 10px; font-size: 13px; border-radius: 8px; }
+.btn--icon { width: 38px; padding: 0; font-size: 16px; }
+.icon-btn {
+  display: grid; place-items: center; width: 34px; height: 34px;
+  background: transparent; border: 1px solid transparent; border-radius: 8px;
+  color: var(--muted);
+}
+.icon-btn:hover { background: var(--surface-3); color: var(--text); }
+
+.select {
+  width: 100%; min-height: 38px; padding: 6px 10px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; font-weight: 600; max-width: 100%;
+}
+.select--sm { width: 74px; min-height: 34px; font-weight: 500; font-size: 13px; padding: 4px 4px; }
+.input, textarea {
+  width: 100%; min-height: 40px; padding: 8px 11px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); transition: border-color .15s, background .15s;
+}
+.input:hover, textarea:hover { border-color: var(--surface-3); }
+.input:focus, textarea:focus { border-color: var(--accent); background: var(--surface); }
+textarea { resize: vertical; min-height: 70px; line-height: 1.65; }
+.field { display: grid; gap: 5px; margin-bottom: 12px; }
+.field > span { font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+.check input { width: 17px; height: 17px; accent-color: var(--accent); }
+
+.menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 60;
+  min-width: 216px; padding: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; box-shadow: var(--shadow);
+  display: grid; gap: 2px;
+}
+.menu button {
+  display: block; width: 100%; text-align: left;
+  padding: 8px 11px; min-height: 38px;
+  background: none; border: 0; border-radius: 8px; font-size: 14px;
+}
+.menu button:hover { background: var(--surface-2); }
+.menu hr { width: 100%; margin: 4px 0; border: 0; border-top: 1px solid var(--border); }
+.menu__danger { color: var(--danger); }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 9px; border-radius: 999px;
+  font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums;
+  background: var(--lvl-none-bg); color: var(--lvl-none);
+  border: 1px solid transparent; white-space: nowrap;
+}
+.badge[data-level="low"] { background: var(--lvl-low-bg); color: var(--lvl-low); }
+.badge[data-level="mid"] { background: var(--lvl-mid-bg); color: var(--lvl-mid); }
+.badge[data-level="high"] { background: var(--lvl-high-bg); color: var(--lvl-high); }
+
+/* 總覽 / gauge */
+.kicker { font-size: 12px; font-weight: 650; letter-spacing: .06em; color: var(--muted); }
+.gauge { display: flex; align-items: baseline; gap: 5px; margin-top: 2px; }
+.gauge b { font-size: 46px; line-height: 1.05; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.gauge b.is-empty { font-size: 30px; color: var(--muted); }
+.gauge small { color: var(--muted); font-size: 13px; }
+.meter { height: 8px; border-radius: 999px; background: var(--surface-3); overflow: hidden; margin: 12px 0 10px; }
+.meter i { display: block; height: 100%; border-radius: 999px; transition: width .4s ease, background-color .2s; }
+.attr-note { font-size: 13.5px; color: var(--muted); min-height: 42px; }
+.attr-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.pill {
+  font-size: 12px; padding: 3px 9px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border); color: var(--muted);
+}
+.pill b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* 圖表 */
+.chart-wrap { position: relative; }
+.chart-wrap svg { display: block; width: 100%; height: auto; }
+.chart-empty {
+  display: grid; place-items: center; min-height: 170px; text-align: center;
+  color: var(--muted); font-size: 13px; padding: 12px;
+  border: 1px dashed var(--border); border-radius: var(--radius-sm);
+}
+.chart-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+/* 長條圖 */
+.bar-row {
+  display: grid; grid-template-columns: 100px minmax(0, 1fr) 46px; gap: 10px; align-items: center;
+  width: 100%; padding: 6px; border: 0; border-radius: 9px;
+  background: none; color: inherit; text-align: left;
+}
+.bar-row:hover { background: var(--surface-2); }
+.bar-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.bar-name { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-track { height: 9px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.bar-fill { display: block; height: 100%; border-radius: 999px; transition: width .35s ease; }
+.bar-val { text-align: right; font-size: 13px; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+/* 熱力格 */
+.heat-row { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 10px; align-items: start; padding: 7px 0; border-top: 1px dashed var(--border); }
+.heat-row:first-child { border-top: 0; }
+.heat-head { font-size: 12.5px; color: var(--muted); padding-top: 5px; }
+.heat-cells { display: flex; flex-wrap: wrap; gap: 5px; }
+.heat-cell {
+  display: inline-flex; align-items: center; gap: 5px;
+  max-width: 100%; padding: 3px 8px; min-height: 26px;
+  border-radius: 7px; border: 1px solid var(--border);
+  background: var(--lvl-none-bg); color: var(--text);
+  font-size: 12px; text-align: left; cursor: pointer;
+}
+.heat-cell span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 15em; }
+.heat-cell b { font-variant-numeric: tabular-nums; color: var(--muted); font-weight: 650; }
+.heat-cell[data-level="low"] { background: var(--lvl-low-bg); border-color: var(--lvl-low); }
+.heat-cell[data-level="mid"] { background: var(--lvl-mid-bg); border-color: var(--lvl-mid); }
+.heat-cell[data-level="high"] { background: var(--lvl-high-bg); border-color: var(--lvl-high); }
+.heat-cell:hover { filter: brightness(.97); }
+.heat-cell.is-unrated { border-style: dashed; color: var(--muted); }
+
+/* 力量卡 */
+.force {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+}
+.force__head {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 11px 14px; background: var(--surface-2);
+  border: 0; border-bottom: 1px solid var(--border); text-align: left;
+}
+.force__num {
+  display: grid; place-items: center; flex: none;
+  width: 22px; height: 22px; border-radius: 7px;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 11.5px; font-weight: 700; color: var(--muted);
+}
+.force__title { display: grid; gap: 1px; min-width: 0; }
+.force__title strong { font-size: 14.5px; font-weight: 650; }
+.force__title em { font-style: normal; font-size: 11.5px; color: var(--muted); letter-spacing: .02em; }
+.force__head .badge { margin-left: auto; }
+.force__caret { color: var(--muted); font-size: 12px; transition: transform .18s; }
+.force.is-collapsed .force__caret { transform: rotate(-90deg); }
+.force__body { padding: 6px 14px 12px; }
+.force.is-collapsed .force__body { display: none; }
+.force.is-flash { outline: 2px solid var(--accent); outline-offset: 2px; }
+.force__desc { margin: 6px 0 4px; }
+.force__desc summary { font-size: 12.5px; color: var(--muted); cursor: pointer; list-style: none; }
+.force__desc summary::-webkit-details-marker { display: none; }
+.force__desc summary::before { content: "▸ "; }
+.force__desc[open] summary::before { content: "▾ "; }
+.force__desc p { font-size: 13px; color: var(--muted); padding: 6px 0 2px; }
+.force__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding-top: 8px; margin-top: 6px; border-top: 1px dashed var(--border); }
+
+.factor {
+  display: grid; grid-template-columns: minmax(120px, 1fr) auto 74px 34px;
+  gap: 8px; align-items: center;
+  padding: 7px 0; border-top: 1px dashed var(--border);
+}
+.factor:first-of-type { border-top: 0; }
+.factor .input { min-height: 34px; padding: 5px 9px; font-size: 13.5px; background: transparent; border-color: transparent; }
+.factor .input:hover { background: var(--surface-2); border-color: var(--border); }
+.factor .input:focus { background: var(--surface); border-color: var(--accent); }
+.force-note { margin-top: 8px; min-height: 46px; font-size: 13px; background: var(--surface-2); }
+.force-note:hover { border-color: var(--border); }
+.force-note:focus { background: var(--surface); border-color: var(--accent); }
+.force-note-print { display: none; font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; background: var(--surface-2); }
+.seg label { position: relative; display: grid; place-items: center; width: 33px; height: 33px; cursor: pointer; }
+.seg label + label { border-left: 1px solid var(--border); }
+.seg input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.seg span { font-size: 13px; color: var(--muted); pointer-events: none; }
+.seg label:hover { background: var(--surface-3); }
+.seg input:checked + span { color: var(--accent); font-weight: 700; }
+.seg label:has(input:checked) { background: var(--accent); }
+.seg label:has(input:checked) span { color: var(--on-accent); }
+.seg label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -3px; }
+
+/* 洞察 */
+.insight { display: grid; gap: 10px; }
+.insight p { font-size: 14px; line-height: 1.75; }
+.insight p strong { font-weight: 650; }
+.insight__empty { color: var(--muted); font-size: 13.5px; }
+.insight__foot { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* 備份 / 印章 */
+.stack { display: flex; gap: 8px; flex-wrap: wrap; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; color: var(--muted); }
+.kv b { color: var(--text); font-weight: 600; }
+
+/* 空狀態 */
+.empty {
+  max-width: 580px; margin: 8vh auto; padding: 34px 28px;
+  display: grid; gap: 14px; justify-items: center; text-align: center;
+}
+.empty__mark {
+  display: grid; place-items: center; width: 54px; height: 54px;
+  border-radius: 16px; background: var(--accent-soft); color: var(--accent);
+  font-weight: 700; font-size: 16px; letter-spacing: .04em;
+}
+.empty h1 { font-size: 22px; font-weight: 700; }
+.empty p { max-width: 42ch; color: var(--muted); font-size: 14px; }
+.empty__actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+
+/* banner / toast */
+.banner {
+  padding: 8px 16px; font-size: 13px; text-align: center;
+  background: var(--lvl-mid-bg); color: var(--text);
+  border-bottom: 1px solid var(--lvl-mid);
+}
+.toast-wrap {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+  z-index: 100; display: grid; gap: 8px; width: min(94vw, 460px);
+}
+.toast {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--border);
+  box-shadow: 0 10px 30px rgba(8, 12, 20, .18);
+  font-size: 13.5px; animation: toast-in .18s ease;
+}
+.toast p { flex: 1; min-width: 0; }
+.toast button {
+  flex: none; padding: 5px 10px; border-radius: 8px;
+  background: var(--accent-soft); color: var(--accent);
+  border: 1px solid transparent; font-size: 13px; font-weight: 650;
+}
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* dialog */
+dialog {
+  width: 100%; max-width: min(600px, 94vw); padding: 0;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(6, 10, 18, .32);
+}
+dialog::backdrop { background: rgba(8, 12, 20, .5); }
+.dlg__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.dlg__head h2 { font-size: 16px; font-weight: 650; }
+.dlg__body { padding: 16px 18px; display: grid; gap: 4px; max-height: 66vh; overflow: auto; }
+.dlg__body p { font-size: 14px; }
+.dlg__foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; padding: 12px 18px; border-top: 1px solid var(--border); }
+.dlg__foot .hint { margin-right: auto; }
+
+.tpl-group { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+.tpl-group > summary { padding: 9px 12px; background: var(--surface-2); font-size: 13.5px; font-weight: 600; cursor: pointer; list-style: none; }
+.tpl-group > summary::-webkit-details-marker { display: none; }
+.tpl-group > summary::before { content: "▸ "; color: var(--muted); }
+.tpl-group[open] > summary::before { content: "▾ "; }
+.tpl-inner { padding: 10px 12px 12px; display: grid; gap: 10px; }
+.tpl-field { display: grid; gap: 4px; }
+.tpl-field > span { font-size: 12px; color: var(--muted); }
+.tpl-field textarea { min-height: 62px; font-size: 13px; }
+
+/* print-only */
+.print-head { display: none; }
+
+/* ── 5. responsive ─────────────────────────────────────── */
+@media (max-width: 1023px) {
+  .shell { grid-template-columns: minmax(0, 1fr); }
+  .side { position: static; max-height: none; overflow: visible; }
+  .appbar__mid { order: 3; flex-basis: 100%; }
+}
+@media (max-width: 620px) {
+  .appbar { padding: 8px 12px; gap: 8px; }
+  .brand__name { display: none; }
+  .appbar__actions .btn { padding: 6px 10px; }
+  .btn { min-height: 44px; }
+  .btn--icon { width: 44px; }
+  .icon-btn { width: 42px; height: 42px; }
+  .select, .input { min-height: 44px; }
+  .seg label { width: 40px; height: 40px; }
+  .shell { padding: 12px; gap: 12px; }
+  .card { padding: 14px; border-radius: 12px; }
+  .factor { grid-template-columns: minmax(0, 1fr) auto 30px; grid-template-areas: "name name name" "seg weight del"; row-gap: 6px; }
+  .factor .input { grid-area: name; }
+  .seg { grid-area: seg; }
+  .select--sm { grid-area: weight; }
+  .factor .icon-btn { grid-area: del; }
+  .heat-row { grid-template-columns: 92px minmax(0, 1fr); }
+  .gauge b { font-size: 40px; }
+  .viz-pair { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+}
+
+/* ── 6. print ──────────────────────────────────────────── */
+@media print {
+  .appbar, .menu, .chart-actions, .toast-wrap, .side .chart-actions,
+  .btn, .icon-btn, .no-print, .insight__foot, .banner { display: none !important; }
+  body { background: #fff; color: #000; font-size: 12px; }
+  .shell { display: block; max-width: none; padding: 0; }
+  .side { position: static; max-height: none; overflow: visible; display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; align-items: start; }
+  .side .card { flex: none; }
+  .chart-wrap svg { max-width: 400px; margin: 0 auto; }
+  .viz-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); break-inside: avoid; }
+  .main-col { display: block; }
+  .main-col > * + * { margin-top: 14px; }
+  .card, .force { box-shadow: none; border-color: #c9ced6; break-inside: avoid; }
+  .force { margin-bottom: 10px; }
+  .print-head { display: block; padding: 0 0 12px; border-bottom: 2px solid #222; margin-bottom: 14px; }
+  .print-head h1 { font-size: 20px; }
+  .print-head p { font-size: 12px; color: #444; }
+  .chart-empty { border-color: #c9ced6; }
+  .factor { break-inside: avoid; }
+  .force__desc { display: none; }
+  .force-note { display: none; }
+  .force-note-print { display: block; }
+  .force__caret { display: none; }
+  .heat-cell { border-color: #bbb !important; }
+  @page { margin: 14mm; }
+}
+</style>
+</head>
+<body>
+<div class="banner" id="banner" hidden></div>
+
+<header class="appbar">
+  <div class="brand">
+    <span class="brand__mark" aria-hidden="true">5</span>
+    <span class="brand__name">五力分析</span>
+  </div>
+  <div class="appbar__mid">
+    <select id="analysisSelect" class="select" aria-label="切換要檢視的分析"></select>
+  </div>
+  <div class="appbar__actions">
+    <button class="btn btn--primary" id="btnNew" type="button">＋ 新增</button>
+    <button class="btn" id="btnInfo" type="button">分析資訊</button>
+    <button class="btn btn--icon" id="btnTheme" type="button" aria-label="切換深色／淺色">◐</button>
+    <button class="btn btn--icon" id="btnMenu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="更多操作">⋯</button>
+    <div class="menu" id="menu" hidden role="menu" aria-label="更多操作">
+      <button type="button" role="menuitem" data-cmd="duplicate">複製目前分析</button>
+      <button type="button" role="menuitem" data-cmd="delete">刪除目前分析</button>
+      <hr>
+      <button type="button" role="menuitem" data-cmd="export-json">匯出 JSON 備份</button>
+      <button type="button" role="menuitem" data-cmd="import-json">匯入 JSON 備份</button>
+      <button type="button" role="menuitem" data-cmd="export-csv">匯出 CSV</button>
+      <button type="button" role="menuitem" data-cmd="print">列印／存成 PDF</button>
+      <hr>
+      <button type="button" role="menuitem" data-cmd="templates">洞察模板…</button>
+      <button type="button" role="menuitem" data-cmd="wipe" class="menu__danger">清除所有資料</button>
+    </div>
+  </div>
+</header>
+
+<main id="app">
+  <section class="empty" id="emptyState">
+    <div class="empty__mark" aria-hidden="true">五力</div>
+    <h1>開始第一份五力分析</h1>
+    <p>用波特五力拆解一個產業：為每個力量下的因子評分，儀表板會即時算出強度、產業吸引力與行動建議。</p>
+    <div class="empty__actions">
+      <button class="btn btn--primary" id="btnStartDefault" type="button">載入預設因子開始</button>
+      <button class="btn" id="btnStartBlank" type="button">從空白開始</button>
+      <button class="btn btn--ghost" id="btnStartSample" type="button">看範例</button>
+    </div>
+    <p class="hint">資料只存在這台裝置的瀏覽器（IndexedDB），不會上傳到任何地方。</p>
+  </section>
+
+  <div class="print-head">
+    <h1 id="printTitle">五力分析</h1>
+    <p id="printMeta"></p>
+  </div>
+
+  <div class="shell" id="shell" hidden>
+    <aside class="side">
+      <section class="card">
+        <div class="kicker">產業吸引力</div>
+        <div class="gauge"><b id="attrScore">—</b><small>/ 100</small></div>
+        <div class="meter"><i id="attrBar" style="width:0%"></i></div>
+        <p class="attr-note" id="attrNote">尚未評分。先為下方因子打分，這裡會即時計算。</p>
+        <div class="attr-meta" id="attrMeta"></div>
+      </section>
+
+      <section class="card">
+        <h2 class="card__title">五力雷達</h2>
+        <div class="chart-wrap" id="radarWrap"></div>
+      </section>
+    </aside>
+
+    <div class="main-col">
+      <section class="card">
+        <div class="viz-pair">
+          <div>
+            <h2 class="card__title">五力排行 <span class="hint" id="barsHint"></span></h2>
+            <div id="barsWrap"></div>
+          </div>
+          <div>
+            <h2 class="card__title">力量強度</h2>
+            <div class="chart-wrap" id="raysWrap"></div>
+          </div>
+        </div>
+        <div class="chart-actions">
+          <button class="btn btn--sm" type="button" data-export="radar">匯出雷達圖 PNG</button>
+          <button class="btn btn--sm" type="button" data-export="rays">匯出五力圖 PNG</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="card__title">因子熱力格 <span class="hint no-print">點方塊可跳到該因子</span></h2>
+        <div id="heatWrap"></div>
+      </section>
+
+      <div class="forces" id="forcesWrap"></div>
+
+      <section class="card">
+        <h2 class="card__title">洞察與建議 <span class="hint">依模板自動生成</span></h2>
+        <div class="insight" id="insightOut"></div>
+        <div class="insight__foot">
+          <button class="btn btn--sm" type="button" id="btnCopyInsight">複製洞察</button>
+          <button class="btn btn--sm" type="button" id="btnTpl">編輯模板</button>
+        </div>
+        <div class="field" style="margin:14px 0 0">
+          <span>我的補充備註</span>
+          <textarea id="insightNote" rows="3" placeholder="自己的想法、待驗證的假設、資料來源…"></textarea>
+        </div>
+      </section>
+
+      <section class="card no-print">
+        <h2 class="card__title">資料與備份</h2>
+        <div class="stack" style="margin-bottom:12px">
+          <button class="btn btn--sm" type="button" data-cmd="export-json">匯出 JSON</button>
+          <button class="btn btn--sm" type="button" data-cmd="import-json">匯入 JSON</button>
+          <button class="btn btn--sm" type="button" data-cmd="export-csv">匯出 CSV</button>
+          <button class="btn btn--sm" type="button" data-cmd="print">列印／PDF</button>
+        </div>
+        <div class="kv">
+          <span>儲存方式</span><b id="kvMode">IndexedDB</b>
+          <span>目前已存</span><b id="kvCount">0 份分析</b>
+          <span>最後更新</span><b id="kvUpdated">—</b>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<footer class="foot">
+  <span>五力分析儀表板 · v1.0.0 · 離線可用</span>
+  <span id="footStat"></span>
+</footer>
+
+<dialog id="dlgInfo">
+  <form method="dialog" id="formInfo">
+    <div class="dlg__head">
+      <h2 id="dlgInfoTitle">分析資訊</h2>
+      <button class="icon-btn" type="button" data-close="dlgInfo" aria-label="關閉">✕</button>
+    </div>
+    <div class="dlg__body">
+      <label class="field"><span>分析名稱</span>
+        <input class="input" id="fName" maxlength="60" required placeholder="例：台灣手搖飲市場">
+      </label>
+      <label class="field"><span>產業／市場</span>
+        <input class="input" id="fIndustry" maxlength="60" placeholder="例：連鎖手搖飲">
+      </label>
+      <label class="field"><span>背景備註</span>
+        <textarea id="fNote" rows="3" placeholder="分析目的、範圍、時間點…"></textarea>
+      </label>
+      <label class="check" id="seedWrap">
+        <input type="checkbox" id="fSeed" checked>
+        <span>載入預設因子（5 力 × 4–5 個）</span>
+      </label>
+    </div>
+    <div class="dlg__foot">
+      <button class="btn" type="button" data-close="dlgInfo">取消</button>
+      <button class="btn btn--primary" type="submit" value="ok" id="dlgInfoOk">建立</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgTpl">
+  <div class="dlg__head">
+    <h2>洞察模板</h2>
+    <button class="icon-btn" type="button" data-close="dlgTpl" aria-label="關閉">✕</button>
+  </div>
+  <div class="dlg__body">
+    <p class="hint">可用變數：<code>{{industry}}</code> <code>{{attraction}}</code> <code>{{force}}</code> <code>{{score}}</code> <code>{{level}}</code> <code>{{topFactor}}</code> <code>{{ratio}}</code>。修改會立即套用。</p>
+    <div id="tplBody"></div>
+  </div>
+  <div class="dlg__foot">
+    <button class="btn btn--sm" type="button" id="tplReset">恢復全部預設</button>
+    <button class="btn" type="button" data-close="dlgTpl">關閉</button>
+  </div>
+</dialog>
+
+<dialog id="dlgConfirm">
+  <div class="dlg__head"><h2 id="cfTitle">確認</h2></div>
+  <div class="dlg__body"><p id="cfBody"></p></div>
+  <div class="dlg__foot">
+    <button class="btn" type="button" id="cfCancel">取消</button>
+    <button class="btn btn--danger" type="button" id="cfOk">確定</button>
+  </div>
+</dialog>
+
+<dialog id="dlgImport">
+  <div class="dlg__head"><h2>匯入備份</h2></div>
+  <div class="dlg__body">
+    <p id="imSummary"></p>
+    <p class="hint">合併：同 id 的分析會被覆蓋，其餘保留。<br>取代：先清空現有分析，再寫入備份內容。</p>
+  </div>
+  <div class="dlg__foot">
+    <button class="btn" type="button" id="imCancel">取消</button>
+    <button class="btn" type="button" id="imMerge">合併</button>
+    <button class="btn btn--primary" type="button" id="imReplace">取代全部</button>
+  </div>
+</dialog>
+
+<div class="toast-wrap" id="toastWrap" aria-live="polite" aria-atomic="false"></div>
+<input type="file" id="fileInput" accept="application/json,.json" hidden>
+
+<script>
+'use strict';
+/* ══════════════════════════════════════════════════════════
+   0. 常數與資料模型
+   ══════════════════════════════════════════════════════════ */
+const APP_ID = 'porter-five-forces';
+const APP_VERSION = '1.0.0';
+const DB_NAME = 'porter-five-forces';
+const DB_VERSION = 1;
+const SCHEMA_VERSION = 1;
+const SAVE_DELAY = 350;
+const FONT = 'system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif';
+
+const FORCES = [
+  {
+    key: 'rivalry', name: '現有競爭者', short: '競爭者', en: 'Rivalry',
+    desc: '同一個市場裡搶同一批客戶的對手。家數越多、產品越像、越常打價格戰，壓力越大。',
+    defaults: [
+      { name: '競爭者數量多、規模相近', weight: 2 },
+      { name: '產品／服務差異化低', weight: 2 },
+      { name: '價格戰頻繁', weight: 2 },
+      { name: '市場成長趨緩', weight: 1 },
+      { name: '退出障礙高', weight: 1 }
+    ]
+  },
+  {
+    key: 'entrants', name: '新進入者', short: '進入者', en: 'New Entrants',
+    desc: '新玩家進來搶市場有多容易。門檻越低，利潤越容易被稀釋。',
+    defaults: [
+      { name: '資本門檻低', weight: 2 },
+      { name: '法規與許可門檻低', weight: 2 },
+      { name: '既有品牌與通路優勢弱', weight: 2 },
+      { name: '規模經濟不明顯', weight: 1 },
+      { name: '技術／know-how 容易取得', weight: 1 }
+    ]
+  },
+  {
+    key: 'substitutes', name: '替代品', short: '替代品', en: 'Substitutes',
+    desc: '用不同方法解決同一個需求的其他選擇。替代品往往不是同類產品。',
+    defaults: [
+      { name: '替代方案選擇多', weight: 2 },
+      { name: '替代品性價比更佳', weight: 2 },
+      { name: '轉換到替代品的成本低', weight: 2 },
+      { name: '替代技術正在快速進步', weight: 1 }
+    ]
+  },
+  {
+    key: 'suppliers', name: '供應商', short: '供應商', en: 'Supplier Power',
+    desc: '上游對你的議價能力。來源越集中、越難替換，你越沒有談判空間。',
+    defaults: [
+      { name: '供應商集中度高', weight: 2 },
+      { name: '關鍵投入稀缺或難替代', weight: 2 },
+      { name: '更換供應商成本高', weight: 2 },
+      { name: '供應商可向前整合', weight: 2 },
+      { name: '我方採購量占其營收比重低', weight: 1 }
+    ]
+  },
+  {
+    key: 'buyers', name: '買方', short: '買方', en: 'Buyer Power',
+    desc: '客戶對你的議價能力。客戶越集中、越懂行情、轉換越容易，價格就越被壓。',
+    defaults: [
+      { name: '買方集中度高', weight: 2 },
+      { name: '單筆採購量大', weight: 2 },
+      { name: '價格敏感度高', weight: 2 },
+      { name: '買方轉換成本低', weight: 2 },
+      { name: '買方可向後整合', weight: 1 }
+    ]
+  }
+];
+const FORCE_KEYS = FORCES.map(f => f.key);
+const FORCE_BY_KEY = Object.create(null);
+FORCES.forEach(f => { FORCE_BY_KEY[f.key] = f; });
+
+const LEVEL_LABEL = { none: '未評估', low: '低', mid: '中', high: '高' };
+
+const DEFAULT_TEMPLATES = {
+  total: {
+    high: '整體產業吸引力偏高（{{attraction}}/100）。五力壓力相對溫和，最需要注意的是「{{topForce}}」，但它還不到阻礙進場的程度。若你具備對應的能力與資源，現在是投入或加碼的合理時機。',
+    mid: '整體產業吸引力中等（{{attraction}}/100）。五力互有消長，最大壓力來自「{{topForce}}」（{{topScore}} 分）。建議先用小規模驗證單位經濟，確認毛利撐得住再放大。',
+    low: '整體產業吸引力偏低（{{attraction}}/100）。最大壓力來自「{{topForce}}」（{{topScore}} 分）。進場前請先說清楚：你有什麼結構性優勢能在這種環境下活下來？沒有的話，換賽道通常比硬拚划算。'
+  },
+  forces: {
+    rivalry: {
+      high: '「現有競爭者」壓力高（{{score}} 分），主因是「{{topFactor}}」。在這種格局下，規格與價格很快被拉平，差異化與成本結構是唯一護城河。',
+      mid: '「現有競爭者」壓力中等（{{score}} 分），主要來自「{{topFactor}}」。還有空間做區隔，但領先幅度不會太大，要持續投資在不容易被抄襲的地方。',
+      low: '「現有競爭者」壓力低（{{score}} 分）。競合環境相對寬鬆，重點會從搶市占轉為把市場做大與守住既有優勢。'
+    },
+    entrants: {
+      high: '「新進入者」威脅高（{{score}} 分），「{{topFactor}}」讓門檻偏低。預期會有新玩家以低價或新通路切入，應提前建立轉換成本、綁定通路或拉高規模門檻。',
+      mid: '「新進入者」威脅中等（{{score}} 分），「{{topFactor}}」是最明顯的破口。留意資金充沛的跨界玩家，他們通常不按原有成本結構出牌。',
+      low: '「新進入者」威脅低（{{score}} 分）。門檻足以擋住多數玩家，但要小心技術或法規變化讓門檻突然消失。'
+    },
+    substitutes: {
+      high: '「替代品」威脅高（{{score}} 分），關鍵是「{{topFactor}}」。替代品常常不是同類產品，而是解決同一個需求的不同方法，要用「客戶到底在買什麼」的角度重新定義競爭者。',
+      mid: '「替代品」威脅中等（{{score}} 分），「{{topFactor}}」值得持續追蹤。定期問客戶「如果你不用我們，會改用什麼」比看同業更有用。',
+      low: '「替代品」威脅低（{{score}} 分）。目前沒有更好的替代方案，但這也代表市場可能還沒被完全開發。'
+    },
+    suppliers: {
+      high: '「供應商」議價能力高（{{score}} 分），主因「{{topFactor}}」。建議發展第二供應源、把關鍵環節自製化，或在合約上鎖定長期價格。',
+      mid: '「供應商」議價能力中等（{{score}} 分），「{{topFactor}}」是談判時最容易被拿走的部分。維持替代供應商的報價作為籌碼。',
+      low: '「供應商」議價能力低（{{score}} 分）。目前採購條件對你有利，但不要把單一來源當成理所當然。'
+    },
+    buyers: {
+      high: '「買方」議價能力高（{{score}} 分），主因「{{topFactor}}」。降低單一客戶集中度、提高轉換成本（資料、整合、服務）是當務之急。',
+      mid: '「買方」議價能力中等（{{score}} 分），「{{topFactor}}」讓部分客戶有殺價空間。用方案分層與加值服務守住價格。',
+      low: '「買方」議價能力低（{{score}} 分）。定價權還在你手上，這是擴大毛利與建立品牌的好時機。'
+    }
+  }
+};
+
+const SAMPLE = {
+  name: '範例：台灣手搖飲市場',
+  industry: '連鎖手搖飲',
+  note: '示範資料，可直接刪除。分數僅為示例，不代表實際市場調查。',
+  scores: {
+    rivalry: [5, 5, 5, 3, 3],
+    entrants: [4, 3, 2, 3, 4],
+    substitutes: [4, 4, 4, 3],
+    suppliers: [2, 2, 3, 2, 3],
+    buyers: [2, 1, 4, 5, 2]
+  }
+};
+
+/* ══════════════════════════════════════════════════════════
+   1. utils
+   ══════════════════════════════════════════════════════════ */
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+
+function el(tag, attrs, children) {
+  const node = document.createElement(tag);
+  if (attrs) {
+    for (const k in attrs) {
+      const v = attrs[k];
+      if (v == null || v === false) continue;
+      if (k === 'class') node.className = v;
+      else if (k === 'text') node.textContent = v;
+      else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+      else node.setAttribute(k, v === true ? '' : String(v));
+    }
+  }
+  if (children != null) {
+    for (const c of [].concat(children)) {
+      if (c == null || c === false) continue;
+      node.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }
+  }
+  return node;
+}
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs, text) {
+  const node = document.createElementNS(SVG_NS, tag);
+  if (attrs) for (const k in attrs) if (attrs[k] != null) node.setAttribute(k, String(attrs[k]));
+  if (text != null) node.textContent = String(text);
+  return node;
+}
+
+function uid() {
+  if (crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+  return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+function nowISO() { return new Date().toISOString(); }
+
+function fmtDateTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+function fmtDateStamp(d = new Date()) {
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+}
+
+function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
+
+function clone(obj) { return JSON.parse(JSON.stringify(obj)); }
+
+function debounce(fn, wait) {
+  let t = null;
+  return function (...args) {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(null, args), wait);
+  };
+}
+
+function levelOf(pct) {
+  if (pct == null || isNaN(pct)) return 'none';
+  if (pct < 40) return 'low';
+  if (pct <= 65) return 'mid';
+  return 'high';
+}
+
+function attrLevel(score) {
+  if (score == null) return 'none';
+  if (score >= 65) return 'low';   // 吸引力高 = 五力弱 = 綠色
+  if (score >= 40) return 'mid';
+  return 'high';
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: filename });
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+function palette() {
+  const cs = getComputedStyle(document.documentElement);
+  const v = n => (cs.getPropertyValue(n) || '').trim() || '#888';
+  return {
+    text: v('--text'),
+    muted: v('--muted'),
+    border: v('--border'),
+    surface: v('--surface'),
+    surface2: v('--surface-2'),
+    surface3: v('--surface-3'),
+    accent: v('--accent'),
+    lvl: {
+      high: v('--lvl-high'),
+      mid: v('--lvl-mid'),
+      low: v('--lvl-low'),
+      none: v('--lvl-none')
+    }
+  };
+}
+
+function levelColor(pal, level) { return pal.lvl[level] || pal.lvl.none; }
+
+/* ══════════════════════════════════════════════════════════
+   2. 儲存層（IndexedDB，失敗時降級記憶體）
+   ══════════════════════════════════════════════════════════ */
+const DB = (() => {
+  let db = null;
+  let memMode = false;
+  let opening = null;
+  const mem = new Map();
+
+  function memStore(name) {
+    if (!mem.has(name)) mem.set(name, new Map());
+    return mem.get(name);
+  }
+
+  function request(req) {
+    return new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error('IndexedDB 請求失敗'));
+    });
+  }
+
+  function done(tx) {
+    return new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error || new Error('交易失敗'));
+      tx.onabort = () => reject(tx.error || new Error('交易被中止'));
+    });
+  }
+
+  function open() {
+    if (opening) return opening;
+    opening = new Promise(resolve => {
+      let settled = false;
+      const finish = ok => { if (!settled) { settled = true; resolve(ok); } };
+
+      if (!('indexedDB' in window)) { memMode = true; finish(false); return; }
+
+      let req;
+      try {
+        req = indexedDB.open(DB_NAME, DB_VERSION);
+      } catch (err) {
+        memMode = true;
+        finish(false);
+        return;
+      }
+
+      req.onupgradeneeded = () => {
+        const d = req.result;
+        if (!d.objectStoreNames.contains('analyses')) d.createObjectStore('analyses', { keyPath: 'id' });
+        if (!d.objectStoreNames.contains('settings')) d.createObjectStore('settings', { keyPath: 'key' });
+      };
+      req.onsuccess = () => {
+        db = req.result;
+        db.onversionchange = () => {
+          try { db.close(); } catch (e) {}
+          db = null;
+          showBanner('這個工具在另一個分頁被開啟了新版本，請重新載入頁面。');
+        };
+        finish(true);
+      };
+      req.onerror = () => {
+        memMode = true;
+        finish(false);
+      };
+      req.onblocked = () => { /* 等待其他分頁關閉，不阻斷流程 */ };
+
+      setTimeout(() => {
+        if (!db) { memMode = true; finish(false); }
+      }, 3500);
+    });
+    return opening;
+  }
+
+  const api = {
+    get memMode() { return memMode || !db; },
+    open,
+    async all(storeName) {
+      if (memMode || !db) return Array.from(memStore(storeName).values()).map(clone);
+      const tx = db.transaction(storeName, 'readonly');
+      const res = await request(tx.objectStore(storeName).getAll());
+      return res;
+    },
+    async get(storeName, key) {
+      if (memMode || !db) return memStore(storeName).get(key) || undefined;
+      const tx = db.transaction(storeName, 'readonly');
+      return request(tx.objectStore(storeName).get(key));
+    },
+    async put(storeName, value) {
+      if (memMode || !db) {
+        memStore(storeName).set(value[storeName === 'settings' ? 'key' : 'id'], clone(value));
+        return value;
+      }
+      const tx = db.transaction(storeName, 'readwrite');
+      tx.objectStore(storeName).put(value);
+      await done(tx);
+      return value;
+    },
+    async del(storeName, key) {
+      if (memMode || !db) { memStore(storeName).delete(key); return; }
+      const tx = db.transaction(storeName, 'readwrite');
+      tx.objectStore(storeName).delete(key);
+      await done(tx);
+    },
+    async bulkPut(storeName, list) {
+      if (memMode || !db) {
+        const m = memStore(storeName);
+        for (const item of list) m.set(item[storeName === 'settings' ? 'key' : 'id'], clone(item));
+        return;
+      }
+      const tx = db.transaction(storeName, 'readwrite');
+      const os = tx.objectStore(storeName);
+      for (const item of list) os.put(item);
+      await done(tx);
+    },
+    async clear(storeName) {
+      if (memMode || !db) { memStore(storeName).clear(); return; }
+      const tx = db.transaction(storeName, 'readwrite');
+      tx.objectStore(storeName).clear();
+      await done(tx);
+    }
+  };
+  return api;
+})();
+
+function showBanner(msg) {
+  const banner = $('#banner');
+  banner.textContent = msg;
+  banner.hidden = false;
+}
+
+async function handleDbError(err) {
+  if (!err) return;
+  const name = err.name || '';
+  if (name === 'QuotaExceededError') {
+    toast('儲存空間不足，請先匯出 JSON 備份，再清除舊資料。');
+  } else {
+    toast('儲存失敗：' + (err.message || name || '未知錯誤'));
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   3. state
+   ══════════════════════════════════════════════════════════ */
+const state = {
+  analyses: [],
+  activeId: null,
+  templates: clone(DEFAULT_TEMPLATES),
+  collapsed: new Set(),
+  comp: null,
+  ready: false
+};
+
+function current() {
+  return state.analyses.find(a => a.id === state.activeId) || null;
+}
+
+function recompute() {
+  const a = current();
+  state.comp = a ? compute(a) : null;
+  return state.comp;
+}
+
+/* ══════════════════════════════════════════════════════════
+   4. 計算引擎
+   ══════════════════════════════════════════════════════════ */
+function compute(analysis) {
+  const out = { forces: {}, rated: 0, total: 0, attraction: null, topForce: null, weakForce: null, assessed: 0 };
+  for (const def of FORCES) {
+    const holder = (analysis.forces && analysis.forces[def.key]) || { factors: [] };
+    const factors = Array.isArray(holder.factors) ? holder.factors : [];
+    let wSum = 0, sSum = 0, rated = 0;
+
+    for (const f of factors) {
+      out.total++;
+      const score = Number(f.score) || 0;
+      if (score >= 1 && score <= 5) {
+        rated++;
+        out.rated++;
+        const w = clamp(Number(f.weight) || 2, 1, 3);
+        wSum += w;
+        sSum += score * w;
+      }
+    }
+    const raw = rated > 0 && wSum > 0 ? sSum / wSum : null;
+    const pct = raw == null ? null : Math.round((raw - 1) / 4 * 1000) / 10;
+    out.forces[def.key] = {
+      pct,
+      raw,
+      level: levelOf(pct),
+      rated,
+      count: factors.length,
+      top: topFactor(factors)
+    };
+  }
+
+  const assessed = FORCES.map(d => d.key).filter(k => out.forces[k].pct != null);
+  out.assessed = assessed.length;
+  if (assessed.length) {
+    const avg = assessed.reduce((sum, k) => sum + out.forces[k].pct, 0) / assessed.length;
+    out.attraction = Math.round(clamp(100 - avg, 0, 100));
+    let top = assessed[0], weak = assessed[0];
+    for (const k of assessed) {
+      if (out.forces[k].pct > out.forces[top].pct) top = k;
+      if (out.forces[k].pct < out.forces[weak].pct) weak = k;
+    }
+    out.topForce = top;
+    out.weakForce = weak;
+  }
+  return out;
+}
+
+function topFactor(factors) {
+  let best = null, bestVal = -1;
+  for (const f of factors) {
+    const score = Number(f.score) || 0;
+    if (score < 1) continue;
+    const v = score * clamp(Number(f.weight) || 2, 1, 3);
+    if (v > bestVal) { bestVal = v; best = f; }
+  }
+  return best;
+}
+
+/* ══════════════════════════════════════════════════════════
+   5. 資料正規化
+   ══════════════════════════════════════════════════════════ */
+function blankForces() {
+  const forces = {};
+  for (const def of FORCES) forces[def.key] = { note: '', factors: [] };
+  return forces;
+}
+
+function makeAnalysis(opts = {}) {
+  const a = {
+    id: opts.id || uid(),
+    name: opts.name || '未命名分析',
+    industry: opts.industry || '',
+    note: opts.note || '',
+    createdAt: opts.createdAt || nowISO(),
+    updatedAt: opts.updatedAt || nowISO(),
+    forces: blankForces(),
+    insightNote: ''
+  };
+  const seed = opts.seed === true;
+  const sample = opts.sample === true;
+  FORCES.forEach(def => {
+    const holder = a.forces[def.key];
+    if (!seed && !sample) return;
+    holder.factors = def.defaults.map((d, i) => ({
+      id: uid(),
+      name: d.name,
+      weight: d.weight || 2,
+      score: sample ? (SAMPLE.scores[def.key][i] || 0) : 0,
+      note: ''
+    }));
+  });
+  return a;
+}
+
+function normalizeAnalysis(raw) {
+  if (!raw || typeof raw !== 'object') throw new Error('資料格式不正確');
+  const a = {
+    id: typeof raw.id === 'string' && raw.id ? raw.id : uid(),
+    name: String(raw.name || '未命名分析').slice(0, 60),
+    industry: String(raw.industry || '').slice(0, 60),
+    note: String(raw.note || '').slice(0, 2000),
+    insightNote: String(raw.insightNote || '').slice(0, 4000),
+    createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : nowISO(),
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : nowISO(),
+    forces: blankForces()
+  };
+  const src = raw.forces && typeof raw.forces === 'object' ? raw.forces : {};
+  for (const def of FORCES) {
+    const holder = src[def.key] && typeof src[def.key] === 'object' ? src[def.key] : {};
+    const target = a.forces[def.key];
+    target.note = String(holder.note || '').slice(0, 2000);
+    const list = Array.isArray(holder.factors) ? holder.factors : [];
+    target.factors = list.map(f => {
+      if (!f || typeof f !== 'object') return null;
+      const score = Number(f.score);
+      return {
+        id: typeof f.id === 'string' && f.id ? f.id : uid(),
+        name: String(f.name || '').slice(0, 60),
+        score: Number.isFinite(score) && score >= 1 && score <= 5 ? Math.round(score) : 0,
+        weight: clamp(Math.round(Number(f.weight) || 2), 1, 3),
+        note: String(f.note || '').slice(0, 500)
+      };
+    }).filter(Boolean).slice(0, 30);
+  }
+  return a;
+}
+
+function normalizeTemplates(raw) {
+  const out = clone(DEFAULT_TEMPLATES);
+  if (!raw || typeof raw !== 'object') return out;
+  for (const key of ['high', 'mid', 'low']) {
+    if (typeof raw.total?.[key] === 'string') out.total[key] = raw.total[key];
+  }
+  for (const def of FORCES) {
+    for (const key of ['high', 'mid', 'low']) {
+      const v = raw.forces?.[def.key]?.[key];
+      if (typeof v === 'string') out.forces[def.key][key] = v;
+    }
+  }
+  return out;
+}
+/* ══════════════════════════════════════════════════════════
+   6. 圖表（純 SVG）
+   ══════════════════════════════════════════════════════════ */
+function chartEmpty(msg) {
+  return el('div', { class: 'chart-empty' }, msg);
+}
+
+function polar(cx, cy, r, angle) {
+  return [cx + Math.cos(angle) * r, cy + Math.sin(angle) * r];
+}
+
+function drawRadar() {
+  const wrap = $('#radarWrap');
+  wrap.textContent = '';
+  const comp = state.comp;
+  if (!comp || comp.assessed === 0) {
+    wrap.append(chartEmpty('評分後這裡會出現五力雷達圖'));
+    return;
+  }
+
+  const pal = palette();
+  const W = 340, H = 298, cx = 170, cy = 146, R = 96;
+  const svg = svgEl('svg', {
+    viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': '五力雷達圖'
+  });
+  const angles = FORCES.map((_, i) => -Math.PI / 2 + i * 2 * Math.PI / 5);
+
+  for (let ring = 1; ring <= 4; ring++) {
+    const pts = angles.map(a => polar(cx, cy, R * ring / 4, a).join(',')).join(' ');
+    svg.append(svgEl('polygon', {
+      points: pts, fill: 'none', stroke: pal.border, 'stroke-width': ring === 4 ? 1.4 : 1
+    }));
+  }
+
+  angles.forEach((a, i) => {
+    const [x, y] = polar(cx, cy, R, a);
+    svg.append(svgEl('line', { x1: cx, y1: cy, x2: x, y2: y, stroke: pal.border, 'stroke-width': 1 }));
+    const [lx, ly] = polar(cx, cy, R + 22, a);
+    svg.append(svgEl('text', {
+      x: lx, y: ly, fill: pal.muted, 'font-size': 11.5, 'font-family': FONT,
+      'text-anchor': 'middle', 'dominant-baseline': 'middle'
+    }, FORCES[i].short));
+  });
+
+  const pts = angles.map((a, i) => {
+    const c = comp.forces[FORCES[i].key];
+    const v = (c.pct == null ? 0 : c.pct) / 100;
+    return polar(cx, cy, R * v, a);
+  });
+  svg.append(svgEl('polygon', {
+    points: pts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' '),
+    fill: pal.accent, 'fill-opacity': 0.16, stroke: pal.accent,
+    'stroke-width': 2, 'stroke-linejoin': 'round'
+  }));
+
+  pts.forEach((p, i) => {
+    const c = comp.forces[FORCES[i].key];
+    const dot = svgEl('circle', {
+      cx: p[0].toFixed(1), cy: p[1].toFixed(1), r: 4.5,
+      fill: c.pct == null ? pal.surface : levelColor(pal, c.level),
+      stroke: pal.surface, 'stroke-width': 1.5
+    });
+    dot.append(svgEl('title', null, `${FORCES[i].name}：${c.pct == null ? '未評估' : Math.round(c.pct) + ' 分（' + LEVEL_LABEL[c.level] + '）'}`));
+    if (c.pct != null) {
+      dot.setAttribute('style', 'cursor:pointer');
+      dot.addEventListener('click', () => focusForce(FORCES[i].key));
+    }
+    svg.append(dot);
+  });
+
+  wrap.append(svg);
+}
+
+function drawRays() {
+  const wrap = $('#raysWrap');
+  wrap.textContent = '';
+  const comp = state.comp;
+  const a = current();
+  if (!comp || comp.assessed === 0) {
+    wrap.append(chartEmpty('評分後這裡會出現五力強度圖'));
+    return;
+  }
+
+  const pal = palette();
+  const W = 340, H = 330, cx = 170, cy = 160, R = 100;
+  const svg = svgEl('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': '五力強度圖' });
+
+  // 外框五邊形（裝飾）
+  const ringPts = FORCES.map((_, i) => polar(cx, cy, R, -Math.PI / 2 + i * 2 * Math.PI / 5));
+  svg.append(svgEl('polygon', {
+    points: ringPts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' '),
+    fill: 'none', stroke: pal.border, 'stroke-width': 1, 'stroke-dasharray': '3 4'
+  }));
+
+  const industry = (a && a.industry ? a.industry : '產業').slice(0, 5);
+
+  FORCES.forEach((def, i) => {
+    const angle = -Math.PI / 2 + i * 2 * Math.PI / 5;
+    const c = comp.forces[def.key];
+    const pct = c.pct == null ? 0 : c.pct;
+    const color = c.pct == null ? pal.lvl.none : levelColor(pal, c.level);
+    const [nx, ny] = polar(cx, cy, R, angle);
+
+    svg.append(svgEl('line', {
+      x1: cx, y1: cy, x2: nx, y2: ny,
+      stroke: color, 'stroke-opacity': c.pct == null ? 0.35 : 0.8,
+      'stroke-width': (2 + (pct / 100) * 7).toFixed(1),
+      'stroke-linecap': 'round',
+      'stroke-dasharray': c.pct == null ? '3 3' : null
+    }));
+
+    const r = 17 + (pct / 100) * 11;
+    svg.append(svgEl('circle', {
+      cx: nx, cy: ny, r: r.toFixed(1),
+      fill: color, 'fill-opacity': c.pct == null ? 0.06 : 0.16,
+      stroke: color, 'stroke-width': 2
+    }));
+    svg.append(svgEl('text', {
+      x: nx, y: ny + 0.5, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: color, 'font-size': 13, 'font-weight': 700, 'font-family': FONT
+    }, c.pct == null ? '—' : String(Math.round(c.pct))));
+
+    const [lx, ly] = polar(cx, cy, R + 38, angle);
+    svg.append(svgEl('text', {
+      x: lx, y: ly, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+      fill: pal.muted, 'font-size': 11.5, 'font-family': FONT
+    }, def.short));
+  });
+
+  // 中心節點最後畫，蓋住放射線
+  svg.append(svgEl('circle', {
+    cx, cy, r: 34, fill: pal.surface2, stroke: pal.border, 'stroke-width': 1
+  }));
+  svg.append(svgEl('text', {
+    x: cx, y: cy, 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+    fill: pal.text, 'font-size': 10.5, 'font-weight': 600, 'font-family': FONT
+  }, industry));
+
+  wrap.append(svg);
+}
+
+function renderCharts() {
+  drawRadar();
+  drawRays();
+}
+
+/* ══════════════════════════════════════════════════════════
+   7. 渲染
+   ══════════════════════════════════════════════════════════ */
+function renderSelect() {
+  const sel = $('#analysisSelect');
+  sel.textContent = '';
+  state.analyses.forEach(a => {
+    const label = a.name + (a.industry ? ' · ' + a.industry : '');
+    sel.append(el('option', { value: a.id }, label));
+  });
+  if (state.activeId) sel.value = state.activeId;
+  sel.disabled = state.analyses.length === 0;
+}
+
+function attrLabel(score) {
+  if (score == null) return '未評估';
+  if (score >= 65) return '有吸引力';
+  if (score >= 40) return '條件普通';
+  return '不具吸引力';
+}
+
+function renderOverview() {
+  const comp = state.comp;
+  const score = comp ? comp.attraction : null;
+  const lvl = attrLevel(score);
+  const pal = palette();
+  const color = score == null ? pal.lvl.none : levelColor(pal, lvl);
+
+  const numEl = $('#attrScore');
+  numEl.textContent = score == null ? '—' : String(score);
+  numEl.style.color = score == null ? 'var(--muted)' : color;
+  numEl.classList.toggle('is-empty', score == null);
+
+  const bar = $('#attrBar');
+  bar.style.width = (score == null ? 0 : score) + '%';
+  bar.style.backgroundColor = color;
+
+  const note = $('#attrNote');
+  if (!comp || score == null) {
+    note.textContent = '還沒有任何評分。從下方任一個力量開始，為每個因子選 1–5 分。';
+  } else {
+    const top = FORCE_BY_KEY[comp.topForce];
+    const weak = FORCE_BY_KEY[comp.weakForce];
+    note.textContent = '五力平均壓力 ' + (100 - score) + ' 分。壓力最大的是「' + top.name +
+      '」（' + Math.round(comp.forces[top.key].pct) + '），最輕的是「' + weak.name +
+      '」（' + Math.round(comp.forces[weak.key].pct) + '）。';
+  }
+
+  const meta = $('#attrMeta');
+  meta.textContent = '';
+  const rated = comp ? comp.rated : 0;
+  const total = comp ? comp.total : 0;
+  meta.append(
+    el('span', { class: 'pill' }, ['完成度 ', el('b', null, rated + ' / ' + total)]),
+    el('span', { class: 'pill' }, ['已評估力量 ', el('b', null, (comp ? comp.assessed : 0) + ' / 5')]),
+    el('span', { class: 'pill' }, [attrLabel(score)])
+  );
+}
+
+function renderBars() {
+  const wrap = $('#barsWrap');
+  wrap.textContent = '';
+  const comp = state.comp;
+  const hint = $('#barsHint');
+  if (!comp || comp.rated === 0) {
+    hint.textContent = '';
+    wrap.append(chartEmpty('尚未評分'));
+    return;
+  }
+  hint.textContent = '分數越高＝壓力越大';
+  const pal = palette();
+  const rows = FORCES.map(d => ({ def: d, c: comp.forces[d.key] }))
+    .sort((x, y) => (y.c.pct == null ? -1 : y.c.pct) - (x.c.pct == null ? -1 : x.c.pct));
+
+  rows.forEach(({ def, c }) => {
+    const color = c.pct == null ? pal.lvl.none : levelColor(pal, c.level);
+    const row = el('button', { class: 'bar-row', type: 'button', 'data-jump': def.key, title: '跳到「' + def.name + '」的評分' });
+    row.append(el('span', { class: 'bar-name' }, def.name));
+    const track = el('div', { class: 'bar-track' });
+    const fill = el('i', { class: 'bar-fill' });
+    fill.style.width = (c.pct == null ? 0 : c.pct) + '%';
+    fill.style.background = color;
+    track.append(fill);
+    row.append(track);
+    const val = el('span', { class: 'bar-val' }, c.pct == null ? '—' : String(Math.round(c.pct)));
+    val.style.color = color;
+    row.append(val);
+    wrap.append(row);
+  });
+}
+
+function renderHeat() {
+  const wrap = $('#heatWrap');
+  wrap.textContent = '';
+  const a = current();
+  const comp = state.comp;
+  if (!a || !comp) return;
+
+  FORCES.forEach(def => {
+    const holder = a.forces[def.key];
+    const c = comp.forces[def.key];
+    const row = el('div', { class: 'heat-row' });
+    const head = el('div', { class: 'heat-head' }, [
+      def.name,
+      el('br'),
+      el('span', { class: 'num' }, c.count ? c.rated + '/' + c.count + ' 已評分' : '無因子')
+    ]);
+    const cells = el('div', { class: 'heat-cells' });
+
+    if (!holder.factors.length) {
+      cells.append(el('span', { class: 'hint' }, '尚未設定因子'));
+    } else {
+      holder.factors.forEach(f => {
+        const level = levelOf(f.score >= 1 ? (f.score - 1) / 4 * 100 : null);
+        const cell = el('button', {
+          class: 'heat-cell' + (f.score >= 1 ? '' : ' is-unrated'),
+          type: 'button',
+          title: (f.name || '未命名因子') + '：' + (f.score >= 1 ? f.score + ' 分' : '未評分') + '（權重 ' + (f.weight || 2) + '）',
+          'data-level': level
+        }, [
+          el('span', null, f.name || '未命名因子'),
+          el('b', null, f.score >= 1 ? String(f.score) : '·')
+        ]);
+        cell.addEventListener('click', () => focusFactor(def.key, f.id));
+        cells.append(cell);
+      });
+    }
+
+    row.append(head, cells);
+    wrap.append(row);
+  });
+}
+
+function factorRow(f, def, index) {
+  const row = el('div', { class: 'factor', 'data-fid': f.id });
+
+  const name = el('input', {
+    class: 'input', type: 'text', value: f.name,
+    placeholder: '因子名稱（例：價格戰頻繁）',
+    maxlength: 60, 'data-role': 'name',
+    'aria-label': def.name + ' 第 ' + (index + 1) + ' 個因子名稱'
+  });
+
+  const seg = el('div', { class: 'seg', role: 'radiogroup', 'aria-label': (f.name || '因子') + ' 分數 1 到 5' });
+  for (let s = 1; s <= 5; s++) {
+    const lab = el('label', { title: s + ' 分' });
+    const input = el('input', {
+      type: 'radio', name: 'sc-' + f.id, value: String(s), 'data-role': 'score',
+      'aria-label': (f.name || '因子') + ' ' + s + ' 分'
+    });
+    if (f.score === s) input.checked = true;
+    lab.append(input, el('span', null, String(s)));
+    seg.append(lab);
+  }
+
+  const weight = el('select', { class: 'select select--sm', 'data-role': 'weight', 'aria-label': '權重' });
+  [[1, '1 輕'], [2, '2 中'], [3, '3 重']].forEach(([v, label]) => {
+    const opt = el('option', { value: String(v) }, label);
+    if ((f.weight || 2) === v) opt.selected = true;
+    weight.append(opt);
+  });
+
+  const del = el('button', {
+    class: 'icon-btn', type: 'button', 'data-role': 'del',
+    'aria-label': '刪除因子 ' + (f.name || ''), title: '刪除因子'
+  }, '✕');
+
+  row.append(name, seg, weight, del);
+  return row;
+}
+
+function forceCard(def, index) {
+  const a = current();
+  const holder = a.forces[def.key];
+  const collapsed = state.collapsed.has(def.key);
+
+  const card = el('section', {
+    class: 'force' + (collapsed ? ' is-collapsed' : ''),
+    'data-force': def.key
+  });
+
+  const head = el('button', {
+    class: 'force__head', type: 'button', 'data-role': 'toggle',
+    'aria-expanded': collapsed ? 'false' : 'true'
+  }, [
+    el('span', { class: 'force__num', 'aria-hidden': 'true' }, String(index + 1)),
+    el('div', { class: 'force__title' }, [
+      el('strong', null, def.name),
+      el('em', null, def.en)
+    ]),
+    el('span', { class: 'badge', 'data-badge': def.key, 'data-level': 'none' }, '未評估'),
+    el('span', { class: 'force__caret', 'aria-hidden': 'true' }, '▾')
+  ]);
+
+  const body = el('div', { class: 'force__body' });
+  body.append(el('details', { class: 'force__desc' }, [
+    el('summary', null, '這個力量在問什麼'),
+    el('p', null, def.desc)
+  ]));
+
+  const list = el('div', { class: 'factor-list' });
+  if (!holder.factors.length) {
+    list.append(el('p', { class: 'hint', style: 'padding:8px 0' }, '還沒有因子。點下面的「新增因子」開始拆解這個力量。'));
+  } else {
+    holder.factors.forEach((f, i) => list.append(factorRow(f, def, i)));
+  }
+  body.append(list);
+
+  if (!holder.factors.length) {
+    const suggest = el('button', { class: 'btn btn--sm', type: 'button', 'data-role': 'preset' }, '套用預設因子');
+    suggest.addEventListener('click', () => applyPreset(def.key));
+    body.append(el('div', { style: 'padding:6px 0 2px' }, suggest));
+  }
+
+  const note = el('textarea', {
+    class: 'force-note', rows: 2, 'data-role': 'fnote',
+    placeholder: '這個力量的觀察、證據或資料來源（選填）',
+    'aria-label': def.name + ' 的觀察備註'
+  });
+  note.value = holder.note || '';
+  body.append(note);
+  body.append(el('p', { class: 'force-note-print' }, holder.note || ''));
+
+  body.append(el('div', { class: 'force__foot' }, [
+    el('button', { class: 'btn btn--sm', type: 'button', 'data-role': 'add' }, '＋ 新增因子'),
+    el('span', { class: 'hint', 'data-progress': def.key }, '')
+  ]));
+
+  card.append(head, body);
+  return card;
+}
+
+function renderForces() {
+  const wrap = $('#forcesWrap');
+  wrap.textContent = '';
+  const a = current();
+  if (!a) return;
+  FORCES.forEach((def, i) => wrap.append(forceCard(def, i)));
+  renderForceBadges();
+}
+
+function renderForceBadges() {
+  const comp = state.comp;
+  if (!comp) return;
+  FORCES.forEach(def => {
+    const c = comp.forces[def.key];
+    const badge = document.querySelector('[data-badge="' + def.key + '"]');
+    if (badge) {
+      badge.textContent = c.pct == null ? '未評估' : LEVEL_LABEL[c.level] + ' · ' + Math.round(c.pct);
+      badge.dataset.level = c.level;
+    }
+    const prog = document.querySelector('[data-progress="' + def.key + '"]');
+    if (prog) prog.textContent = c.count ? '已評分 ' + c.rated + ' / ' + c.count + ' 個因子' : '尚無因子';
+  });
+}
+
+function fillTpl(tpl, vars) {
+  return String(tpl || '').replace(/\{\{\s*(\w+)\s*\}\}/g, (m, key) =>
+    vars[key] == null ? '' : String(vars[key]));
+}
+
+function buildInsight() {
+  const a = current();
+  const comp = state.comp;
+  if (!a || !comp) return [];
+  const out = [];
+
+  if (comp.attraction != null) {
+    const lvl = comp.attraction >= 65 ? 'high' : comp.attraction >= 40 ? 'mid' : 'low';
+    out.push(fillTpl(state.templates.total[lvl], {
+      industry: a.industry || a.name,
+      attraction: comp.attraction,
+      topForce: comp.topForce ? FORCE_BY_KEY[comp.topForce].name : '—',
+      topScore: comp.topForce ? Math.round(comp.forces[comp.topForce].pct) : '—'
+    }));
+  }
+
+  const ordered = FORCES.filter(d => comp.forces[d.key].pct != null)
+    .sort((x, y) => comp.forces[y.key].pct - comp.forces[x.key].pct);
+
+  ordered.forEach(def => {
+    const c = comp.forces[def.key];
+    out.push(fillTpl(state.templates.forces[def.key][c.level], {
+      force: def.name,
+      industry: a.industry || a.name,
+      score: Math.round(c.pct),
+      level: LEVEL_LABEL[c.level],
+      topFactor: c.top ? c.top.name : '（尚未命名）',
+      ratio: c.rated + '/' + c.count
+    }));
+  });
+
+  return out.filter(t => t.trim().length > 0);
+}
+
+function renderInsight() {
+  const out = $('#insightOut');
+  out.textContent = '';
+  const paras = buildInsight();
+  if (!paras.length) {
+    out.append(el('p', { class: 'insight__empty' }, '開始評分後，這裡會依你的分數自動生成結論與建議。你也可以在下方寫下自己的判斷。'));
+    return;
+  }
+  paras.forEach(text => out.append(el('p', null, text)));
+}
+
+function renderMeta() {
+  const a = current();
+  const comp = state.comp;
+  $('#kvCount').textContent = state.analyses.length + ' 份分析';
+  $('#kvMode').textContent = DB.memMode ? '記憶體（不會保存）' : 'IndexedDB';
+  $('#kvUpdated').textContent = a ? fmtDateTime(a.updatedAt) : '—';
+  $('#footStat').textContent = a
+    ? '已評分 ' + comp.rated + ' / ' + comp.total + ' 個因子 · 更新於 ' + fmtDateTime(a.updatedAt)
+    : '尚未建立分析';
+}
+
+function renderPrintHead() {
+  const a = current();
+  if (!a) return;
+  const comp = state.comp;
+  $('#printTitle').textContent = a.name;
+  document.title = a.name + ' · 五力分析';
+  $('#printMeta').textContent = [
+    a.industry || '未填產業',
+    '產業吸引力 ' + (comp.attraction == null ? '—' : comp.attraction) + '/100',
+    '更新於 ' + fmtDateTime(a.updatedAt)
+  ].join(' · ');
+}
+
+function renderAll() {
+  const a = current();
+  if (!a) return;
+  recompute();
+  renderOverview();
+  renderCharts();
+  renderBars();
+  renderHeat();
+  renderForces();
+  renderInsight();
+  renderMeta();
+  renderPrintHead();
+  const noteEl = $('#insightNote');
+  if (document.activeElement !== noteEl) noteEl.value = a.insightNote || '';
+}
+
+function renderDynamic() {
+  if (!current()) return;
+  recompute();
+  renderOverview();
+  renderCharts();
+  renderBars();
+  renderHeat();
+  renderForceBadges();
+  renderInsight();
+  renderMeta();
+}
+
+function render() {
+  const has = state.analyses.length > 0;
+  $('#emptyState').hidden = has;
+  $('#shell').hidden = !has;
+  $('#btnInfo').disabled = !has;
+  $('#btnMenu').disabled = !has;
+  $('.appbar__mid').hidden = !has;
+  renderSelect();
+  if (!has) {
+    $('#footStat').textContent = '尚未建立分析';
+    return;
+  }
+  if (!current()) state.activeId = state.analyses[0].id;
+  renderAll();
+}
+
+/* ══════════════════════════════════════════════════════════
+   8. 儲存排程
+   ══════════════════════════════════════════════════════════ */
+let saveTimer = null;
+let pendingAnalysis = null;
+
+async function persist(a) {
+  try {
+    await DB.put('analyses', a);
+  } catch (err) {
+    handleDbError(err);
+  }
+}
+
+function scheduleSave(a) {
+  a.updatedAt = nowISO();
+  pendingAnalysis = a;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    flushSave();
+  }, SAVE_DELAY);
+}
+
+function flushSave() {
+  const a = pendingAnalysis;
+  pendingAnalysis = null;
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  if (a) persist(a);
+}
+
+function cancelPending(id) {
+  if (!pendingAnalysis) return;
+  if (id && pendingAnalysis.id !== id) return;
+  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+  pendingAnalysis = null;
+}
+
+async function saveSetting(key, value) {
+  try {
+    await DB.put('settings', { key, value });
+  } catch (err) {
+    handleDbError(err);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════
+   9. 動作
+   ══════════════════════════════════════════════════════════ */
+function switchAnalysis(id) {
+  if (!state.analyses.some(a => a.id === id)) return;
+  state.activeId = id;
+  saveSetting('activeId', id);
+  renderSelect();
+  renderAll();
+}
+
+function focusForce(key) {
+  state.collapsed.delete(key);
+  renderForces();
+  const card = document.querySelector('[data-force="' + key + '"]');
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  card.classList.add('is-flash');
+  setTimeout(() => card.classList.remove('is-flash'), 1400);
+  const head = card.querySelector('[data-role="toggle"]');
+  if (head) setTimeout(() => head.focus({ preventScroll: true }), 360);
+}
+
+function focusFactor(key, fid) {
+  state.collapsed.delete(key);
+  renderForces();
+  const row = document.querySelector('[data-force="' + key + '"] [data-fid="' + fid + '"]');
+  if (!row) return;
+  row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const target = row.querySelector('input[type="radio"]:checked') ||
+    row.querySelector('input[type="radio"]') ||
+    row.querySelector('input');
+  if (target) setTimeout(() => target.focus({ preventScroll: true }), 340);
+}
+
+function addFactor(key) {
+  const a = current();
+  if (!a) return;
+  const f = { id: uid(), name: '', score: 0, weight: 2, note: '' };
+  a.forces[key].factors.push(f);
+  state.collapsed.delete(key);
+  renderForces();
+  renderDynamic();
+  scheduleSave(a);
+  const input = document.querySelector('[data-force="' + key + '"] [data-fid="' + f.id + '"] [data-role="name"]');
+  if (input) {
+    input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => input.focus({ preventScroll: true }), 300);
+  }
+}
+
+function deleteFactor(key, fid) {
+  const a = current();
+  if (!a) return;
+  const list = a.forces[key].factors;
+  const idx = list.findIndex(f => f.id === fid);
+  if (idx < 0) return;
+  const removed = list.splice(idx, 1)[0];
+  renderForces();
+  renderDynamic();
+  scheduleSave(a);
+  toast('已刪除因子「' + (removed.name || '未命名') + '」', {
+    action: '復原',
+    duration: 7000,
+    onAction: () => {
+      list.splice(Math.min(idx, list.length), 0, removed);
+      renderForces();
+      renderDynamic();
+      scheduleSave(a);
+    }
+  });
+}
+
+function applyPreset(key) {
+  const a = current();
+  if (!a) return;
+  const def = FORCE_BY_KEY[key];
+  const existing = a.forces[key].factors;
+  const names = new Set(existing.map(f => f.name));
+  def.defaults.forEach(d => {
+    if (names.has(d.name)) return;
+    existing.push({ id: uid(), name: d.name, score: 0, weight: d.weight || 2, note: '' });
+  });
+  renderForces();
+  renderDynamic();
+  scheduleSave(a);
+  toast('已套用「' + def.name + '」的預設因子');
+}
+
+async function createAnalysisFrom(opts) {
+  const a = makeAnalysis(opts);
+  state.analyses.unshift(a);
+  state.activeId = a.id;
+  await persist(a);
+  await saveSetting('activeId', a.id);
+  render();
+  toast('已建立「' + a.name + '」' + (opts.sample ? '（範例資料）' : ''));
+  return a;
+}
+
+async function duplicateAnalysis() {
+  const a = current();
+  if (!a) return;
+  const copy = normalizeAnalysis({
+    ...clone(a),
+    id: uid(),
+    name: a.name + '（複本）',
+    createdAt: nowISO(),
+    updatedAt: nowISO()
+  });
+  copy.forces = {};
+  FORCES.forEach(def => {
+    copy.forces[def.key] = {
+      note: a.forces[def.key].note || '',
+      factors: a.forces[def.key].factors.map(f => ({ ...f, id: uid() }))
+    };
+  });
+  state.analyses.unshift(copy);
+  state.activeId = copy.id;
+  await persist(copy);
+  await saveSetting('activeId', copy.id);
+  render();
+  toast('已複製為「' + copy.name + '」');
+}
+
+async function deleteAnalysis() {
+  const a = current();
+  if (!a) return;
+  const ok = await confirmDialog({
+    title: '刪除分析',
+    body: '確定要刪除「' + a.name + '」嗎？這份分析的所有因子與備註都會一起移除。',
+    okText: '刪除',
+    danger: true
+  });
+  if (!ok) return;
+
+  const idx = state.analyses.findIndex(x => x.id === a.id);
+  cancelPending(a.id);
+  state.analyses.splice(idx, 1);
+  try { await DB.del('analyses', a.id); } catch (err) { handleDbError(err); }
+
+  if (state.analyses.length) {
+    state.activeId = state.analyses[Math.max(0, idx - 1)].id;
+  } else {
+    state.activeId = null;
+  }
+  await saveSetting('activeId', state.activeId);
+  render();
+  toast('已刪除「' + a.name + '」', {
+    action: '復原',
+    duration: 8000,
+    onAction: async () => {
+      state.analyses.splice(idx, 0, a);
+      state.activeId = a.id;
+      await persist(a);
+      await saveSetting('activeId', a.id);
+      render();
+    }
+  });
+}
+
+/* ── 洞察模板 ─────────────────────────────────────────── */
+function openTemplates() {
+  const body = $('#tplBody');
+  body.textContent = '';
+
+  const makeGroup = (title, obj, path, open) => {
+    const group = el('details', { class: 'tpl-group' });
+    if (open) group.open = true;
+    group.append(el('summary', null, title));
+    const inner = el('div', { class: 'tpl-inner' });
+    [['high', '高／強'], ['mid', '中'], ['low', '低／弱']].forEach(([lvl, label]) => {
+      const field = el('label', { class: 'tpl-field' });
+      field.append(el('span', null, label));
+      const ta = el('textarea', {
+        'data-tpl': path, 'data-lvl': lvl, 'aria-label': title + ' ' + label + ' 文案'
+      });
+      ta.value = obj[lvl] || '';
+      ta.addEventListener('input', () => {
+        if (path === 'total') state.templates.total[lvl] = ta.value;
+        else state.templates.forces[path][lvl] = ta.value;
+        renderInsight();
+        scheduleSaveTemplates();
+      });
+      field.append(ta);
+      inner.append(field);
+    });
+    group.append(inner);
+    return group;
+  };
+
+  body.append(makeGroup('總體結論（產業吸引力）', state.templates.total, 'total', true));
+  FORCES.forEach(def => body.append(makeGroup(def.name, state.templates.forces[def.key], def.key, false)));
+  openDialog($('#dlgTpl'));
+}
+
+const scheduleSaveTemplates = debounce(() => {
+  saveSetting('templates', state.templates);
+}, 500);
+
+/* ── 匯出 / 匯入 ──────────────────────────────────────── */
+function csvCell(v) {
+  const s = String(v == null ? '' : v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function exportJSON() {
+  const payload = {
+    app: APP_ID,
+    appVersion: APP_VERSION,
+    schemaVersion: SCHEMA_VERSION,
+    exportedAt: nowISO(),
+    analyses: state.analyses,
+    settings: { templates: state.templates }
+  };
+  downloadBlob(
+    new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' }),
+    '五力分析-' + fmtDateStamp() + '.json'
+  );
+  toast('已匯出 JSON 備份（' + state.analyses.length + ' 份分析）');
+}
+
+function exportCSV() {
+  const a = current();
+  if (!a) return;
+  const comp = state.comp;
+  const rows = [[
+    '分析', '產業', '力量', '力量分數', '等級', '因子', '分數', '權重', '力量備註'
+  ]];
+  FORCES.forEach(def => {
+    const c = comp.forces[def.key];
+    const holder = a.forces[def.key];
+    const base = [
+      a.name, a.industry, def.name,
+      c.pct == null ? '' : Math.round(c.pct),
+      LEVEL_LABEL[c.level]
+    ];
+    if (!holder.factors.length) {
+      rows.push([...base, '', '', '', holder.note || '']);
+    } else {
+      holder.factors.forEach(f => {
+        rows.push([...base, f.name, f.score >= 1 ? f.score : '', f.weight || 2, holder.note || '']);
+      });
+    }
+  });
+  const csv = '\ufeff' + rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+  downloadBlob(new Blob([csv], { type: 'text/csv;charset=utf-8' }),
+    '五力分析-' + a.name.replace(/[\\/:*?"<>|]/g, '_') + '-' + fmtDateStamp() + '.csv');
+  toast('已匯出 CSV（可用 Excel 開啟）');
+}
+
+let pendingImport = null;
+
+async function handleImportFile(file) {
+  if (!file) return;
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch (err) {
+    toast('匯入失敗：檔案不是有效的 JSON');
+    return;
+  }
+  try {
+    const list = Array.isArray(data) ? data : data && data.analyses;
+    if (!Array.isArray(list) || list.length === 0) throw new Error('檔案裡沒有分析資料');
+    const analyses = list.map(normalizeAnalysis);
+    pendingImport = {
+      analyses,
+      templates: data && data.settings && data.settings.templates
+        ? normalizeTemplates(data.settings.templates)
+        : null
+    };
+    $('#imSummary').textContent = '讀到 ' + analyses.length + ' 份分析：' +
+      analyses.slice(0, 4).map(x => x.name).join('、') +
+      (analyses.length > 4 ? ' 等' : '') + '。';
+    openDialog($('#dlgImport'));
+  } catch (err) {
+    toast('匯入失敗：' + (err.message || '資料格式不正確'));
+  }
+}
+
+async function applyImport(mode) {
+  if (!pendingImport) return;
+  const { analyses, templates } = pendingImport;
+  pendingImport = null;
+  $('#dlgImport').close();
+  cancelPending();
+
+  try {
+    if (mode === 'replace') {
+      await DB.clear('analyses');
+      state.analyses = analyses.slice();
+    } else {
+      for (const a of analyses) {
+        const i = state.analyses.findIndex(x => x.id === a.id);
+        if (i >= 0) state.analyses[i] = a;
+        else state.analyses.unshift(a);
+      }
+    }
+    await DB.bulkPut('analyses', state.analyses);
+    if (templates) {
+      state.templates = templates;
+      await saveSetting('templates', state.templates);
+    }
+    state.activeId = state.analyses[0] ? state.analyses[0].id : null;
+    await saveSetting('activeId', state.activeId);
+    render();
+    toast('已匯入 ' + analyses.length + ' 份分析（' + (mode === 'replace' ? '取代' : '合併') + '）');
+  } catch (err) {
+    handleDbError(err);
+  }
+}
+
+function wipeAll() {
+  confirmDialog({
+    title: '清除所有資料',
+    body: '這會刪除這台裝置上的全部分析與自訂模板，且無法復原。建議先匯出 JSON 備份。',
+    okText: '全部清除',
+    danger: true
+  }).then(async ok => {
+    if (!ok) return;
+    try {
+      cancelPending();
+      await DB.clear('analyses');
+      await DB.clear('settings');
+      state.analyses = [];
+      state.activeId = null;
+      state.templates = clone(DEFAULT_TEMPLATES);
+      render();
+      toast('已清除所有資料');
+    } catch (err) {
+      handleDbError(err);
+    }
+  });
+}
+
+/* ── 圖片匯出 ─────────────────────────────────────────── */
+function exportChartPng(kind) {
+  const svg = document.querySelector(kind === 'radar' ? '#radarWrap svg' : '#raysWrap svg');
+  if (!svg) {
+    toast('目前沒有可匯出的圖表');
+    return;
+  }
+  const vb = svg.viewBox.baseVal;
+  if (!vb || !vb.width) {
+    toast('圖表匯出失敗');
+    return;
+  }
+  const w = vb.width, h = vb.height;
+  const clone = svg.cloneNode(true);
+  clone.setAttribute('xmlns', SVG_NS);
+  clone.setAttribute('width', w);
+  clone.setAttribute('height', h);
+  const bg = svgEl('rect', { x: 0, y: 0, width: w, height: h, fill: palette().surface });
+  clone.insertBefore(bg, clone.firstChild);
+
+  const str = new XMLSerializer().serializeToString(clone);
+  const img = new Image();
+  img.onload = () => {
+    const scale = 2;
+    const canvas = document.createElement('canvas');
+    canvas.width = w * scale;
+    canvas.height = h * scale;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = palette().surface;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(blob => {
+      if (!blob) {
+        toast('圖表匯出失敗');
+        return;
+      }
+      downloadBlob(blob, '五力-' + (kind === 'radar' ? '雷達圖' : '五力圖') + '-' + fmtDateStamp() + '.png');
+      toast('已匯出 PNG');
+    }, 'image/png');
+  };
+  img.onerror = () => toast('圖表匯出失敗，可改用「列印／PDF」');
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str);
+}
+
+/* ══════════════════════════════════════════════════════════
+   10. 對話框與 toast
+   ══════════════════════════════════════════════════════════ */
+function openDialog(dlg) {
+  if (!dlg || dlg.open) return;
+  if (typeof dlg.showModal === 'function') dlg.showModal();
+  else dlg.setAttribute('open', '');
+}
+
+function toast(message, opts = {}) {
+  const wrap = $('#toastWrap');
+  const node = el('div', { class: 'toast' }, el('p', null, message));
+  if (opts.action) {
+    const btn = el('button', { type: 'button' }, opts.action);
+    btn.addEventListener('click', () => {
+      node.remove();
+      if (opts.onAction) opts.onAction();
+    });
+    node.append(btn);
+  }
+  wrap.append(node);
+  while (wrap.children.length > 3) wrap.firstElementChild.remove();
+  setTimeout(() => node.remove(), opts.duration || 5000);
+}
+
+function confirmDialog({ title, body, okText = '確定', cancelText = '取消', danger = false }) {
+  const dlg = $('#dlgConfirm');
+  $('#cfTitle').textContent = title;
+  $('#cfBody').textContent = body;
+  const ok = $('#cfOk');
+  ok.textContent = okText;
+  ok.classList.toggle('btn--danger', danger);
+  ok.classList.toggle('btn--primary', !danger);
+  $('#cfCancel').textContent = cancelText;
+  dlg.returnValue = '';
+  return new Promise(resolve => {
+    const onClose = () => {
+      dlg.removeEventListener('close', onClose);
+      resolve(dlg.returnValue === 'ok');
+    };
+    dlg.addEventListener('close', onClose);
+    openDialog(dlg);
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   11. 分析資訊對話框
+   ══════════════════════════════════════════════════════════ */
+let infoMode = 'create';
+let infoSeed = true;
+
+function openInfoDialog(mode, seed) {
+  const dlg = $('#dlgInfo');
+  const a = current();
+  infoMode = mode;
+  infoSeed = seed !== false;
+
+  $('#dlgInfoTitle').textContent =
+    mode === 'edit' ? '分析資訊' : mode === 'sample' ? '建立範例分析' : '新增分析';
+  $('#dlgInfoOk').textContent = mode === 'edit' ? '儲存' : '建立';
+
+  if (mode === 'edit' && a) {
+    $('#fName').value = a.name;
+    $('#fIndustry').value = a.industry;
+    $('#fNote').value = a.note;
+  } else if (mode === 'sample') {
+    $('#fName').value = SAMPLE.name;
+    $('#fIndustry').value = SAMPLE.industry;
+    $('#fNote').value = SAMPLE.note;
+  } else {
+    $('#fName').value = '';
+    $('#fIndustry').value = '';
+    $('#fNote').value = '';
+  }
+
+  $('#seedWrap').hidden = mode !== 'create';
+  $('#fSeed').checked = infoSeed;
+
+  dlg.returnValue = '';
+  openDialog(dlg);
+  setTimeout(() => {
+    const nameInput = $('#fName');
+    nameInput.focus();
+    nameInput.select();
+  }, 40);
+}
+
+async function onInfoClosed() {
+  const dlg = $('#dlgInfo');
+  if (dlg.returnValue !== 'ok') return;
+  const name = ($('#fName').value || '').trim() || '未命名分析';
+  const industry = ($('#fIndustry').value || '').trim();
+  const note = ($('#fNote').value || '').trim();
+
+  if (infoMode === 'edit') {
+    const a = current();
+    if (!a) return;
+    a.name = name;
+    a.industry = industry;
+    a.note = note;
+    a.updatedAt = nowISO();
+    await persist(a);
+    renderSelect();
+    renderPrintHead();
+    renderMeta();
+    toast('已更新分析資訊');
+    return;
+  }
+
+  await createAnalysisFrom({
+    name,
+    industry,
+    note,
+    seed: infoMode === 'create' ? $('#fSeed').checked : false,
+    sample: infoMode === 'sample'
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   12. 事件綁定
+   ══════════════════════════════════════════════════════════ */
+function closeMenu() {
+  const menu = $('#menu');
+  if (!menu) return;
+  menu.hidden = true;
+  $('#btnMenu').setAttribute('aria-expanded', 'false');
+}
+
+function runCmd(cmd) {
+  switch (cmd) {
+    case 'duplicate': duplicateAnalysis(); break;
+    case 'delete': deleteAnalysis(); break;
+    case 'export-json': exportJSON(); break;
+    case 'import-json': $('#fileInput').click(); break;
+    case 'export-csv': exportCSV(); break;
+    case 'print': window.print(); break;
+    case 'templates': openTemplates(); break;
+    case 'wipe': wipeAll(); break;
+  }
+}
+
+function bindEvents() {
+  // 切換分析
+  $('#analysisSelect').addEventListener('change', e => switchAnalysis(e.target.value));
+
+  // 新增 / 資訊
+  $('#btnNew').addEventListener('click', () => openInfoDialog('create', true));
+  $('#btnInfo').addEventListener('click', () => openInfoDialog('edit'));
+
+  // 空狀態
+  $('#btnStartDefault').addEventListener('click', () => openInfoDialog('create', true));
+  $('#btnStartBlank').addEventListener('click', () => openInfoDialog('create', false));
+  $('#btnStartSample').addEventListener('click', () => openInfoDialog('sample'));
+
+  // 主題
+  $('#btnTheme').addEventListener('click', () => {
+    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('p5-theme', next); } catch (e) {}
+    if (state.ready && current()) renderCharts();
+  });
+
+  // 選單
+  const menu = $('#menu');
+  $('#btnMenu').addEventListener('click', e => {
+    e.stopPropagation();
+    const willOpen = menu.hidden;
+    menu.hidden = !willOpen;
+    $('#btnMenu').setAttribute('aria-expanded', String(willOpen));
+    if (willOpen) {
+      const first = menu.querySelector('button');
+      if (first) first.focus();
+    }
+  });
+  document.addEventListener('click', e => {
+    if (menu.hidden) return;
+    if (e.target.closest('#menu')) return;
+    closeMenu();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeMenu();
+    if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      const tag = (document.activeElement && document.activeElement.tagName) || '';
+      if (!/^(INPUT|TEXTAREA|SELECT)$/.test(tag) && !document.querySelector('dialog[open]')) {
+        e.preventDefault();
+        openInfoDialog('create', true);
+      }
+    }
+  });
+
+  // 選單指令（含備份卡片按鈕）
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-cmd]');
+    if (!btn) return;
+    const cmd = btn.dataset.cmd;
+    closeMenu();
+    runCmd(cmd);
+  });
+
+  // dialog 關閉按鈕
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-close]');
+    if (!btn) return;
+    const dlg = document.getElementById(btn.dataset.close);
+    if (dlg && dlg.open) dlg.close();
+  });
+
+  // 圖表匯出
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-export]');
+    if (btn) exportChartPng(btn.dataset.export);
+  });
+
+  // 確認框
+  $('#cfOk').addEventListener('click', () => { $('#dlgConfirm').close('ok'); });
+  $('#cfCancel').addEventListener('click', () => { $('#dlgConfirm').close('cancel'); });
+
+  // 分析資訊
+  $('#dlgInfo').addEventListener('close', onInfoClosed);
+
+  // 模板
+  $('#btnTpl').addEventListener('click', openTemplates);
+  $('#tplReset').addEventListener('click', async () => {
+    const ok = await confirmDialog({
+      title: '恢復預設模板',
+      body: '所有自訂的洞察文案都會被還原成預設值。',
+      okText: '恢復預設',
+      danger: true
+    });
+    if (!ok) return;
+    state.templates = clone(DEFAULT_TEMPLATES);
+    await saveSetting('templates', state.templates);
+    openTemplates();
+    renderInsight();
+    toast('已恢復預設模板');
+  });
+
+  // 備註
+  const noteEl = $('#insightNote');
+  noteEl.addEventListener('input', () => {
+    const a = current();
+    if (!a) return;
+    a.insightNote = noteEl.value;
+    scheduleSave(a);
+  });
+
+  // 複製洞察
+  $('#btnCopyInsight').addEventListener('click', async () => {
+    const a = current();
+    if (!a) return;
+    const text = buildInsight().join('\n\n') + (a.insightNote ? '\n\n【備註】\n' + a.insightNote : '');
+    if (!text.trim()) {
+      toast('目前沒有可複製的內容');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      toast('已複製洞察文字');
+    } catch (err) {
+      toast('瀏覽器阻擋了剪貼簿，請手動選取文字');
+    }
+  });
+
+  // 力量卡：點擊委派
+  $('#forcesWrap').addEventListener('click', e => {
+    const card = e.target.closest('[data-force]');
+    if (!card) return;
+    const key = card.dataset.force;
+
+    if (e.target.closest('[data-role="toggle"]')) {
+      if (state.collapsed.has(key)) state.collapsed.delete(key);
+      else state.collapsed.add(key);
+      card.classList.toggle('is-collapsed');
+      const head = card.querySelector('[data-role="toggle"]');
+      head.setAttribute('aria-expanded', state.collapsed.has(key) ? 'false' : 'true');
+      return;
+    }
+    if (e.target.closest('[data-role="add"]')) { addFactor(key); return; }
+    if (e.target.closest('[data-role="preset"]')) { applyPreset(key); return; }
+    if (e.target.closest('[data-role="del"]')) {
+      const row = e.target.closest('[data-fid]');
+      if (row) deleteFactor(key, row.dataset.fid);
+      return;
+    }
+  });
+
+  // 力量卡：輸入委派
+  const forces = $('#forcesWrap');
+
+  $('#barsWrap').addEventListener('click', e => {
+    const row = e.target.closest('[data-jump]');
+    if (row) focusForce(row.dataset.jump);
+  });
+
+  forces.addEventListener('input', e => {
+    const a = current();
+    if (!a) return;
+    const card = e.target.closest('[data-force]');
+    if (!card) return;
+    const holder = a.forces[card.dataset.force];
+    if (!holder) return;
+    const role = e.target.dataset.role;
+
+    if (role === 'fnote') {
+      holder.note = e.target.value;
+      const mirror = card.querySelector('.force-note-print');
+      if (mirror) mirror.textContent = holder.note;
+      scheduleSave(a);
+      return;
+    }
+    if (role !== 'name') return;
+
+    const row = e.target.closest('[data-fid]');
+    if (!row) return;
+    const f = holder.factors.find(x => x.id === row.dataset.fid);
+    if (!f) return;
+    f.name = e.target.value;
+    renderDynamic();
+    scheduleSave(a);
+  });
+
+  forces.addEventListener('change', e => {
+    const row = e.target.closest('[data-fid]');
+    const a = current();
+    if (!a || !row) return;
+    const key = row.closest('[data-force]').dataset.force;
+    const f = a.forces[key].factors.find(x => x.id === row.dataset.fid);
+    if (!f) return;
+
+    if (e.target.dataset.role === 'score') {
+      f.score = clamp(Number(e.target.value) || 0, 1, 5);
+      renderDynamic();
+      scheduleSave(a);
+    } else if (e.target.dataset.role === 'weight') {
+      f.weight = clamp(Number(e.target.value) || 2, 1, 3);
+      renderDynamic();
+      scheduleSave(a);
+    }
+  });
+
+  forces.addEventListener('focusout', e => {
+    if (e.target.matches('input, textarea, select')) flushSave();
+  });
+
+  // 匯入檔案
+  $('#fileInput').addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (file) await handleImportFile(file);
+  });
+
+  $('#imCancel').addEventListener('click', () => { pendingImport = null; $('#dlgImport').close(); });
+  $('#imMerge').addEventListener('click', () => applyImport('merge'));
+  $('#imReplace').addEventListener('click', () => applyImport('replace'));
+
+  // 離開頁面前盡量落地
+  window.addEventListener('pagehide', flushSave);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushSave();
+  });
+
+  // 多分頁同步（同一個工具開兩個分頁時）
+  window.addEventListener('storage', e => {
+    if (e.key === 'p5-theme' && e.newValue) {
+      document.documentElement.dataset.theme = e.newValue === 'dark' ? 'dark' : 'light';
+      if (current()) renderCharts();
+    }
+  });
+}
+
+/* ══════════════════════════════════════════════════════════
+   13. boot
+   ══════════════════════════════════════════════════════════ */
+async function boot() {
+  await DB.open();
+
+  if (DB.memMode) {
+    showBanner('這個瀏覽器無法使用本機儲存（可能是 file:// 或無痕模式），本次資料不會保存。建議改用 http://localhost 開啟，並先匯出 JSON 備份。');
+  } else if (navigator.storage && typeof navigator.storage.persist === 'function') {
+    navigator.storage.persist().catch(() => {});
+  }
+
+  let settings = [];
+  let raw = [];
+  try {
+    settings = await DB.all('settings');
+    raw = await DB.all('analyses');
+  } catch (err) {
+    handleDbError(err);
+  }
+
+  const map = new Map(settings.map(s => [s.key, s.value]));
+  state.templates = normalizeTemplates(map.get('templates'));
+
+  state.analyses = raw.map(item => {
+    try { return normalizeAnalysis(item); } catch (err) { return null; }
+  }).filter(Boolean);
+
+  state.analyses.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+
+  const savedActive = map.get('activeId');
+  state.activeId = state.analyses.some(a => a.id === savedActive)
+    ? savedActive
+    : (state.analyses[0] ? state.analyses[0].id : null);
+
+  state.ready = true;
+  render();
+}
+
+bindEvents();
+boot().catch(err => {
+  console.error(err);
+  showBanner('啟動時發生錯誤：' + (err.message || err) + '。請重新載入，或先匯出備份。');
+});
+
+
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
