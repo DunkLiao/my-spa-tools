@@ -1,6 +1,6 @@
 # SPA 網頁小工具使用者操作手冊
 
-本專案提供八十六個可在瀏覽器中直接使用的單頁網頁工具，涵蓋決策沙盤推演（多準則加權計分、TOPSIS 排名、權重情境與蒙地卡羅模擬、決議快照與決策報告）、情境決策矩陣（加權評分與 Pugh 基準比較）、產業五力分析儀表板（力量強度、產業吸引力與行動建議）、AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程（動態甘特圖與 WBS 甘特排程器）、專案時程與處理流程紀錄（事件、流程紀錄、附件與到期提醒）、任務看板（ProTrack 的多專案看板、清單、統計儀表板與 JSON 備份）、專案工作台（栖序的專案任務看板、總覽、逾期追蹤與備份）、專案台（Project Desk 的看板、列表、統計、日曆與工時管理）、會議人力成本即時看板（燃燒速率與產出 vs 成本評估卡）、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、銀行業信用風險標準法（SA-CR）資本分析與 RAROC 壓力測試、信用風險標準法暴險分析（CSV 匯入、風險權重／CCF／CRM 規則與 JSON 備份）、大額曝險與關聯戶圖譜速算、金融金額中文大寫轉換、核心主機固定長度電文解析與規格管理、核心系統與電文錯誤碼排查對照、雙邊資料對帳與平帳差額探索（欄位對齊、鍵值配對、金額與日期容差、人工配對與稽核底稿）、信用卡防阻詐騙異常模式沙盒（案件情境注入、規則引擎異常模式偵測、世界地圖交易軌跡與風險評分、處置與稽核通報）、消金逾期戶還款協議試算（債權明細整理、協商方案模擬、核決層級與清償協議草稿）、聯徵報告與財務報表速讀解析（信用卡／授信／查詢／退票明細、DBR、循環使用率與財務比率）、稽核缺失知識庫（內外稽與金檢缺失的全文檢索、統計儀表板、Excel 報表與批次匯入）、稽核抽樣工作站（CSV／XLSX 母體匯入、品質檢核與排除軌跡、可重現種子的簡單隨機／系統／分層／確定性抽樣與工作底稿匯出）、會議簡報濃縮（授信案件 PDF／DOCX／DOC 匯入、欄位擷取、風險規則檢核與會議摘要）、違約熱區地圖（期別／縣市／產業違約資料、RR／A/E／Gi* 空間統計、熱區地圖與矩陣）、預期信用損失變動分析（前期／本期 ECL 快照拆解、Stage 矩陣、IFRS 7 調節表與情境權重）、PD 遷移解釋（評等遷移矩陣、PD 變動拆解、SICR 篩選與白話說明）、代碼簿管理（代碼主檔、生效日、系統對照、查詢翻譯、CSV 驗證與異動紀錄）、企金壓測沙盒（資料工作台、情境設計、壓測執行、情境比較、反向壓測與抵減模擬）、信用標準法異常哨兵（暴險匯入、異常中心、跨期比較、規則與權數參數管理）、債券發行人分類（規則與名單判定、單筆查詢、批次匯入、覆核佇列與主檔）、提示詞保管庫（分類、標籤、全文搜尋、片段、範例圖與 JSON 備份）、資料勾稽工作台（專案式資料來源、Key、欄位對應、比對規則與執行結果）、資訊圖表產生（文字拆分、版型主題、對比與溢出檢查、PNG／JSON 匯出）、SVG 背景紋理生成（9 種可參數化圖樣、配色預設、平鋪／Hero／卡片預覽與 SVG／CSS／PNG 匯出）、社群圖卡設計（30 款風格範本、三種畫布比例、即時 Canvas 預覽與 PNG／JSON 匯出）、靈感素材收藏（圖片／連結／文字、標籤與看板、主色統計與 JSON／CSV 備份）、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、文件字數與閱讀時間統計、沉浸式打字機心流寫作（打字機聲效、Markdown 即時預覽、段落聚焦與文稿庫）、資料夾路徑轉目錄樹與格式輸出（Unicode／ASCII 樹狀文字、Markdown 清單、對齊註解與 JSON）、規格書版本比對與審查、園遊會摸彩券管理（期別、人員與券號維護及報表匯出）、離線速記便箋、色彩故事盤、語意化色彩與 Design Tokens 產生器（OKLCH 色階、語意對應、UI 沙盒與 CSS／Tailwind／DTCG JSON／YAML 匯出）、設計債務分析（Figma／CSS／SCSS／Design Tokens／截圖匯入、七大維度 Debt Score、整併建議與快照趨勢）、設計決策解釋（設計稿元素分析、客戶／主管／設計師三種語氣決策卡、風險清單與提案 Q&A、DOCX／PDF 匯出）、Bento Grid 版型排版（可拖曳縮放卡片、10 種視覺主題、自訂色碼與 Tailwind／CSS／JSON 匯出）、UI 狀態徽章與微標籤（形態槽位、幾何外觀、語意配色、動態特效、WCAG 對比與 Tailwind／CSS／React／Design Tokens 匯出）、狀態機與業務流程拓撲建模與模擬、Why-How Map 階梯式思考畫布（向上追問目的、向下拆解行動）、VBA 巨集依賴關係分析與視覺化（程序呼叫圖、循環依賴與孤島偵測）、表格矩陣轉置與格式轉換、CSV 格式清理（支援 Big5／CP950 讀寫）、API Mock 與 cURL 雙向轉換、批次檔案進件檢查（檔名規則、編碼／BOM／換行與 SHA-256 漂移比對、報告匯出）、資料異常值掃描（自訂規則、嚴重度評分、複核與白名單）、資料品質稽核（CSV／Excel 匯入、欄位剖析與六構面規則檢核）、資料關聯探索（CSV／TSV 匯入、自動推測主外鍵與 ER 圖）、Excel 公式地圖（活頁簿公式解析、依賴圖、格線熱區、循環參照與風險掃描）、PDF 表格救援（PDF 表格框選與欄線列線校正、掃描頁 OCR、範本與批次處理）、Power Query M 除錯（步驟結構、欄位與型別等 12 條規則檢查、流程圖與修正建議）、截圖 OCR 知識庫（截圖貼上、Tesseract OCR 與全文檢索）、單頁音樂創作工作台（順階和弦盤與和弦進行公式、16 步旋律／鼓機音序器、雙八度虛擬鋼琴、歌詞結構筆記與哼唱錄音、專案庫與 WAV／JSON 匯出）、SoundCraft 音樂創作與靈感工作台（順階和弦盤與經典進行預設、帶和弦標註的歌詞稿紙、16 步鼓機、麥克風靈感錄音與多專案庫備份）、琴日常小提琴練習夥伴（每日練習計時與四步驟檢核、麥克風調音器、節拍器與點按穩定度測試、8 堂初學課程與練習紀錄）、烏克麗麗練習室（74 個和弦指法、節拍器與刷弦節奏、可移調歌本、進行練習與抽考、練習日誌與熱力圖）、和弦進行工坊（順階與自由和弦編排、常見進行範本、拍數與 BPM 調整、播放與 WAV／JSON 匯出）、單檔鼓機（8 軌合成鼓、8／16／32 步格線、BPM 與 Swing、節奏庫與 MIDI／JSON 匯出），以及 SQL 目錄、比對、格式化、個資清除、欄位血緣分析、SQL 沙箱測試、SQL 欄位映射、CTE 積木組裝、監理檢核規則鑄造與資料表結構偵探。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
+本專案提供八十九個可在瀏覽器中直接使用的單頁網頁工具，涵蓋決策沙盤推演（多準則加權計分、TOPSIS 排名、權重情境與蒙地卡羅模擬、決議快照與決策報告）、情境決策矩陣（加權評分與 Pugh 基準比較）、產業五力分析儀表板（力量強度、產業吸引力與行動建議）、SWOT 可視化產生器與 TOWS 交叉戰略矩陣（四象限權重、SO／WO／ST／WT 行動方案與雷達分析）、多時區協調羅盤（24 小時共識帶、最佳會議重疊時段與會議卡）、離線圖片工作室（角落取樣去背、筆刷修補、文字浮水印與 PNG 匯出）、AI Agent YAML 狀態與交接檔、結構化提示詞工程工作台、專案排程（動態甘特圖與 WBS 甘特排程器）、專案時程與處理流程紀錄（事件、流程紀錄、附件與到期提醒）、任務看板（ProTrack 的多專案看板、清單、統計儀表板與 JSON 備份）、專案工作台（栖序的專案任務看板、總覽、逾期追蹤與備份）、專案台（Project Desk 的看板、列表、統計、日曆與工時管理）、會議人力成本即時看板（燃燒速率與產出 vs 成本評估卡）、臺灣 LCR／NSFR 試算、銀行信用風險與資本適足情境試算、銀行業信用風險標準法（SA-CR）資本分析與 RAROC 壓力測試、信用風險標準法暴險分析（CSV 匯入、風險權重／CCF／CRM 規則與 JSON 備份）、大額曝險與關聯戶圖譜速算、金融金額中文大寫轉換、核心主機固定長度電文解析與規格管理、核心系統與電文錯誤碼排查對照、雙邊資料對帳與平帳差額探索（欄位對齊、鍵值配對、金額與日期容差、人工配對與稽核底稿）、信用卡防阻詐騙異常模式沙盒（案件情境注入、規則引擎異常模式偵測、世界地圖交易軌跡與風險評分、處置與稽核通報）、消金逾期戶還款協議試算（債權明細整理、協商方案模擬、核決層級與清償協議草稿）、聯徵報告與財務報表速讀解析（信用卡／授信／查詢／退票明細、DBR、循環使用率與財務比率）、稽核缺失知識庫（內外稽與金檢缺失的全文檢索、統計儀表板、Excel 報表與批次匯入）、稽核抽樣工作站（CSV／XLSX 母體匯入、品質檢核與排除軌跡、可重現種子的簡單隨機／系統／分層／確定性抽樣與工作底稿匯出）、會議簡報濃縮（授信案件 PDF／DOCX／DOC 匯入、欄位擷取、風險規則檢核與會議摘要）、違約熱區地圖（期別／縣市／產業違約資料、RR／A/E／Gi* 空間統計、熱區地圖與矩陣）、預期信用損失變動分析（前期／本期 ECL 快照拆解、Stage 矩陣、IFRS 7 調節表與情境權重）、PD 遷移解釋（評等遷移矩陣、PD 變動拆解、SICR 篩選與白話說明）、代碼簿管理（代碼主檔、生效日、系統對照、查詢翻譯、CSV 驗證與異動紀錄）、企金壓測沙盒（資料工作台、情境設計、壓測執行、情境比較、反向壓測與抵減模擬）、信用標準法異常哨兵（暴險匯入、異常中心、跨期比較、規則與權數參數管理）、債券發行人分類（規則與名單判定、單筆查詢、批次匯入、覆核佇列與主檔）、提示詞保管庫（分類、標籤、全文搜尋、片段、範例圖與 JSON 備份）、資料勾稽工作台（專案式資料來源、Key、欄位對應、比對規則與執行結果）、資訊圖表產生（文字拆分、版型主題、對比與溢出檢查、PNG／JSON 匯出）、SVG 背景紋理生成（9 種可參數化圖樣、配色預設、平鋪／Hero／卡片預覽與 SVG／CSS／PNG 匯出）、社群圖卡設計（30 款風格範本、三種畫布比例、即時 Canvas 預覽與 PNG／JSON 匯出）、靈感素材收藏（圖片／連結／文字、標籤與看板、主色統計與 JSON／CSV 備份）、公文簽／函排版與 Word 匯出、Markdown 卡片簡報、剪貼簿文字洗滌與個資脫敏、文件字數與閱讀時間統計、沉浸式打字機心流寫作（打字機聲效、Markdown 即時預覽、段落聚焦與文稿庫）、資料夾路徑轉目錄樹與格式輸出（Unicode／ASCII 樹狀文字、Markdown 清單、對齊註解與 JSON）、規格書版本比對與審查、園遊會摸彩券管理（期別、人員與券號維護及報表匯出）、離線速記便箋、色彩故事盤、語意化色彩與 Design Tokens 產生器（OKLCH 色階、語意對應、UI 沙盒與 CSS／Tailwind／DTCG JSON／YAML 匯出）、設計債務分析（Figma／CSS／SCSS／Design Tokens／截圖匯入、七大維度 Debt Score、整併建議與快照趨勢）、設計決策解釋（設計稿元素分析、客戶／主管／設計師三種語氣決策卡、風險清單與提案 Q&A、DOCX／PDF 匯出）、Bento Grid 版型排版（可拖曳縮放卡片、10 種視覺主題、自訂色碼與 Tailwind／CSS／JSON 匯出）、UI 狀態徽章與微標籤（形態槽位、幾何外觀、語意配色、動態特效、WCAG 對比與 Tailwind／CSS／React／Design Tokens 匯出）、狀態機與業務流程拓撲建模與模擬、Why-How Map 階梯式思考畫布（向上追問目的、向下拆解行動）、VBA 巨集依賴關係分析與視覺化（程序呼叫圖、循環依賴與孤島偵測）、表格矩陣轉置與格式轉換、CSV 格式清理（支援 Big5／CP950 讀寫）、API Mock 與 cURL 雙向轉換、批次檔案進件檢查（檔名規則、編碼／BOM／換行與 SHA-256 漂移比對、報告匯出）、資料異常值掃描（自訂規則、嚴重度評分、複核與白名單）、資料品質稽核（CSV／Excel 匯入、欄位剖析與六構面規則檢核）、資料關聯探索（CSV／TSV 匯入、自動推測主外鍵與 ER 圖）、Excel 公式地圖（活頁簿公式解析、依賴圖、格線熱區、循環參照與風險掃描）、PDF 表格救援（PDF 表格框選與欄線列線校正、掃描頁 OCR、範本與批次處理）、Power Query M 除錯（步驟結構、欄位與型別等 12 條規則檢查、流程圖與修正建議）、截圖 OCR 知識庫（截圖貼上、Tesseract OCR 與全文檢索）、單頁音樂創作工作台（順階和弦盤與和弦進行公式、16 步旋律／鼓機音序器、雙八度虛擬鋼琴、歌詞結構筆記與哼唱錄音、專案庫與 WAV／JSON 匯出）、SoundCraft 音樂創作與靈感工作台（順階和弦盤與經典進行預設、帶和弦標註的歌詞稿紙、16 步鼓機、麥克風靈感錄音與多專案庫備份）、琴日常小提琴練習夥伴（每日練習計時與四步驟檢核、麥克風調音器、節拍器與點按穩定度測試、8 堂初學課程與練習紀錄）、烏克麗麗練習室（74 個和弦指法、節拍器與刷弦節奏、可移調歌本、進行練習與抽考、練習日誌與熱力圖）、和弦進行工坊（順階與自由和弦編排、常見進行範本、拍數與 BPM 調整、播放與 WAV／JSON 匯出）、單檔鼓機（8 軌合成鼓、8／16／32 步格線、BPM 與 Swing、節奏庫與 MIDI／JSON 匯出），以及 SQL 目錄、比對、格式化、個資清除、欄位血緣分析、SQL 沙箱測試、SQL 欄位映射、CTE 積木組裝、監理檢核規則鑄造與資料表結構偵探。工具不需要本專案專用後端；建議從根目錄的入口大廳 [`index.html`](./index.html) 依分類進入，或直接開啟對應的 HTML 入口。
 
 ## 目錄
 
@@ -74,6 +74,8 @@
 - [決策沙盤推演系統](#決策沙盤推演系統)
 - [衡 情境決策矩陣](#衡-情境決策矩陣)
 - [五力分析儀表板](#五力分析儀表板)
+- [SWOT 可視化產生器與 TOWS 交叉戰略矩陣](#swot-可視化產生器與-tows-交叉戰略矩陣)
+- [多時區協調羅盤 World Time Planner](#多時區協調羅盤-world-time-planner)
 - [Zen Typewriter 打字機心流編輯器](#zen-typewriter-打字機心流編輯器)
 - [Palette Lore 色彩故事盤](#palette-lore-色彩故事盤)
 - [Semantic Color Tokenizer 語意化色彩與 Token 產生器](#semantic-color-tokenizer-語意化色彩與-token-產生器)
@@ -85,6 +87,7 @@
 - [SVG Pattern Studio 向量背景紋理生成器](#svg-pattern-studio-向量背景紋理生成器)
 - [圖卡工房 — 質感社群圖卡設計](#圖卡工房--質感社群圖卡設計)
 - [Moodboard 靈感素材庫](#moodboard-靈感素材庫)
+- [霧光・離線圖片工作室](#霧光離線圖片工作室)
 - [StateFlow 動態狀態機與業務流程拓撲模擬器](#stateflow-動態狀態機與業務流程拓撲模擬器)
 - [Why-How Map 探索畫布](#why-how-map-探索畫布)
 - [VBA Dependency Explorer 依賴關係分析與視覺化](#vba-dependency-explorer-依賴關係分析與視覺化)
@@ -169,6 +172,8 @@
    - [`docs/decision-sandbox/decision-sandbox.html`](./docs/decision-sandbox/decision-sandbox.html)
    - [`docs/decision-matrix/decision-matrix.html`](./docs/decision-matrix/decision-matrix.html)
    - [`docs/five-forces-dashboard/five-forces-dashboard.html`](./docs/five-forces-dashboard/five-forces-dashboard.html)
+   - [`docs/swot-tows-studio/swot-tows-studio.html`](./docs/swot-tows-studio/swot-tows-studio.html)
+   - [`docs/world-time-planner/world-time-planner.html`](./docs/world-time-planner/world-time-planner.html)
    - [`docs/zen-typewriter-editor/zen-typewriter-editor.html`](./docs/zen-typewriter-editor/zen-typewriter-editor.html)
    - [`design/palette-lore/palette-lore.html`](./design/palette-lore/palette-lore.html)
    - [`design/semantic-color-tokenizer/semantic-color-tokenizer.html`](./design/semantic-color-tokenizer/semantic-color-tokenizer.html)
@@ -180,6 +185,7 @@
    - [`design/svg-pattern-studio/svg-pattern-studio.html`](./design/svg-pattern-studio/svg-pattern-studio.html)
    - [`design/card-workshop/card-workshop.html`](./design/card-workshop/card-workshop.html)
    - [`design/moodboard/moodboard.html`](./design/moodboard/moodboard.html)
+   - [`design/mistlight-image-studio/mistlight-image-studio.html`](./design/mistlight-image-studio/mistlight-image-studio.html)
    - [`diagram/stateflow/stateflow.html`](./diagram/stateflow/stateflow.html)
    - [`diagram/vba-dependency-explorer/vba-dependency-explorer.html`](./diagram/vba-dependency-explorer/vba-dependency-explorer.html)
    - [`diagram/why-how-map/why-how-map.html`](./diagram/why-how-map/why-how-map.html)
@@ -278,6 +284,8 @@ my-spa-tools/
 │  ├─ decision-sandbox/         決策沙盤推演系統（多準則計分、TOPSIS、情境與蒙地卡羅模擬、決議快照）
 │  ├─ decision-matrix/          衡 情境決策矩陣（加權評分、Pugh 基準比較與 JSON 備份）
 │  ├─ five-forces-dashboard/    五力分析儀表板（波特五力評分、雷達圖、洞察建議與 PNG 匯出）
+│  ├─ swot-tows-studio/         SWOT 可視化產生器與 TOWS 交叉戰略矩陣（四象限權重、行動方案與 PNG／Markdown／JSON 匯出）
+│  ├─ world-time-planner/       多時區協調羅盤（24 小時共識帶、最佳會議重疊時段與 JSON 備份）
 │  └─ zen-typewriter-editor/    Zen Typewriter 打字機心流編輯器（打字機聲效、Markdown 預覽與文稿庫）
 ├─ design/                       設計工具
 │  ├─ bento-grid-studio/         Bento Studio 版型產生器（拖曳縮放、10 種主題與 Tailwind／CSS／JSON 匯出）
@@ -289,6 +297,7 @@ my-spa-tools/
 │  ├─ infographic-builder/       Infographic Builder 資訊圖表產生器（文字拆分、5 種版型、6 套主題與 PNG／JSON 匯出）
 │  ├─ svg-pattern-studio/        SVG Pattern Studio 向量背景紋理生成器（9 種圖樣、配色與 SVG／CSS／PNG 匯出）
 │  ├─ card-workshop/             圖卡工房（30 款風格範本、三種畫布、即時預覽與 PNG／JSON 匯出）
+│  ├─ mistlight-image-studio/    霧光・離線圖片工作室（角落取樣去背、筆刷修補、文字浮水印與 PNG 匯出）
 │  └─ moodboard/                 Moodboard 靈感素材庫（圖片／連結／文字、標籤看板、主色統計與備份）
 ├─ diagram/                      流程與圖表建模
 │  ├─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器（DSL、拓撲圖、模擬與診斷）
@@ -457,6 +466,15 @@ flowchart TD
     UKX --> UKY[用節拍器與刷弦節奏練習 或開啟調音器]
     UKY --> UKZ[跟著範本進行或歌本伴奏 用抽考找出弱點]
     UKZ --> UKW[記錄練習分鐘與最快 BPM 並檢視熱力圖]
+    B -->|SWOT 與 TOWS 策略分析| SWOTX[建立專案並在四象限新增分析項目]
+    SWOTX --> SWOTY[設定權重與分類 並在 TOWS 矩陣擬定行動方案]
+    SWOTY --> SWOTZ[檢視雷達與佔比 並匯出 PNG Markdown 或 JSON]
+    B -->|多時區會議協調| WTPX[新增城市並設定各地上班時段]
+    WTPX --> WTPY[拖動 24 小時游標檢視共識帶與最佳重疊時段]
+    WTPY --> WTPZ[複製會議卡時間或匯出匯入 JSON]
+    B -->|圖片去背與浮水印| MISX[載入圖片並選擇背景取樣角落]
+    MISX --> MISY[調整容差與邊緣柔化並以筆刷修補]
+    MISY --> MISZ[設定文字浮水印並下載 PNG]
     C --> F[預覽並下載 YAML 或 ZIP]
     AE --> AF[填入變數並複製組裝結果]
     D --> G[查看甘特圖與里程碑倒數]
@@ -605,6 +623,8 @@ flowchart TD
 | 決策沙盤推演系統 | [`docs/decision-sandbox/decision-sandbox.html`](./docs/decision-sandbox/decision-sandbox.html) | 以議題、方案、評估因子與多位評審的評分矩陣量化決策，提供加權總分法與 TOPSIS 排名、權重情境比較、敏感度與翻盤點分析、蒙地卡羅模擬，並將決議鎖成快照、輸出決策報告 | 瀏覽器 IndexedDB（`DecisionLabDB`：`topics`、`options`、`criteria`、`reviewers`、`scores`、`scenarios`、`decisions`、`attachments`）；目前檢視與選取的議題使用 `localStorage`，並提供單一議題與整庫 JSON 匯出／匯入 |
 | 衡 情境決策矩陣 | [`docs/decision-matrix/decision-matrix.html`](./docs/decision-matrix/decision-matrix.html) | 建立決策情境、方案與評估準則，逐格以 1–5 分評分（可設定權重與偏好方向），切換加權評分或 Pugh 基準比較檢視排序與淨優勢，並匯出／匯入 JSON 備份 | 瀏覽器 IndexedDB（`heng-decision-matrix`，version 1，object store `decisions`，以決策 id 為鍵）；未使用 `localStorage`；提供整庫 JSON 匯出與匯入 |
 | 五力分析儀表板 | [`docs/five-forces-dashboard/five-forces-dashboard.html`](./docs/five-forces-dashboard/five-forces-dashboard.html) | 以波特五力拆解產業，逐力維護因子並以 1–5 分與權重（1 輕／2 中／3 重）評分，即時計算力量強度、五力平均壓力與產業吸引力，提供雷達圖、五力排行、因子熱力格與洞察建議，並匯出 PNG／CSV／PDF／JSON | 瀏覽器 IndexedDB（`porter-five-forces`，version 1；object stores：`analyses`、`settings`），主題偏好使用 `localStorage`（鍵值 `p5-theme`）；IndexedDB 無法使用時退回頁面記憶體；提供 JSON 匯出與合併／取代匯入 |
+| SWOT 可視化產生器與 TOWS 交叉戰略矩陣 | [`docs/swot-tows-studio/swot-tows-studio.html`](./docs/swot-tows-studio/swot-tows-studio.html) | 以四象限管理優勢／劣勢／機會／威脅項目與權重，於 TOWS 矩陣擬定 SO／WO／ST／WT 行動方案，檢視雷達與佔比統計，並匯出 PNG／Markdown／JSON | 瀏覽器 IndexedDB（`SwotStudioDB`，version 1；object stores：`projects`、`swot_items`、`tows_actions`）；主題偏好使用 `localStorage`（鍵值 `swot_theme`）；提供 JSON 匯出／匯入 |
+| 多時區協調羅盤 World Time Planner | [`docs/world-time-planner/world-time-planner.html`](./docs/world-time-planner/world-time-planner.html) | 管理多個城市與各自上班時段，以 24 小時共識帶找出最佳會議重疊時段，複製會議卡時間並匯出／匯入 JSON 備份 | 瀏覽器 IndexedDB（`world-time-compass`，version 1；object stores：`places`、`meta`）；主題偏好使用 `localStorage`（鍵值 `wtc-theme`）；IndexedDB 無法使用時退回頁面記憶體 |
 | Zen Typewriter 打字機心流編輯器 | [`docs/zen-typewriter-editor/zen-typewriter-editor.html`](./docs/zen-typewriter-editor/zen-typewriter-editor.html) | 以復古打字機敲擊聲效與視線置中捲動營造沉浸寫作環境，支援 Markdown 即時預覽、左右雙欄對照、段落聚焦、十款紙張主題與多份草稿的文稿庫，並可匯出 `.md` 檔 | 瀏覽器 IndexedDB（`ZenTypewriterDB`：`documents`）；紙張主題偏好使用 `localStorage`（鍵值 `zen_typewriter_theme`） |
 | Palette Lore 色彩故事盤 | [`design/palette-lore/palette-lore.html`](./design/palette-lore/palette-lore.html) | 以抽象意境文字生成五色配色盤，附實境 UI 模擬、WCAG 對比評測與 CSS／Tailwind／JSON 匯出 | 瀏覽器 IndexedDB（`PaletteLoreDB`：`palettes` 典藏與 `app_state` 工作階段／主題） |
 | Semantic Color Tokenizer 語意化色彩與 Token 產生器 | [`design/semantic-color-tokenizer/semantic-color-tokenizer.html`](./design/semantic-color-tokenizer/semantic-color-tokenizer.html) | 以 Primary／Secondary 種子色經 OKLCH 內插產生 11 階色票與語意 Token，搭配 UI 沙盒即時預覽、WCAG 對比檢核，並匯出 CSS、Tailwind、DTCG JSON 與 YAML | 只保留在目前頁面記憶體；設定會同步到網址雜湊（`#p=…&s=…&n=…`）以便分享連結，重新整理可由網址還原 |
@@ -616,6 +636,7 @@ flowchart TD
 | SVG Pattern Studio 向量背景紋理生成器 | [`design/svg-pattern-studio/svg-pattern-studio.html`](./design/svg-pattern-studio/svg-pattern-studio.html) | 以 9 種可參數化 SVG 圖樣（點陣、方格、蜂巢、十字、正弦波、同心圓、孟菲斯、斜紋、人字紋）產生無縫背景，調整平鋪尺寸、元素尺寸、筆觸、旋轉、透明度、密度與亂數種子，套用 6 組配色，在平鋪／Hero／卡片情境預覽並匯出 SVG、CSS Data URI、PNG 或 JSON | 瀏覽器 IndexedDB（`SVGPatternStudioDB`，version 1，object store `patterns`）；首次開啟自動寫入 6 組預設圖樣，未使用 `localStorage`，提供整庫 JSON 匯出／匯入 |
 | 圖卡工房 — 質感社群圖卡設計 | [`design/card-workshop/card-workshop.html`](./design/card-workshop/card-workshop.html) | 以 30 款風格範本（簡約、深色、暖色、活力、商務）製作社群圖卡，編輯眉標／主標題／內文、四段字級、背景與點綴色及 7 組快速配色，支援方形 1080×1080、限動 1080×1920 與橫式 1200×627 畫布，即時 Canvas 預覽並匯出高畫質 PNG 或專案 JSON | 瀏覽器 IndexedDB（`card-workshop`，version 1，object store `projects`）；編輯後約 320ms 自動儲存草稿，未使用 `localStorage`；提供單一專案 JSON 匯出／匯入、複製副本與刪除 |
 | Moodboard 靈感素材庫 | [`design/moodboard/moodboard.html`](./design/moodboard/moodboard.html) | 收藏圖片、連結與文字靈感，加上標籤、狀態（待看／參考中／已使用）、收藏與備註；提供卡片／清單／看板三種檢視、拖曳改狀態、全文搜尋、排序、回收筒，並自動擷取圖片主色與統計色相分布 | 瀏覽器 IndexedDB（`moodboard-db`，version 1；object stores：`items`、`blobs`、`meta`）保存靈感、圖片與設定；主題偏好使用 `localStorage`（鍵值 `moodboard-theme`）；提供完整／輕量 JSON、CSV 匯出與 JSON 匯入（可合併或取代） |
+| 霧光・離線圖片工作室 | [`design/mistlight-image-studio/mistlight-image-studio.html`](./design/mistlight-image-studio/mistlight-image-studio.html) | 以角落取樣色彩自動去背，調整容差與邊緣柔化並以筆刷修補，加上可旋轉與平鋪的文字浮水印，輸出透明或純色背景 PNG | 瀏覽器 IndexedDB（`offline-image-studio`，version 1；object stores：`projects`、`settings`），最近 8 件作品自動保存；未使用 `localStorage`；提供 PNG 下載 |
 | StateFlow 動態狀態機與業務流程拓撲模擬器 | [`diagram/stateflow/stateflow.html`](./diagram/stateflow/stateflow.html) | 以極簡 DSL 定義狀態、轉換、動作與條件，繪製可分層佈局的流程拓撲圖，執行互動式流程模擬並診斷死胡同、孤島與黑洞循環，匯出 SVG 向量圖 | 編輯中的 DSL 草稿與自訂範本使用瀏覽器 `localStorage`；提供範本庫 JSON 匯出／匯入 |
 | VBA Dependency Explorer 依賴關係分析與視覺化 | [`diagram/vba-dependency-explorer/vba-dependency-explorer.html`](./diagram/vba-dependency-explorer/vba-dependency-explorer.html) | 匯入或貼上 VBA（`.bas`／`.cls`／`.frm`）模組，繪製程序級與模組級依賴拓撲圖，偵測循環呼叫與孤島程序，並檢視屬性與呼叫關係、匯出 SVG／Mermaid／專案 JSON | 瀏覽器 IndexedDB（`VBADepExplorerDB`，object store `projects`）；主題偏好使用 `localStorage`（鍵值 `vba_theme`），並提供專案 JSON 匯出／匯入 |
 | Why-How Map 探索畫布 | [`diagram/why-how-map/why-how-map.html`](./diagram/why-how-map/why-how-map.html) | 以階梯式畫布向上追問 Why、向下拆解 How，節點可標記焦點、阻礙、洞察、狀態與優先級，提供三種範本、畫布／大綱模式、階梯自動排版、邏輯鏈檢查、思考引導問句與迷你導航圖，並匯出 JSON／Markdown／PNG | 瀏覽器 IndexedDB（`WhyHowMapDB`，version 1；object stores：`maps`、`nodes`、`edges`、`settings`），主題與上次開啟的地圖使用 `localStorage`（鍵值 `whyhow_theme`、`whyhow_active_map_id`）；提供 JSON 匯出／匯入 |
@@ -3604,6 +3625,64 @@ flowchart TD
 
 本工具完全離線，不使用任何 CDN 或外部函式庫（雷達圖與五力圖以原生 SVG 繪製）。分析、因子評分與備註保存在目前瀏覽器的 IndexedDB（資料庫名稱 `porter-five-forces`，version 1；object stores：`analyses`、`settings`），深／淺色主題使用 `localStorage`（鍵值 `p5-theme`）；IndexedDB 無法使用時會退回頁面記憶體並提示，關閉頁面後資料即消失。分數與吸引力屬於質化評估的量化輔助，正式策略判斷仍應搭配實際市場數據。
 
+## SWOT 可視化產生器與 TOWS 交叉戰略矩陣
+
+SWOT 可視化產生器把優勢（Strengths）、劣勢（Weaknesses）、機會（Opportunities）與威脅（Threats）整理成四象限看板，每個項目可設定高／中／低權重、自訂分類標籤與背景說明；TOWS 分頁再把內外部條件交叉成 SO／WO／ST／WT 四類行動方案。分析分頁以四象限雷達與權重佔比呈現整體平衡，適合策略會議、專案啟動與個人職涯盤點。
+
+### 建立專案與新增項目
+
+1. 開啟 [`swot-tows-studio.html`](./docs/swot-tows-studio/swot-tows-studio.html)；首次使用可「新建」專案，或按「載入範本」選用企業 AI 產品上市、資深經理人職涯發展等內建範例。
+2. 在「專案設定」填寫名稱與背景描述；頁首下拉選單可切換專案，右側「新建／編輯」維護專案，刪除專案會一併移除其項目與 TOWS 行動。
+3. 在各象限按「＋」新增項目，填寫項目名稱、權重（高／中／低）、分類標籤與詳細說明；卡片上的搜尋與權重／分類篩選可快速收斂清單。
+
+### TOWS 交叉矩陣與分析
+
+1. 切換到「TOWS 交叉矩陣」分頁，按「新增戰略行動」選擇 SO 增長、WO 扭轉、ST 監視防禦或 WT 避險撤退，填寫具體行動與負責人／里程碑備註。
+2. 「平衡雷達與分析」分頁顯示四象限雷達圖、各象限權重與分類佔比，可檢查策略是否過度偏向單一象限。
+3. 右上「匯出 / 分享」提供高畫質 PNG 矩陣圖、Markdown 戰略報告（可複製）、列印與完整 JSON 備份；「匯入」可還原備份。深／淺色主題可切換。
+
+```mermaid
+flowchart TD
+    A[建立或選擇 SWOT 專案] --> B[在四象限新增優勢 劣勢 機會 威脅項目]
+    B --> C[設定權重 分類標籤與說明]
+    C --> D[以搜尋與權重 分類篩選檢視]
+    D --> E[切換 TOWS 矩陣擬定 SO WO ST WT 行動]
+    E --> F[檢視雷達圖與權重佔比]
+    F --> G{輸出}
+    G -->|簡報| H[匯出高畫質 PNG 或列印]
+    G -->|文件| I[複製 Markdown 戰略報告]
+    G -->|備份| J[匯出或匯入 JSON]
+```
+
+本工具完全離線，樣式、雷達圖與 PNG 匯出皆以原生 JavaScript／Canvas 內嵌於單一 HTML。專案、SWOT 項目與 TOWS 行動保存在目前瀏覽器的 IndexedDB（`SwotStudioDB`，version 1；object stores：`projects`、`swot_items`、`tows_actions`），主題偏好使用 `localStorage`（鍵值 `swot_theme`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得，請定期匯出 JSON 備份。
+
+## 多時區協調羅盤 World Time Planner
+
+多時區協調羅盤用來安排跨城市會議：把每個城市加入「我的地點」並設定當地上班時段，工具會以基準時區排出 24 小時共識帶，標示各地的白天、夜間與重疊工作時段，並列出最多人同時上班的「最佳重疊時段」。會議卡可直接複製成訊息或行事曆邀請文字。
+
+### 加入地點與選擇時間
+
+1. 開啟 [`world-time-planner.html`](./docs/world-time-planner/world-time-planner.html)；在「我的地點」按「＋ 新增地點」，輸入名稱（例如「東京辦公室」），以城市或時區關鍵字搜尋並選擇時區，設定上班與下班時間。
+2. 以頁首的基準時區、日期與「今天／回到現在」定位要討論的會議日；拖動 24 小時滑桿或點擊時間格移動游標，也可用鍵盤 ←／→ 微調 15 分鐘（加 Shift 為 1 小時）。
+3. 共識帶下方的「最佳重疊時段」會列出重疊工作時間，點一下即可跳到該時段；右側會議卡同步顯示各地換算時間，按「複製時間」取得純文字。
+
+### 備份與重設
+
+- 展開「資料備份與重設」可「匯出 JSON」下載地點與時段設定、「匯入 JSON」還原（只還原地點，不覆蓋目前主題、基準時區與日期），或「清空全部地點」。
+- 主題可切換自動／淺色／深色；資料保存在目前瀏覽器的 IndexedDB（`world-time-compass`，version 1；object stores：`places`、`meta`）。若瀏覽器無法使用 IndexedDB（例如部分 `file://` 或無痕模式），會退回頁面記憶體並提示先匯出備份。
+
+```mermaid
+flowchart TD
+    A[新增地點並選擇城市或時區] --> B[設定各地上班與下班時段]
+    B --> C[選擇基準時區與會議日期]
+    C --> D[拖動 24 小時游標或點擊時間格]
+    D --> E[檢視共識帶與最佳重疊時段]
+    E --> F[在會議卡確認各地時間並複製]
+    F --> G[匯出 JSON 備份或匯入還原]
+```
+
+本工具完全離線，時區清單取自瀏覽器 `Intl` 時區資料，並附常見城市備援清單，不使用任何 CDN。跨日或日光節約時間仍以瀏覽器時區資料庫為準；若作業系統時區資料過舊，換算結果可能與最新規則略有差異。
+
 ## Zen Typewriter 打字機心流編輯器
 
 Zen Typewriter 打字機心流編輯器是單檔、100% 離線的沉浸式寫作工具：以 `contenteditable` 編輯區搭配「打字機視線置中」捲動與 Web Audio API 即時合成的敲擊聲，讓書寫回到打字機般的專注節奏。內容支援 Markdown 語法並可即時排版預覽、切換左右雙欄對照，每份草稿會自動保存到瀏覽器的 IndexedDB 文稿庫，完全不需要網路或後端。
@@ -4107,6 +4186,38 @@ flowchart TD
 ```
 
 本工具完全離線，樣式、圖示、圖片縮放、主色擷取、統計與備份邏輯皆內嵌於單一 HTML，不使用任何 CDN 或外部資源。資料保存在目前瀏覽器的 IndexedDB（`moodboard-db`，version 1；object stores：`items`、`blobs`、`meta`），主題偏好使用 `localStorage`（`moodboard-theme`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得。完整備份 JSON 內含 Base64 圖片，檔案可能很大；超過約 700 MB 時瀏覽器可能無法下載，建議改用「只匯出清單」或先清理回收筒。
+
+## 霧光・離線圖片工作室
+
+霧光・離線圖片工作室是單檔、完全離線的圖片編修工具：以圖片角落取樣背景色自動去背，調整色彩容差與邊緣柔化後，再用筆刷擦除或還原細節，最後疊上可旋轉、可平鋪的文字浮水印，輸出透明背景或純色背景的 PNG。圖片只在瀏覽器內處理，不會上傳。
+
+### 載入與去背
+
+1. 開啟 [`mistlight-image-studio.html`](./design/mistlight-image-studio/mistlight-image-studio.html)，拖放圖片或按「選取圖片」載入 PNG、JPG、WebP、GIF 或 BMP（建議小於 8 百萬像素）。
+2. 在「圖片與背景」選擇背景取樣角落（左上／右上／左下／右下），調整「色彩容差」決定要移除多少相近顏色，再以「邊緣柔化」讓輪廓自然。
+3. 需要修補時切換「筆刷修補」的「擦除／還原」，調整筆刷大小後直接在畫布塗抹；按住 Shift 可暫時反向操作，按「重設」可還原去背與筆刷修改。
+
+### 浮水印與匯出
+
+1. 在「文字浮水印」輸入文字、選擇顏色，調整大小、不透明度與旋轉角度，可勾選「平鋪重複」鋪滿畫面。
+2. 需要不透明背景時勾選「合成純色背景」並選擇顏色；否則匯出的 PNG 會保留透明通道。
+3. 按「下載 PNG」輸出成品；「最近作品」會保留最近 8 件編輯，可重新開啟或刪除。
+
+```mermaid
+flowchart TD
+    A[載入圖片] --> B[選擇背景取樣角落]
+    B --> C[調整色彩容差與邊緣柔化]
+    C --> D[以擦除或還原筆刷修補細節]
+    D --> E[設定文字浮水印 大小 角度與平鋪]
+    E --> F{背景}
+    F -->|透明| G[保留 Alpha 通道]
+    F -->|純色| H[合成指定背景色]
+    G --> I[下載 PNG]
+    H --> I
+    I --> J[作品自動保存至 IndexedDB]
+```
+
+本工具完全離線，去背、筆刷、浮水印與 PNG 編碼皆以原生 Canvas 與 JavaScript 內嵌於單一 HTML，不使用任何 CDN 或外部資源。作品與偏好設定保存在目前瀏覽器的 IndexedDB（`offline-image-studio`，version 1；object stores：`projects`、`settings`），未使用 `localStorage`；換瀏覽器、使用無痕視窗或清除網站資料後作品可能無法取得，請記得下載 PNG 保存成品。去背成果取決於背景顏色是否均勻；複雜背景建議搭配筆刷修補。
 
 ## StateFlow 動態狀態機與業務流程拓撲模擬器
 
@@ -4737,6 +4848,12 @@ flowchart LR
     DMD --> DMJ[匯出 JSON 備份或匯入還原]
     P5D --> P5J[匯出 PNG CSV PDF 或 JSON 備份]
     WHD --> WHJ[匯出 JSON Markdown 或 PNG]
+    B -->|SWOT 與 TOWS 策略| SWOTD[IndexedDB 專案 分析項目 行動方案與主題]
+    B -->|多時區協調| WTPD[IndexedDB 地點 上班時段與設定]
+    B -->|圖片去背與浮水印| MISD[IndexedDB 最近作品與偏好設定]
+    SWOTD --> SWOTJ[匯出 PNG Markdown 或 JSON 備份]
+    WTPD --> WTPJ[匯出或匯入 JSON 備份]
+    MISD --> MISJ[下載 PNG 或重新開啟作品]
     ZTW --> ZTX[匯出 Markdown md 檔]
     AE --> AF[複製提示詞]
 ```
@@ -4809,6 +4926,9 @@ flowchart LR
 - 決策沙盤推演系統會將議題、方案、評估因子、評審、評分、情境、決議與附件保存在目前瀏覽器的 IndexedDB（`DecisionLabDB`，object stores：`topics`、`options`、`criteria`、`reviewers`、`scores`、`scenarios`、`decisions`、`attachments`），目前檢視與選取的議題以 `localStorage`（鍵值 `dl_view`、`dl_topic`）記憶；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得，請以「全部資料 JSON（備份）」保存、用「還原備份（清空後匯入）」帶回，匯出的 JSON、CSV、Excel 與決策報告都是使用者主動下載或列印的檔案。
 - 衡 情境決策矩陣會將每個決策（含方案、準則、權重、偏好方向、1–5 分評分與 Pugh 比較）保存在目前瀏覽器的 IndexedDB（`heng-decision-matrix`，version 1，object store `decisions`），未使用 `localStorage`；換瀏覽器、使用無痕視窗或清除網站資料後決策可能無法取得，請以「⇩ 匯出備份」保存 JSON、用「⇧ 匯入備份」帶回。刪除決策會一併移除其方案、準則與評分且無法復原。
 - 五力分析儀表板會將每份分析（產業、背景備註、五力因子、1–5 分、權重與各力觀察備註）、洞察模板與設定保存在目前瀏覽器的 IndexedDB（`porter-five-forces`，version 1；object stores：`analyses`、`settings`），深／淺色主題使用 `localStorage`（鍵值 `p5-theme`）；IndexedDB 無法使用時會退回頁面記憶體並在畫面提示。請以「匯出 JSON」保存、用「匯入 JSON」以合併或取代方式還原；「清除所有資料」會刪除全部分析且無法復原。
+- SWOT 可視化產生器與 TOWS 交叉戰略矩陣會將專案、四象限分析項目（權重、分類與說明）與 TOWS 行動方案保存在目前瀏覽器的 IndexedDB（`SwotStudioDB`，version 1；object stores：`projects`、`swot_items`、`tows_actions`），深／淺色主題使用 `localStorage`（鍵值 `swot_theme`）；換瀏覽器、使用無痕視窗或清除網站資料後資料可能無法取得，請以「匯出 / 分享 → JSON」保存並用「匯入」還原。PNG 矩陣圖與 Markdown 戰略報告都是使用者主動下載或複製的輸出。
+- 多時區協調羅盤 World Time Planner 會將地點、時區、上班時段與介面設定保存在目前瀏覽器的 IndexedDB（`world-time-compass`，version 1；object stores：`places`、`meta`），主題偏好使用 `localStorage`（鍵值 `wtc-theme`）；若瀏覽器無法使用 IndexedDB（例如部分 `file://` 或無痕模式），資料只保留在目前頁面記憶體並提示先匯出備份。請以「資料備份與重設 → 匯出 JSON」保存、用「匯入 JSON」還原地點。
+- 霧光・離線圖片工作室會將最近 8 件作品（原圖、處理後像素、尺寸與編輯設定）與偏好設定保存在目前瀏覽器的 IndexedDB（`offline-image-studio`，version 1；object stores：`projects`、`settings`），未使用 `localStorage`；圖片只在瀏覽器內以 Canvas 處理，不會上傳。換瀏覽器、使用無痕視窗或清除網站資料後作品可能無法取得，請以下載 PNG 保存成品。
 - Why-How Map 探索畫布會將地圖、節點（性質、狀態、優先級與備註）與連線保存在目前瀏覽器的 IndexedDB（`WhyHowMapDB`，version 1；object stores：`maps`、`nodes`、`edges`、`settings`），深／淺色主題與上次開啟的地圖使用 `localStorage`（鍵值 `whyhow_theme`、`whyhow_active_map_id`）；換瀏覽器、使用無痕視窗或清除網站資料後地圖可能無法取得，請以「匯出 / 備份」保存完整 JSON，或用 Markdown 大綱／PNG 快照留下交付版本。
 - Zen Typewriter 打字機心流編輯器會將每份草稿自動保存在目前瀏覽器的 IndexedDB（`ZenTypewriterDB`，object store `documents`），紙張主題偏好使用 `localStorage`（鍵值 `zen_typewriter_theme`）；換瀏覽器、使用無痕視窗或清除網站資料後草稿可能無法取得，請以「匯出」下載 `.md` 保存。工具完全離線，音效由 Web Audio API 即時合成，不使用任何外部資源。
 - StateFlow 動態狀態機與業務流程拓撲模擬器不使用 IndexedDB，編輯中的 DSL 草稿、自訂範本、目前範本與主題偏好以 `localStorage`（鍵值 `stateflow_saved_dsl`、`stateflow_templates_v2`、`stateflow_active_template_id`、`stateflow_theme`）保存在目前瀏覽器；輸出為複製到剪貼簿的 DSL 或使用者主動下載的 SVG 與範本庫 JSON，換瀏覽器或清除網站資料後需重新輸入或匯入。
@@ -4891,6 +5011,9 @@ flowchart LR
 - 決策沙盤推演系統：純離線，不使用任何外部資源（圖表以原生 SVG 繪製）。
 - 衡 情境決策矩陣：純離線，樣式、矩陣編輯、加權與 Pugh 計算、備份驗證皆以原生 JavaScript 內嵌於單一 HTML，不使用任何外部資源。
 - 五力分析儀表板：純離線，樣式、五力計算、雷達圖與五力圖（原生 SVG）、PNG 轉檔、洞察模板與 CSV 產生器皆內嵌於單一 HTML，不使用任何外部資源。
+- SWOT 可視化產生器與 TOWS 交叉戰略矩陣：純離線，樣式、四象限看板、TOWS 矩陣、雷達圖、Markdown 報告與 Canvas PNG 匯出皆內嵌於單一 HTML，不使用任何外部資源。
+- 多時區協調羅盤 World Time Planner：純離線，樣式、時區換算（瀏覽器 `Intl` 與內建備援城市清單）、共識帶、會議卡與 JSON 備份皆內嵌於單一 HTML，不使用任何外部資源。
+- 霧光・離線圖片工作室：純離線，樣式、角落取樣去背、筆刷修補、浮水印繪製與 PNG 匯出皆以原生 Canvas／JavaScript 內嵌於單一 HTML，不使用任何外部資源。
 - Why-How Map 探索畫布：純離線，樣式、階梯排版、邏輯鏈檢查、迷你導航圖與 PNG 快照皆以原生 JavaScript／Canvas 內嵌於單一 HTML，不使用任何外部資源。
 - StateFlow 動態狀態機與業務流程拓撲模擬器：純離線，樣式與邏輯（內嵌 Tailwind 與打包後的 JavaScript）皆已內嵌於單一 HTML，不使用任何外部資源。
 - VBA Dependency Explorer 依賴關係分析與視覺化：純離線，樣式、VBA 解析器、力導向佈局與 SVG 圖形繪製皆以原生 JavaScript 內嵌於單一 HTML，不使用任何外部資源。
@@ -4970,6 +5093,9 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 - 決策沙盤推演系統使用 IndexedDB（資料庫名稱 `DecisionLabDB`；object stores：`topics`、`options`、`criteria`、`reviewers`、`scores`、`scenarios`、`decisions`、`attachments`）保存議題、方案、評估因子、評審、評分、情境、決議與附件，並以 `localStorage`（`dl_view`、`dl_topic`）記憶目前檢視與選取的議題；提供單一議題與整庫 JSON 匯出／匯入，以及 CSV、Excel 與列印報告輸出。
 - 衡 情境決策矩陣使用 IndexedDB（資料庫名稱 `heng-decision-matrix`，version 1，object store `decisions`，以決策 id 為鍵）保存決策、方案、準則、權重、偏好方向、評分與 Pugh 比較，未使用 `localStorage`；提供整庫 JSON 匯出／匯入。
 - 五力分析儀表板使用 IndexedDB（資料庫名稱 `porter-five-forces`，version 1；object stores：`analyses`、`settings`）保存分析、五力因子、評分、權重、觀察備註與洞察模板，並以 `localStorage`（鍵值 `p5-theme`）記憶深／淺色主題；IndexedDB 無法使用時退回頁面記憶體；提供 JSON 匯出與合併／取代匯入，以及 CSV、PNG 與 PDF 輸出。
+- SWOT 可視化產生器與 TOWS 交叉戰略矩陣使用 IndexedDB（資料庫名稱 `SwotStudioDB`，version 1；object stores：`projects`、`swot_items`、`tows_actions`）保存專案、四象限項目與行動方案，並以 `localStorage`（鍵值 `swot_theme`）記憶主題；提供 PNG、Markdown 與 JSON 匯出及 JSON 匯入。
+- 多時區協調羅盤 World Time Planner 使用 IndexedDB（資料庫名稱 `world-time-compass`，version 1；object stores：`places`、`meta`）保存地點、上班時段與介面設定，並以 `localStorage`（鍵值 `wtc-theme`）記憶主題；IndexedDB 無法使用時退回頁面記憶體；提供 JSON 匯出／匯入。
+- 霧光・離線圖片工作室使用 IndexedDB（資料庫名稱 `offline-image-studio`，version 1；object stores：`projects`、`settings`）保存最近 8 件作品與偏好設定，未使用 `localStorage`；提供 PNG 下載，重新整理後可從「最近作品」繼續編輯。
 - Why-How Map 探索畫布使用 IndexedDB（資料庫名稱 `WhyHowMapDB`，version 1；object stores：`maps`、`nodes`、`edges`、`settings`）保存地圖、節點與連線，並以 `localStorage`（鍵值 `whyhow_theme`、`whyhow_active_map_id`）記憶主題與上次開啟的地圖；提供完整 JSON 匯出／匯入、Markdown 大綱複製與 PNG 快照。
 - StateFlow 動態狀態機與業務流程拓撲模擬器不使用 IndexedDB，僅以 `localStorage`（鍵值 `stateflow_saved_dsl`、`stateflow_templates_v2`、`stateflow_active_template_id`、`stateflow_theme`）保存草稿、自訂範本與主題偏好。
 - SQL Lab 使用 IndexedDB（資料庫名稱 `sql-lab`；object stores：`workspaces`、`history`、`snippets`、`testcases`、`testruns`、`settings`）保存工作區、查詢歷史、片段、測試案例、執行紀錄與介面設定，並快取 sql.js 的 Wasm 檔；提供完整備份 JSON 匯出／匯入。
@@ -5191,7 +5317,7 @@ Agent YAML Maker、Prompt Studio、甘特圖、信用風險模擬器、大額曝
 git diff --check -- README.md
 ```
 
-若修改網頁程式，請分別在現代瀏覽器開啟八十六個入口，至少確認：Semantic Color Tokenizer 可切換種子色與中性傾向並檢視色階即時更新／調整語意階層滑桿確認沙盒與匯出同步／切換 CSS、Tailwind、DTCG JSON 與 YAML 分頁並複製代碼／按分享確認網址雜湊含參數、PDF 表格救援站可開啟或拖入 PDF 並自動偵測表格／拖曳欄線列線與框選表格並確認下方預覽同步更新／設定表頭、合併儲存格與清洗規則／執行加總驗證與（需要的話）OCR／將表格存成範本並用批次處理多份 PDF／匯出 xlsx、CSV、JSON、Markdown 與多工作表 Excel、PQ Debugger 可載入範例並執行檢查（Ctrl+Enter）／檢視問題、步驟說明與流程圖分頁並套用修正／切換深色模式與調整設定及識別碼關鍵字／從歷史載入先前紀錄／匯出 Markdown、流程圖 SVG／PNG 與修正後 `.pq`、Excel 公式地圖可載入範例活頁簿並切換總覽地圖、依賴圖、格線熱區、風險掃描與循環分頁／執行 SPEC 測試與隨機測試／匯出 Markdown 報告、JSON 與 SVG／匯入 `.xlsx` 後確認工作表清單與最近分析快取、決策沙盤推演系統可新增議題／建立方案、評估因子與評審並填寫評分矩陣／切換加權總分法與 TOPSIS 檢視排名與因子貢獻／建立權重情境、拖動敏感度滑桿檢視翻盤點與執行蒙地卡羅模擬／記錄決議並檢視快照／匯出 JSON、CSV、Excel 並列印決策報告、Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、WBS 甘特排程器可設定專案起日與 WBS 任務／前置相依並檢視工作天與甘特圖／匯出 CSV 與 JSON、專案時程暨處理流程紀錄系統可新增專案與事件並設定狀態／優先度／期限與人員／新增處理流程紀錄與附件（含路徑連結）／切換列表、甘特與月曆檢視並以狀態、處理人員與關鍵字篩選／匯出專案或整庫 JSON 並匯入還原／匯出 `.ics` 提醒與維護人員 CSV、離線速記便箋可新增便箋與標籤／切換 Markdown 預覽與雙欄模式／搜尋與置頂／匯出與匯入 JSON 並匯出 Markdown、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、大額曝險與關聯戶圖譜速算器可設定淨值與集團／新增關聯戶與股權連結／檢視圖譜與法定門檻檢核／執行 What-If 壓力試算並複製底稿或匯出案卷 JSON、金融金額中文大寫轉換器可切換幣別抬頭與「結尾加整」／「顯示英文金額」選項／輸入金額檢視中文大寫、純中文大寫與英文大寫輸出並複製、信用卡防阻詐騙異常模式沙盒可載入內建模板／拖曳門檻滑桿檢視風險分數與等級即時變化／切換地圖軌跡、時序波形與交易明細清單並播放時間軸／執行鎖卡、照會、白名單與立案通報並在稽核軌跡留下紀錄／匯出模板 JSON、案件 CSV 與稽核報告 JSON、消金逾期戶還款協議試算可新增案件與債權帳戶／切換四種協商方案並調整減免、利率與期數檢視月付與減免比率即時變化／確認核決層級與還款能力比對／展開完整攤還明細／切換個資遮罩並確認列印與簡訊複製會被停用／儲存、載入與刪除案件後重新整理確認 IndexedDB 仍保留、聯徵與財報速讀解析器可貼上聯徵與財報範例文字／切換解析模式與顯示遮罩／檢視風險提示、摘要指標、財務比率與明細表格／匯入 TXT／CSV／TSV 檔案並確認 2 MB 限制／複製 Markdown、匯出 JSON 與清除工作區後重新整理確認 IndexedDB 已同步、稽核缺失知識庫可匯入範例／對應欄位並預覽驗證後匯入（含重複編號略過、覆寫與新建）／以全文搜尋、同義詞與多維篩選查詢並開啟缺失詳情／檢視儀表板圖表與重複缺失排行／新增或編輯缺失並記錄改善歷程與草稿／匯出單一與多工作表 Excel 報表／維護代碼表、同義詞與標籤合併／匯出與還原 JSON 備份並確認重新整理後 IndexedDB 仍保留、稽核抽樣工作站可載入虛構示範資料或匯入 CSV／XLSX 並切換編碼與標題列／指定識別鍵並檢視空白鍵與重複鍵檢核／設定篩選並確認調節表與排除紀錄同步更新／以固定 seed 執行簡單隨機、系統、分層與確定性加隨機抽樣並確認結果可重現／切換遮蔽與匯出欄位後匯出 XLSX 工作底稿、CSV 與專案 JSON 並匯入設定、會議簡報濃縮器可建立場次並匯入 PDF／DOCX／DOC／檢視欄位擷取、風險命中、摘要與原文定位／修訂欄位後確認稽核紀錄與風險重算／匯出 Excel、案件 PDF／DOCX 與整庫備份 JSON、Infographic Builder 可載入範例並切換五種版型與六套主題／調整色票與排版滑桿檢視預覽即時更新／以「貼上全文解析」拆分文字並確認非 AI 摘要／檢視 WCAG 對比與溢出警告／匯出 PNG 與 JSON 後重新匯入還原、VBA Dependency Explorer 可新建或切換分析專案／載入範例專案／匯入或貼上 `.bas`、`.cls`、`.frm` 模組並切換檔案編碼／切換程序級與模組級依賴圖並置中或重排／點選節點開啟屬性與呼叫檢查器／在循環依賴與孤島函式分頁確認偵測結果／匯出 SVG、複製 Mermaid 語法、匯出與還原專案 JSON 並於重新整理後確認 IndexedDB 仍保留、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、SQL Lab 可新增與切換工作區／在編輯器執行查詢與檢視結果並匯出 CSV／以結構樹插入查詢與檢視資料庫結構並下載 SQL Dump／以 CSV、SQL 腳本或 SQLite 檔匯入資料／保存與搜尋片段及查詢歷史／建立含預期結果的測試案例並執行套件與匯出報告 CSV／重新整理後確認工作區與設定仍在、MatrixPivot 表格矩陣轉置器可貼上或匯入表格／執行行列轉置／切換 Markdown、JSON、SQL、HTML 與 CSV 輸出並複製或下載 CSV、API Mock Studio 可切換端點／貼上 cURL 解析／執行 Mock 模擬與延遲測試／產生 Dummy 假資料／匯出 OpenAPI 3.0 與 Postman Collection、CSV 格式清理器可讀入 UTF-8 與 Big5 檔案／切換清理規則並檢視預覽／匯出 CP950 時確認無法對應字元的提示，Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、文件字數與閱讀時間統計可貼上文字或匯入 UTF-8／Big5 等多編碼檔案／檢視中英字數、段落句數與閱讀時間／設定目標字數並複製統計摘要、Zen Typewriter 打字機心流編輯器可新增與切換草稿／鍵入 Markdown 並開啟預覽視窗或雙欄對照／切換段落聚焦與紙張主題、聲效與靜音／確認停止輸入後自動保存且重新整理後草稿仍在／匯出 `.md` 檔，Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏、StateFlow 動態狀態機與業務流程拓撲模擬器可切換內建與自訂範本／以 DSL 定義狀態、動作與條件並即時繪製拓撲圖／拖曳節點、縮放畫布與重整佈局／執行流程模擬並使用「上一步」「隨機探索」「重新開始」／切換拓撲診斷確認死胡同、孤島、黑洞循環與自環等問題並顯示問題數／新增、編輯、複製與刪除範本並匯出與匯入範本庫 JSON／匯出 SVG 與複製 DSL／重新整理後確認草稿與自訂範本仍在、銀行核心系統固定長度電文解析與管理中心可選擇電文規格／貼上多筆電文解析並匯出 JSON 與 CSV／切換反向組裝產生固定長度電文／新增或匯入多編碼 CSV 規格並保存解析歷程、核心系統與電文錯誤碼排查對照台可搜尋與篩選錯誤碼／新增編輯與刪除代碼／維護系統類別／匯入 Excel 並匯出完整資料、會議燃燒成本看板可設定人數與時薪級距（含新增與刪除級距、儲存與套用常用組合）／開始、暫停與結束計時並檢視超時加碼／勾選議程產出率／下載 PNG 評估卡與複製文字摘要／調整評等標準（產出權重、超時容忍、容忍與門檻）並確認提示文字、卡片與歷史分數同步更新且「回預設」可還原／重新整理後確認設定與 IndexedDB 紀錄仍在，並匯出 CSV 與 JSON 後再匯入還原（確認匯入後評等與分數依現行標準重算）、截圖 OCR 知識庫可先至「⚙ OCR 引擎設定」匯入主程式、Worker、核心與語言檔並執行 OCR 測試／以 `Ctrl`+`V` 貼上或匯入截圖（確認完全相同的圖片會自動略過）並辨識文字／以關鍵字、`#標籤` 與 `-排除` 語法搜尋並在檢視器確認命中高亮／編輯標題、分類、標籤與備註並加入集合／框選區域 OCR、文字標註、遮蔽區域與匯出分享圖／建立操作流程並下載 Word 或列印 PDF／匯出 ZIP 備份後再還原／重新整理後確認 IndexedDB（`snap-ocr-kb`）資料仍在、資料品質稽核中心可拖曳或選擇 CSV／TSV／TXT／XLSX 匯入並以自動偵測的編碼與分隔符號預覽確認／查看欄位剖析的型態、空值與分布／建立範本與規則（含必填、唯一、型別、範例清單、正規式、跨欄比較、檢查碼、日期缺口與跨資料集參照）並加入例外／執行稽核時可顯示進度與取消並產生總分、維度分數與 A–E 評等／在問題明細篩選分頁並點選列檢視原始資料／匯出問題明細 CSV、問題列原始資料、HTML 報告與清理後資料 CSV／以批次比對檢視分數趨勢與兩批次差異／匯出完整備份 JSON 後再匯入還原、資料關聯探索器可匯入多個 CSV／TSV 並逐檔確認編碼與分隔符號／按分析後檢視主鍵候選、外鍵關聯（信心、包含率與孤兒值）與欄位相依／在 ER 圖標示關聯並匯出 SVG 或 PNG／產生 JOIN SQL 與孤兒值查詢 SQL 並匯出孤兒值 CSV／以路徑查詢與影響分析追蹤欄位並匯出清單／匯出 Mermaid、DDL（Oracle、SQL Server、SQLite）、Excel、Markdown 與 HTML 報告／匯出工作區 JSON 後再匯入還原、SpecDiff 規格書比對工具可新增專案與匯入 docx／txt／Markdown 多個版本（或貼上文字）／選擇舊版與新版比對並切換左右並排、合併檢視、變更清單與需求編號四種檢視／依類型、審查狀態與模組篩選並批次套用狀態／逐筆設定審查狀態、影響模組與備註並以 F7／F8 導覽／調整比對選項（正規化、修改門檻、搬移偵測）後重新比對／匯出 HTML 差異報告與變更清單／影響清單 CSV／匯出整庫 JSON 後還原，並確認 IndexedDB 無法使用時會退回記憶體儲存並提示、FolderTree Architect 路徑轉樹狀結構可貼上路徑清單或拖曳資料夾掃描／切換 Raw Paths 與 Indented 輸入／切換 Unicode、ASCII、Markdown、Annotated 與 JSON 輸出並調整深度、忽略樣式與排序選項／在 Preview 分頁檢視色彩樹狀圖／複製 Markdown、純文字或下載檔案、Schema Studio — SQL 欄位映射可貼上 DDL／JSON／JSON Schema 解析來源與目標欄位／以點選、拖曳或自動配對建立欄位映射並設定轉換規則與樣板／切換 SQL SELECT、Target DDL、Pandas、dbt 與 MyBatis 分頁檢視輸出／切換方言與引用識別字、關鍵字大寫與補齊稽核欄位選項／複製或下載程式碼並匯出與匯入 JSON 設定且重新整理後仍保留、園遊會摸彩券管理工具可建立期別與人員／以單筆與起訖批次新增摸彩券並設定存根人與代抽人／以號碼、存根人與代抽人篩選並批次修改或依範圍刪除／產生報表並匯出 CSV 與 Excel（`.xlsx`）／匯出 JSON 備份後再匯入還原且重新整理後資料仍在、雙邊資料對帳與平帳差額探索器可載入範例情境或匯入 CSV／TSV／TXT／XLSX 雙邊資料／對齊識別鍵、金額、日期與備援鍵並設定清洗正則、金額方向、容差、彙總媒合與時間容差／執行媒合後檢視平帳達成率、單邊未平帳與淨差額／切換狀態分頁並搜尋、排序與分頁／開啟明細抽屜填寫人工註記或執行人工配對／匯出差異項目與全部 CSV、產生審計報告，並以專案存檔 JSON 後再載入還原。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。另請確認設計債務分析器可切換專案並匯入範例資料／檢視總覽儀表與七維度分數／以維度、嚴重度與狀態篩選債務並切換狀態／檢視色彩分群、字型階梯、變體牆與間距直方圖／調整權重與門檻後重新分析／比較兩個快照的債務增減並匯出 Excel（或 CSV）、Markdown、JSON、建議 Tokens 與儀表板 PNG、設計決策解釋器可新增專案並載入範例／匯入或貼上設計稿、框選與自動偵測元素並指定類型／執行分析後檢視色彩、對比、動線與對齊結果／切換三種語氣產生決策卡並標記已確認／將風險標記為刻意設計並填寫理由／產生與編輯 Q&A 並匯出 Markdown／建立新版本並比較改版指標／於匯出中心勾選章節後輸出 DOCX、PDF、Markdown 與專案 JSON、Bento Studio 可新增與切換多個版型並確認自動儲存／調整欄數、間距、高度與圓角後確認畫布同步／新增卡片並拖曳移動、拉伸縮放與刪除／調整卡片跨度、標籤、標題與說明／套用 10 種主題及自訂 HEX 色碼並可重設／以隨機版型快速套用範本／切換 Tailwind、原生 CSS 與 JSON 分頁並複製代碼／下載 JSON 規格檔後重新整理確認 IndexedDB 版型仍在、UI 狀態徽章與標籤合成器可切換形態槽位的前置與後置元素／調整風格、尺寸、圓角、內距與字距／切換五組語意色與自訂 HEX 並確認 WCAG 對比更新／調整呼吸燈、圖示動態與懸停效果／切換焦點畫布縮放與背景、檢視多情境矩陣與真實 UI 模擬／切換 Tailwind、CSS、React 與 Design Tokens 分頁並複製代碼／打包整套系統庫下載 JSON／儲存、載入與刪除自訂預設並匯出與匯入預設 JSON／按分享確認網址含 `#badge=` 且重新開啟可還原設定。
+若修改網頁程式，請分別在現代瀏覽器開啟八十九個入口，至少確認：Semantic Color Tokenizer 可切換種子色與中性傾向並檢視色階即時更新／調整語意階層滑桿確認沙盒與匯出同步／切換 CSS、Tailwind、DTCG JSON 與 YAML 分頁並複製代碼／按分享確認網址雜湊含參數、PDF 表格救援站可開啟或拖入 PDF 並自動偵測表格／拖曳欄線列線與框選表格並確認下方預覽同步更新／設定表頭、合併儲存格與清洗規則／執行加總驗證與（需要的話）OCR／將表格存成範本並用批次處理多份 PDF／匯出 xlsx、CSV、JSON、Markdown 與多工作表 Excel、PQ Debugger 可載入範例並執行檢查（Ctrl+Enter）／檢視問題、步驟說明與流程圖分頁並套用修正／切換深色模式與調整設定及識別碼關鍵字／從歷史載入先前紀錄／匯出 Markdown、流程圖 SVG／PNG 與修正後 `.pq`、Excel 公式地圖可載入範例活頁簿並切換總覽地圖、依賴圖、格線熱區、風險掃描與循環分頁／執行 SPEC 測試與隨機測試／匯出 Markdown 報告、JSON 與 SVG／匯入 `.xlsx` 後確認工作表清單與最近分析快取、決策沙盤推演系統可新增議題／建立方案、評估因子與評審並填寫評分矩陣／切換加權總分法與 TOPSIS 檢視排名與因子貢獻／建立權重情境、拖動敏感度滑桿檢視翻盤點與執行蒙地卡羅模擬／記錄決議並檢視快照／匯出 JSON、CSV、Excel 並列印決策報告、Agent YAML Maker 可切換兩個 YAML 分頁並下載檔案、Prompt Studio 可切換 10 種框架／輸入含 `{{變數}}` 的區塊以抽出填空欄位／儲存版本並從歷史下拉選單還原、甘特圖可建立專案與任務並重新整理後保留資料、WBS 甘特排程器可設定專案起日與 WBS 任務／前置相依並檢視工作天與甘特圖／匯出 CSV 與 JSON、專案時程暨處理流程紀錄系統可新增專案與事件並設定狀態／優先度／期限與人員／新增處理流程紀錄與附件（含路徑連結）／切換列表、甘特與月曆檢視並以狀態、處理人員與關鍵字篩選／匯出專案或整庫 JSON 並匯入還原／匯出 `.ics` 提醒與維護人員 CSV、離線速記便箋可新增便箋與標籤／切換 Markdown 預覽與雙欄模式／搜尋與置頂／匯出與匯入 JSON 並匯出 Markdown、LCR 可加入明細並更新計算結果、NSFR 可加入 ASF／RSF 明細並計算 NSFR 且能保存與載入情境、信用風險模擬器可新增資產組合／切換壓力情境／匯出並匯入 JSON、大額曝險與關聯戶圖譜速算器可設定淨值與集團／新增關聯戶與股權連結／檢視圖譜與法定門檻檢核／執行 What-If 壓力試算並複製底稿或匯出案卷 JSON、金融金額中文大寫轉換器可切換幣別抬頭與「結尾加整」／「顯示英文金額」選項／輸入金額檢視中文大寫、純中文大寫與英文大寫輸出並複製、信用卡防阻詐騙異常模式沙盒可載入內建模板／拖曳門檻滑桿檢視風險分數與等級即時變化／切換地圖軌跡、時序波形與交易明細清單並播放時間軸／執行鎖卡、照會、白名單與立案通報並在稽核軌跡留下紀錄／匯出模板 JSON、案件 CSV 與稽核報告 JSON、消金逾期戶還款協議試算可新增案件與債權帳戶／切換四種協商方案並調整減免、利率與期數檢視月付與減免比率即時變化／確認核決層級與還款能力比對／展開完整攤還明細／切換個資遮罩並確認列印與簡訊複製會被停用／儲存、載入與刪除案件後重新整理確認 IndexedDB 仍保留、聯徵與財報速讀解析器可貼上聯徵與財報範例文字／切換解析模式與顯示遮罩／檢視風險提示、摘要指標、財務比率與明細表格／匯入 TXT／CSV／TSV 檔案並確認 2 MB 限制／複製 Markdown、匯出 JSON 與清除工作區後重新整理確認 IndexedDB 已同步、稽核缺失知識庫可匯入範例／對應欄位並預覽驗證後匯入（含重複編號略過、覆寫與新建）／以全文搜尋、同義詞與多維篩選查詢並開啟缺失詳情／檢視儀表板圖表與重複缺失排行／新增或編輯缺失並記錄改善歷程與草稿／匯出單一與多工作表 Excel 報表／維護代碼表、同義詞與標籤合併／匯出與還原 JSON 備份並確認重新整理後 IndexedDB 仍保留、稽核抽樣工作站可載入虛構示範資料或匯入 CSV／XLSX 並切換編碼與標題列／指定識別鍵並檢視空白鍵與重複鍵檢核／設定篩選並確認調節表與排除紀錄同步更新／以固定 seed 執行簡單隨機、系統、分層與確定性加隨機抽樣並確認結果可重現／切換遮蔽與匯出欄位後匯出 XLSX 工作底稿、CSV 與專案 JSON 並匯入設定、會議簡報濃縮器可建立場次並匯入 PDF／DOCX／DOC／檢視欄位擷取、風險命中、摘要與原文定位／修訂欄位後確認稽核紀錄與風險重算／匯出 Excel、案件 PDF／DOCX 與整庫備份 JSON、Infographic Builder 可載入範例並切換五種版型與六套主題／調整色票與排版滑桿檢視預覽即時更新／以「貼上全文解析」拆分文字並確認非 AI 摘要／檢視 WCAG 對比與溢出警告／匯出 PNG 與 JSON 後重新匯入還原、VBA Dependency Explorer 可新建或切換分析專案／載入範例專案／匯入或貼上 `.bas`、`.cls`、`.frm` 模組並切換檔案編碼／切換程序級與模組級依賴圖並置中或重排／點選節點開啟屬性與呼叫檢查器／在循環依賴與孤島函式分頁確認偵測結果／匯出 SVG、複製 Mermaid 語法、匯出與還原專案 JSON 並於重新整理後確認 IndexedDB 仍保留、SQL Catalog 可選取目錄／掃描 SQL／編輯說明並匯出 `sql_catalog.json`、SQL Compare 可載入兩份 SQL 並產生逐行與結構摘要、Oracle SQL Formatter 可掃描資料夾／預覽格式化／執行健檢並以 ZIP 或寫回方式輸出、SQL／TXT 個資工具可掃描命中／產生遮罩報告並以 ZIP 或備份後寫回輸出、SQL Column Lineage Analyzer 可載入或貼上 SQL／執行分析／查看血緣圖與上下游追溯，並匯出 CSV、JSON、Mermaid、SVG 或 PNG、SQL Lab 可新增與切換工作區／在編輯器執行查詢與檢視結果並匯出 CSV／以結構樹插入查詢與檢視資料庫結構並下載 SQL Dump／以 CSV、SQL 腳本或 SQLite 檔匯入資料／保存與搜尋片段及查詢歷史／建立含預期結果的測試案例並執行套件與匯出報告 CSV／重新整理後確認工作區與設定仍在、MatrixPivot 表格矩陣轉置器可貼上或匯入表格／執行行列轉置／切換 Markdown、JSON、SQL、HTML 與 CSV 輸出並複製或下載 CSV、API Mock Studio 可切換端點／貼上 cURL 解析／執行 Mock 模擬與延遲測試／產生 Dummy 假資料／匯出 OpenAPI 3.0 與 Postman Collection、CSV 格式清理器可讀入 UTF-8 與 Big5 檔案／切換清理規則並檢視預覽／匯出 CP950 時確認無法對應字元的提示，Markdown 卡片簡報工具可輸入 Markdown／切分頁面／全螢幕播放／套用與儲存範本，並匯出可離線開啟的單一 HTML、公文簽／函排版工具可切換簽／函／自由 Markdown 三種模式／檢視即時預覽／複製純文字與 Word 格式並下載 `.docx`、剪貼簿洗滌器可貼上文字／勾選洗滌規則或套用情境／複製洗滌結果並確認個資遮罩、文件字數與閱讀時間統計可貼上文字或匯入 UTF-8／Big5 等多編碼檔案／檢視中英字數、段落句數與閱讀時間／設定目標字數並複製統計摘要、Zen Typewriter 打字機心流編輯器可新增與切換草稿／鍵入 Markdown 並開啟預覽視窗或雙欄對照／切換段落聚焦與紙張主題、聲效與靜音／確認停止輸入後自動保存且重新整理後草稿仍在／匯出 `.md` 檔，Palette Lore 色彩故事盤可輸入意境／生成色盤／鎖定與自訂色塊／檢視 WCAG 對比／匯出 CSS、Tailwind 或 JSON，並收藏與刪除 IndexedDB 典藏、StateFlow 動態狀態機與業務流程拓撲模擬器可切換內建與自訂範本／以 DSL 定義狀態、動作與條件並即時繪製拓撲圖／拖曳節點、縮放畫布與重整佈局／執行流程模擬並使用「上一步」「隨機探索」「重新開始」／切換拓撲診斷確認死胡同、孤島、黑洞循環與自環等問題並顯示問題數／新增、編輯、複製與刪除範本並匯出與匯入範本庫 JSON／匯出 SVG 與複製 DSL／重新整理後確認草稿與自訂範本仍在、銀行核心系統固定長度電文解析與管理中心可選擇電文規格／貼上多筆電文解析並匯出 JSON 與 CSV／切換反向組裝產生固定長度電文／新增或匯入多編碼 CSV 規格並保存解析歷程、核心系統與電文錯誤碼排查對照台可搜尋與篩選錯誤碼／新增編輯與刪除代碼／維護系統類別／匯入 Excel 並匯出完整資料、會議燃燒成本看板可設定人數與時薪級距（含新增與刪除級距、儲存與套用常用組合）／開始、暫停與結束計時並檢視超時加碼／勾選議程產出率／下載 PNG 評估卡與複製文字摘要／調整評等標準（產出權重、超時容忍、容忍與門檻）並確認提示文字、卡片與歷史分數同步更新且「回預設」可還原／重新整理後確認設定與 IndexedDB 紀錄仍在，並匯出 CSV 與 JSON 後再匯入還原（確認匯入後評等與分數依現行標準重算）、截圖 OCR 知識庫可先至「⚙ OCR 引擎設定」匯入主程式、Worker、核心與語言檔並執行 OCR 測試／以 `Ctrl`+`V` 貼上或匯入截圖（確認完全相同的圖片會自動略過）並辨識文字／以關鍵字、`#標籤` 與 `-排除` 語法搜尋並在檢視器確認命中高亮／編輯標題、分類、標籤與備註並加入集合／框選區域 OCR、文字標註、遮蔽區域與匯出分享圖／建立操作流程並下載 Word 或列印 PDF／匯出 ZIP 備份後再還原／重新整理後確認 IndexedDB（`snap-ocr-kb`）資料仍在、資料品質稽核中心可拖曳或選擇 CSV／TSV／TXT／XLSX 匯入並以自動偵測的編碼與分隔符號預覽確認／查看欄位剖析的型態、空值與分布／建立範本與規則（含必填、唯一、型別、範例清單、正規式、跨欄比較、檢查碼、日期缺口與跨資料集參照）並加入例外／執行稽核時可顯示進度與取消並產生總分、維度分數與 A–E 評等／在問題明細篩選分頁並點選列檢視原始資料／匯出問題明細 CSV、問題列原始資料、HTML 報告與清理後資料 CSV／以批次比對檢視分數趨勢與兩批次差異／匯出完整備份 JSON 後再匯入還原、資料關聯探索器可匯入多個 CSV／TSV 並逐檔確認編碼與分隔符號／按分析後檢視主鍵候選、外鍵關聯（信心、包含率與孤兒值）與欄位相依／在 ER 圖標示關聯並匯出 SVG 或 PNG／產生 JOIN SQL 與孤兒值查詢 SQL 並匯出孤兒值 CSV／以路徑查詢與影響分析追蹤欄位並匯出清單／匯出 Mermaid、DDL（Oracle、SQL Server、SQLite）、Excel、Markdown 與 HTML 報告／匯出工作區 JSON 後再匯入還原、SpecDiff 規格書比對工具可新增專案與匯入 docx／txt／Markdown 多個版本（或貼上文字）／選擇舊版與新版比對並切換左右並排、合併檢視、變更清單與需求編號四種檢視／依類型、審查狀態與模組篩選並批次套用狀態／逐筆設定審查狀態、影響模組與備註並以 F7／F8 導覽／調整比對選項（正規化、修改門檻、搬移偵測）後重新比對／匯出 HTML 差異報告與變更清單／影響清單 CSV／匯出整庫 JSON 後還原，並確認 IndexedDB 無法使用時會退回記憶體儲存並提示、FolderTree Architect 路徑轉樹狀結構可貼上路徑清單或拖曳資料夾掃描／切換 Raw Paths 與 Indented 輸入／切換 Unicode、ASCII、Markdown、Annotated 與 JSON 輸出並調整深度、忽略樣式與排序選項／在 Preview 分頁檢視色彩樹狀圖／複製 Markdown、純文字或下載檔案、Schema Studio — SQL 欄位映射可貼上 DDL／JSON／JSON Schema 解析來源與目標欄位／以點選、拖曳或自動配對建立欄位映射並設定轉換規則與樣板／切換 SQL SELECT、Target DDL、Pandas、dbt 與 MyBatis 分頁檢視輸出／切換方言與引用識別字、關鍵字大寫與補齊稽核欄位選項／複製或下載程式碼並匯出與匯入 JSON 設定且重新整理後仍保留、園遊會摸彩券管理工具可建立期別與人員／以單筆與起訖批次新增摸彩券並設定存根人與代抽人／以號碼、存根人與代抽人篩選並批次修改或依範圍刪除／產生報表並匯出 CSV 與 Excel（`.xlsx`）／匯出 JSON 備份後再匯入還原且重新整理後資料仍在、雙邊資料對帳與平帳差額探索器可載入範例情境或匯入 CSV／TSV／TXT／XLSX 雙邊資料／對齊識別鍵、金額、日期與備援鍵並設定清洗正則、金額方向、容差、彙總媒合與時間容差／執行媒合後檢視平帳達成率、單邊未平帳與淨差額／切換狀態分頁並搜尋、排序與分頁／開啟明細抽屜填寫人工註記或執行人工配對／匯出差異項目與全部 CSV、產生審計報告，並以專案存檔 JSON 後再載入還原。SQL Catalog、SQL Formatter 與個資工具的目錄權限及瀏覽器相容性仍需實機驗證。另請確認設計債務分析器可切換專案並匯入範例資料／檢視總覽儀表與七維度分數／以維度、嚴重度與狀態篩選債務並切換狀態／檢視色彩分群、字型階梯、變體牆與間距直方圖／調整權重與門檻後重新分析／比較兩個快照的債務增減並匯出 Excel（或 CSV）、Markdown、JSON、建議 Tokens 與儀表板 PNG、設計決策解釋器可新增專案並載入範例／匯入或貼上設計稿、框選與自動偵測元素並指定類型／執行分析後檢視色彩、對比、動線與對齊結果／切換三種語氣產生決策卡並標記已確認／將風險標記為刻意設計並填寫理由／產生與編輯 Q&A 並匯出 Markdown／建立新版本並比較改版指標／於匯出中心勾選章節後輸出 DOCX、PDF、Markdown 與專案 JSON、Bento Studio 可新增與切換多個版型並確認自動儲存／調整欄數、間距、高度與圓角後確認畫布同步／新增卡片並拖曳移動、拉伸縮放與刪除／調整卡片跨度、標籤、標題與說明／套用 10 種主題及自訂 HEX 色碼並可重設／以隨機版型快速套用範本／切換 Tailwind、原生 CSS 與 JSON 分頁並複製代碼／下載 JSON 規格檔後重新整理確認 IndexedDB 版型仍在、UI 狀態徽章與標籤合成器可切換形態槽位的前置與後置元素／調整風格、尺寸、圓角、內距與字距／切換五組語意色與自訂 HEX 並確認 WCAG 對比更新／調整呼吸燈、圖示動態與懸停效果／切換焦點畫布縮放與背景、檢視多情境矩陣與真實 UI 模擬／切換 Tailwind、CSS、React 與 Design Tokens 分頁並複製代碼／打包整套系統庫下載 JSON／儲存、載入與刪除自訂預設並匯出與匯入預設 JSON／按分享確認網址含 `#badge=` 且重新開啟可還原設定。
 
 - 違約熱區地圖：上傳範例 CSV 或貼上表格，確認編碼偵測、必要欄位與縣市／產業正規化；執行資料驗證並下載錯誤清單；切換地圖與矩陣視圖、色階指標、信度收縮與比較期；點選縣市／格子檢視明細與趨勢；匯出 PNG、SVG、CSV、Markdown 與設定 JSON，重新整理後確認設定保留。
 - 預期信用損失變動分析器：分別匯入前期與本期範例檔並確認欄位自動對應；檢查資料品質與總帳核對；切換瀑布圖、Stage 矩陣、維度、Top Movers、評等轉移、IFRS 7、情境權重、趨勢與帳戶明細；匯出 Excel 並列印目前分頁。
@@ -5226,3 +5352,6 @@ git diff --check -- README.md
 - 衡 情境決策矩陣：新增決策並建立兩個以上方案；為準則設定權重與「越低越好／越高越好」方向，確認 1–5 分的換算與加權排序即時更新；切換 Pugh 比較並更換基準方案，確認清除提示與淨分排序；匯出 JSON 後以匯入還原，重新整理確認 IndexedDB 仍保留。
 - 五力分析儀表板：以「載入預設因子開始」建立分析，逐力為因子選 1–5 分並調整權重，確認力量強度、五力排行與產業吸引力同步更新；新增與刪除自訂因子、填寫力量觀察備註；匯出雷達圖與五力圖 PNG、CSV 與 JSON，重新整理確認 IndexedDB 仍保留；切換深／淺色主題確認 `p5-theme` 記憶。
 - Why-How Map 探索畫布：以範本建立地圖並新增 WHY／HOW 節點、設定性質與優先級；拖曳平移、滾輪縮放並執行階梯自動排版與邏輯鏈檢查；切換大綱模式並複製 Markdown；匯出 PNG 快照與完整 JSON，重新匯入後確認節點與連線一致且重新整理仍保留。
+- SWOT 可視化產生器與 TOWS 交叉戰略矩陣：建立專案並載入範本，新增四象限項目並設定權重與分類；切換 TOWS 分頁新增 SO／WO／ST／WT 行動；檢視雷達與佔比；匯出 PNG、複製 Markdown 與 JSON 後重新匯入，確認重新整理後 IndexedDB 仍保留。
+- 多時區協調羅盤 World Time Planner：新增數個城市並設定上班時段；切換基準時區與日期並拖動游標，確認共識帶與會議卡同步；點選最佳重疊時段；匯出 JSON 後匯入還原，並確認重新整理後 IndexedDB 仍保留。
+- 霧光・離線圖片工作室：載入圖片、切換取樣角落並調整容差與柔化；以擦除／還原筆刷修補；設定浮水印與純色背景後下載 PNG；重新開啟最近作品，確認 IndexedDB 仍保留。

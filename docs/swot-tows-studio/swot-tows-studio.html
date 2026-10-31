@@ -1,0 +1,2763 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWOT 可視化產生器 & TOWS 交叉戰略矩陣</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='48' height='48' rx='8' fill='%2310b981'/><rect x='52' width='48' height='48' rx='8' fill='%23f59e0b'/><rect y='52' width='48' height='48' rx='8' fill='%230284c7'/><rect x='52' y='52' width='48' height='48' rx='8' fill='%23f43f5e'/></svg>">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-elevated: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --border-focus: #3b82f6;
+      --radius-sm: 6px;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+      /* SWOT Palette */
+      --s-primary: #10b981;
+      --s-bg: #ecfdf5;
+      --s-border: #a7f3d0;
+      --s-text: #065f46;
+
+      --w-primary: #f59e0b;
+      --w-bg: #fffbeb;
+      --w-border: #fde68a;
+      --w-text: #92400e;
+
+      --o-primary: #0284c7;
+      --o-bg: #f0f9ff;
+      --o-border: #bae6fd;
+      --o-text: #075985;
+
+      --t-primary: #f43f5e;
+      --t-bg: #fff1f2;
+      --t-border: #fecdd3;
+      --t-text: #9f1239;
+
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --primary-light: #e0e7ff;
+      --danger: #ef4444;
+      --danger-hover: #dc2626;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0b0f19;
+      --surface: #131c2e;
+      --surface-elevated: #1e293b;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --border: #223049;
+      --border-focus: #6366f1;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4);
+      --shadow-lg: 0 10px 25px -3px rgb(0 0 0 / 0.5);
+
+      /* SWOT Dark Palette */
+      --s-primary: #34d399;
+      --s-bg: #062b1e;
+      --s-border: #0d4d38;
+      --s-text: #a7f3d0;
+
+      --w-primary: #fbbf24;
+      --w-bg: #2d1c03;
+      --w-border: #523407;
+      --w-text: #fde68a;
+
+      --o-primary: #38bdf8;
+      --o-bg: #08283e;
+      --o-border: #0c4366;
+      --o-text: #bae6fd;
+
+      --t-primary: #fb7185;
+      --t-bg: #300c14;
+      --t-border: #551924;
+      --t-text: #fecdd3;
+
+      --primary: #6366f1;
+      --primary-hover: #818cf8;
+      --primary-light: #1e1b4b;
+      --danger: #f87171;
+      --danger-hover: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      font-weight: 800;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+
+    .brand-logo {
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 2px;
+      width: 26px;
+      height: 26px;
+      padding: 2px;
+      border-radius: 6px;
+      background: var(--border);
+    }
+    .brand-logo span { border-radius: 2px; }
+    .brand-logo .b-s { background: var(--s-primary); }
+    .brand-logo .b-w { background: var(--w-primary); }
+    .brand-logo .b-o { background: var(--o-primary); }
+    .brand-logo .b-t { background: var(--t-primary); }
+
+    .header-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* View Switcher Tabs */
+    .view-tabs {
+      display: flex;
+      background: var(--bg);
+      padding: 3px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      gap: 2px;
+    }
+
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: calc(var(--radius) - 3px);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Common Button Styles */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--border); }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); color: #fff; }
+    .btn-outline { background: transparent; }
+    .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.775rem; border-radius: var(--radius-sm); }
+    .btn-icon { padding: 0.45rem; border-radius: var(--radius-sm); }
+
+    /* Dropdown */
+    .dropdown { position: relative; display: inline-block; }
+    .dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      min-width: 190px;
+      padding: 0.35rem;
+      z-index: 100;
+      display: none;
+    }
+    .dropdown.active .dropdown-menu { display: block; animation: dropDown 0.15s ease-out; }
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.45rem 0.65rem;
+      border-radius: var(--radius-sm);
+      border: none;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.85rem;
+      text-align: left;
+      cursor: pointer;
+    }
+    .dropdown-item:hover { background: var(--border); color: var(--primary); }
+    .dropdown-divider { height: 1px; background: var(--border); margin: 0.3rem 0; }
+
+    @keyframes dropDown {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Sub-header / Project & Filter Bar */
+    .sub-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .project-info {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex: 1;
+      min-width: 280px;
+    }
+
+    .project-select-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    select.project-select {
+      appearance: none;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 0.95rem;
+      padding: 0.4rem 2rem 0.4rem 0.85rem;
+      border-radius: var(--radius);
+      cursor: pointer;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    select.project-select:focus { outline: none; border-color: var(--primary); }
+    .select-arrow {
+      position: absolute;
+      right: 0.65rem;
+      pointer-events: none;
+      color: var(--text-muted);
+    }
+
+    .project-desc-text {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 360px;
+    }
+
+    .filter-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .search-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-input-wrap svg {
+      position: absolute;
+      left: 0.65rem;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+    .search-input {
+      padding: 0.4rem 0.65rem 0.4rem 2rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.85rem;
+      width: 170px;
+      transition: width 0.2s ease;
+    }
+    .search-input:focus { width: 220px; outline: none; border-color: var(--primary); }
+
+    .filter-select {
+      padding: 0.4rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      padding: 1.25rem;
+      max-width: 1440px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* VIEW 1: SWOT 2x2 Matrix */
+    .swot-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: auto auto;
+      gap: 1.25rem;
+      min-height: 640px;
+    }
+
+    @media (max-width: 900px) {
+      .swot-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .quadrant {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .quadrant.drag-over {
+      border: 2px dashed var(--primary);
+      background: var(--primary-light);
+    }
+
+    .quad-header {
+      padding: 0.85rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .quad-title-group {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+
+    .quad-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 1rem;
+    }
+
+    .quad-info h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .quad-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .quad-stats {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .stat-pill {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: var(--bg);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    /* Quadrant Theme Accents */
+    .quad-s { border-top: 4px solid var(--s-primary); }
+    .quad-s .quad-badge { background: var(--s-bg); color: var(--s-primary); border: 1px solid var(--s-border); }
+
+    .quad-w { border-top: 4px solid var(--w-primary); }
+    .quad-w .quad-badge { background: var(--w-bg); color: var(--w-primary); border: 1px solid var(--w-border); }
+
+    .quad-o { border-top: 4px solid var(--o-primary); }
+    .quad-o .quad-badge { background: var(--o-bg); color: var(--o-primary); border: 1px solid var(--o-border); }
+
+    .quad-t { border-top: 4px solid var(--t-primary); }
+    .quad-t .quad-badge { background: var(--t-bg); color: var(--t-primary); border: 1px solid var(--t-border); }
+
+    /* Quadrant Content & Cards */
+    .quad-body {
+      padding: 0.85rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      overflow-y: auto;
+      max-height: 520px;
+    }
+
+    .card-item {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      cursor: grab;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.15s ease;
+      position: relative;
+    }
+    .card-item:active { cursor: grabbing; }
+    .card-item:hover {
+      box-shadow: var(--shadow);
+      border-color: var(--text-muted);
+      transform: translateY(-1px);
+    }
+    .card-item.dragging {
+      opacity: 0.4;
+    }
+
+    .card-header-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text);
+      word-break: break-word;
+      line-height: 1.35;
+    }
+
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.2rem;
+      opacity: 0.3;
+      transition: opacity 0.15s ease;
+    }
+    .card-item:hover .card-actions { opacity: 1; }
+
+    .card-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      word-break: break-word;
+      line-height: 1.4;
+    }
+
+    .card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 0.25rem;
+      padding-top: 0.35rem;
+      border-top: 1px dashed var(--border);
+      gap: 0.5rem;
+    }
+
+    .card-tags {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+      flex-wrap: wrap;
+    }
+
+    .tag-chip {
+      font-size: 0.725rem;
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      background: var(--bg);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .priority-badge {
+      font-size: 0.725rem;
+      font-weight: 700;
+      padding: 0.1rem 0.45rem;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+    }
+    .priority-high { background: #fee2e2; color: #991b1b; }
+    .priority-med { background: #fef3c7; color: #92400e; }
+    .priority-low { background: #f1f5f9; color: #475569; }
+
+    [data-theme="dark"] .priority-high { background: #450a0a; color: #fca5a5; }
+    [data-theme="dark"] .priority-med { background: #451a03; color: #fde68a; }
+    [data-theme="dark"] .priority-low { background: #1e293b; color: #94a3b8; }
+
+    /* Empty state inside quadrant */
+    .empty-quadrant {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2.5rem 1rem;
+      color: var(--text-muted);
+      text-align: center;
+      gap: 0.5rem;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      height: 100%;
+      min-height: 140px;
+    }
+    .empty-quadrant p { font-size: 0.825rem; }
+
+    /* Add Item Footer in Quadrant */
+    .quad-footer {
+      padding: 0.65rem 0.85rem;
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+    }
+    .quad-add-btn {
+      width: 100%;
+      padding: 0.45rem;
+      border-radius: var(--radius-sm);
+      border: 1px dashed var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      font-size: 0.825rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .quad-add-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    /* VIEW 2: TOWS 交叉戰略矩陣 */
+    .tows-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .tows-intro {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .tows-intro-text h2 { font-size: 1.15rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .tows-intro-text p { font-size: 0.85rem; color: var(--text-muted); }
+
+    .tows-matrix-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    @media (max-width: 900px) {
+      .tows-matrix-grid { grid-template-columns: 1fr; }
+    }
+
+    .tows-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .tows-box-header {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .tows-box-title {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .tows-label {
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-weight: 800;
+      font-size: 0.85rem;
+    }
+    .tows-box-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .tows-so { border-top: 4px solid #10b981; }
+    .tows-so .tows-label { background: #d1fae5; color: #065f46; }
+    .tows-wo { border-top: 4px solid #f59e0b; }
+    .tows-wo .tows-label { background: #fef3c7; color: #92400e; }
+    .tows-st { border-top: 4px solid #0284c7; }
+    .tows-st .tows-label { background: #e0f2fe; color: #0369a1; }
+    .tows-wt { border-top: 4px solid #f43f5e; }
+    .tows-wt .tows-label { background: #ffe4e6; color: #9f1239; }
+
+    [data-theme="dark"] .tows-so .tows-label { background: #064e3b; color: #a7f3d0; }
+    [data-theme="dark"] .tows-wo .tows-label { background: #451a03; color: #fde68a; }
+    [data-theme="dark"] .tows-st .tows-label { background: #075985; color: #bae6fd; }
+    [data-theme="dark"] .tows-wt .tows-label { background: #4c0519; color: #fecdd3; }
+
+    .tows-box-body {
+      padding: 0.85rem;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      min-height: 200px;
+    }
+
+    .tows-item {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .tows-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .tows-item-title {
+      font-weight: 600;
+      font-size: 0.88rem;
+    }
+    .tows-item-meta {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* VIEW 3: 分析與雷達圖 */
+    .analytics-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .analytics-summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+    }
+
+    .summary-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .summary-card-title {
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .summary-card-val {
+      font-size: 1.85rem;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+    .summary-card-hint {
+      font-size: 0.785rem;
+      color: var(--text-muted);
+    }
+
+    .analytics-charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+    @media (max-width: 900px) {
+      .analytics-charts-grid { grid-template-columns: 1fr; }
+    }
+
+    .chart-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .chart-box-header h3 { font-size: 1rem; font-weight: 700; }
+    .chart-box-header p { font-size: 0.8rem; color: var(--text-muted); }
+
+    .chart-body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+    }
+
+    /* Modals / Dialogs */
+    dialog {
+      background: var(--surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      max-width: 520px;
+      width: 92%;
+      margin: auto;
+      box-shadow: var(--shadow-lg);
+    }
+    dialog::backdrop {
+      background: rgb(0 0 0 / 0.5);
+      backdrop-filter: blur(2px);
+    }
+    dialog h3 {
+      font-size: 1.15rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%;
+      padding: 0.55rem 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 0.875rem;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+      border-color: var(--border-focus);
+    }
+    .form-group .hint {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Toast Container */
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 999;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: var(--surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      font-size: 0.875rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      animation: toastIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      pointer-events: auto;
+    }
+    .toast-success { border-left: 4px solid var(--s-primary); }
+    .toast-error { border-left: 4px solid var(--danger); }
+    .toast-info { border-left: 4px solid var(--primary); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Print Stylesheet */
+    @media print {
+      header, .sub-bar, .quad-footer, .quad-add-btn, .card-actions, #toast-container, .tows-intro .btn {
+        display: none !important;
+      }
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      main {
+        max-width: 100% !important;
+        padding: 0 !important;
+      }
+      .swot-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 10px !important;
+        page-break-inside: avoid;
+      }
+      .quadrant {
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+      }
+      .card-item {
+        border: 1px solid #ddd !important;
+        box-shadow: none !important;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo" aria-hidden="true">
+        <span class="b-s"></span>
+        <span class="b-w"></span>
+        <span class="b-o"></span>
+        <span class="b-t"></span>
+      </div>
+      <span>SWOT Matrix Studio</span>
+    </div>
+
+    <!-- View Switcher -->
+    <div class="view-tabs" role="tablist">
+      <button class="tab-btn active" data-view="matrix" role="tab" id="tab-matrix">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        2x2 矩陣
+      </button>
+      <button class="tab-btn" data-view="tows" role="tab" id="tab-tows">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        TOWS 交叉策略
+      </button>
+      <button class="tab-btn" data-view="analytics" role="tab" id="tab-analytics">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+        平衡雷達與分析
+      </button>
+    </div>
+
+    <!-- Header Actions -->
+    <div class="header-nav">
+      <!-- Quick Add Item -->
+      <button class="btn btn-primary" id="btn-quick-add" title="快速新增分析項目">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新增要素
+      </button>
+
+      <!-- Export Dropdown -->
+      <div class="dropdown" id="dropdown-export">
+        <button class="btn btn-outline" id="btn-export-toggle">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          匯出 / 分享
+        </button>
+        <div class="dropdown-menu">
+          <button class="dropdown-item" id="btn-export-png">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            匯出為高畫質 PNG 圖片
+          </button>
+          <button class="dropdown-item" id="btn-export-markdown">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            複製 Markdown 戰略報告
+          </button>
+          <button class="dropdown-item" id="btn-print-view">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            列印 / 另存為 PDF
+          </button>
+          <div class="dropdown-divider"></div>
+          <button class="dropdown-item" id="btn-export-json">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            備份專案資料 (JSON)
+          </button>
+          <button class="dropdown-item" id="btn-trigger-import">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            匯入備份資料 (JSON)
+          </button>
+        </div>
+      </div>
+
+      <!-- Theme Switcher -->
+      <button class="btn btn-icon btn-outline" id="btn-theme-toggle" title="切換深淺色主題" aria-label="切換主題">
+        <svg id="theme-icon-dark" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg id="theme-icon-light" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Sub-Header: Project Selector & Filters -->
+  <div class="sub-bar">
+    <div class="project-info">
+      <div class="project-select-wrapper">
+        <select class="project-select" id="project-select" aria-label="選擇分析專案">
+          <!-- Populated by JS -->
+        </select>
+        <svg class="select-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+
+      <button class="btn btn-sm btn-outline" id="btn-new-project" title="建立新專案">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        新建
+      </button>
+
+      <button class="btn btn-sm btn-outline" id="btn-edit-project" title="編輯專案設定">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </button>
+
+      <span class="project-desc-text" id="project-desc-display">載入中...</span>
+    </div>
+
+    <div class="filter-controls">
+      <!-- Search -->
+      <div class="search-input-wrap">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" class="search-input" id="search-input" placeholder="搜尋項目關鍵字...">
+      </div>
+
+      <!-- Priority Filter -->
+      <select class="filter-select" id="filter-priority" aria-label="依重要程度過濾">
+        <option value="">全部權重</option>
+        <option value="high">高 (⭐⭐⭐)</option>
+        <option value="medium">中 (⭐⭐)</option>
+        <option value="low">低 (⭐)</option>
+      </select>
+
+      <!-- Category Filter -->
+      <select class="filter-select" id="filter-category" aria-label="依分類標籤過濾">
+        <option value="">全部分類</option>
+      </select>
+
+      <!-- Load Template / Demo -->
+      <button class="btn btn-sm btn-outline" id="btn-load-template" title="載入經典範本">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        範本庫
+      </button>
+    </div>
+  </div>
+
+  <!-- Main View Container -->
+  <main>
+    <!-- VIEW 1: 2x2 SWOT Matrix -->
+    <div id="view-matrix" class="swot-grid">
+      <!-- Strengths Quadrant -->
+      <section class="quadrant quad-s" data-quadrant="strengths" id="quad-strengths">
+        <div class="quad-header">
+          <div class="quad-title-group">
+            <div class="quad-badge">S</div>
+            <div class="quad-info">
+              <h2>優勢 Strengths</h2>
+              <span class="quad-sub">內部正向因素・企業核心競爭力</span>
+            </div>
+          </div>
+          <div class="quad-stats">
+            <span class="stat-pill" id="stat-s-count">0 項</span>
+            <span class="stat-pill" id="stat-s-score">權重 0</span>
+          </div>
+        </div>
+        <div class="quad-body" id="list-strengths"></div>
+        <div class="quad-footer">
+          <button class="quad-add-btn" data-quadrant="strengths">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            新增優勢項目 (S)
+          </button>
+        </div>
+      </section>
+
+      <!-- Weaknesses Quadrant -->
+      <section class="quadrant quad-w" data-quadrant="weaknesses" id="quad-weaknesses">
+        <div class="quad-header">
+          <div class="quad-title-group">
+            <div class="quad-badge">W</div>
+            <div class="quad-info">
+              <h2>劣勢 Weaknesses</h2>
+              <span class="quad-sub">內部負向因素・營運痛點與不足</span>
+            </div>
+          </div>
+          <div class="quad-stats">
+            <span class="stat-pill" id="stat-w-count">0 項</span>
+            <span class="stat-pill" id="stat-w-score">權重 0</span>
+          </div>
+        </div>
+        <div class="quad-body" id="list-weaknesses"></div>
+        <div class="quad-footer">
+          <button class="quad-add-btn" data-quadrant="weaknesses">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            新增劣勢項目 (W)
+          </button>
+        </div>
+      </section>
+
+      <!-- Opportunities Quadrant -->
+      <section class="quadrant quad-o" data-quadrant="opportunities" id="quad-opportunities">
+        <div class="quad-header">
+          <div class="quad-title-group">
+            <div class="quad-badge">O</div>
+            <div class="quad-info">
+              <h2>機會 Opportunities</h2>
+              <span class="quad-sub">外部正向因素・市場趨勢與商機</span>
+            </div>
+          </div>
+          <div class="quad-stats">
+            <span class="stat-pill" id="stat-o-count">0 項</span>
+            <span class="stat-pill" id="stat-o-score">權重 0</span>
+          </div>
+        </div>
+        <div class="quad-body" id="list-opportunities"></div>
+        <div class="quad-footer">
+          <button class="quad-add-btn" data-quadrant="opportunities">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            新增機會項目 (O)
+          </button>
+        </div>
+      </section>
+
+      <!-- Threats Quadrant -->
+      <section class="quadrant quad-t" data-quadrant="threats" id="quad-threats">
+        <div class="quad-header">
+          <div class="quad-title-group">
+            <div class="quad-badge">T</div>
+            <div class="quad-info">
+              <h2>威脅 Threats</h2>
+              <span class="quad-sub">外部負向因素・潛在風險與競爭挑戰</span>
+            </div>
+          </div>
+          <div class="quad-stats">
+            <span class="stat-pill" id="stat-t-count">0 項</span>
+            <span class="stat-pill" id="stat-t-score">權重 0</span>
+          </div>
+        </div>
+        <div class="quad-body" id="list-threats"></div>
+        <div class="quad-footer">
+          <button class="quad-add-btn" data-quadrant="threats">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            新增威脅項目 (T)
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <!-- VIEW 2: TOWS 交叉戰略矩陣 -->
+    <div id="view-tows" class="tows-container" style="display: none;">
+      <div class="tows-intro">
+        <div class="tows-intro-text">
+          <h2>TOWS 交叉矩陣 (策略擬定行動方案)</h2>
+          <p>將 SWOT 內外部因子相互配對，推導出具體可落地的四大業務方針：增長、扭轉、防禦、避險。</p>
+        </div>
+        <button class="btn btn-primary" id="btn-add-tows-action">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          新增戰略行動
+        </button>
+      </div>
+
+      <div class="tows-matrix-grid">
+        <!-- SO 策略 -->
+        <div class="tows-box tows-so">
+          <div class="tows-box-header">
+            <div class="tows-box-title">
+              <span class="tows-label">SO 增長策略</span>
+              <strong>發揮優勢 × 把握機會 (Maxi-Maxi)</strong>
+            </div>
+          </div>
+          <div class="tows-box-body" id="tows-list-so"></div>
+        </div>
+
+        <!-- WO 策略 -->
+        <div class="tows-box tows-wo">
+          <div class="tows-box-header">
+            <div class="tows-box-title">
+              <span class="tows-label">WO 扭轉策略</span>
+              <strong>克服劣勢 × 把握機會 (Mini-Maxi)</strong>
+            </div>
+          </div>
+          <div class="tows-box-body" id="tows-list-wo"></div>
+        </div>
+
+        <!-- ST 策略 -->
+        <div class="tows-box tows-st">
+          <div class="tows-box-header">
+            <div class="tows-box-title">
+              <span class="tows-label">ST 監視防禦</span>
+              <strong>發揮優勢 × 抵禦威脅 (Maxi-Mini)</strong>
+            </div>
+          </div>
+          <div class="tows-box-body" id="tows-list-st"></div>
+        </div>
+
+        <!-- WT 策略 -->
+        <div class="tows-box tows-wt">
+          <div class="tows-box-header">
+            <div class="tows-box-title">
+              <span class="tows-label">WT 避險撤退</span>
+              <strong>減少劣勢 × 規避威脅 (Mini-Mini)</strong>
+            </div>
+          </div>
+          <div class="tows-box-body" id="tows-list-wt"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 3: 數據分析與雷達平衡圖 -->
+    <div id="view-analytics" class="analytics-container" style="display: none;">
+      <div class="analytics-summary-grid">
+        <div class="summary-card">
+          <span class="summary-card-title">總分析要素</span>
+          <span class="summary-card-val" id="ana-total-factors">0</span>
+          <span class="summary-card-hint" id="ana-internal-external">內部 0 / 外部 0</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card-title">內部實力指數 (S / W)</span>
+          <span class="summary-card-val" id="ana-internal-ratio">1.0</span>
+          <span class="summary-card-hint" id="ana-internal-verdict">健康度評估</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card-title">外部環境吸引力 (O / T)</span>
+          <span class="summary-card-val" id="ana-external-ratio">1.0</span>
+          <span class="summary-card-hint" id="ana-external-verdict">機會與威脅比</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card-title">戰略行動方案數</span>
+          <span class="summary-card-val" id="ana-tows-count">0</span>
+          <span class="summary-card-hint">TOWS 策略落地清單</span>
+        </div>
+      </div>
+
+      <div class="analytics-charts-grid">
+        <!-- SWOT Radar Chart (Pure SVG) -->
+        <div class="chart-box">
+          <div class="chart-box-header">
+            <h3>四象限戰略雷達 (SWOT Radar)</h3>
+            <p>展示四個維度的加權總得分與結構平衡程度</p>
+          </div>
+          <div class="chart-body" id="radar-container">
+            <!-- Dynamic SVG Radar will be drawn here -->
+          </div>
+        </div>
+
+        <!-- Factor Weight Priority Distribution -->
+        <div class="chart-box">
+          <div class="chart-box-header">
+            <h3>權重與分類佔比統計</h3>
+            <p>各要素重要程度及領域覆蓋分析</p>
+          </div>
+          <div class="chart-body" id="distribution-container" style="flex-direction: column; width: 100%;">
+            <!-- Dynamic Bar Progress indicators -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- MODAL: Add/Edit SWOT Item -->
+  <dialog id="modal-item">
+    <h3 id="modal-item-title">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      編輯 SWOT 項目
+    </h3>
+    <form id="form-item">
+      <input type="hidden" id="item-id">
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="item-quadrant">所屬象限 *</label>
+          <select id="item-quadrant" required>
+            <option value="strengths">S - 優勢 (Strengths)</option>
+            <option value="weaknesses">W - 劣勢 (Weaknesses)</option>
+            <option value="opportunities">O - 機會 (Opportunities)</option>
+            <option value="threats">T - 威脅 (Threats)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="item-priority">權重重要程度 *</label>
+          <select id="item-priority" required>
+            <option value="high">高權重 (Impact: 3)</option>
+            <option value="medium" selected>中權重 (Impact: 2)</option>
+            <option value="low">低權重 (Impact: 1)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="item-title-input">項目名稱 / 關鍵論點 *</label>
+        <input type="text" id="item-title-input" placeholder="例如：團隊具備先進 LLM 研發能力" required>
+      </div>
+
+      <div class="form-group">
+        <label for="item-category-input">分類標籤</label>
+        <input type="text" id="item-category-input" placeholder="例如：技術研發、市場營銷、財務、人才...">
+        <span class="hint">可自定義分類標籤，方便日後交叉篩選</span>
+      </div>
+
+      <div class="form-group">
+        <label for="item-desc-input">詳細說明 / 背景依據 (可選)</label>
+        <textarea id="item-desc-input" rows="3" placeholder="補充該論點的事實依據、數據佐證或影響評估..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="btn-cancel-item">取消</button>
+        <button type="submit" class="btn btn-primary" id="btn-save-item">儲存項目</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- MODAL: Project Settings -->
+  <dialog id="modal-project">
+    <h3 id="modal-project-title">專案設定</h3>
+    <form id="form-project">
+      <input type="hidden" id="project-id">
+      
+      <div class="form-group">
+        <label for="project-name-input">專案名稱 *</label>
+        <input type="text" id="project-name-input" placeholder="例如：2027 企業 AI 產品上市策略" required>
+      </div>
+
+      <div class="form-group">
+        <label for="project-desc-input">專案背景或目標描述</label>
+        <textarea id="project-desc-input" rows="3" placeholder="簡述本次 SWOT 評估的目標、背景脈絡與預期成果..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-danger btn-outline" id="btn-delete-project" style="margin-right:auto;">刪除此專案</button>
+        <button type="button" class="btn btn-outline" id="btn-cancel-project">取消</button>
+        <button type="submit" class="btn btn-primary">儲存專案</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- MODAL: Add/Edit TOWS Action -->
+  <dialog id="modal-tows">
+    <h3 id="modal-tows-title">新增 TOWS 戰略行動</h3>
+    <form id="form-tows">
+      <input type="hidden" id="tows-id">
+      
+      <div class="form-group">
+        <label for="tows-type">策略類型 *</label>
+        <select id="tows-type" required>
+          <option value="so">SO 增長策略 (發揮優勢 × 把握機會)</option>
+          <option value="wo">WO 扭轉策略 (克服劣勢 × 把握機會)</option>
+          <option value="st">ST 監視防禦 (發揮優勢 × 抵禦威脅)</option>
+          <option value="wt">WT 避險撤退 (減少劣勢 × 規避威脅)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="tows-title-input">具體行動方案 *</label>
+        <input type="text" id="tows-title-input" placeholder="例如：與頂尖科研機構簽訂產學合作，搶先推出行業標準" required>
+      </div>
+
+      <div class="form-group">
+        <label for="tows-notes-input">行動備註 / 負責人 / 里程碑</label>
+        <textarea id="tows-notes-input" rows="2" placeholder="預期執行部門、資源需求或時程..."></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="btn-cancel-tows">取消</button>
+        <button type="submit" class="btn btn-primary">儲存行動方案</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- MODAL: Template Selector -->
+  <dialog id="modal-templates">
+    <h3>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      選擇內建經典 SWOT 範本
+    </h3>
+    <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">載入範本將會建立一個全新專案，不會影響您既有的專案內容。</p>
+    <div style="display:flex; flex-direction:column; gap:0.75rem;" id="template-options-list">
+      <!-- Injected by JS -->
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline" id="btn-close-templates">關閉</button>
+    </div>
+  </dialog>
+
+  <!-- Hidden file input for JSON import -->
+  <input type="file" id="file-import-input" accept=".json" style="display:none;">
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" aria-live="polite"></div>
+
+  <!-- Application Script -->
+  <script>
+    /**
+     * MiniDB IndexedDB Lightweight Wrapper
+     */
+    class MiniDB {
+      constructor(dbName = 'SwotStudioDB', version = 1) {
+        this.dbName = dbName;
+        this.version = version;
+        this.db = null;
+      }
+
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(this.dbName, this.version);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('projects')) {
+              db.createObjectStore('projects', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('swot_items')) {
+              const store = db.createObjectStore('swot_items', { keyPath: 'id' });
+              store.createIndex('projectId', 'projectId', { unique: false });
+              store.createIndex('quadrant', 'quadrant', { unique: false });
+            }
+            if (!db.objectStoreNames.contains('tows_actions')) {
+              const towsStore = db.createObjectStore('tows_actions', { keyPath: 'id' });
+              towsStore.createIndex('projectId', 'projectId', { unique: false });
+            }
+          };
+          req.onsuccess = (e) => {
+            this.db = e.target.result;
+            resolve(this.db);
+          };
+          req.onerror = (e) => reject(e.target.error);
+        });
+      }
+
+      getStore(storeName, mode = 'readonly') {
+        const tx = this.db.transaction(storeName, mode);
+        return tx.objectStore(storeName);
+      }
+
+      async getAll(storeName) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readonly');
+          const req = store.getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async get(storeName, key) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readonly');
+          const req = store.get(key);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async put(storeName, item) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readwrite');
+          const req = store.put(item);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async delete(storeName, key) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readwrite');
+          const req = store.delete(key);
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async clear(storeName) {
+        await this.init();
+        return new Promise((resolve, reject) => {
+          const store = this.getStore(storeName, 'readwrite');
+          const req = store.clear();
+          req.onsuccess = () => resolve(true);
+          req.onerror = () => reject(req.error);
+        });
+      }
+
+      async exportAll() {
+        await this.init();
+        const backup = {
+          version: 1,
+          exportedAt: new Date().toISOString(),
+          projects: await this.getAll('projects'),
+          swot_items: await this.getAll('swot_items'),
+          tows_actions: await this.getAll('tows_actions')
+        };
+        return backup;
+      }
+
+      async importAll(data) {
+        await this.init();
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+          throw new Error('Invalid backup structure');
+        }
+        const str = (v) => (typeof v === 'string' ? v : '');
+        const QUADS = ['strengths', 'weaknesses', 'opportunities', 'threats'];
+        const PRIOS = ['high', 'medium', 'low'];
+        const TYPES = ['so', 'wo', 'st', 'wt'];
+        const projects = (Array.isArray(data.projects) ? data.projects : [])
+          .filter(p => p && typeof p.id === 'string' && p.id && typeof p.name === 'string')
+          .map(p => ({ ...p, desc: str(p.desc) }));
+        const items = (Array.isArray(data.swot_items) ? data.swot_items : [])
+          .filter(i => i && typeof i.id === 'string' && i.id && typeof i.projectId === 'string'
+            && QUADS.includes(i.quadrant) && typeof i.title === 'string')
+          .map(i => ({ ...i, priority: PRIOS.includes(i.priority) ? i.priority : 'medium', category: str(i.category), desc: str(i.desc) }));
+        const actions = (Array.isArray(data.tows_actions) ? data.tows_actions : [])
+          .filter(a => a && typeof a.id === 'string' && a.id && typeof a.projectId === 'string'
+            && TYPES.includes(a.type) && typeof a.title === 'string')
+          .map(a => ({ ...a, notes: str(a.notes) }));
+        if (!projects.length && !items.length && !actions.length) {
+          throw new Error('No valid records in backup');
+        }
+        for (const p of projects) await this.put('projects', p);
+        for (const item of items) await this.put('swot_items', item);
+        for (const a of actions) await this.put('tows_actions', a);
+      }
+    }
+
+    /**
+     * Preloaded Templates
+     */
+    const TEMPLATES = [
+      {
+        id: 'tpl-saas',
+        title: '🚀 企業級 AI 智慧分析產品市場推展',
+        desc: '評估將新一代多模態 AI 工具推廣至中大型金融與醫療企業的戰略定位',
+        items: [
+          // Strengths
+          { quadrant: 'strengths', title: '專利高精準度檢索增強 (RAG) 核心技術', priority: 'high', category: '技術研發', desc: '相較開源模型幻覺率低 65%，獲 ISO 國際資安認證' },
+          { quadrant: 'strengths', title: '全台在地化部署與客製化顧問服務經驗', priority: 'medium', category: '服務與營運', desc: '支援私有雲隔離環境，符合金管會法規' },
+          { quadrant: 'strengths', title: '核心研發團隊具備全球頂級期刊發表成果', priority: 'high', category: '人才實力', desc: '5 位博士主持演算法開發' },
+          // Weaknesses
+          { quadrant: 'weaknesses', title: 'B2B 企業端銷售團隊規模不足', priority: 'high', category: '組織規模', desc: '目前商務拓展僅 4 人，難以覆蓋全國客戶詢問' },
+          { quadrant: 'weaknesses', title: '品牌在傳產與製造領域知名度待建立', priority: 'medium', category: '品牌營銷', desc: '過往案例多集中於科技新創圈' },
+          { quadrant: 'weaknesses', title: '高階 GPU 算力租用成本波動風險', priority: 'medium', category: '財務成本', desc: '雲端運算初期成本佔毛利 30%' },
+          // Opportunities
+          { quadrant: 'opportunities', title: '傳統產業數位轉型與企業 AI 預算倍增', priority: 'high', category: '市場需求', desc: '調查顯示 78% 企業計畫在兩年內採購生成式 AI 解決方案' },
+          { quadrant: 'opportunities', title: '政府出台「產業升級與智慧製造」專案補助', priority: 'medium', category: '政策法規', desc: '最高補助採購案 40% 費用' },
+          { quadrant: 'opportunities', title: '國際大型雲平台積極尋求在地 ISV 合作夥伴', priority: 'high', category: '生態合作', desc: '可直接上架其全球市集與聯合銷售' },
+          // Threats
+          { quadrant: 'threats', title: '國際科技巨頭 (OpenAI, Microsoft) 降價競爭', priority: 'high', category: '競爭挑戰', desc: '標準 API 價格年降 50%，擠壓通用模型毛利' },
+          { quadrant: 'threats', title: '企業採購決策週期漫長 (平均 6-9 個月)', priority: 'medium', category: '市場風險', desc: '資安審查與內控合規流程複雜' },
+          { quadrant: 'threats', title: 'AI 專業工程人才薪資成本年年攀升', priority: 'medium', category: '人才爭奪', desc: '跨國外商設立研發中心搶奪資深架構師' }
+        ],
+        actions: [
+          { type: 'so', title: '結合在地合規優勢，與國際雲端巨頭聯合進軍金融首波示範標竿專案', notes: '發揮 RAG 專利，搶佔銀行總行合約' },
+          { type: 'wo', title: '招募關鍵系統整合商 (SI) 作為總代理，補足自身業務銷售人力短板', notes: '提供 25% 渠道分潤機制' },
+          { type: 'st', title: '聚焦高客製化私有化地端部署，避開雲端 API 價格戰', notes: '主打完全資料不外流' },
+          { type: 'wt', title: '推出預先包裝的快速概念驗證 (PoC) 輕量套裝，縮短採購評估期至 3 週', notes: '降低初期決策門檻' }
+        ]
+      },
+      {
+        id: 'tpl-career',
+        title: '💼 資深專業經理人職涯發展與轉職策略',
+        desc: '個人能力審視、轉職高階領導崗位或開展技術顧問服務之 SWOT 評估',
+        items: [
+          { quadrant: 'strengths', title: '10 年軟體工程與高併發架構實戰經驗', priority: 'high', category: '專業技術', desc: '主導過億級日請求系統重構' },
+          { quadrant: 'strengths', title: '具備 15 人跨國敏捷團隊管理實績', priority: 'high', category: '領導溝通', desc: '全員保留率 92%，順利交付 4 款大型專案' },
+          { quadrant: 'weaknesses', title: '個人社群影響力與公開演講經驗較少', priority: 'medium', category: '個人品牌', desc: '缺乏 Medium 專欄或技術大會分享曝光' },
+          { quadrant: 'weaknesses', title: '財務與商業損益 (P&L) 全面經營經驗待強化', priority: 'medium', category: '商業思維', desc: '過去主要專注研發端預算控制' },
+          { quadrant: 'opportunities', title: '傳統中型企業急需具現代化架構經驗之技術長 (CTO)', priority: 'high', category: '就業市場', desc: '獵頭主動接洽頻率持續上升' },
+          { quadrant: 'opportunities', title: '生成式 AI 應用落地顧問諮詢市場需求孔急', priority: 'high', category: '副業商機', desc: '鐘點諮詢費用市場行情樂觀' },
+          { quadrant: 'threats', title: '科技業高管職缺競爭激烈，要求全方位的商務談判背景', priority: 'high', category: '競爭者', desc: '同儕具備 EMBA 或商學院學歷比例高' }
+        ],
+        actions: [
+          { type: 'so', title: '利用團隊管理與架構實戰，爭取正在擴編的中型企業 VP of Engineering 職位', notes: '備妥專案交付數據作為作品集' },
+          { type: 'wo', title: '報名進階商業財務實戰課程，並定期產出技術管理乾貨文章建立個人 IP', notes: '每月在 LinkedIn 與社群發表一篇深思文章' }
+        ]
+      }
+    ];
+
+    /**
+     * Application State & Manager
+     */
+    class SwotStudio {
+      constructor() {
+        this.db = new MiniDB();
+        this.projects = [];
+        this.currentProjectId = null;
+        this.items = [];
+        this.actions = [];
+        this.activeView = 'matrix';
+        this.filterQuery = '';
+        this.filterPriority = '';
+        this.filterCategory = '';
+        this.draggedItemId = null;
+
+        this.init();
+      }
+
+      async init() {
+        this.initTheme();
+        this.bindEvents();
+        await this.loadInitialData();
+      }
+
+      initTheme() {
+        const savedTheme = localStorage.getItem('swot_theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        this.setTheme(savedTheme);
+      }
+
+      setTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('swot_theme', theme);
+        const isDark = theme === 'dark';
+        document.getElementById('theme-icon-dark').style.display = isDark ? 'none' : 'block';
+        document.getElementById('theme-icon-light').style.display = isDark ? 'block' : 'none';
+        if (this.activeView === 'analytics') {
+          this.renderAnalytics();
+        }
+      }
+
+      toggleTheme() {
+        const cur = document.documentElement.getAttribute('data-theme');
+        this.setTheme(cur === 'dark' ? 'light' : 'dark');
+      }
+
+      showToast(msg, type = 'info') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type}`;
+        
+        let iconSvg = '';
+        if (type === 'success') {
+          iconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+        } else if (type === 'error') {
+          iconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+        } else {
+          iconSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+        }
+
+        toast.innerHTML = `${iconSvg}<span>${this.escapeHtml(msg)}</span>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateY(8px)';
+          toast.style.transition = 'all 0.2s ease';
+          setTimeout(() => toast.remove(), 200);
+        }, 2800);
+      }
+
+      escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      async loadInitialData() {
+        this.projects = await this.db.getAll('projects');
+        if (this.projects.length === 0) {
+          // First time user: install first template
+          await this.createProjectFromTemplate(TEMPLATES[0]);
+          return;
+        }
+
+        const lastActiveId = localStorage.getItem('swot_active_project');
+        if (lastActiveId && this.projects.some(p => p.id === lastActiveId)) {
+          this.currentProjectId = lastActiveId;
+        } else {
+          this.currentProjectId = this.projects[0].id;
+        }
+
+        await this.refreshAll();
+      }
+
+      async createProjectFromTemplate(tpl) {
+        const newProjId = 'proj-' + Date.now();
+        const newProj = {
+          id: newProjId,
+          name: tpl.title,
+          desc: tpl.desc,
+          createdAt: new Date().toISOString()
+        };
+        await this.db.put('projects', newProj);
+
+        for (const item of tpl.items) {
+          await this.db.put('swot_items', {
+            id: 'item-' + Math.random().toString(36).substr(2, 9),
+            projectId: newProjId,
+            quadrant: item.quadrant,
+            title: item.title,
+            priority: item.priority || 'medium',
+            category: item.category || '',
+            desc: item.desc || '',
+            createdAt: new Date().toISOString()
+          });
+        }
+
+        if (tpl.actions) {
+          for (const a of tpl.actions) {
+            await this.db.put('tows_actions', {
+              id: 'tows-' + Math.random().toString(36).substr(2, 9),
+              projectId: newProjId,
+              type: a.type,
+              title: a.title,
+              notes: a.notes || '',
+              createdAt: new Date().toISOString()
+            });
+          }
+        }
+
+        this.projects = await this.db.getAll('projects');
+        this.currentProjectId = newProjId;
+        localStorage.setItem('swot_active_project', newProjId);
+        this.showToast(`已載入範本「${tpl.title}」`, 'success');
+        await this.refreshAll();
+      }
+
+      async refreshAll() {
+        this.projects = await this.db.getAll('projects');
+        if (!this.projects.some(p => p.id === this.currentProjectId)) {
+          this.currentProjectId = this.projects[0]?.id || null;
+        }
+        localStorage.setItem('swot_active_project', this.currentProjectId || '');
+
+        if (!this.currentProjectId) {
+          // If no projects exist
+          document.getElementById('project-desc-display').textContent = '無可用專案，請點擊新建';
+          return;
+        }
+
+        const allItems = await this.db.getAll('swot_items');
+        this.items = allItems.filter(i => i.projectId === this.currentProjectId);
+
+        const allActions = await this.db.getAll('tows_actions');
+        this.actions = allActions.filter(a => a.projectId === this.currentProjectId);
+
+        this.renderProjectHeader();
+        this.updateCategoryOptions();
+        this.renderCurrentView();
+      }
+
+      renderProjectHeader() {
+        const select = document.getElementById('project-select');
+        select.innerHTML = '';
+        this.projects.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = p.name;
+          if (p.id === this.currentProjectId) opt.selected = true;
+          select.appendChild(opt);
+        });
+
+        const curProject = this.projects.find(p => p.id === this.currentProjectId);
+        const descEl = document.getElementById('project-desc-display');
+        descEl.textContent = curProject ? (curProject.desc || '無特定描述') : '';
+      }
+
+      updateCategoryOptions() {
+        const catSelect = document.getElementById('filter-category');
+        const categories = Array.from(new Set(this.items.map(i => i.category).filter(Boolean)));
+        
+        if (this.filterCategory && !categories.includes(this.filterCategory)) {
+          this.filterCategory = '';
+        }
+        const curVal = this.filterCategory;
+        catSelect.innerHTML = '<option value="">全部分類</option>';
+        categories.forEach(cat => {
+          const opt = document.createElement('option');
+          opt.value = cat;
+          opt.textContent = cat;
+          if (cat === curVal) opt.selected = true;
+          catSelect.appendChild(opt);
+        });
+      }
+
+      renderCurrentView() {
+        if (this.activeView === 'matrix') {
+          this.renderMatrix();
+        } else if (this.activeView === 'tows') {
+          this.renderTows();
+        } else if (this.activeView === 'analytics') {
+          this.renderAnalytics();
+        }
+      }
+
+      switchView(viewName) {
+        this.activeView = viewName;
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.view === viewName);
+        });
+
+        document.getElementById('view-matrix').style.display = viewName === 'matrix' ? 'grid' : 'none';
+        document.getElementById('view-tows').style.display = viewName === 'tows' ? 'flex' : 'none';
+        document.getElementById('view-analytics').style.display = viewName === 'analytics' ? 'flex' : 'none';
+
+        this.renderCurrentView();
+      }
+
+      /**
+       * Filter Items
+       */
+      getFilteredItems(quadrant) {
+        return this.items.filter(item => {
+          if (quadrant && item.quadrant !== quadrant) return false;
+          if (this.filterPriority && item.priority !== this.filterPriority) return false;
+          if (this.filterCategory && item.category !== this.filterCategory) return false;
+          if (this.filterQuery) {
+            const q = this.filterQuery.toLowerCase();
+            const matchTitle = (item.title || '').toLowerCase().includes(q);
+            const matchDesc = (item.desc || '').toLowerCase().includes(q);
+            const matchCat = (item.category || '').toLowerCase().includes(q);
+            if (!matchTitle && !matchDesc && !matchCat) return false;
+          }
+          return true;
+        });
+      }
+
+      /**
+       * Calculate Impact Score (High=3, Medium=2, Low=1)
+       */
+      getScore(item) {
+        if (item.priority === 'high') return 3;
+        if (item.priority === 'medium') return 2;
+        return 1;
+      }
+
+      /**
+       * Render View 1: 2x2 SWOT Matrix
+       */
+      renderMatrix() {
+        const quadrants = ['strengths', 'weaknesses', 'opportunities', 'threats'];
+        const scoreKeyMap = { strengths: 'stat-s', weaknesses: 'stat-w', opportunities: 'stat-o', threats: 'stat-t' };
+
+        quadrants.forEach(quad => {
+          const container = document.getElementById(`list-${quad}`);
+          const filtered = this.getFilteredItems(quad);
+          const allQuadItems = this.items.filter(i => i.quadrant === quad);
+
+          // Update header stats
+          const totalScore = allQuadItems.reduce((acc, i) => acc + this.getScore(i), 0);
+          document.getElementById(`${scoreKeyMap[quad]}-count`).textContent = `${allQuadItems.length} 項`;
+          document.getElementById(`${scoreKeyMap[quad]}-score`).textContent = `權重 ${totalScore}`;
+
+          container.innerHTML = '';
+          if (filtered.length === 0) {
+            container.innerHTML = `
+              <div class="empty-quadrant">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                <p>${this.filterQuery || this.filterPriority || this.filterCategory ? '無符合篩選條件的項目' : '尚無項目，點擊下方新增'}</p>
+              </div>
+            `;
+            return;
+          }
+
+          filtered.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'card-item';
+            card.draggable = true;
+            card.dataset.id = item.id;
+
+            let priorityText = '⭐⭐⭐ 高';
+            let priorityClass = 'priority-high';
+            if (item.priority === 'medium') {
+              priorityText = '⭐⭐ 中';
+              priorityClass = 'priority-med';
+            } else if (item.priority === 'low') {
+              priorityText = '⭐ 低';
+              priorityClass = 'priority-low';
+            }
+
+            card.innerHTML = `
+              <div class="card-header-row">
+                <div class="card-title">${this.escapeHtml(item.title)}</div>
+                <div class="card-actions">
+                  <button class="btn btn-icon btn-sm btn-outline btn-edit-item" title="編輯" data-id="${this.escapeHtml(item.id)}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  </button>
+                  <button class="btn btn-icon btn-sm btn-outline btn-delete-item" title="刪除" data-id="${this.escapeHtml(item.id)}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+              ${item.desc ? `<div class="card-desc">${this.escapeHtml(item.desc)}</div>` : ''}
+              <div class="card-footer">
+                <div class="card-tags">
+                  ${item.category ? `<span class="tag-chip">${this.escapeHtml(item.category)}</span>` : ''}
+                </div>
+                <span class="priority-badge ${priorityClass}">${priorityText}</span>
+              </div>
+            `;
+
+            // Drag Events
+            card.addEventListener('dragstart', (e) => {
+              this.draggedItemId = item.id;
+              card.classList.add('dragging');
+              e.dataTransfer.setData('text/plain', item.id);
+            });
+            card.addEventListener('dragend', () => {
+              this.draggedItemId = null;
+              card.classList.remove('dragging');
+            });
+
+            container.appendChild(card);
+          });
+        });
+      }
+
+      /**
+       * Render View 2: TOWS 交叉戰略矩陣
+       */
+      renderTows() {
+        const types = ['so', 'wo', 'st', 'wt'];
+        types.forEach(type => {
+          const container = document.getElementById(`tows-list-${type}`);
+          const list = this.actions.filter(a => a.type === type);
+          container.innerHTML = '';
+
+          if (list.length === 0) {
+            container.innerHTML = `
+              <div class="empty-quadrant" style="padding:1.5rem 1rem;">
+                <p>尚未建立該戰略行動</p>
+                <button class="btn btn-sm btn-outline btn-inline-tows" data-type="${type}" style="margin-top:0.25rem;">+ 新增行動</button>
+              </div>
+            `;
+            return;
+          }
+
+          list.forEach(item => {
+            const el = document.createElement('div');
+            el.className = 'tows-item';
+            el.innerHTML = `
+              <div class="tows-item-header">
+                <span class="tows-item-title">${this.escapeHtml(item.title)}</span>
+                <div class="card-actions" style="opacity:1;">
+                  <button class="btn btn-icon btn-sm btn-outline btn-edit-tows" data-id="${this.escapeHtml(item.id)}" title="編輯">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  </button>
+                  <button class="btn btn-icon btn-sm btn-outline btn-delete-tows" data-id="${this.escapeHtml(item.id)}" title="刪除">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                </div>
+              </div>
+              ${item.notes ? `<div class="card-desc">${this.escapeHtml(item.notes)}</div>` : ''}
+            `;
+            container.appendChild(el);
+          });
+        });
+      }
+
+      /**
+       * Render View 3: Radar Chart & Metrics
+       */
+      renderAnalytics() {
+        const sItems = this.items.filter(i => i.quadrant === 'strengths');
+        const wItems = this.items.filter(i => i.quadrant === 'weaknesses');
+        const oItems = this.items.filter(i => i.quadrant === 'opportunities');
+        const tItems = this.items.filter(i => i.quadrant === 'threats');
+
+        const sScore = sItems.reduce((acc, i) => acc + this.getScore(i), 0);
+        const wScore = wItems.reduce((acc, i) => acc + this.getScore(i), 0);
+        const oScore = oItems.reduce((acc, i) => acc + this.getScore(i), 0);
+        const tScore = tItems.reduce((acc, i) => acc + this.getScore(i), 0);
+
+        // Update Summary Cards
+        document.getElementById('ana-total-factors').textContent = this.items.length;
+        document.getElementById('ana-internal-external').textContent = `內部 ${sItems.length + wItems.length} 項 / 外部 ${oItems.length + tItems.length} 項`;
+
+        const internalRatio = wScore === 0 ? (sScore > 0 ? 3.0 : 1.0) : (sScore / wScore).toFixed(2);
+        document.getElementById('ana-internal-ratio').textContent = internalRatio;
+        const intVerdict = internalRatio >= 1.5 ? '優勢佔顯著主導地位 (健康)' : (internalRatio >= 1.0 ? '內部實力尚稱均衡' : '內部劣勢較顯著，需加緊扭轉');
+        document.getElementById('ana-internal-verdict').textContent = intVerdict;
+
+        const externalRatio = tScore === 0 ? (oScore > 0 ? 3.0 : 1.0) : (oScore / tScore).toFixed(2);
+        document.getElementById('ana-external-ratio').textContent = externalRatio;
+        const extVerdict = externalRatio >= 1.5 ? '市場商機大於威脅 (積極進攻)' : (externalRatio >= 1.0 ? '機遇與風險並存 (穩中求進)' : '外部競爭威脅嚴峻 (注重防禦)');
+        document.getElementById('ana-external-verdict').textContent = extVerdict;
+
+        document.getElementById('ana-tows-count').textContent = this.actions.length;
+
+        // Render Pure SVG Radar Chart
+        this.renderSvgRadar(sScore, wScore, oScore, tScore);
+
+        // Render Distribution Bars
+        this.renderDistributionBars(sItems, wItems, oItems, tItems);
+      }
+
+      renderSvgRadar(s, w, o, t) {
+        const container = document.getElementById('radar-container');
+        const maxVal = Math.max(s, w, o, t, 6);
+        const size = 280;
+        const center = size / 2;
+        const radius = 100;
+
+        // Normalizing coordinates:
+        // Top: S, Right: O, Bottom: W, Left: T
+        const getCoord = (score, angleDeg) => {
+          const r = (score / maxVal) * radius;
+          const rad = (angleDeg - 90) * (Math.PI / 180);
+          return {
+            x: center + r * Math.cos(rad),
+            y: center + r * Math.sin(rad)
+          };
+        };
+
+        const ptS = getCoord(s, 0);   // Top: Strengths
+        const ptO = getCoord(o, 90);  // Right: Opportunities
+        const ptW = getCoord(w, 180); // Bottom: Weaknesses
+        const ptT = getCoord(t, 270); // Left: Threats
+
+        const polygonPoints = `${ptS.x},${ptS.y} ${ptO.x},${ptO.y} ${ptW.x},${ptW.y} ${ptT.x},${ptT.y}`;
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const gridColor = isDark ? '#334155' : '#e2e8f0';
+        const textColor = isDark ? '#94a3b8' : '#64748b';
+
+        container.innerHTML = `
+          <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+            <!-- Background circles -->
+            <circle cx="${center}" cy="${center}" r="${radius * 0.33}" fill="none" stroke="${gridColor}" stroke-dasharray="2 2" />
+            <circle cx="${center}" cy="${center}" r="${radius * 0.66}" fill="none" stroke="${gridColor}" stroke-dasharray="2 2" />
+            <circle cx="${center}" cy="${center}" r="${radius}" fill="none" stroke="${gridColor}" />
+
+            <!-- Axis lines -->
+            <line x1="${center}" y1="${center - radius}" x2="${center}" y2="${center + radius}" stroke="${gridColor}" />
+            <line x1="${center - radius}" y1="${center}" x2="${center + radius}" y2="${center}" stroke="${gridColor}" />
+
+            <!-- Radar Area -->
+            <polygon points="${polygonPoints}" fill="rgba(79, 70, 229, 0.25)" stroke="#6366f1" stroke-width="2.5" />
+
+            <!-- Vertex Dots -->
+            <circle cx="${ptS.x}" cy="${ptS.y}" r="4.5" fill="#10b981" />
+            <circle cx="${ptO.x}" cy="${ptO.y}" r="4.5" fill="#0284c7" />
+            <circle cx="${ptW.x}" cy="${ptW.y}" r="4.5" fill="#f59e0b" />
+            <circle cx="${ptT.x}" cy="${ptT.y}" r="4.5" fill="#f43f5e" />
+
+            <!-- Labels -->
+            <text x="${center}" y="${center - radius - 14}" text-anchor="middle" font-size="12" font-weight="700" fill="#10b981">優勢 S (${s})</text>
+            <text x="${center + radius + 10}" y="${center + 4}" text-anchor="start" font-size="12" font-weight="700" fill="#0284c7">機會 O (${o})</text>
+            <text x="${center}" y="${center + radius + 22}" text-anchor="middle" font-size="12" font-weight="700" fill="#f59e0b">劣勢 W (${w})</text>
+            <text x="${center - radius - 10}" y="${center + 4}" text-anchor="end" font-size="12" font-weight="700" fill="#f43f5e">威脅 T (${t})</text>
+          </svg>
+        `;
+      }
+
+      renderDistributionBars(s, w, o, t) {
+        const container = document.getElementById('distribution-container');
+        const total = this.items.length || 1;
+
+        const highCount = this.items.filter(i => i.priority === 'high').length;
+        const medCount = this.items.filter(i => i.priority === 'medium').length;
+        const lowCount = this.items.filter(i => i.priority === 'low').length;
+
+        // Categories breakdown
+        const cats = {};
+        this.items.forEach(i => {
+          const c = i.category || '未分類';
+          cats[c] = (cats[c] || 0) + 1;
+        });
+
+        const sortedCats = Object.entries(cats).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+        container.innerHTML = `
+          <div style="width:100%; display:flex; flex-direction:column; gap:1.25rem;">
+            <!-- Priority Breakdown -->
+            <div>
+              <div style="display:flex; justify-content:space-between; font-size:0.8rem; font-weight:600; margin-bottom:0.35rem;">
+                <span>重要程度分佈</span>
+                <span>高: ${highCount} | 中: ${medCount} | 低: ${lowCount}</span>
+              </div>
+              <div style="height:10px; width:100%; background:var(--border); border-radius:999px; overflow:hidden; display:flex;">
+                <div style="width:${(highCount/total)*100}%; background:#ef4444;" title="高權重"></div>
+                <div style="width:${(medCount/total)*100}%; background:#f59e0b;" title="中權重"></div>
+                <div style="width:${(lowCount/total)*100}%; background:#94a3b8;" title="低權重"></div>
+              </div>
+            </div>
+
+            <!-- Categories ranking -->
+            <div>
+              <div style="font-size:0.8rem; font-weight:600; margin-bottom:0.6rem;">主要涵蓋維度排名</div>
+              <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                ${sortedCats.map(([catName, count]) => `
+                  <div style="display:flex; align-items:center; gap:0.5rem; font-size:0.8rem;">
+                    <span style="width:80px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${this.escapeHtml(catName)}</span>
+                    <div style="flex:1; height:8px; background:var(--border); border-radius:999px; overflow:hidden;">
+                      <div style="width:${(count/total)*100}%; height:100%; background:var(--primary);"></div>
+                    </div>
+                    <span style="color:var(--text-muted); font-size:0.75rem; width:35px; text-align:right;">${count} 項</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      /**
+       * High Resolution HTML5 Canvas PNG Exporter
+       */
+      async exportToPNG() {
+        const curProject = this.projects.find(p => p.id === this.currentProjectId) || { name: 'SWOT-Matrix', desc: '' };
+        
+        // Setup 2x Canvas for crystal sharp presentation quality
+        const scale = 2;
+        const width = 1200 * scale;
+        const height = 900 * scale;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.scale(scale, scale);
+
+        const w = 1200;
+        const h = 900;
+
+        // Background
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(0, 0, w, h);
+
+        // Header banner
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(20, 20, w - 40, 75);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(20, 20, w - 40, 75);
+
+        // Title
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 22px system-ui, sans-serif';
+        ctx.fillText(curProject.name, 40, 56);
+
+        // Description / Subtitle
+        ctx.fillStyle = '#64748b';
+        ctx.font = '13px system-ui, sans-serif';
+        const descText = curProject.desc ? curProject.desc.slice(0, 90) : 'SWOT Strategic Analysis Matrix';
+        ctx.fillText(descText, 40, 78);
+
+        // Date Stamp
+        ctx.textAlign = 'right';
+        ctx.fillText(`產出日期：${new Date().toLocaleDateString('zh-TW')} | SWOT Studio`, w - 40, 65);
+        ctx.textAlign = 'left';
+
+        // 4 Quadrants Coordinates
+        const qW = (w - 60) / 2;
+        const qH = (h - 130) / 2;
+        const topY1 = 110;
+        const topY2 = 110 + qH + 15;
+        const leftX1 = 20;
+        const leftX2 = 20 + qW + 20;
+
+        const quadDefs = [
+          {
+            key: 'strengths',
+            title: 'S - 優勢 (Strengths)',
+            sub: '內部正向因素',
+            color: '#10b981',
+            bg: '#f0fdf4',
+            x: leftX1,
+            y: topY1
+          },
+          {
+            key: 'weaknesses',
+            title: 'W - 劣勢 (Weaknesses)',
+            sub: '內部負向因素',
+            color: '#f59e0b',
+            bg: '#fffbeb',
+            x: leftX2,
+            y: topY1
+          },
+          {
+            key: 'opportunities',
+            title: 'O - 機會 (Opportunities)',
+            sub: '外部正向因素',
+            color: '#0284c7',
+            bg: '#f0f9ff',
+            x: leftX1,
+            y: topY2
+          },
+          {
+            key: 'threats',
+            title: 'T - 威脅 (Threats)',
+            sub: '外部負向因素',
+            color: '#f43f5e',
+            bg: '#fff1f2',
+            x: leftX2,
+            y: topY2
+          }
+        ];
+
+        quadDefs.forEach(q => {
+          // Quadrant Box
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(q.x, q.y, qW, qH);
+          ctx.strokeStyle = '#e2e8f0';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(q.x, q.y, qW, qH);
+
+          // Top accent line
+          ctx.fillStyle = q.color;
+          ctx.fillRect(q.x, q.y, qW, 5);
+
+          // Header area
+          ctx.fillStyle = q.bg;
+          ctx.fillRect(q.x + 1, q.y + 5, qW - 2, 45);
+
+          // Quadrant Title
+          ctx.fillStyle = q.color;
+          ctx.font = 'bold 16px system-ui, sans-serif';
+          ctx.fillText(q.title, q.x + 16, q.y + 32);
+
+          // Quadrant Subtitle
+          ctx.fillStyle = '#64748b';
+          ctx.font = '12px system-ui, sans-serif';
+          ctx.fillText(q.sub, q.x + 16, q.y + 46);
+
+          // Items
+          const items = this.items.filter(i => i.quadrant === q.key);
+          let itemY = q.y + 70;
+
+          if (items.length === 0) {
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = 'italic 13px system-ui, sans-serif';
+            ctx.fillText('尚無分析項目', q.x + 20, itemY);
+          } else {
+            items.slice(0, 6).forEach((item, idx) => {
+              // Item card background
+              ctx.fillStyle = '#f8fafc';
+              ctx.fillRect(q.x + 12, itemY - 14, qW - 24, 46);
+              ctx.strokeStyle = '#e2e8f0';
+              ctx.lineWidth = 1;
+              ctx.strokeRect(q.x + 12, itemY - 14, qW - 24, 46);
+
+              // Bullet
+              ctx.fillStyle = q.color;
+              ctx.beginPath();
+              ctx.arc(q.x + 24, itemY + 2, 3.5, 0, Math.PI * 2);
+              ctx.fill();
+
+              // Item text
+              ctx.fillStyle = '#0f172a';
+              ctx.font = 'bold 13px system-ui, sans-serif';
+              const truncated = item.title.length > 30 ? item.title.slice(0, 30) + '...' : item.title;
+              ctx.fillText(truncated, q.x + 36, itemY + 6);
+
+              // Priority & Category badge
+              ctx.fillStyle = '#64748b';
+              ctx.font = '11px system-ui, sans-serif';
+              const pLabel = item.priority === 'high' ? '⭐高' : (item.priority === 'medium' ? '⭐中' : '⭐低');
+              const tagLabel = item.category ? `[${item.category}]` : '';
+              ctx.textAlign = 'right';
+              ctx.fillText(`${tagLabel} ${pLabel}`, q.x + qW - 24, itemY + 6);
+              ctx.textAlign = 'left';
+
+              itemY += 52;
+            });
+            if (items.length > 6) {
+              ctx.fillStyle = '#64748b';
+              ctx.font = 'italic 12px system-ui, sans-serif';
+              ctx.fillText(`…另有 ${items.length - 6} 項未顯示`, q.x + 20, itemY + 4);
+            }
+          }
+        });
+
+        // Trigger Download
+        canvas.toBlob((blob) => {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const safeName = (curProject.name || 'swot-analysis').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '-');
+          a.download = `${safeName}-${new Date().toISOString().slice(0, 10)}.png`;
+          a.href = url;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          this.showToast('已匯出高畫質 PNG 矩陣圖', 'success');
+        });
+      }
+
+      /**
+       * Generate and Copy Markdown Report
+       */
+      copyMarkdownReport() {
+        const curProject = this.projects.find(p => p.id === this.currentProjectId) || { name: 'SWOT 戰略分析報告', desc: '' };
+        const sItems = this.items.filter(i => i.quadrant === 'strengths');
+        const wItems = this.items.filter(i => i.quadrant === 'weaknesses');
+        const oItems = this.items.filter(i => i.quadrant === 'opportunities');
+        const tItems = this.items.filter(i => i.quadrant === 'threats');
+
+        let md = `# ${curProject.name}\n\n`;
+        if (curProject.desc) {
+          md += `> **專案背景**：${curProject.desc}\n\n`;
+        }
+        md += `*產出日期：${new Date().toLocaleDateString('zh-TW')}*\n\n---\n\n`;
+
+        md += `## 一、SWOT 四象限分析\n\n`;
+
+        const renderQuadrantMd = (title, items) => {
+          let str = `### ${title}\n`;
+          if (items.length === 0) {
+            str += `*(無項目)*\n\n`;
+          } else {
+            items.forEach((item, idx) => {
+              const p = item.priority === 'high' ? '高權重' : (item.priority === 'medium' ? '中權重' : '低權重');
+              const cat = item.category ? `\`${item.category}\`` : '';
+              str += `${idx + 1}. **${item.title}** [${p}] ${cat}\n`;
+              if (item.desc) str += `   - *說明*：${item.desc}\n`;
+            });
+            str += `\n`;
+          }
+          return str;
+        };
+
+        md += renderQuadrantMd('優勢 Strengths (內部正向)', sItems);
+        md += renderQuadrantMd('劣勢 Weaknesses (內部負向)', wItems);
+        md += renderQuadrantMd('機會 Opportunities (外部正向)', oItems);
+        md += renderQuadrantMd('威脅 Threats (外部負向)', tItems);
+
+        if (this.actions.length > 0) {
+          md += `---\n\n## 二、TOWS 交叉戰略行動方案\n\n`;
+          const types = [
+            { key: 'so', name: 'SO 增長策略 (優勢 × 機會)' },
+            { key: 'wo', name: 'WO 扭轉策略 (劣勢 × 機會)' },
+            { key: 'st', name: 'ST 監視防禦 (優勢 × 威脅)' },
+            { key: 'wt', name: 'WT 避險撤退 (劣勢 × 威脅)' }
+          ];
+
+          types.forEach(t => {
+            const list = this.actions.filter(a => a.type === t.key);
+            if (list.length > 0) {
+              md += `### ${t.name}\n`;
+              list.forEach((act, idx) => {
+                md += `- **行動 ${idx + 1}**：${act.title}\n`;
+                if (act.notes) md += `  - 備註/里程碑：${act.notes}\n`;
+              });
+              md += `\n`;
+            }
+          });
+        }
+
+        const fallbackCopy = () => {
+          const ta = document.createElement('textarea');
+          ta.value = md;
+          ta.style.cssText = 'position:fixed;opacity:0;';
+          document.body.appendChild(ta);
+          ta.select();
+          let ok = false;
+          try { ok = document.execCommand('copy'); } catch (_) {}
+          ta.remove();
+          return ok;
+        };
+        const done = () => this.showToast('已複製 Markdown 戰略報告至剪貼簿！', 'success');
+        const fail = () => this.showToast('無法存取剪貼簿，請手動複製', 'error');
+        if (navigator.clipboard?.writeText) {
+          navigator.clipboard.writeText(md).then(done).catch(() => (fallbackCopy() ? done() : fail()));
+        } else {
+          fallbackCopy() ? done() : fail();
+        }
+      }
+
+      /**
+       * Bind all Event Listeners
+       */
+      bindEvents() {
+        // Theme toggle
+        document.getElementById('btn-theme-toggle').addEventListener('click', () => this.toggleTheme());
+
+        // View Tabs
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.switchView(btn.dataset.view);
+          });
+        });
+
+        // Project Select
+        document.getElementById('project-select').addEventListener('change', async (e) => {
+          this.currentProjectId = e.target.value;
+          await this.refreshAll();
+        });
+
+        // New Project Button
+        document.getElementById('btn-new-project').addEventListener('click', () => {
+          document.getElementById('project-id').value = '';
+          document.getElementById('project-name-input').value = '';
+          document.getElementById('project-desc-input').value = '';
+          document.getElementById('modal-project-title').textContent = '建立新 SWOT 專案';
+          document.getElementById('btn-delete-project').style.display = 'none';
+          document.getElementById('modal-project').showModal();
+        });
+
+        // Edit Project Button
+        document.getElementById('btn-edit-project').addEventListener('click', () => {
+          const cur = this.projects.find(p => p.id === this.currentProjectId);
+          if (!cur) return;
+          document.getElementById('project-id').value = cur.id;
+          document.getElementById('project-name-input').value = cur.name;
+          document.getElementById('project-desc-input').value = cur.desc || '';
+          document.getElementById('modal-project-title').textContent = '編輯專案設定';
+          document.getElementById('btn-delete-project').style.display = this.projects.length > 1 ? 'block' : 'none';
+          document.getElementById('modal-project').showModal();
+        });
+
+        // Project Form Submit
+        document.getElementById('form-project').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const id = document.getElementById('project-id').value || ('proj-' + Date.now());
+          const name = document.getElementById('project-name-input').value.trim();
+          const desc = document.getElementById('project-desc-input').value.trim();
+
+          await this.db.put('projects', {
+            id,
+            name,
+            desc,
+            updatedAt: new Date().toISOString()
+          });
+
+          this.currentProjectId = id;
+          document.getElementById('modal-project').close();
+          this.showToast('專案已儲存', 'success');
+          await this.refreshAll();
+        });
+
+        document.getElementById('btn-cancel-project').addEventListener('click', () => {
+          document.getElementById('modal-project').close();
+        });
+
+        // Delete Project
+        document.getElementById('btn-delete-project').addEventListener('click', async () => {
+          if (!confirm('確定要刪除此專案及其所有分析項目與 TOWS 策略嗎？此動作無法復原。')) return;
+          
+          await this.db.delete('projects', this.currentProjectId);
+          // Clean up related items
+          const items = await this.db.getAll('swot_items');
+          for (const item of items) {
+            if (item.projectId === this.currentProjectId) await this.db.delete('swot_items', item.id);
+          }
+          const actions = await this.db.getAll('tows_actions');
+          for (const a of actions) {
+            if (a.projectId === this.currentProjectId) await this.db.delete('tows_actions', a.id);
+          }
+
+          document.getElementById('modal-project').close();
+          this.showToast('專案已刪除', 'info');
+          await this.loadInitialData();
+        });
+
+        // Search & Filters
+        document.getElementById('search-input').addEventListener('input', (e) => {
+          this.filterQuery = e.target.value.trim();
+          this.renderMatrix();
+        });
+
+        document.getElementById('filter-priority').addEventListener('change', (e) => {
+          this.filterPriority = e.target.value;
+          this.renderMatrix();
+        });
+
+        document.getElementById('filter-category').addEventListener('change', (e) => {
+          this.filterCategory = e.target.value;
+          this.renderMatrix();
+        });
+
+        // Quick Add Item
+        document.getElementById('btn-quick-add').addEventListener('click', () => {
+          this.openItemModal();
+        });
+
+        // Quadrant "+ Add" buttons
+        document.querySelectorAll('.quad-add-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.openItemModal(btn.dataset.quadrant);
+          });
+        });
+
+        // Cancel Item Modal
+        document.getElementById('btn-cancel-item').addEventListener('click', () => {
+          document.getElementById('modal-item').close();
+        });
+
+        // Item Form Submit
+        document.getElementById('form-item').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const id = document.getElementById('item-id').value || ('item-' + Math.random().toString(36).substr(2, 9));
+          const quadrant = document.getElementById('item-quadrant').value;
+          const priority = document.getElementById('item-priority').value;
+          const title = document.getElementById('item-title-input').value.trim();
+          const category = document.getElementById('item-category-input').value.trim();
+          const desc = document.getElementById('item-desc-input').value.trim();
+
+          const record = {
+            id,
+            projectId: this.currentProjectId,
+            quadrant,
+            priority,
+            title,
+            category,
+            desc,
+            updatedAt: new Date().toISOString()
+          };
+
+          await this.db.put('swot_items', record);
+          document.getElementById('modal-item').close();
+          this.showToast('要素已儲存', 'success');
+          await this.refreshAll();
+        });
+
+        // Delegated clicks for Matrix Cards (Edit / Delete)
+        document.getElementById('view-matrix').addEventListener('click', async (e) => {
+          const editBtn = e.target.closest('.btn-edit-item');
+          if (editBtn) {
+            const item = this.items.find(i => i.id === editBtn.dataset.id);
+            if (item) this.openItemModal(item.quadrant, item);
+            return;
+          }
+
+          const delBtn = e.target.closest('.btn-delete-item');
+          if (delBtn) {
+            if (confirm('確定要刪除此要素項目嗎？')) {
+              await this.db.delete('swot_items', delBtn.dataset.id);
+              this.showToast('項目已刪除', 'info');
+              await this.refreshAll();
+            }
+          }
+        });
+
+        // Drag and Drop between Quadrants
+        document.querySelectorAll('.quadrant').forEach(quadEl => {
+          quadEl.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            quadEl.classList.add('drag-over');
+          });
+
+          quadEl.addEventListener('dragleave', () => {
+            quadEl.classList.remove('drag-over');
+          });
+
+          quadEl.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            quadEl.classList.remove('drag-over');
+            const targetQuad = quadEl.dataset.quadrant;
+            if (this.draggedItemId && targetQuad) {
+              const item = this.items.find(i => i.id === this.draggedItemId);
+              if (item && item.quadrant !== targetQuad) {
+                item.quadrant = targetQuad;
+                await this.db.put('swot_items', item);
+                this.showToast(`已移動至 ${targetQuad.toUpperCase()}`, 'success');
+                await this.refreshAll();
+              }
+            }
+          });
+        });
+
+        // TOWS Actions
+        document.getElementById('btn-add-tows-action').addEventListener('click', () => {
+          this.openTowsModal();
+        });
+
+        document.getElementById('view-tows').addEventListener('click', async (e) => {
+          const inlineBtn = e.target.closest('.btn-inline-tows');
+          if (inlineBtn) {
+            this.openTowsModal(inlineBtn.dataset.type);
+            return;
+          }
+
+          const editBtn = e.target.closest('.btn-edit-tows');
+          if (editBtn) {
+            const act = this.actions.find(a => a.id === editBtn.dataset.id);
+            if (act) this.openTowsModal(act.type, act);
+            return;
+          }
+
+          const delBtn = e.target.closest('.btn-delete-tows');
+          if (delBtn) {
+            if (confirm('確定要刪除此戰略行動方案嗎？')) {
+              await this.db.delete('tows_actions', delBtn.dataset.id);
+              this.showToast('戰略行動已刪除', 'info');
+              await this.refreshAll();
+            }
+          }
+        });
+
+        document.getElementById('btn-cancel-tows').addEventListener('click', () => {
+          document.getElementById('modal-tows').close();
+        });
+
+        document.getElementById('form-tows').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const id = document.getElementById('tows-id').value || ('tows-' + Math.random().toString(36).substr(2, 9));
+          const type = document.getElementById('tows-type').value;
+          const title = document.getElementById('tows-title-input').value.trim();
+          const notes = document.getElementById('tows-notes-input').value.trim();
+
+          await this.db.put('tows_actions', {
+            id,
+            projectId: this.currentProjectId,
+            type,
+            title,
+            notes,
+            updatedAt: new Date().toISOString()
+          });
+
+          document.getElementById('modal-tows').close();
+          this.showToast('戰略行動已儲存', 'success');
+          await this.refreshAll();
+        });
+
+        // Template Library Modal
+        document.getElementById('btn-load-template').addEventListener('click', () => {
+          const list = document.getElementById('template-options-list');
+          list.innerHTML = '';
+          TEMPLATES.forEach(t => {
+            const btn = document.createElement('div');
+            btn.style.cssText = 'padding:0.75rem; border:1px solid var(--border); border-radius:var(--radius-sm); cursor:pointer; background:var(--surface); display:flex; flex-direction:column; gap:0.25rem; transition:all 0.15s ease;';
+            btn.innerHTML = `
+              <strong style="font-size:0.9rem;">${this.escapeHtml(t.title)}</strong>
+              <span style="font-size:0.785rem; color:var(--text-muted);">${this.escapeHtml(t.desc)}</span>
+            `;
+            btn.addEventListener('click', async () => {
+              document.getElementById('modal-templates').close();
+              await this.createProjectFromTemplate(t);
+            });
+            list.appendChild(btn);
+          });
+          document.getElementById('modal-templates').showModal();
+        });
+
+        document.getElementById('btn-close-templates').addEventListener('click', () => {
+          document.getElementById('modal-templates').close();
+        });
+
+        // Dropdown toggle
+        const dropdown = document.getElementById('dropdown-export');
+        document.getElementById('btn-export-toggle').addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.toggle('active');
+        });
+
+        document.addEventListener('click', () => {
+          dropdown.classList.remove('active');
+        });
+
+        // Export Actions
+        document.getElementById('btn-export-png').addEventListener('click', () => {
+          dropdown.classList.remove('active');
+          this.exportToPNG();
+        });
+
+        document.getElementById('btn-export-markdown').addEventListener('click', () => {
+          dropdown.classList.remove('active');
+          this.copyMarkdownReport();
+        });
+
+        document.getElementById('btn-print-view').addEventListener('click', () => {
+          dropdown.classList.remove('active');
+          window.print();
+        });
+
+        // JSON Backup
+        document.getElementById('btn-export-json').addEventListener('click', async () => {
+          dropdown.classList.remove('active');
+          const backup = await this.db.exportAll();
+          const jsonStr = JSON.stringify(backup, null, 2);
+          const blob = new Blob([jsonStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `swot-studio-backup-${new Date().toISOString().slice(0, 10)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          this.showToast('已匯出完整資料備份 (JSON)', 'success');
+        });
+
+        // JSON Restore
+        document.getElementById('btn-trigger-import').addEventListener('click', () => {
+          dropdown.classList.remove('active');
+          document.getElementById('file-import-input').click();
+        });
+
+        document.getElementById('file-import-input').addEventListener('change', async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+
+          try {
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+              try {
+                const data = JSON.parse(evt.target.result);
+                await this.db.importAll(data);
+                this.showToast('資料還原成功！', 'success');
+                await this.loadInitialData();
+              } catch (err) {
+                this.showToast('JSON 格式錯誤，無法還原', 'error');
+              }
+            };
+            reader.readAsText(file);
+          } catch (err) {
+            this.showToast('檔案讀取失敗', 'error');
+          } finally {
+            e.target.value = '';
+          }
+        });
+      }
+
+      openItemModal(quadrant = 'strengths', item = null) {
+        document.getElementById('item-id').value = item ? item.id : '';
+        document.getElementById('item-quadrant').value = item ? item.quadrant : quadrant;
+        document.getElementById('item-priority').value = item ? item.priority : 'medium';
+        document.getElementById('item-title-input').value = item ? item.title : '';
+        document.getElementById('item-category-input').value = item ? (item.category || '') : '';
+        document.getElementById('item-desc-input').value = item ? (item.desc || '') : '';
+        document.getElementById('modal-item-title').innerHTML = `
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          ${item ? '編輯分析要素' : '新增分析要素'}
+        `;
+        document.getElementById('modal-item').showModal();
+        setTimeout(() => document.getElementById('item-title-input').focus(), 50);
+      }
+
+      openTowsModal(type = 'so', action = null) {
+        document.getElementById('tows-id').value = action ? action.id : '';
+        document.getElementById('tows-type').value = action ? action.type : type;
+        document.getElementById('tows-title-input').value = action ? action.title : '';
+        document.getElementById('tows-notes-input').value = action ? (action.notes || '') : '';
+        document.getElementById('modal-tows-title').textContent = action ? '編輯 TOWS 戰略行動' : '新增 TOWS 戰略行動';
+        document.getElementById('modal-tows').showModal();
+        setTimeout(() => document.getElementById('tows-title-input').focus(), 50);
+      }
+    }
+
+    // Initialize application on DOM ready
+    window.addEventListener('DOMContentLoaded', () => {
+      window.app = new SwotStudio();
+    });
+  </script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

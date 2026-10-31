@@ -78,6 +78,8 @@ my-spa-tools/
 │  ├─ decision-sandbox/          決策沙盤推演系統（多準則計分、TOPSIS、情境與蒙地卡羅模擬、決議快照）
 │  ├─ decision-matrix/           衡 情境決策矩陣（加權評分、Pugh 基準比較與 JSON 備份）
 │  ├─ five-forces-dashboard/     五力分析儀表板（波特五力評分、雷達圖、洞察建議與 PNG 匯出）
+│  ├─ swot-tows-studio/         SWOT 可視化產生器與 TOWS 交叉戰略矩陣（四象限權重、行動方案與 PNG／Markdown／JSON 匯出）
+│  ├─ world-time-planner/       多時區協調羅盤（24 小時共識帶、最佳會議重疊時段與 JSON 備份）
 │  └─ zen-typewriter-editor/     Zen Typewriter 打字機心流編輯器（打字機聲效、Markdown 預覽與文稿庫）
 ├─ design/                       設計工具
 │  ├─ bento-grid-studio/         Bento Studio 版型產生器（拖曳縮放、10 種主題與 Tailwind／CSS／JSON 匯出）
@@ -89,6 +91,7 @@ my-spa-tools/
 │  ├─ infographic-builder/       Infographic Builder 資訊圖表產生器（文字拆分、版型主題與 PNG／JSON 匯出）
 │  ├─ svg-pattern-studio/        SVG Pattern Studio 向量背景紋理生成器（9 種圖樣、配色與 SVG／CSS／PNG 匯出）
 │  ├─ card-workshop/             圖卡工房（30 款範本、三種畫布、即時預覽與 PNG／JSON 匯出）
+│  ├─ mistlight-image-studio/    霧光・離線圖片工作室（角落取樣去背、筆刷修補、文字浮水印與 PNG 匯出）
 │  └─ moodboard/                 Moodboard 靈感素材庫（圖片／連結／文字、標籤看板與備份）
 ├─ diagram/                      流程與圖表建模
 │  ├─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器
@@ -167,7 +170,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 86 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 89 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

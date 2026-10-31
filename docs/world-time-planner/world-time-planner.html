@@ -1,0 +1,2862 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="多時區協調羅盤：用 24 小時共識帶找出跨時區會議的最佳重疊時段，資料存在瀏覽器本機。">
+<title>多時區協調羅盤 · World Time Planner</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d141b'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23e0a55a' stroke-width='1.5'/%3E%3Cpath d='M16 6.5l3 10-3 2-3-2z' fill='%23e0a55a'/%3E%3Ccircle cx='16' cy='16' r='1.5' fill='%23fff8ec'/%3E%3C/svg%3E">
+<script>
+  /* 首屏先套用主題，避免白閃。localStorage 只是鏡像，正式設定在 IndexedDB。 */
+  try {
+    var wtcTheme = localStorage.getItem('wtc-theme') || 'auto';
+    if (wtcTheme === 'auto') {
+      wtcTheme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    document.documentElement.dataset.theme = wtcTheme;
+    document.documentElement.style.colorScheme = wtcTheme;
+  } catch (e) {}
+</script>
+<style>
+/* ── 1. tokens ───────────────────────────────────────────── */
+:root {
+  --bg: #f2eee4;
+  --surface: #fffdf8;
+  --surface-2: #f5f0e6;
+  --text: #1b2430;
+  --muted: #5a6573;
+  --border: #d8cfbe;
+  --border-strong: #b7aa90;
+  --accent: #8a5514;
+  --accent-2: #b4762a;
+  --accent-text: #fff9ef;
+  --ok: #1c6f4e;
+  --ok-soft: #dcefe4;
+  --danger: #a33427;
+  --info: #3d5f9e;
+  --night-amount: 7%;
+  --work-amount: 21%;
+  --grid-line: rgba(27, 36, 48, .09);
+  --now: #2c6f8e;
+  --shadow: 0 1px 2px rgba(27, 36, 48, .05), 0 12px 32px rgba(27, 36, 48, .06);
+  --radius: 16px;
+  --radius-sm: 10px;
+  --maxw: 1420px;
+  --mono: ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+}
+[data-theme="dark"] {
+  --bg: #0a1117;
+  --surface: #111b23;
+  --surface-2: #17232d;
+  --text: #eee9dd;
+  --muted: #98a6b2;
+  --border: #283845;
+  --border-strong: #435767;
+  --accent: #e0a55a;
+  --accent-2: #f0c07c;
+  --accent-text: #1c1408;
+  --ok: #5cc59a;
+  --ok-soft: rgba(92, 197, 154, .14);
+  --danger: #ff8d7d;
+  --info: #9db6ff;
+  --night-amount: 32%;
+  --work-amount: 27%;
+  --grid-line: rgba(238, 233, 221, .08);
+  --now: #6fc3e4;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 16px 40px rgba(0, 0, 0, .35);
+}
+
+/* ── 2. base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background:
+    radial-gradient(1100px 520px at 50% -12%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%),
+    var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.6;
+}
+h1, h2, h3, p, ul, ol { margin: 0; }
+h1 { font-size: 19px; font-weight: 700; letter-spacing: .01em; line-height: 1.25; }
+h2 { font-size: 18px; font-weight: 680; line-height: 1.3; }
+h3 { font-size: 14px; font-weight: 700; letter-spacing: .04em; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { touch-action: manipulation; }
+::placeholder { color: var(--muted); opacity: .8; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ── 3. layout ───────────────────────────────────────────── */
+.appbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px max(18px, calc((100% - var(--maxw)) / 2 + 18px));
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+.brand__mark {
+  display: grid; place-items: center; flex: none;
+  width: 40px; height: 40px; border-radius: 12px;
+  background: var(--text); color: var(--bg);
+  border: 1px solid var(--border-strong);
+}
+[data-theme="dark"] .brand__mark { background: var(--surface-2); color: var(--accent); }
+.brand__sub { font-family: var(--mono); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.appbar__actions { display: flex; gap: 8px; }
+main {
+  max-width: var(--maxw); margin: 0 auto; padding: 20px 18px 24px;
+  display: grid; gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+}
+.foot {
+  max-width: var(--maxw); margin: 0 auto; padding: 4px 18px 32px;
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  color: var(--muted); font-size: 12px;
+}
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow);
+  min-width: 0;
+}
+.card-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.card-head > div { min-width: 0; }
+.hint { color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.now-readout {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-left: 8px; color: var(--now);
+  font-family: var(--mono); font-size: 11px; white-space: nowrap;
+}
+.now-readout::before { content: ""; width: 14px; border-top: 2px dashed var(--now); }
+.card-head .hint { margin-top: 3px; }
+
+/* ── 4. controls ─────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 8px 14px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: 14px; font-weight: 550; text-decoration: none; cursor: pointer;
+  transition: background .15s, border-color .15s, transform .05s;
+}
+.btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.btn--primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.btn--primary:hover { background: var(--accent); border-color: var(--accent); filter: brightness(1.07); }
+.btn--small { min-height: 44px; padding: 6px 12px; font-size: 13px; }
+.btn--danger { color: var(--danger); }
+.btn--danger:hover { background: color-mix(in srgb, var(--danger) 10%, transparent); border-color: var(--danger); }
+.btn--danger-solid { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn--danger-solid:hover { background: var(--danger); filter: brightness(1.07); }
+.icon-btn {
+  width: 44px; height: 44px; flex: none;
+  display: grid; place-items: center;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; font-size: 17px; cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.icon-btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
+.icon-btn--danger { color: var(--danger); font-size: 14px; }
+input[type="text"], input[type="search"], input[type="date"], input[type="time"], select, textarea {
+  width: 100%; min-height: 44px; padding: 8px 11px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+input[type="date"], input[type="time"] { font-family: var(--mono); font-size: 13px; }
+textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+select { cursor: pointer; }
+
+/* ── 5. hero ─────────────────────────────────────────────── */
+.hero {
+  display: grid; grid-template-columns: 116px minmax(0, 1fr) 168px;
+  gap: 24px; align-items: center;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 5%, transparent), transparent 55%),
+    var(--surface);
+}
+.hero__rose { width: 116px; height: 116px; display: grid; place-items: center; }
+.hero__rose svg { width: 100%; height: 100%; overflow: visible; }
+.rose-ring { fill: none; stroke: var(--border-strong); stroke-width: 1; opacity: .7; }
+.rose-ring--soft { stroke: var(--border); stroke-dasharray: 2 4; }
+.rose-tick { stroke: var(--border-strong); stroke-width: 1; }
+.rose-tick.is-major { stroke: var(--accent); stroke-width: 2; }
+.rose-card { fill: var(--muted); font: 600 7.5px var(--mono); letter-spacing: .04em; }
+#rose-needle { transform-box: view-box; transform-origin: 60px 60px; transition: transform .16s ease; }
+.hero__ref { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; min-width: 0; }
+.hero__reflabel { font-size: 11px; letter-spacing: .1em; color: var(--muted); }
+#ref-tz {
+  flex: 1 1 180px; min-width: 0; width: auto; max-width: 300px;
+  min-height: 36px; padding: 4px 8px; font-size: 12.5px; border-radius: 8px;
+}
+.hero__clock { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; margin: 4px 0 8px; min-width: 0; }
+.hero__time {
+  font-family: var(--mono); font-size: clamp(44px, 6.6vw, 68px);
+  font-weight: 650; line-height: 1; letter-spacing: -.035em;
+  font-variant-numeric: tabular-nums;
+}
+.hero__meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+.hero__meta span + span::before { content: "·"; margin-right: 8px; color: var(--border-strong); }
+.hero__body { min-width: 0; }
+.hero__nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.hero__nav input[type="date"] { width: 144px; }
+.hero__nav .icon-btn { font-size: 22px; line-height: 1; }
+.hero__stat {
+  border-left: 1px solid var(--border); padding-left: 22px;
+  display: flex; flex-direction: column; justify-content: center; min-height: 100px;
+}
+.stat { display: flex; align-items: baseline; gap: 2px; font-family: var(--mono); }
+.stat__num { font-size: 42px; font-weight: 650; line-height: 1; letter-spacing: -.03em; }
+.stat__den { font-size: 16px; color: var(--muted); }
+.stat__label { font-size: 13px; color: var(--text); margin-top: 2px; }
+.hero__stat .hint { margin-top: 2px; }
+
+/* ── 6. timeline ─────────────────────────────────────────── */
+.cursor-pill {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 12px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 999px;
+}
+.cursor-pill__label { font-size: 10px; letter-spacing: .12em; color: var(--muted); }
+#cursor-time { font-size: 18px; font-weight: 700; }
+.cursor-pill__zone { font-size: 11px; color: var(--muted); }
+.range-wrap { display: grid; gap: 2px; margin: 12px 0 10px; }
+#cursor-range { width: 100%; height: 44px; accent-color: var(--accent); cursor: pointer; }
+.range-ticks {
+  display: flex; justify-content: space-between; padding: 0 8px;
+  font: 10px var(--mono); color: var(--muted);
+}
+.tl-scroll {
+  overflow-x: auto; overflow-y: hidden;
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--surface);
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+}
+.timeline {
+  --label-w: 126px;
+  --slot-w: 50px;
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--label-w) repeat(24, minmax(var(--slot-w), 1fr));
+  width: 100%;
+  min-width: max-content;
+  background: var(--surface);
+  font-variant-numeric: tabular-nums;
+}
+.tl-head {
+  height: 40px; display: flex; align-items: center; justify-content: center;
+  background: var(--surface-2); color: var(--muted);
+  border-right: 1px solid var(--grid-line); border-bottom: 1px solid var(--border);
+  font: 600 12px var(--mono);
+}
+.tl-corner {
+  position: sticky; left: 0; z-index: 6;
+  display: flex; flex-direction: column; justify-content: center;
+  gap: 1px; padding: 0 10px;
+  background: var(--surface); color: var(--muted);
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--grid-line);
+  font-size: 11px; line-height: 1.25;
+}
+.tl-corner strong { color: var(--text); font-size: 12px; font-weight: 650; }
+.tl-corner--head { height: 40px; }
+.tl-corner--score { height: 30px; font-size: 10px; letter-spacing: .04em; }
+.tl-score {
+  position: relative; height: 30px; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface); color: var(--muted);
+  border-right: 1px solid var(--grid-line); border-bottom: 1px solid var(--border);
+  font: 600 10px var(--mono);
+}
+.tl-score::before {
+  content: ""; position: absolute; left: 6px; right: 6px; bottom: 0;
+  height: calc(var(--h, 0) * 1%);
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  border-radius: 2px 2px 0 0;
+}
+.tl-score.is-some::before { background: color-mix(in srgb, var(--accent-2) 42%, transparent); }
+.tl-score.is-full::before { background: color-mix(in srgb, var(--ok) 48%, transparent); }
+.tl-score span { position: relative; z-index: 1; }
+.tl-label {
+  position: sticky; left: 0; z-index: 6;
+  height: 50px; display: grid; grid-template-rows: auto auto; align-content: center;
+  gap: 1px; padding: 5px 10px;
+  background: var(--surface);
+  border-right: 1px solid var(--border); border-bottom: 1px solid var(--grid-line);
+  box-shadow: 6px 0 10px -8px rgba(0, 0, 0, .32);
+}
+.tl-label__top { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tl-label__name {
+  font-size: 13px; font-weight: 650; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.tl-label__day {
+  flex: none; padding: 1px 4px; border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent); font: 600 9px var(--mono);
+}
+.tl-label__bottom { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.tl-label__time { font-size: 13px; font-weight: 650; }
+.tl-label__work { font-size: 9.5px; color: var(--muted); }
+.tl-cell {
+  height: 50px; display: flex; align-items: center; justify-content: center;
+  background: var(--surface); color: var(--text);
+  border-right: 1px solid var(--grid-line); border-bottom: 1px solid var(--grid-line);
+  font: 500 11px var(--mono); cursor: pointer;
+  transition: background .12s;
+}
+.tl-cell.is-night { background: color-mix(in srgb, #000 var(--night-amount), var(--surface)); color: var(--muted); }
+.tl-cell.is-work { background: color-mix(in srgb, var(--c) var(--work-amount), var(--surface)); font-weight: 700; }
+.tl-cell.is-work.is-night { background: color-mix(in srgb, var(--c) calc(var(--work-amount) + 5%), var(--surface)); }
+.tl-cell.is-daybreak { box-shadow: inset 2px 0 0 var(--border-strong); }
+.tl-head.is-cursor, .tl-score.is-cursor { color: var(--accent); }
+.tl-cell.is-cursor { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 78%, transparent); }
+.tl-head.is-cursor { box-shadow: inset 0 -2px 0 var(--accent); }
+.tl-overlay {
+  position: absolute; top: 0; bottom: 0; left: var(--label-w); right: 0;
+  pointer-events: none; z-index: 4;
+}
+.tl-cursor {
+  position: absolute; top: 0; bottom: 0;
+  left: calc(var(--pct, 0) * 100%);
+  border-left: 2px solid var(--accent);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--accent) 45%, transparent));
+}
+.tl-cursor::before {
+  content: ""; position: absolute; top: 0; left: -6px;
+  border: 5px solid transparent; border-top-color: var(--accent);
+}
+.tl-now {
+  position: absolute; top: 0; bottom: 0;
+  left: calc(var(--pct, 0) * 100%);
+  border-left: 2px dashed var(--now);
+}
+.legend {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin-top: 10px; color: var(--muted); font-size: 11.5px;
+}
+.legend__item { display: inline-flex; align-items: center; gap: 6px; }
+.legend__swatch { width: 14px; height: 10px; border-radius: 3px; border: 1px solid var(--border); }
+.legend__swatch--work { background: linear-gradient(90deg, #c9822f, #2f9e8f); border-color: transparent; }
+.legend__swatch--night { background: color-mix(in srgb, #000 18%, var(--surface)); }
+.legend__line { width: 16px; height: 0; border-top: 2px solid var(--accent); }
+.legend__line--now { border-top-style: dashed; border-color: var(--now); }
+.legend__hint { margin-left: auto; font-size: 11px; }
+
+/* ── 7. best windows ─────────────────────────────────────── */
+.best { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
+.best__head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.best-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.best-btn {
+  display: grid; gap: 2px; text-align: left;
+  padding: 10px 12px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 10px;
+  cursor: pointer; transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.best-btn:hover { border-color: var(--border-strong); }
+.best-btn.is-active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--surface));
+}
+.best-btn__time { font: 700 15px var(--mono); letter-spacing: -.01em; }
+.best-btn__score { font-size: 11.5px; color: var(--muted); }
+.best-btn__warn {
+  justify-self: start; margin-top: 2px; padding: 1px 6px;
+  border-radius: 4px; font-size: 10px; font-weight: 650;
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.best-dots { display: flex; gap: 4px; margin-top: 3px; }
+.best-empty { color: var(--muted); font-size: 12.5px; padding: 8px 0; }
+
+/* ── 8. meeting ──────────────────────────────────────────── */
+.meet-list { display: grid; gap: 8px; }
+.meet-row {
+  display: grid; grid-template-columns: 12px minmax(120px, 1fr) auto auto;
+  align-items: center; gap: 12px;
+  padding: 10px 12px; background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 12px;
+}
+.meet-name { display: grid; gap: 1px; min-width: 0; }
+.meet-name strong { font-size: 15px; font-weight: 650; }
+.meet-name span { font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meet-time { display: grid; justify-items: end; gap: 0; }
+.meet-time strong { font-size: 20px; font-weight: 650; line-height: 1.2; }
+.meet-time span { font-size: 10.5px; color: var(--muted); }
+.meet-chips { display: flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
+.dot {
+  width: 10px; height: 10px; flex: none; border-radius: 50%;
+  background: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 22%, transparent);
+}
+.dot--sm { width: 7px; height: 7px; box-shadow: none; }
+.chip {
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--muted); font-size: 11px; font-weight: 550;
+}
+.chip--work { color: var(--ok); background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
+.chip--night { color: var(--info); border-color: color-mix(in srgb, var(--info) 30%, transparent); }
+.chip--day { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+
+/* ── 9. places ───────────────────────────────────────────── */
+.backup__summary {
+  display: flex; align-items: center; min-height: 44px;
+  cursor: pointer; font-weight: 650; font-size: 15px;
+}
+.place-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.place-row {
+  display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto;
+  align-items: center; gap: 12px;
+  padding: 9px 12px; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 12px;
+}
+.place-main { min-width: 0; }
+.place-name { display: flex; align-items: center; gap: 7px; font-size: 14.5px; font-weight: 650; }
+.tag {
+  padding: 1px 6px; border-radius: 4px; font-size: 9.5px; font-weight: 700;
+  letter-spacing: .04em; color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+.place-tz { font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.place-hours { font: 600 12px var(--mono); color: var(--muted); white-space: nowrap; }
+.place-actions { display: flex; align-items: center; gap: 4px; }
+.place-actions .icon-btn { width: 44px; height: 44px; font-size: 14px; }
+.place-actions .btn { min-height: 44px; padding: 4px 9px; font-size: 12.5px; }
+
+/* ── 10. empty / banner / toast ──────────────────────────── */
+.empty {
+  padding: 24px 16px; text-align: center; color: var(--muted);
+  border: 1px dashed var(--border-strong); border-radius: 12px;
+  font-size: 13.5px; display: grid; gap: 10px; justify-items: center;
+}
+.banner {
+  display: flex; align-items: flex-start; gap: 12px;
+  margin: 12px auto 0; max-width: calc(var(--maxw) - 36px);
+  padding: 10px 12px 10px 16px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+  border-radius: 10px; color: var(--text); font-size: 13px;
+}
+.banner__x {
+  margin-left: auto; width: 44px; height: 44px; flex: none;
+  background: transparent; border: 0; border-radius: 8px;
+  font-size: 18px; line-height: 1; cursor: pointer; color: var(--muted);
+}
+.banner__x:hover { background: var(--surface-2); color: var(--text); }
+.toast {
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 7px 7px 16px; border-radius: 999px;
+  background: #15202a; color: #f5f1e7;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .35);
+  font-size: 13px; z-index: 60; max-width: calc(100vw - 28px);
+}
+[data-theme="dark"] .toast { background: #283743; }
+#toast-msg { min-width: 0; overflow-wrap: anywhere; }
+.toast .btn {
+  min-height: 44px; padding: 4px 12px;
+  background: transparent; border-color: transparent;
+  color: #f0c07c; font-size: 13px;
+}
+.toast .btn:hover { background: rgba(255, 255, 255, .1); }
+
+/* ── 11. dialogs ─────────────────────────────────────────── */
+dialog {
+  width: min(560px, calc(100vw - 24px)); max-height: calc(100dvh - 32px);
+  padding: 20px; overflow: auto;
+  border: 1px solid var(--border); border-radius: 16px;
+  background: var(--surface); color: var(--text);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+}
+dialog::backdrop { background: rgba(6, 11, 16, .55); backdrop-filter: blur(3px); }
+dialog h2 { margin-bottom: 12px; }
+dialog h3 { margin: 16px 0 6px; }
+dialog menu {
+  display: flex; justify-content: flex-end; align-items: center;
+  gap: 8px; flex-wrap: wrap; padding: 0; margin: 18px 0 0;
+}
+.dialog-text { font-size: 13.5px; color: var(--muted); line-height: 1.6; }
+.field { display: grid; gap: 5px; margin-bottom: 12px; }
+.field > span, .field > label { font-size: 12px; color: var(--muted); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-error {
+  margin: 0 0 8px; padding: 7px 10px; border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  color: var(--danger); font-size: 12.5px;
+}
+.swatches { border: 0; margin: 0 0 4px; padding: 0; }
+.swatches legend { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.swatch-list { display: flex; gap: 4px; flex-wrap: wrap; }
+.swatch { position: relative; display: grid; place-items: center; width: 44px; height: 44px; cursor: pointer; }
+.swatch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.swatch__dot {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--c); border: 2px solid var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+  transition: transform .12s, box-shadow .12s;
+}
+.swatch:hover .swatch__dot { transform: scale(1.08); }
+.swatch input:checked + .swatch__dot { box-shadow: 0 0 0 2px var(--text); transform: scale(1.06); }
+.swatch input:focus-visible + .swatch__dot { outline: 2px solid var(--accent); outline-offset: 3px; }
+.help-list { margin: 0 0 4px 18px; padding: 0; display: grid; gap: 6px; font-size: 13.5px; color: var(--text); }
+.keys { margin: 0 0 4px 18px; padding: 0; display: grid; gap: 5px; font-size: 13px; color: var(--muted); }
+kbd {
+  display: inline-block; min-width: 20px; padding: 0 5px;
+  border: 1px solid var(--border-strong); border-bottom-width: 2px;
+  border-radius: 5px; background: var(--surface-2);
+  font: 600 11px var(--mono); text-align: center; color: var(--text);
+}
+dialog .hint { margin-top: 8px; }
+
+/* ── 12. responsive ──────────────────────────────────────── */
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 92px minmax(0, 1fr); gap: 16px; }
+  .hero__rose { width: 92px; height: 92px; }
+  .hero__stat {
+    grid-column: 1 / -1; flex-direction: row; align-items: baseline;
+    gap: 12px; border-left: 0; border-top: 1px solid var(--border);
+    padding: 10px 0 0; min-height: 0;
+  }
+  .hero__stat .hint { margin-left: auto; }
+}
+@media (max-width: 640px) {
+  .appbar { padding: 8px 14px; }
+  .brand__mark { width: 36px; height: 36px; }
+  h1 { font-size: 17px; }
+  .brand__sub { display: none; }
+  main { padding: 12px; gap: 12px; }
+  .card { padding: 14px; border-radius: 14px; }
+  .hero { grid-template-columns: 74px minmax(0, 1fr); padding: 14px; }
+  .hero__rose { width: 74px; height: 74px; }
+  .hero__time { font-size: 46px; }
+  .hero__meta { font-size: 12px; }
+  .hero__nav input[type="date"] { width: 136px; }
+  .hero__nav { gap: 6px; }
+  .hero__nav .icon-btn { width: 44px; height: 44px; }
+  #ref-tz { max-width: 100%; }
+  .card-head { gap: 10px; }
+  .cursor-pill { width: 100%; justify-content: space-between; }
+  .timeline { --label-w: 108px; --slot-w: 50px; }
+  #cursor-range { height: 44px; }
+  .tl-label { padding: 5px 8px; }
+  .tl-label__name { font-size: 12px; }
+  .tl-label__work { display: none; }
+  .meet-row { grid-template-columns: 12px minmax(0, 1fr) auto; gap: 8px 10px; }
+  .meet-chips { grid-column: 2 / -1; justify-content: flex-start; }
+  .meet-time strong { font-size: 18px; }
+  .place-row { grid-template-columns: 12px minmax(0, 1fr); gap: 6px 10px; }
+  .place-hours { grid-column: 2; }
+  .place-actions { grid-column: 2; justify-content: flex-end; padding-top: 2px; }
+  .place-actions .icon-btn { width: 44px; height: 44px; }
+  .place-actions .btn { min-height: 44px; }
+  .btn--small { min-height: 44px; }
+  .best-list { grid-template-columns: 1fr; }
+  .legend { gap: 10px; }
+  .legend__hint { width: 100%; margin-left: 0; }
+  .field-row { grid-template-columns: 1fr 1fr; }
+  .foot { padding: 4px 14px 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="brand">
+    <span class="brand__mark" aria-hidden="true">
+      <svg viewBox="0 0 32 32" width="26" height="26">
+        <circle cx="16" cy="16" r="12.5" fill="none" stroke="currentColor" stroke-width="1.3" opacity=".55"/>
+        <path d="M16 5.8l3.3 10.1L16 18.4 12.7 15.9z" fill="currentColor"/>
+        <circle cx="16" cy="16" r="1.5" fill="var(--surface)"/>
+      </svg>
+    </span>
+    <div>
+      <h1>多時區協調羅盤</h1>
+      <p class="brand__sub">World Time Planner</p>
+    </div>
+  </div>
+  <div class="appbar__actions">
+    <button id="btn-help" class="icon-btn" type="button" aria-label="使用說明與快捷鍵">?</button>
+    <button id="btn-theme" class="icon-btn" type="button" aria-label="切換主題">◐</button>
+  </div>
+</header>
+
+<div id="banner" class="banner" role="status" hidden>
+  <span id="banner-text"></span>
+  <button id="banner-close" class="banner__x" type="button" aria-label="關閉提示">×</button>
+</div>
+
+<main>
+  <section class="card hero" aria-labelledby="hero-title">
+    <h2 class="sr-only" id="hero-title">目前選擇的時間</h2>
+    <div class="hero__rose" aria-hidden="true">
+      <svg viewBox="0 0 120 120">
+        <circle class="rose-ring" cx="60" cy="60" r="55"/>
+        <circle class="rose-ring rose-ring--soft" cx="60" cy="60" r="43"/>
+        <g id="rose-ticks"></g>
+        <text class="rose-card" x="60" y="8.5" text-anchor="middle">00</text>
+        <text class="rose-card" x="116" y="60" text-anchor="end" dominant-baseline="middle">06</text>
+        <text class="rose-card" x="60" y="118" text-anchor="middle">12</text>
+        <text class="rose-card" x="4" y="60" dominant-baseline="middle">18</text>
+        <g id="rose-needle">
+          <path d="M60 20 L64.5 58 L60 64 L55.5 58 Z" fill="var(--accent)"/>
+          <path d="M60 100 L63 60 L60 56 L57 60 Z" fill="var(--muted)" opacity=".45"/>
+        </g>
+        <circle cx="60" cy="60" r="4.5" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>
+      </svg>
+    </div>
+    <div class="hero__body">
+      <div class="hero__ref">
+        <span class="hero__reflabel">基準時區</span>
+        <select id="ref-tz" aria-label="基準時區"></select>
+      </div>
+      <div class="hero__clock">
+        <output id="hero-time" class="hero__time">--:--</output>
+        <div class="hero__meta">
+          <span id="hero-weekday"></span>
+          <span id="hero-date" class="mono"></span>
+          <span id="hero-utc" class="mono"></span>
+        </div>
+      </div>
+      <div class="hero__nav">
+        <button id="btn-prev" class="icon-btn" type="button" aria-label="前一天">‹</button>
+        <input id="date-input" type="date" aria-label="日期">
+        <button id="btn-next" class="icon-btn" type="button" aria-label="後一天">›</button>
+        <button id="btn-today" class="btn btn--small" type="button">今天</button>
+        <button id="btn-now" class="btn btn--small btn--primary" type="button">回到現在</button>
+      </div>
+    </div>
+    <div class="hero__stat">
+      <div class="stat">
+        <span id="work-count" class="stat__num">0</span>
+        <span class="stat__den">/<span id="place-count">0</span></span>
+      </div>
+      <p class="stat__label">個地點在上班</p>
+      <p id="stat-hint" class="hint">—</p>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="tl-title">
+    <div class="card-head">
+      <div>
+        <h2 id="tl-title">24 小時共識帶</h2>
+        <p class="hint">點格子或拖動滑桿移動游標；彩色區塊是當地上班時段，深色是夜間。<span id="now-readout" class="now-readout" hidden></span></p>
+      </div>
+      <div class="cursor-pill">
+        <span class="cursor-pill__label">游標</span>
+        <span id="cursor-time" class="mono">--:--</span>
+        <span id="cursor-zone" class="cursor-pill__zone"></span>
+      </div>
+    </div>
+
+    <div id="range-wrap" class="range-wrap">
+      <input id="cursor-range" type="range" min="0" max="1425" step="15" value="540" aria-label="會議時間游標">
+      <div class="range-ticks" aria-hidden="true"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>24:00</span></div>
+    </div>
+
+    <div id="tl-scroll" class="tl-scroll">
+      <div id="timeline" class="timeline" aria-hidden="true"></div>
+    </div>
+
+    <div id="tl-empty" class="empty" hidden>
+      <p>還沒有任何地點。加入城市後，這裡會出現 24 小時共識帶。</p>
+      <button class="btn btn--primary" type="button" data-act="add">＋ 新增第一個地點</button>
+    </div>
+
+    <div id="legend" class="legend">
+      <span class="legend__item"><i class="legend__swatch legend__swatch--work"></i>上班</span>
+      <span class="legend__item"><i class="legend__swatch legend__swatch--night"></i>夜間</span>
+      <span class="legend__item"><i class="legend__line"></i>游標</span>
+      <span class="legend__item"><i class="legend__line legend__line--now"></i>現在</span>
+      <span class="legend__hint">左右滑動查看全天</span>
+    </div>
+
+    <div id="best-section" class="best">
+      <div class="best__head">
+        <h3>最佳重疊時段</h3>
+        <p id="best-note" class="hint"></p>
+      </div>
+      <div id="best-list" class="best-list" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="meet-title">
+    <div class="card-head">
+      <div>
+        <h2 id="meet-title">會議卡</h2>
+        <p id="meet-sub" class="hint"></p>
+      </div>
+      <button id="btn-copy" class="btn" type="button">複製時間</button>
+    </div>
+    <div id="meet-list" class="meet-list"></div>
+    <p id="meet-empty" class="empty" hidden></p>
+  </section>
+
+  <section class="card" aria-labelledby="places-title">
+    <div class="card-head">
+      <div>
+        <h2 id="places-title">我的地點</h2>
+        <p class="hint">每個地點可設定自己的上班時段；重疊時段會自動計算。</p>
+      </div>
+      <button id="btn-add" class="btn btn--primary" type="button">＋ 新增地點</button>
+    </div>
+    <ul id="place-list" class="place-list"></ul>
+    <p id="place-empty" class="empty" hidden></p>
+  </section>
+
+  <details class="card">
+    <summary class="backup__summary">資料備份與重設</summary>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+      <button id="btn-export" class="btn" type="button">匯出 JSON</button>
+      <button id="btn-import" class="btn" type="button">匯入 JSON</button>
+      <button id="btn-clear" class="btn btn--danger" type="button">清空全部地點</button>
+      <input id="file-import" type="file" accept="application/json,.json" hidden>
+    </div>
+    <p class="hint" style="margin-top:10px;">資料存在這台裝置的瀏覽器（IndexedDB）。換裝置、換瀏覽器或清理站台資料前，請先匯出備份。</p>
+    <p class="hint">匯入只會還原地點；目前的主題、基準時區與日期不會被備份檔覆蓋。</p>
+    <p id="storage-usage" class="hint"></p>
+  </details>
+</main>
+
+<footer class="foot">
+  <span id="foot-count" aria-live="polite"></span>
+  <span id="store-mode"></span>
+  <span id="foot-version">World Time Planner v1.0.1</span>
+</footer>
+
+<dialog id="dlg-place" aria-labelledby="place-title">
+  <form id="form-place" autocomplete="off">
+    <h2 id="place-title">新增地點</h2>
+    <label class="field">
+      <span>名稱</span>
+      <input id="place-name" type="text" required maxlength="40" placeholder="例如：東京辦公室">
+    </label>
+    <div class="field">
+      <span>時區</span>
+      <input id="tz-search" type="search" placeholder="搜尋城市或時區，例如 Tokyo、Europe/London" aria-label="搜尋時區">
+      <select id="tz-select" aria-label="時區" required></select>
+    </div>
+    <p id="tz-preview" class="hint" style="margin:-6px 0 12px;" aria-live="polite"></p>
+    <div class="field-row">
+      <label class="field"><span>上班</span><input id="work-start" type="time" step="900" required></label>
+      <label class="field"><span>下班</span><input id="work-end" type="time" step="900" required></label>
+    </div>
+    <fieldset class="swatches">
+      <legend>顏色</legend>
+      <div id="swatch-list" class="swatch-list"></div>
+    </fieldset>
+    <p id="place-error" class="form-error" role="alert" hidden></p>
+    <menu>
+      <button id="place-cancel" class="btn" type="button">取消</button>
+      <button id="place-save" class="btn btn--primary" type="submit">儲存</button>
+    </menu>
+  </form>
+</dialog>
+
+<dialog id="dlg-confirm" aria-labelledby="confirm-title">
+  <h2 id="confirm-title"></h2>
+  <p id="confirm-body" class="dialog-text"></p>
+  <menu>
+    <button id="confirm-cancel" class="btn" type="button">取消</button>
+    <button id="confirm-ok" class="btn btn--primary" type="button">確定</button>
+  </menu>
+</dialog>
+
+<dialog id="dlg-import" aria-labelledby="import-title">
+  <h2 id="import-title">匯入備份</h2>
+  <p id="import-body" class="dialog-text"></p>
+  <p class="hint">「合併」保留現有地點並覆蓋相同 ID；「取代」會先清空目前所有地點。</p>
+  <menu>
+    <button id="import-cancel" class="btn" type="button">取消</button>
+    <button id="import-merge" class="btn" type="button">合併</button>
+    <button id="import-replace" class="btn btn--danger-solid" type="button">取代全部</button>
+  </menu>
+</dialog>
+
+<dialog id="dlg-help" aria-labelledby="help-title">
+  <h2 id="help-title">怎麼用</h2>
+  <ol class="help-list">
+    <li>在「我的地點」加入城市與時區，設定各自的上班時段。</li>
+    <li>用日期、基準時區與滑桿選擇時間；共識帶會標出每座城市的當地時間。</li>
+    <li>「最佳重疊時段」列出最多人同時上班的區間，點一下即可跳過去。</li>
+    <li>按「複製時間」把會議卡貼到訊息或行事曆邀請。</li>
+  </ol>
+  <h3>快捷鍵</h3>
+  <ul class="keys">
+    <li><kbd>←</kbd> / <kbd>→</kbd> 微調 15 分鐘（加 <kbd>Shift</kbd> 為 1 小時）</li>
+    <li><kbd>N</kbd> 回到現在</li>
+    <li><kbd>Esc</kbd> 關閉對話框</li>
+  </ul>
+  <p class="hint">資料只存在這個瀏覽器。換裝置或清理瀏覽器資料前，請先匯出備份。</p>
+  <menu><button id="help-close" class="btn btn--primary" type="button">知道了</button></menu>
+</dialog>
+
+<dialog id="dlg-copy" aria-labelledby="copy-title">
+  <h2 id="copy-title">複製會議時間</h2>
+  <p class="hint">瀏覽器不允許自動複製，請手動全選後複製。</p>
+  <label class="field">
+    <span class="sr-only">會議時間文字</span>
+    <textarea id="copy-text" rows="8" readonly></textarea>
+  </label>
+  <menu><button id="copy-close" class="btn btn--primary" type="button">關閉</button></menu>
+</dialog>
+
+<div id="toast" class="toast" role="status" hidden>
+  <span id="toast-msg"></span>
+  <button id="toast-act" class="btn" type="button" hidden></button>
+</div>
+
+<noscript>
+  <p style="padding:16px;text-align:center;">這個工具需要 JavaScript 才能計算時區與儲存資料。</p>
+</noscript>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ───────── CONFIG ───────── */
+  const CONFIG = {
+    dbName: 'world-time-compass',
+    version: 1,
+    maxPlaces: 40,
+    maxName: 40,
+    maxImportBytes: 5 * 1024 * 1024,
+    settingsDelay: 350,
+  };
+  const STORE_PLACES = 'places';
+  const STORE_META = 'meta';
+  const THEME_KEY = 'wtc-theme';
+
+  const COLORS = [
+    { v: '#c9822f', n: '黃銅' },
+    { v: '#2f9e8f', n: '青綠' },
+    { v: '#d9695a', n: '珊瑚' },
+    { v: '#6b7fd7', n: '靛藍' },
+    { v: '#7a9a4e', n: '苔綠' },
+    { v: '#a86bb0', n: '紫羅蘭' },
+    { v: '#4b9fd6', n: '天藍' },
+    { v: '#b58b5a', n: '沙金' },
+  ];
+
+  const COMMON_TZ = [
+    { tz: 'Asia/Taipei', label: '台北' },
+    { tz: 'Asia/Tokyo', label: '東京' },
+    { tz: 'Asia/Seoul', label: '首爾' },
+    { tz: 'Asia/Shanghai', label: '上海' },
+    { tz: 'Asia/Hong_Kong', label: '香港' },
+    { tz: 'Asia/Singapore', label: '新加坡' },
+    { tz: 'Asia/Bangkok', label: '曼谷' },
+    { tz: 'Asia/Jakarta', label: '雅加達' },
+    { tz: 'Asia/Manila', label: '馬尼拉' },
+    { tz: 'Asia/Kolkata', label: '加爾各答／德里' },
+    { tz: 'Asia/Dubai', label: '杜拜' },
+    { tz: 'Asia/Karachi', label: '喀拉蚩' },
+    { tz: 'Australia/Sydney', label: '雪梨' },
+    { tz: 'Australia/Perth', label: '伯斯' },
+    { tz: 'Pacific/Auckland', label: '奧克蘭' },
+    { tz: 'Pacific/Honolulu', label: '檀香山' },
+    { tz: 'Europe/London', label: '倫敦' },
+    { tz: 'Europe/Paris', label: '巴黎' },
+    { tz: 'Europe/Berlin', label: '柏林' },
+    { tz: 'Europe/Madrid', label: '馬德里' },
+    { tz: 'Europe/Moscow', label: '莫斯科' },
+    { tz: 'America/New_York', label: '紐約' },
+    { tz: 'America/Chicago', label: '芝加哥' },
+    { tz: 'America/Denver', label: '丹佛' },
+    { tz: 'America/Los_Angeles', label: '洛杉磯／舊金山' },
+    { tz: 'America/Vancouver', label: '溫哥華' },
+    { tz: 'America/Toronto', label: '多倫多' },
+    { tz: 'America/Mexico_City', label: '墨西哥城' },
+    { tz: 'America/Sao_Paulo', label: '聖保羅' },
+    { tz: 'Africa/Cairo', label: '開羅' },
+    { tz: 'Africa/Johannesburg', label: '約翰尼斯堡' },
+    { tz: 'UTC', label: 'UTC' },
+  ];
+  const TZ_LABELS = {};
+  for (const c of COMMON_TZ) TZ_LABELS[c.tz] = c.label;
+  const COMMON_SET = new Set(COMMON_TZ.map((c) => c.tz));
+
+  const FALLBACK_ZONES = [
+    'Pacific/Auckland', 'Australia/Lord_Howe', 'Australia/Sydney', 'Australia/Brisbane',
+    'Australia/Adelaide', 'Australia/Perth', 'Asia/Tokyo', 'Asia/Seoul', 'Asia/Shanghai',
+    'Asia/Hong_Kong', 'Asia/Taipei', 'Asia/Manila', 'Asia/Singapore', 'Asia/Kuala_Lumpur',
+    'Asia/Bangkok', 'Asia/Jakarta', 'Asia/Kolkata', 'Asia/Karachi', 'Asia/Dubai',
+    'Europe/Moscow', 'Europe/Istanbul', 'Africa/Cairo', 'Africa/Johannesburg',
+    'Europe/Berlin', 'Europe/Paris', 'Europe/Madrid', 'Europe/London',
+    'America/Sao_Paulo', 'America/Argentina/Buenos_Aires', 'America/New_York',
+    'America/Toronto', 'America/Chicago', 'America/Mexico_City', 'America/Denver',
+    'America/Los_Angeles', 'America/Vancouver', 'Pacific/Honolulu', 'UTC',
+  ];
+
+  const ZONES = (function () {
+    let list = [];
+    try {
+      if (typeof Intl.supportedValuesOf === 'function') {
+        list = Intl.supportedValuesOf('timeZone') || [];
+      }
+    } catch (e) { list = []; }
+    if (!list.length) list = FALLBACK_ZONES.slice();
+    for (const z of FALLBACK_ZONES) {
+      if (list.indexOf(z) === -1) list.push(z);
+    }
+    return list.slice().sort((a, b) => a.localeCompare(b));
+  })();
+
+  const SEED_PLACES = [
+    { name: '台北', tz: 'Asia/Taipei', color: '#c9822f' },
+    { name: '東京', tz: 'Asia/Tokyo', color: '#d9695a' },
+    { name: '倫敦', tz: 'Europe/London', color: '#6b7fd7' },
+    { name: '紐約', tz: 'America/New_York', color: '#2f9e8f' },
+    { name: '舊金山', tz: 'America/Los_Angeles', color: '#a86bb0' },
+  ];
+
+  /* ───────── utils ───────── */
+  const $ = (sel, root) => (root || document).querySelector(sel);
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const nowISO = () => new Date().toISOString();
+  const uid = () => (crypto.randomUUID
+    ? crypto.randomUUID()
+    : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+
+  function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+  function clampRound15(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 540;
+    return clamp(Math.round(n / 15) * 15, 0, 1425);
+  }
+  function truncate(s, n) {
+    s = String(s == null ? '' : s);
+    return s.length > n ? s.slice(0, n) + '…' : s;
+  }
+
+  function el(tag, props, ...children) {
+    const node = document.createElement(tag);
+    props = props || {};
+    for (const [k, v] of Object.entries(props)) {
+      if (v == null || v === false) continue;
+      if (k === 'class') node.className = v;
+      else if (k === 'text') node.textContent = v;
+      else if (k === 'dataset') Object.assign(node.dataset, v);
+      else if (k === 'style' && v && typeof v === 'object') {
+        for (const [sk, sv] of Object.entries(v)) {
+          if (sk.indexOf('--') === 0) node.style.setProperty(sk, sv);
+          else node.style[sk] = sv;
+        }
+      } else if (k.indexOf('on') === 0 && typeof v === 'function') {
+        node.addEventListener(k.slice(2).toLowerCase(), v);
+      } else if (k in node) {
+        try { node[k] = v; } catch (e) { node.setAttribute(k, v); }
+      } else {
+        node.setAttribute(k, v);
+      }
+    }
+    for (const c of children.flat(Infinity)) {
+      if (c == null || c === false) continue;
+      node.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }
+    return node;
+  }
+
+  function downloadJSON(filename, obj) {
+    const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = el('a', { href: url, download: filename });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  /* ───────── time zone math ───────── */
+  const partsFmtCache = new Map();
+  function partsFmt(tz) {
+    let f = partsFmtCache.get(tz);
+    if (!f) {
+      f = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+      });
+      partsFmtCache.set(tz, f);
+    }
+    return f;
+  }
+
+  function partsAt(date, tz) {
+    const bag = {};
+    for (const p of partsFmt(tz).formatToParts(date)) {
+      if (p.type !== 'literal') bag[p.type] = p.value;
+    }
+    let hour = parseInt(bag.hour, 10);
+    if (hour === 24) hour = 0;
+    return {
+      y: parseInt(bag.year, 10),
+      m: parseInt(bag.month, 10),
+      d: parseInt(bag.day, 10),
+      h: hour,
+      mi: parseInt(bag.minute, 10),
+      s: parseInt(bag.second, 10),
+    };
+  }
+
+  function tzOffsetMs(date, tz) {
+    const p = partsAt(date, tz);
+    const asUTC = Date.UTC(p.y, p.m - 1, p.d, p.h, p.mi, p.s);
+    const whole = Math.floor(date.getTime() / 1000) * 1000;
+    return asUTC - whole;
+  }
+
+  function zonedToUtc(y, m, d, h, mi, tz) {
+    const target = Date.UTC(y, m - 1, d, h, mi, 0);
+    let ts = target;
+    for (let i = 0; i < 3; i++) {
+      const off = tzOffsetMs(new Date(ts), tz);
+      const next = target - off;
+      if (next === ts) break;
+      ts = next;
+    }
+    return new Date(ts);
+  }
+
+  function isValidTz(tz) {
+    if (typeof tz !== 'string' || !tz) return false;
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: tz }).format(new Date());
+      return true;
+    } catch (e) { return false; }
+  }
+
+  const WEEKDAY_FMT = new Intl.DateTimeFormat('zh-Hant', { weekday: 'short', timeZone: 'UTC' });
+  function weekdayOfDate(y, m, d) {
+    return WEEKDAY_FMT.format(new Date(Date.UTC(y, m - 1, d)));
+  }
+  function isDateStr(s) {
+    if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+    const d = new Date(s + 'T00:00:00Z');
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+  }
+  function todayStrInTz(tz) {
+    const p = partsAt(new Date(), tz);
+    return p.y + '-' + pad2(p.m) + '-' + pad2(p.d);
+  }
+  function addDays(ds, delta) {
+    const d = new Date(ds + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + delta);
+    return d.toISOString().slice(0, 10);
+  }
+  function dateParts(ds) {
+    const p = ds.split('-').map(Number);
+    return { y: p[0], m: p[1], d: p[2] };
+  }
+  function dayIndex(p) {
+    return Math.round(Date.UTC(p.y, p.m - 1, p.d) / 86400000);
+  }
+  function offsetLabel(date, tz) {
+    const mins = Math.round(tzOffsetMs(date, tz) / 60000);
+    const sign = mins < 0 ? '−' : '+';
+    const abs = Math.abs(mins);
+    return 'UTC' + sign + Math.floor(abs / 60) + (abs % 60 ? ':' + pad2(abs % 60) : '');
+  }
+  function shortZone(tz) {
+    if (TZ_LABELS[tz]) return TZ_LABELS[tz];
+    const tail = String(tz).split('/').pop() || tz;
+    return tail.replace(/_/g, ' ');
+  }
+  function minToTime(mins) {
+    const n = clamp(Math.round(mins), 0, 1439);
+    return pad2(Math.floor(n / 60)) + ':' + pad2(n % 60);
+  }
+  function timeToMin(value) {
+    if (typeof value !== 'string' || !/^\d{2}:\d{2}$/.test(value)) return null;
+    const p = value.split(':').map(Number);
+    if (p[0] > 23 || p[1] > 59) return null;
+    return p[0] * 60 + p[1];
+  }
+  function isWork(place, p) {
+    const mins = p.h * 60 + p.mi;
+    const s = place.workStart;
+    const e = place.workEnd;
+    if (s === e) return false;
+    if (s < e) return mins >= s && mins < e;
+    return mins >= s || mins < e;
+  }
+  function statusFor(place, p) {
+    if (isWork(place, p)) return { key: 'work', label: '上班' };
+    if (p.h >= 22 || p.h < 6) return { key: 'night', label: '深夜' };
+    return { key: 'off', label: '休息' };
+  }
+  function workLabel(p) {
+    // end=00:00 代表「到當日午夜」，不是跨到隔天早上；22:00–06:00 才是跨夜。
+    const overnight = p.workEnd !== 0 && p.workEnd < p.workStart;
+    return minToTime(p.workStart) + '–' + minToTime(p.workEnd) + (overnight ? ' · 跨夜' : '');
+  }
+
+  /* ───────── storage ───────── */
+  let idbOK = true;
+  let dbPromise = null;
+  const mem = { places: new Map(), meta: new Map() };
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) {
+        reject(Object.assign(new Error('IndexedDB unavailable'), { name: 'NO_IDB' }));
+        return;
+      }
+      let req;
+      try {
+        req = indexedDB.open(CONFIG.dbName, CONFIG.version);
+      } catch (err) { reject(err); return; }
+
+      req.onupgradeneeded = (event) => {
+        const db = req.result;
+        const old = event.oldVersion;
+        if (old < 1) {
+          db.createObjectStore(STORE_PLACES, { keyPath: 'id' });
+          db.createObjectStore(STORE_META, { keyPath: 'key' });
+        }
+        // 未來版本：往下加 if (old < 2) { ... }，不要修改上面的既有結構。
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        db.onversionchange = () => {
+          db.close();
+          dbPromise = null;
+          showBanner('此工具已在其他分頁更新，請重新載入頁面。');
+        };
+        resolve(db);
+      };
+      req.onerror = () => reject(req.error || new Error('open failed'));
+      req.onblocked = () => showBanner('資料庫被其他分頁占用，請關閉其他分頁後重新載入。');
+    });
+  }
+  function db() {
+    if (!dbPromise) dbPromise = openDB();
+    return dbPromise;
+  }
+  function keyOf(store, value) {
+    return store === STORE_META ? value.key : value.id;
+  }
+
+  async function getAllRows(store) {
+    if (!idbOK) return Array.from(mem[store].values());
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readonly');
+      const req = t.objectStore(store).getAll();
+      t.oncomplete = () => resolve(req.result || []);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+  async function getRow(store, key) {
+    if (!idbOK) return mem[store].get(key);
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readonly');
+      const req = t.objectStore(store).get(key);
+      t.oncomplete = () => resolve(req.result);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+  async function putRow(store, value) {
+    if (!idbOK) { mem[store].set(keyOf(store, value), value); return value; }
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readwrite');
+      t.objectStore(store).put(value);
+      t.oncomplete = () => resolve(value);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+  async function delRow(store, key) {
+    if (!idbOK) { mem[store].delete(key); return; }
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readwrite');
+      t.objectStore(store).delete(key);
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+  async function bulkPutRows(store, values) {
+    if (!idbOK) {
+      for (const v of values) mem[store].set(keyOf(store, v), v);
+      return values.length;
+    }
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readwrite');
+      const s = t.objectStore(store);
+      try {
+        for (const v of values) s.put(v);
+      } catch (err) {
+        try { t.abort(); } catch (e) {}
+        reject(err);
+        return;
+      }
+      t.oncomplete = () => resolve(values.length);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+  async function clearRows(store) {
+    if (!idbOK) { mem[store].clear(); return; }
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readwrite');
+      t.objectStore(store).clear();
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+  // 取代匯入用：clear + 全部 put 必須在同一個 transaction，避免中途失敗留下空資料。
+  async function replaceAllRows(store, values) {
+    if (!idbOK) {
+      mem[store].clear();
+      for (const v of values) mem[store].set(keyOf(store, v), v);
+      return values.length;
+    }
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readwrite');
+      const s = t.objectStore(store);
+      try {
+        s.clear();
+        for (const v of values) s.put(v);
+      } catch (err) {
+        try { t.abort(); } catch (e) {}
+        reject(err);
+        return;
+      }
+      t.oncomplete = () => resolve(values.length);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+
+  async function metaGet(key, fallback) {
+    try {
+      if (!idbOK) return mem.meta.has(key) ? mem.meta.get(key).value : (fallback === undefined ? null : fallback);
+      const row = await getRow(STORE_META, key);
+      return row ? row.value : (fallback === undefined ? null : fallback);
+    } catch (e) {
+      return fallback === undefined ? null : fallback;
+    }
+  }
+  function metaSet(key, value) {
+    return putRow(STORE_META, { key: key, value: value });
+  }
+
+  async function persist(fn, message) {
+    try {
+      await fn();
+      return true;
+    } catch (err) {
+      console.error(err);
+      const kind = err && err.name ? err.name : '錯誤';
+      const extra = kind === 'QuotaExceededError' ? '，請先匯出備份並清理瀏覽器空間' : '';
+      showBanner(message + '（' + kind + extra + '）');
+      return false;
+    }
+  }
+
+  /* ───────── state + elements ───────── */
+  const state = {
+    places: [],
+    settings: null,
+    theme: 'light',
+    ready: false,
+    editingId: null,
+    placeSaving: false,
+    broadcast: null,
+  };
+
+  const banner = $('#banner');
+  const bannerText = $('#banner-text');
+  const bannerClose = $('#banner-close');
+  const btnHelp = $('#btn-help');
+  const btnTheme = $('#btn-theme');
+
+  const heroTime = $('#hero-time');
+  const heroWeekday = $('#hero-weekday');
+  const heroDate = $('#hero-date');
+  const heroUtc = $('#hero-utc');
+  const refTzSelect = $('#ref-tz');
+  const dateInput = $('#date-input');
+  const btnPrev = $('#btn-prev');
+  const btnNext = $('#btn-next');
+  const btnToday = $('#btn-today');
+  const btnNow = $('#btn-now');
+  const workCountEl = $('#work-count');
+  const placeCountEl = $('#place-count');
+  const statHint = $('#stat-hint');
+  const roseNeedle = $('#rose-needle');
+
+  const cursorTime = $('#cursor-time');
+  const cursorZone = $('#cursor-zone');
+  const cursorRange = $('#cursor-range');
+  const rangeWrap = $('#range-wrap');
+  const tlScroll = $('#tl-scroll');
+  const timeline = $('#timeline');
+  const tlEmpty = $('#tl-empty');
+  const legend = $('#legend');
+  const bestSection = $('#best-section');
+  const bestNote = $('#best-note');
+  const bestList = $('#best-list');
+
+  const meetSub = $('#meet-sub');
+  const meetList = $('#meet-list');
+  const meetEmpty = $('#meet-empty');
+  const btnCopy = $('#btn-copy');
+
+  const btnAdd = $('#btn-add');
+  const placeList = $('#place-list');
+  const placeEmpty = $('#place-empty');
+
+  const btnExport = $('#btn-export');
+  const btnImport = $('#btn-import');
+  const btnClear = $('#btn-clear');
+  const fileImport = $('#file-import');
+  const storageUsage = $('#storage-usage');
+
+  const footCount = $('#foot-count');
+  const storeMode = $('#store-mode');
+
+  const dlgPlace = $('#dlg-place');
+  const formPlace = $('#form-place');
+  const placeTitle = $('#place-title');
+  const placeName = $('#place-name');
+  const tzSearch = $('#tz-search');
+  const tzSelect = $('#tz-select');
+  const tzPreview = $('#tz-preview');
+  const workStart = $('#work-start');
+  const workEnd = $('#work-end');
+  const swatchList = $('#swatch-list');
+  const placeError = $('#place-error');
+  const placeCancel = $('#place-cancel');
+  const placeSave = $('#place-save');
+
+  const dlgConfirm = $('#dlg-confirm');
+  const confirmTitle = $('#confirm-title');
+  const confirmBody = $('#confirm-body');
+  const confirmCancel = $('#confirm-cancel');
+  const confirmOk = $('#confirm-ok');
+
+  const dlgImport = $('#dlg-import');
+  const importBody = $('#import-body');
+  const importCancel = $('#import-cancel');
+  const importMerge = $('#import-merge');
+  const importReplace = $('#import-replace');
+
+  const dlgHelp = $('#dlg-help');
+  const helpClose = $('#help-close');
+  const dlgCopy = $('#dlg-copy');
+  const copyText = $('#copy-text');
+  const copyClose = $('#copy-close');
+
+  const toast = $('#toast');
+  const toastMsg = $('#toast-msg');
+  const toastAct = $('#toast-act');
+
+  let labelRefs = [];
+
+  /* ───────── theme ───────── */
+  function applyTheme(theme) {
+    state.theme = theme;
+    const resolved = theme === 'auto'
+      ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : theme;
+    document.documentElement.dataset.theme = resolved;
+    document.documentElement.style.colorScheme = resolved;
+    btnTheme.textContent = theme === 'auto' ? '◐' : theme === 'dark' ? '☾' : '☀';
+    const label = theme === 'auto' ? '跟隨系統' : theme === 'dark' ? '深色' : '淺色';
+    btnTheme.setAttribute('aria-label', '主題：' + label + '，點擊切換');
+    btnTheme.title = '主題：' + label;
+    try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+  }
+  function cycleTheme() {
+    const order = ['auto', 'light', 'dark'];
+    const next = order[(order.indexOf(state.theme) + 1) % order.length];
+    applyTheme(next);
+    if (state.settings) {
+      state.settings.theme = next;
+      scheduleSettingsSave();
+    }
+  }
+
+  /* ───────── settings save ───────── */
+  let settingsTimer = null;
+  function scheduleSettingsSave() {
+    if (!state.ready || !state.settings) return;
+    clearTimeout(settingsTimer);
+    settingsTimer = setTimeout(flushSettings, CONFIG.settingsDelay);
+  }
+  async function flushSettings() {
+    clearTimeout(settingsTimer);
+    settingsTimer = null;
+    if (!state.settings) return;
+    await persist(function () {
+      return metaSet('settings', Object.assign({}, state.settings));
+    }, '偏好設定儲存失敗');
+  }
+
+  /* ───────── derived time ───────── */
+  function baseMs() {
+    const dp = dateParts(state.settings.date);
+    return zonedToUtc(dp.y, dp.m, dp.d, 0, 0, state.settings.refTz).getTime();
+  }
+  function instantAt(minutes) {
+    return new Date(baseMs() + minutes * 60000);
+  }
+  function selectedInstant() {
+    return instantAt(state.settings.cursorMin);
+  }
+  function sortedPlaces() {
+    return state.places.slice().sort((a, b) => {
+      const sa = Number.isFinite(a.sort) ? a.sort : 0;
+      const sb = Number.isFinite(b.sort) ? b.sort : 0;
+      return (sa - sb) || String(a.createdAt || '').localeCompare(String(b.createdAt || ''));
+    });
+  }
+  function defaultSettings() {
+    return {
+      refTz: 'Asia/Taipei',
+      date: todayStrInTz('Asia/Taipei'),
+      cursorMin: 540,
+      theme: 'auto',
+    };
+  }
+
+  /* ───────── toast / banner ───────── */
+  let toastTimer = null;
+  let toastCurrent = null;
+  const toastQueue = [];
+
+  function showToast(message, actionLabel, onAction) {
+    const item = { message: message, actionLabel: actionLabel, onAction: onAction };
+    if (toastCurrent) {
+      if (toastCurrent.actionLabel) {
+        // 保留進行中的 Undo；其他 Undo 排隊，一般提示直接略過，避免蓋掉復原機會。
+        if (actionLabel && toastQueue.length < 4) toastQueue.push(item);
+        return;
+      }
+      // 一般提示可以被新提示取代；新的 Undo 則優先顯示。
+      displayToast(item);
+      return;
+    }
+    displayToast(item);
+  }
+
+  function displayToast(item) {
+    clearTimeout(toastTimer);
+    toastCurrent = item;
+    toastMsg.textContent = item.message;
+    if (item.actionLabel) {
+      toastAct.hidden = false;
+      toastAct.textContent = item.actionLabel;
+      toastAct.onclick = function () {
+        const fn = item.onAction;
+        toastAct.onclick = null;
+        dismissToast(true);
+        if (fn) fn();
+      };
+    } else {
+      toastAct.hidden = true;
+      toastAct.onclick = null;
+    }
+    toast.hidden = false;
+    toastTimer = setTimeout(function () { dismissToast(true); }, 6000);
+  }
+
+  function dismissToast(showNext) {
+    clearTimeout(toastTimer);
+    toast.hidden = true;
+    toastCurrent = null;
+    if (showNext && toastQueue.length) {
+      displayToast(toastQueue.shift());
+    }
+  }
+  function showBanner(message) {
+    bannerText.textContent = message;
+    banner.hidden = false;
+  }
+
+  /* ───────── timeline render ───────── */
+  function renderTimeline() {
+    const places = sortedPlaces();
+    const has = places.length > 0;
+
+    rangeWrap.hidden = !has;
+    tlScroll.hidden = !has;
+    legend.hidden = !has;
+    tlEmpty.hidden = has;
+    bestSection.hidden = !has;
+
+    labelRefs = [];
+    if (!has) {
+      timeline.replaceChildren();
+      return;
+    }
+
+    const base = baseMs();
+    const refTz = state.settings.refTz;
+    const frag = document.createDocumentFragment();
+
+    frag.append(el('div', { class: 'tl-corner tl-corner--head' },
+      el('span', { text: '基準時間' }),
+      el('strong', { text: shortZone(refTz) })
+    ));
+
+    for (let i = 0; i < 24; i++) {
+      const p = partsAt(new Date(base + i * 3600000), refTz);
+      frag.append(el('div', {
+        class: 'tl-head', dataset: { slot: i },
+        title: pad2(p.h) + ':' + pad2(p.mi) + ' ' + refTz,
+        text: pad2(p.h),
+      }));
+    }
+
+    frag.append(el('div', { class: 'tl-corner tl-corner--score' },
+      el('span', { text: '上班人數' })
+    ));
+
+    for (let i = 0; i < 24; i++) {
+      const t = new Date(base + i * 3600000);
+      let count = 0;
+      for (const p of places) {
+        if (isWork(p, partsAt(t, p.tz))) count++;
+      }
+      const score = el('div', {
+        class: 'tl-score' + (count === places.length ? ' is-full' : count > 0 ? ' is-some' : ''),
+        dataset: { slot: i },
+        title: count + ' / ' + places.length + ' 個地點在上班',
+      }, el('span', { text: String(count) }));
+      score.style.setProperty('--h', String(Math.round((count / places.length) * 100)));
+      frag.append(score);
+    }
+
+    for (const p of places) {
+      const labelTime = el('span', { class: 'tl-label__time mono', text: '--:--' });
+      const labelDay = el('span', { class: 'tl-label__day', text: '', hidden: true });
+
+      frag.append(el('div', { class: 'tl-label', dataset: { id: p.id }, title: p.name + ' · ' + p.tz + ' · 上班 ' + workLabel(p) },
+        el('div', { class: 'tl-label__top' },
+          el('span', { class: 'dot', style: { '--c': p.color } }),
+          el('span', { class: 'tl-label__name', text: p.name }),
+          labelDay
+        ),
+        el('div', { class: 'tl-label__bottom' },
+          labelTime,
+          el('span', { class: 'tl-label__work', text: workLabel(p) })
+        )
+      ));
+
+      labelRefs.push({ id: p.id, timeEl: labelTime, dayEl: labelDay });
+
+      let prevDay = null;
+      let first = true;
+      for (let i = 0; i < 24; i++) {
+        const parts = partsAt(new Date(base + i * 3600000), p.tz);
+        const di = dayIndex(parts);
+        const work = isWork(p, parts);
+        const night = parts.h >= 22 || parts.h < 6;
+        const cls = ['tl-cell'];
+        if (work) cls.push('is-work');
+        if (night) cls.push('is-night');
+        if (!first && di !== prevDay) cls.push('is-daybreak');
+
+        const cell = el('div', {
+          class: cls.join(' '), dataset: { slot: i, id: p.id },
+          title: p.name + ' ' + pad2(parts.h) + ':' + pad2(parts.mi) + ' · ' + statusFor(p, parts).label,
+          text: pad2(parts.h) + ':' + pad2(parts.mi),
+        });
+        cell.style.setProperty('--c', p.color);
+        frag.append(cell);
+
+        prevDay = di;
+        first = false;
+      }
+    }
+
+    frag.append(el('div', { class: 'tl-overlay' },
+      el('div', { class: 'tl-now', id: 'now-line', hidden: true }),
+      el('div', { class: 'tl-cursor', id: 'cursor-line' })
+    ));
+
+    timeline.replaceChildren(frag);
+  }
+
+  /* ───────── cursor + hero + meeting ───────── */
+  function renderCursor() {
+    if (!state.ready) return;
+    const cur = state.settings.cursorMin;
+    const refTz = state.settings.refTz;
+    const inst = instantAt(cur);
+    const rp = partsAt(inst, refTz);
+    const refName = shortZone(refTz);
+
+    heroTime.textContent = pad2(rp.h) + ':' + pad2(rp.mi);
+    heroWeekday.textContent = weekdayOfDate(rp.y, rp.m, rp.d);
+    heroDate.textContent = rp.y + '/' + pad2(rp.m) + '/' + pad2(rp.d);
+    heroUtc.textContent = offsetLabel(inst, refTz);
+    if (document.activeElement !== dateInput) dateInput.value = state.settings.date;
+
+    cursorTime.textContent = pad2(rp.h) + ':' + pad2(rp.mi);
+    cursorZone.textContent = refName + ' · ' + weekdayOfDate(rp.y, rp.m, rp.d);
+    cursorRange.value = String(cur);
+    cursorRange.setAttribute('aria-valuetext',
+      weekdayOfDate(rp.y, rp.m, rp.d) + ' ' + rp.y + '/' + pad2(rp.m) + '/' + pad2(rp.d) + ' ' +
+      pad2(rp.h) + ':' + pad2(rp.mi) + ' ' + refName);
+
+    if (roseNeedle) {
+      roseNeedle.style.transform = 'rotate(' + ((cur / 1440) * 360) + 'deg)';
+    }
+
+    const places = sortedPlaces();
+    let working = 0;
+    for (const p of places) {
+      if (isWork(p, partsAt(inst, p.tz))) working++;
+    }
+    workCountEl.textContent = String(working);
+    placeCountEl.textContent = String(places.length);
+    statHint.textContent = places.length
+      ? '重疊率 ' + Math.round((working / places.length) * 100) + '%'
+      : '—';
+
+    const slot = Math.floor(cur / 60);
+    const old = timeline.querySelectorAll('.is-cursor');
+    for (const n of old) n.classList.remove('is-cursor');
+    for (const n of timeline.querySelectorAll('[data-slot="' + slot + '"]')) {
+      n.classList.add('is-cursor');
+    }
+
+    const cursorLine = $('#cursor-line');
+    if (cursorLine) cursorLine.style.setProperty('--pct', String(cur / 1440));
+
+    for (const ref of labelRefs) {
+      const p = state.places.find((x) => x.id === ref.id);
+      if (!p) continue;
+      const pp = partsAt(inst, p.tz);
+      ref.timeEl.textContent = pad2(pp.h) + ':' + pad2(pp.mi);
+      const diff = dayIndex(pp) - dayIndex(rp);
+      if (diff !== 0) {
+        ref.dayEl.textContent = (diff > 0 ? '+' : '−') + Math.abs(diff) + '天';
+        ref.dayEl.hidden = false;
+      } else {
+        ref.dayEl.hidden = true;
+      }
+    }
+
+    renderMeeting(rp);
+    updatePlaceOffsets(inst);
+    updateBestActive();
+    updateNowLine();
+  }
+
+  function renderMeeting(rp) {
+    const places = sortedPlaces();
+    const inst = selectedInstant();
+    const refTz = state.settings.refTz;
+
+    btnCopy.disabled = places.length === 0;
+    if (!places.length) {
+      meetList.replaceChildren();
+      meetEmpty.hidden = false;
+      meetEmpty.textContent = '加入地點後，這裡會列出同一時刻在各地的時間。';
+      meetSub.textContent = '還沒有地點。';
+      return;
+    }
+    meetEmpty.hidden = true;
+    meetSub.textContent = rp.y + '/' + pad2(rp.m) + '/' + pad2(rp.d) + ' ' +
+      weekdayOfDate(rp.y, rp.m, rp.d) + ' · ' + pad2(rp.h) + ':' + pad2(rp.mi) + ' ' + shortZone(refTz);
+
+    meetList.replaceChildren(...places.map((p) => {
+      const pp = partsAt(inst, p.tz);
+      const st = statusFor(p, pp);
+      const diff = dayIndex(pp) - dayIndex(rp);
+      const chips = [];
+      if (diff !== 0) {
+        chips.push(el('span', {
+          class: 'chip chip--day',
+          text: (diff > 0 ? '+' : '−') + Math.abs(diff) + ' 天',
+        }));
+      }
+      chips.push(el('span', { class: 'chip', text: offsetLabel(inst, p.tz) }));
+      chips.push(el('span', { class: 'chip chip--' + st.key, text: st.label }));
+
+      return el('div', { class: 'meet-row' },
+        el('span', { class: 'dot', style: { '--c': p.color } }),
+        el('div', { class: 'meet-name' },
+          el('strong', { text: p.name }),
+          el('span', { class: 'mono', text: p.tz })
+        ),
+        el('div', { class: 'meet-time' },
+          el('strong', { class: 'mono', text: pad2(pp.h) + ':' + pad2(pp.mi) }),
+          el('span', { text: pad2(pp.m) + '/' + pad2(pp.d) + ' ' + weekdayOfDate(pp.y, pp.m, pp.d) })
+        ),
+        el('div', { class: 'meet-chips' }, chips)
+      );
+    }));
+  }
+
+  /* ───────── best windows ───────── */
+  function refComfortAt(instant) {
+    const p = partsAt(instant, state.settings.refTz);
+    const home = state.places.find((x) => x.tz === state.settings.refTz);
+    if (home) return isWork(home, p);
+    const mins = p.h * 60 + p.mi;
+    return mins >= 8 * 60 && mins < 21 * 60;
+  }
+
+  function computeBestWindows() {
+    const places = sortedPlaces();
+    if (!places.length) return { runs: [], max: 0, n: 0, hasEnough: false };
+    const base = baseMs();
+    const scores = [];
+    for (let i = 0; i < 48; i++) {
+      const t = new Date(base + i * 1800000);
+      const who = [];
+      for (const p of places) {
+        if (isWork(p, partsAt(t, p.tz))) who.push(p);
+      }
+      scores.push({ i: i, c: who.length, who: who });
+    }
+    let max = 0;
+    for (const s of scores) if (s.c > max) max = s.c;
+    if (max === 0) return { runs: [], max: 0, n: places.length, hasEnough: false };
+    if (max < 2 && places.length > 1) {
+      return { runs: [], max: max, n: places.length, hasEnough: false };
+    }
+
+    // 以 30 分鐘為單位切出「同一組人上班」的連續區間。只用人數切的話，
+    // 一個 10 小時的區間可能中途換人，卻被當成同一個「最佳時段」。
+    const runs = [];
+    let cur = null;
+    for (const s of scores) {
+      const key = s.who.map((p) => p.id).sort().join('|');
+      if (s.c > 0 && cur && cur.key === key && cur.end === s.i) {
+        cur.end = s.i + 1;
+      } else if (s.c > 0) {
+        cur = { start: s.i, end: s.i + 1, c: s.c, who: s.who, key: key };
+        runs.push(cur);
+      } else {
+        cur = null;
+      }
+    }
+
+    const candidates = places.length > 1 ? runs.filter((r) => r.c >= 2) : runs;
+    if (!candidates.length) {
+      return { runs: [], max: max, n: places.length, hasEnough: false };
+    }
+    for (const r of candidates) {
+      const mid = new Date(base + ((r.start + r.end) / 2) * 1800000);
+      r.comfort = refComfortAt(mid);
+      r.duration = (r.end - r.start) * 30;
+    }
+    candidates.sort((a, b) =>
+      (b.c - a.c) ||
+      (Number(b.comfort) - Number(a.comfort)) ||
+      (b.duration - a.duration) ||
+      (a.start - b.start)
+    );
+    return { runs: candidates.slice(0, 4), max: max, n: places.length, hasEnough: true };
+  }
+
+  function renderBest() {
+    const places = sortedPlaces();
+    if (!places.length) {
+      bestList.replaceChildren();
+      bestNote.textContent = '';
+      return;
+    }
+    const result = computeBestWindows();
+    if (!result.runs.length) {
+      bestNote.textContent = '';
+      bestList.replaceChildren(el('p', {
+        class: 'best-empty',
+        text: result.max === 0
+          ? '這一天沒有地點在上班時段內，換個日期或調整上班時間。'
+          : '這一天沒有兩個以上地點同時上班，試著換日期或放寬上班時段。',
+      }));
+      return;
+    }
+
+    bestNote.textContent = result.max === result.n
+      ? '全員到齊 · ' + result.n + ' / ' + result.n
+      : '最多 ' + result.max + ' / ' + result.n + ' 個地點同時上班';
+
+    const base = baseMs();
+    const refTz = state.settings.refTz;
+    const clockAt = (minutes) => {
+      const p = partsAt(new Date(base + minutes * 60000), refTz);
+      return pad2(p.h) + ':' + pad2(p.mi);
+    };
+
+    bestList.replaceChildren(...result.runs.map((run) => {
+      const start = run.start * 30;
+      const end = run.end * 30;
+      const startLabel = clockAt(start);
+      const endLabel = clockAt(end);
+      const dots = run.who.map((p) => el('span', {
+        class: 'dot dot--sm', style: { '--c': p.color }, title: p.name,
+      }));
+      const kids = [
+        el('span', {
+          class: 'best-btn__time mono',
+          text: startLabel + '–' + endLabel + (startLabel === endLabel ? '（重複小時）' : ''),
+        }),
+        el('span', { class: 'best-btn__score', text: run.c + ' / ' + result.n + ' 個地點上班' }),
+      ];
+      if (!run.comfort) {
+        kids.push(el('span', { class: 'best-btn__warn', text: '基準時區非上班' }));
+      }
+      kids.push(el('span', { class: 'best-dots' }, dots));
+      return el('button', {
+        class: 'best-btn', type: 'button',
+        dataset: { start: String(start), end: String(end) },
+        title: '把游標移到 ' + startLabel,
+      }, kids);
+    }));
+    updateBestActive();
+  }
+
+  function updateBestActive() {
+    const cur = state.settings.cursorMin;
+    for (const b of bestList.querySelectorAll('button[data-start]')) {
+      const s = Number(b.dataset.start);
+      const e = Number(b.dataset.end);
+      b.classList.toggle('is-active', cur >= s && cur < e);
+    }
+  }
+
+  /* ───────── places ───────── */
+  function updatePlaceOffsets(inst) {
+    for (const node of placeList.querySelectorAll('[data-offset-for]')) {
+      const p = state.places.find((x) => x.id === node.dataset.offsetFor);
+      if (p) node.textContent = offsetLabel(inst, p.tz);
+    }
+  }
+
+  function renderPlaces() {
+    const places = sortedPlaces();
+    placeList.replaceChildren(...places.map((p, idx) => renderPlaceRow(p, idx, places.length)));
+    placeEmpty.hidden = places.length > 0;
+    placeEmpty.textContent = '還沒有地點。按右上角「新增地點」加入第一個城市。';
+  }
+
+  function renderPlaceRow(p, idx, total) {
+    const inst = selectedInstant();
+    return el('li', { class: 'place-row', dataset: { id: p.id } },
+      el('span', { class: 'dot', style: { '--c': p.color } }),
+      el('div', { class: 'place-main' },
+        el('div', { class: 'place-name' },
+          p.name,
+          p.tz === state.settings.refTz ? el('span', { class: 'tag', text: '基準' }) : null
+        ),
+        el('div', { class: 'place-tz mono' },
+          el('span', { text: p.tz + ' · ' }),
+          el('span', { dataset: { offsetFor: p.id }, text: offsetLabel(inst, p.tz) })
+        )
+      ),
+      el('div', { class: 'place-hours', text: workLabel(p) }),
+      el('div', { class: 'place-actions' },
+        el('button', {
+          class: 'icon-btn', type: 'button', dataset: { act: 'up' },
+          disabled: idx === 0, 'aria-label': '上移 ' + p.name,
+        }, '↑'),
+        el('button', {
+          class: 'icon-btn', type: 'button', dataset: { act: 'down' },
+          disabled: idx === total - 1, 'aria-label': '下移 ' + p.name,
+        }, '↓'),
+        el('button', {
+          class: 'btn btn--small', type: 'button', dataset: { act: 'edit' },
+          'aria-label': '編輯 ' + p.name,
+        }, '編輯'),
+        el('button', {
+          class: 'btn btn--small btn--danger', type: 'button', dataset: { act: 'del' },
+          'aria-label': '刪除 ' + p.name,
+        }, '刪除')
+      )
+    );
+  }
+
+  /* ───────── now marker ───────── */
+  function updateNowLine() {
+    if (!state.ready || !state.settings) return;
+    const line = $('#now-line');
+    if (!line) return;
+    const base = baseMs();
+    const now = Date.now();
+    const pct = (now - base) / 86400000;
+    const today = todayStrInTz(state.settings.refTz);
+    const visible = pct >= 0 && pct < 1 && state.settings.date === today;
+    line.hidden = !visible;
+
+    const readout = $('#now-readout');
+    if (readout) {
+      readout.hidden = !visible;
+      if (visible) {
+        const p = partsAt(new Date(now), state.settings.refTz);
+        readout.textContent = '現在 ' + pad2(p.h) + ':' + pad2(p.mi);
+      }
+    }
+    if (!visible) return;
+    line.style.setProperty('--pct', String(pct));
+  }
+
+  /* ───────── whole render ───────── */
+  function renderAll() {
+    if (!state.ready) return;
+    renderTimeline();
+    renderBest();
+    renderCursor();
+    renderPlaces();
+    footCount.textContent = state.places.length
+      ? state.places.length + ' 個地點'
+      : '尚未加入地點';
+  }
+
+  /* ───────── scroll ───────── */
+  function scrollToCursor() {
+    if (!state.places.length) return;
+    const cs = getComputedStyle(timeline);
+    const labelW = parseFloat(cs.getPropertyValue('--label-w')) || 126;
+    const rect = timeline.getBoundingClientRect();
+    const slotsW = Math.max(1, rect.width - labelW);
+    const x = labelW + (state.settings.cursorMin / 1440) * slotsW;
+    tlScroll.scrollLeft = Math.max(0, x - tlScroll.clientWidth / 2);
+  }
+
+  /* ───────── interactions ───────── */
+  function setCursor(minutes, doScroll) {
+    if (!state.ready) return;
+    const next = clampRound15(minutes);
+    if (next === state.settings.cursorMin && !doScroll) return;
+    state.settings.cursorMin = next;
+    renderCursor();
+    scheduleSettingsSave();
+    if (doScroll) scrollToCursor();
+  }
+
+  function shiftDate(delta) {
+    if (!state.ready) return;
+    state.settings.date = addDays(state.settings.date, delta);
+    dateInput.value = state.settings.date;
+    renderAll();
+    scheduleSettingsSave();
+  }
+
+  function goToday() {
+    if (!state.ready) return;
+    state.settings.date = todayStrInTz(state.settings.refTz);
+    dateInput.value = state.settings.date;
+    renderAll();
+    scheduleSettingsSave();
+    requestAnimationFrame(scrollToCursor);
+  }
+
+  function goNow() {
+    if (!state.ready) return;
+    const tz = state.settings.refTz;
+    const now = new Date();
+    const p = partsAt(now, tz);
+    const dateStr = p.y + '-' + pad2(p.m) + '-' + pad2(p.d);
+    const base = zonedToUtc(p.y, p.m, p.d, 0, 0, tz).getTime();
+    // cursorMin 是「從當地午夜起算的實際經過分鐘」，不是牆上時鐘的分鐘數。
+    // 這樣在 DST 切換日（23 或 25 小時）才會落在正確的格子。
+    state.settings.date = dateStr;
+    state.settings.cursorMin = clampRound15((now.getTime() - base) / 60000);
+    dateInput.value = dateStr;
+    renderAll();
+    scheduleSettingsSave();
+    requestAnimationFrame(scrollToCursor);
+  }
+
+  /* ───────── timezone select ───────── */
+  function matchesZone(z, q) {
+    if (!q) return true;
+    const label = TZ_LABELS[z] || '';
+    return z.toLowerCase().indexOf(q) !== -1 || label.toLowerCase().indexOf(q) !== -1;
+  }
+
+  function fillTzSelect(select, filter, selected) {
+    const q = String(filter || '').trim().toLowerCase();
+    const frag = document.createDocumentFragment();
+
+    const common = COMMON_TZ.filter((c) => matchesZone(c.tz, q));
+    if (common.length) {
+      const g = el('optgroup', { label: q ? '常用符合' : '常用' });
+      for (const c of common) {
+        g.append(el('option', { value: c.tz, text: c.label + ' · ' + c.tz }));
+      }
+      frag.append(g);
+    }
+
+    const rest = ZONES.filter((z) => !COMMON_SET.has(z) && matchesZone(z, q));
+    if (rest.length) {
+      const groups = new Map();
+      for (const z of rest) {
+        const region = z.indexOf('/') === -1 ? '其他' : z.split('/')[0];
+        if (!groups.has(region)) groups.set(region, []);
+        groups.get(region).push(z);
+      }
+      const order = ['Asia', 'Europe', 'America', 'Africa', 'Australia', 'Pacific', 'Atlantic', 'Indian', 'Arctic', 'Antarctica', 'Etc', '其他'];
+      const keys = Array.from(groups.keys()).sort((a, b) => {
+        const ia = order.indexOf(a);
+        const ib = order.indexOf(b);
+        return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib) || a.localeCompare(b);
+      });
+      for (const region of keys) {
+        const g = el('optgroup', { label: region });
+        for (const z of groups.get(region)) g.append(el('option', { value: z, text: z }));
+        frag.append(g);
+      }
+    }
+
+    select.replaceChildren(frag);
+    const matched = select.options.length > 0;
+
+    let found = false;
+    for (const o of select.options) {
+      if (o.value === selected) { found = true; break; }
+    }
+    if (selected && found) {
+      select.value = selected;
+    } else if (q && select.options.length) {
+      // 搜尋時若原本選取的時區已不符合，直接選第一個符合項目，所見即所得。
+      select.selectedIndex = 0;
+    } else if (selected && isValidTz(selected)) {
+      select.append(el('option', { value: selected, text: selected }));
+      select.value = selected;
+    } else if (select.options.length) {
+      select.selectedIndex = 0;
+    }
+    return matched;
+  }
+
+  function updateTzPreview(noResults) {
+    if (noResults) {
+      tzPreview.textContent = '找不到符合的時區，請換個關鍵字；目前仍保留原本的選擇。';
+      return;
+    }
+    const tz = tzSelect.value;
+    if (!isValidTz(tz)) {
+      tzPreview.textContent = '請選擇有效的時區。';
+      return;
+    }
+    const now = new Date();
+    const p = partsAt(now, tz);
+    tzPreview.textContent = '當地現在 ' + pad2(p.h) + ':' + pad2(p.mi) +
+      '（' + weekdayOfDate(p.y, p.m, p.d) + '）· ' + offsetLabel(now, tz);
+  }
+
+  /* ───────── place dialog ───────── */
+  function buildSwatches() {
+    swatchList.replaceChildren(...COLORS.map((c, i) => el('label', { class: 'swatch', title: c.n },
+      el('input', {
+        type: 'radio', name: 'place-color', value: c.v, checked: i === 0,
+      }),
+      el('span', { class: 'swatch__dot', style: { '--c': c.v } }),
+      el('span', { class: 'sr-only', text: c.n })
+    )));
+  }
+
+  function firstUnusedColor() {
+    const used = new Set(state.places.map((p) => p.color));
+    const found = COLORS.find((c) => !used.has(c.v));
+    return found ? found.v : COLORS[0].v;
+  }
+
+  function setPlaceColor(color) {
+    const radios = formPlace.querySelectorAll('input[name="place-color"]');
+    let hit = false;
+    for (const r of radios) {
+      r.checked = r.value === color;
+      if (r.checked) hit = true;
+    }
+    if (!hit && radios.length) radios[0].checked = true;
+  }
+
+  function checkedColor() {
+    const r = formPlace.querySelector('input[name="place-color"]:checked');
+    return r ? r.value : COLORS[0].v;
+  }
+
+  function showPlaceError(msg) {
+    placeError.textContent = msg;
+    placeError.hidden = false;
+  }
+
+  function openPlaceDialog(place) {
+    if (dlgPlace.open) return;
+    state.editingId = place ? place.id : null;
+    placeTitle.textContent = place ? '編輯地點' : '新增地點';
+    placeName.value = place ? place.name : '';
+    tzSearch.value = '';
+    fillTzSelect(tzSelect, '', place ? place.tz : state.settings.refTz);
+    workStart.value = minToTime(place ? place.workStart : 540);
+    workEnd.value = minToTime(place ? place.workEnd : 1080);
+    setPlaceColor(place ? place.color : firstUnusedColor());
+    placeError.hidden = true;
+    placeError.textContent = '';
+    updateTzPreview();
+    dlgPlace.scrollTop = 0;
+    dlgPlace.showModal();
+    placeName.focus();
+    if (place) placeName.select();
+  }
+
+  async function savePlace(event) {
+    event.preventDefault();
+    if (state.placeSaving) return;
+    const name = placeName.value.trim();
+    const tz = tzSelect.value;
+    const ws = timeToMin(workStart.value);
+    const we = timeToMin(workEnd.value);
+
+    let msg = '';
+    if (!name) msg = '請輸入地點名稱。';
+    else if (name.length > CONFIG.maxName) msg = '名稱最多 ' + CONFIG.maxName + ' 字。';
+    else if (!isValidTz(tz)) msg = '請選擇有效的時區。';
+    else if (ws == null || we == null) msg = '請設定上下班時間。';
+    else if (ws === we) msg = '上下班時間不能相同；若為全天請設 00:00–23:59。';
+    else if (!state.editingId && state.places.length >= CONFIG.maxPlaces) msg = '最多只能加入 ' + CONFIG.maxPlaces + ' 個地點。';
+    if (msg) { showPlaceError(msg); return; }
+
+    const existing = state.editingId
+      ? state.places.find((p) => p.id === state.editingId)
+      : null;
+    const stamp = nowISO();
+    let sort = 0;
+    if (existing) {
+      sort = Number.isFinite(existing.sort) ? existing.sort : 0;
+    } else if (state.places.length) {
+      sort = Math.max.apply(null, state.places.map((p) => Number.isFinite(p.sort) ? p.sort : 0)) + 1;
+    }
+
+    const place = {
+      id: existing ? existing.id : uid(),
+      name: name.slice(0, CONFIG.maxName),
+      tz: tz,
+      color: checkedColor(),
+      workStart: ws,
+      workEnd: we,
+      sort: sort,
+      createdAt: existing ? existing.createdAt : stamp,
+      updatedAt: stamp,
+    };
+
+    state.placeSaving = true;
+    placeSave.disabled = true;
+    const ok = await persist(function () {
+      return putRow(STORE_PLACES, place);
+    }, '儲存地點失敗，請先匯出備份');
+    placeSave.disabled = false;
+    state.placeSaving = false;
+    if (!ok) return;
+
+    if (existing) Object.assign(existing, place);
+    else state.places.push(place);
+
+    dlgPlace.close();
+    renderAll();
+    refreshUsage();
+    notifyChange();
+    showToast(existing ? '已更新「' + place.name + '」' : '已新增「' + place.name + '」');
+  }
+
+  /* ───────── places actions ───────── */
+  async function deletePlace(p) {
+    const snapshot = Object.assign({}, p);
+    const ok = await persist(function () {
+      return delRow(STORE_PLACES, p.id);
+    }, '刪除地點失敗');
+    if (!ok) return;
+
+    state.places = state.places.filter((x) => x.id !== p.id);
+    renderAll();
+    refreshUsage();
+    notifyChange();
+    showToast('已刪除「' + truncate(p.name, 16) + '」', '復原', async function () {
+      const ok2 = await persist(function () {
+        return putRow(STORE_PLACES, snapshot);
+      }, '復原失敗');
+      if (!ok2) return;
+      state.places.push(snapshot);
+      renderAll();
+      refreshUsage();
+      notifyChange();
+      showToast('已復原');
+    });
+  }
+
+  async function movePlace(id, dir) {
+    const arr = sortedPlaces();
+    const idx = arr.findIndex((p) => p.id === id);
+    const other = idx + dir;
+    if (idx < 0 || other < 0 || other >= arr.length) return;
+    const a = arr[idx];
+    const b = arr[other];
+    const sa = Number.isFinite(a.sort) ? a.sort : idx;
+    const sb = Number.isFinite(b.sort) ? b.sort : other;
+    const stamp = nowISO();
+    const na = Object.assign({}, a, { sort: sb, updatedAt: stamp });
+    const nb = Object.assign({}, b, { sort: sa, updatedAt: stamp });
+    const ok = await persist(function () {
+      return bulkPutRows(STORE_PLACES, [na, nb]);
+    }, '調整順序失敗');
+    if (!ok) return;
+    Object.assign(a, na);
+    Object.assign(b, nb);
+    renderAll();
+    refreshUsage();
+    notifyChange();
+  }
+
+  /* ───────── copy ───────── */
+  function buildMeetingText() {
+    const places = sortedPlaces();
+    const inst = selectedInstant();
+    const refTz = state.settings.refTz;
+    const rp = partsAt(inst, refTz);
+    const lines = [];
+    lines.push('多時區會議時間');
+    lines.push(rp.y + '/' + pad2(rp.m) + '/' + pad2(rp.d) +
+      '（' + weekdayOfDate(rp.y, rp.m, rp.d) + '）' +
+      pad2(rp.h) + ':' + pad2(rp.mi) + ' ' +
+      shortZone(refTz) + '（' + offsetLabel(inst, refTz) + '）');
+    lines.push('');
+    for (const p of places) {
+      const pp = partsAt(inst, p.tz);
+      const st = statusFor(p, pp);
+      const diff = dayIndex(pp) - dayIndex(rp);
+      const day = diff === 0 ? '' : '（' + (diff > 0 ? '+' : '−') + Math.abs(diff) + ' 天）';
+      lines.push(p.name + '：' + pad2(pp.h) + ':' + pad2(pp.mi) + ' ' +
+        pad2(pp.m) + '/' + pad2(pp.d) + day + ' · ' + offsetLabel(inst, p.tz) + ' · ' + st.label);
+    }
+    return lines.join('\n');
+  }
+
+  async function copyTextToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch (e) {}
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      ta.style.top = '0';
+      ta.setAttribute('readonly', '');
+      document.body.append(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      return ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function handleCopy() {
+    if (!state.places.length) return;
+    const text = buildMeetingText();
+    const ok = await copyTextToClipboard(text);
+    if (ok) {
+      showToast('已複製會議時間');
+      return;
+    }
+    if (dlgCopy.open) return;
+    copyText.value = text;
+    dlgCopy.showModal();
+    copyText.focus();
+    copyText.select();
+  }
+
+  /* ───────── backup ───────── */
+  async function exportData() {
+    await flushSettings();
+    let places, meta;
+    try {
+      places = await getAllRows(STORE_PLACES);
+      meta = await getAllRows(STORE_META);
+    } catch (err) {
+      console.error(err);
+      showBanner('讀取資料失敗，無法匯出。');
+      return;
+    }
+    places = places.map(normalizeStoredPlace).filter(Boolean);
+    const backup = {
+      app: CONFIG.dbName,
+      schemaVersion: CONFIG.version,
+      exportedAt: nowISO(),
+      counts: { places: places.length },
+      data: { places: places, meta: meta },
+    };
+    downloadJSON('world-time-compass-' + todayStrInTz('UTC') + '.json', backup);
+    showToast('已匯出 ' + places.length + ' 個地點');
+  }
+
+  function normalizeStoredPlace(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const name = String(raw.name == null ? '' : raw.name).trim().slice(0, CONFIG.maxName);
+    const tz = typeof raw.tz === 'string' ? raw.tz : '';
+    if (!name || !isValidTz(tz)) return null;
+    let ws = Number(raw.workStart);
+    let we = Number(raw.workEnd);
+    ws = Number.isFinite(ws) ? clamp(Math.round(ws), 0, 1439) : 540;
+    we = Number.isFinite(we) ? clamp(Math.round(we), 0, 1439) : 1080;
+    if (ws === we) { ws = 540; we = 1080; }
+    const color = COLORS.some((c) => c.v === raw.color) ? raw.color : COLORS[0].v;
+    const sort = Number.isFinite(Number(raw.sort)) ? Number(raw.sort) : 0;
+    const stamp = nowISO();
+    return {
+      id: typeof raw.id === 'string' && raw.id ? raw.id : uid(),
+      name: name,
+      tz: tz,
+      color: color,
+      workStart: ws,
+      workEnd: we,
+      sort: sort,
+      createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : stamp,
+      updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : stamp,
+    };
+  }
+
+  function normalizeOrder() {
+    const arr = sortedPlaces();
+    arr.forEach((p, i) => { p.sort = i; });
+    state.places = arr;
+  }
+
+  async function importFile(file) {
+    if (!file) return;
+    if (file.size > CONFIG.maxImportBytes) {
+      showBanner('匯入失敗：檔案超過 ' + Math.round(CONFIG.maxImportBytes / 1024 / 1024) + ' MB。');
+      return;
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch (e) {
+      showBanner('匯入失敗：檔案不是有效的 JSON。');
+      return;
+    }
+
+    let rawPlaces = null;
+    let version = 1;
+    if (Array.isArray(parsed)) {
+      rawPlaces = parsed;
+    } else if (parsed && parsed.data && Array.isArray(parsed.data.places)) {
+      rawPlaces = parsed.data.places;
+      version = parsed.schemaVersion == null ? 1 : parsed.schemaVersion;
+    } else if (parsed && Array.isArray(parsed.places)) {
+      rawPlaces = parsed.places;
+    }
+
+    if (!rawPlaces) {
+      showBanner('匯入失敗：找不到 places 陣列（預期 data.places）。');
+      return;
+    }
+    const vnum = Number(version);
+    if (Number.isFinite(vnum) && vnum > CONFIG.version) {
+      showBanner('匯入失敗：此備份來自較新版本（v' + vnum + '），請更新工具後再匯入。');
+      return;
+    }    if (rawPlaces.length > CONFIG.maxPlaces) {
+      showBanner('匯入失敗：一次最多匯入 ' + CONFIG.maxPlaces + ' 個地點。');
+      return;
+    }
+
+    const seen = new Set();
+    const normalized = [];
+    for (let i = 0; i < rawPlaces.length; i++) {
+      const p = normalizeStoredPlace(rawPlaces[i]);
+      if (!p) continue;
+      if (seen.has(p.id)) p.id = uid();
+      seen.add(p.id);
+      p.sort = i;
+      normalized.push(p);
+    }
+    const invalid = rawPlaces.length - normalized.length;
+    if (!normalized.length) {
+      showBanner('匯入失敗：沒有可用地點（' + invalid + ' 筆格式不符）。');
+      return;
+    }
+
+    const choice = await askImport(normalized.length, invalid);
+    if (!choice) return;
+
+    if (choice === 'replace') {
+      const ok = await persist(function () {
+        return replaceAllRows(STORE_PLACES, normalized);
+      }, '匯入寫入失敗');
+      if (!ok) return;
+      state.places = normalized;
+    } else {
+      const ok = await persist(function () {
+        return bulkPutRows(STORE_PLACES, normalized);
+      }, '匯入寫入失敗');
+      if (!ok) return;
+      try {
+        state.places = await getAllRows(STORE_PLACES);
+      } catch (err) {
+        showBanner('匯入後讀取失敗，請重新整理頁面。');
+        return;
+      }
+      state.places = state.places.map(normalizeStoredPlace).filter(Boolean);
+    }
+
+    normalizeOrder();
+    renderAll();
+    notifyChange();
+    refreshUsage();
+    showToast('已' + (choice === 'replace' ? '取代為 ' : '合併 ') + normalized.length + ' 個地點');
+  }
+
+  async function clearAll() {
+    if (!state.places.length) {
+      showToast('目前沒有地點');
+      return;
+    }
+    const ok = await askConfirm({
+      title: '清空全部地點？',
+      body: '這會刪除目前 ' + state.places.length + ' 個地點與時間設定，無法復原。建議先匯出備份。',
+      okLabel: '清空',
+      danger: true,
+    });
+    if (!ok) return;
+
+    const cleared = await persist(function () {
+      return clearRows(STORE_PLACES);
+    }, '清空失敗');
+    if (!cleared) return;
+
+    state.places = [];
+    const d = defaultSettings();
+    state.settings = {
+      refTz: d.refTz,
+      date: todayStrInTz(d.refTz),
+      cursorMin: 540,
+      theme: state.theme,
+    };
+    fillTzSelect(refTzSelect, '', state.settings.refTz);
+    await flushSettings();
+    try { await metaSet('seeded', true); } catch (e) {}
+    renderAll();
+    notifyChange();
+    refreshUsage();
+    showToast('已清空所有地點');
+  }
+
+  async function refreshUsage() {
+    if (!navigator.storage || !navigator.storage.estimate) return;
+    try {
+      const est = await navigator.storage.estimate();
+      const usage = est.usage || 0;
+      storageUsage.textContent = '目前約使用 ' +
+        (usage < 1024 * 1024
+          ? Math.max(1, Math.round(usage / 1024)) + ' KB'
+          : (usage / 1024 / 1024).toFixed(1) + ' MB');
+    } catch (e) {}
+  }
+
+  /* ───────── dialogs ───────── */
+  let confirmResolve = null;
+  function askConfirm(opts) {
+    if (confirmResolve) closeConfirm(false);
+    if (dlgConfirm.open) dlgConfirm.close();
+    confirmTitle.textContent = opts.title || '確定？';
+    confirmBody.textContent = opts.body || '';
+    confirmBody.hidden = !opts.body;
+    confirmOk.textContent = opts.okLabel || '確定';
+    confirmOk.className = 'btn ' + (opts.danger ? 'btn--danger-solid' : 'btn--primary');
+    dlgConfirm.showModal();
+    confirmCancel.focus();
+    return new Promise(function (resolve) { confirmResolve = resolve; });
+  }
+  function closeConfirm(value) {
+    if (!confirmResolve) return;
+    const resolve = confirmResolve;
+    confirmResolve = null;
+    dlgConfirm.close();
+    resolve(value);
+  }
+
+  let importResolve = null;
+  function askImport(count, invalid) {
+    if (importResolve) closeImport(null);
+    if (dlgImport.open) dlgImport.close();
+    importBody.textContent = '準備匯入 ' + count + ' 個地點' +
+      (invalid ? '，另有 ' + invalid + ' 筆格式不符已略過' : '') +
+      '。目前有 ' + state.places.length + ' 個地點。';
+    dlgImport.showModal();
+    importMerge.focus();
+    return new Promise(function (resolve) { importResolve = resolve; });
+  }
+  function closeImport(value) {
+    if (!importResolve) return;
+    const resolve = importResolve;
+    importResolve = null;
+    dlgImport.close();
+    resolve(value);
+  }
+
+  /* ───────── broadcast ───────── */
+  function notifyChange() {
+    if (state.broadcast) {
+      state.broadcast.postMessage({ type: 'changed', at: Date.now() });
+    }
+  }
+  async function reloadPlaces() {
+    try {
+      let rows = await getAllRows(STORE_PLACES);
+      rows = rows.map(normalizeStoredPlace).filter(Boolean);
+      state.places = rows;
+      normalizeOrder();
+      renderAll();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  /* ───────── rose ticks ───────── */
+  function buildRoseTicks() {
+    const g = $('#rose-ticks');
+    if (!g) return;
+    const NS = 'http://www.w3.org/2000/svg';
+    for (let i = 0; i < 24; i++) {
+      const major = i % 6 === 0;
+      const rad = ((i * 15) - 90) * Math.PI / 180;
+      const r1 = major ? 44 : 47;
+      const r2 = 50;
+      const line = document.createElementNS(NS, 'line');
+      line.setAttribute('x1', String(60 + Math.cos(rad) * r1));
+      line.setAttribute('y1', String(60 + Math.sin(rad) * r1));
+      line.setAttribute('x2', String(60 + Math.cos(rad) * r2));
+      line.setAttribute('y2', String(60 + Math.sin(rad) * r2));
+      line.setAttribute('class', 'rose-tick' + (major ? ' is-major' : ''));
+      g.append(line);
+    }
+  }
+
+  /* ───────── events ───────── */
+  function bindEvents() {
+    btnTheme.addEventListener('click', cycleTheme);
+    bannerClose.addEventListener('click', function () { banner.hidden = true; });
+    btnHelp.addEventListener('click', function () {
+      dlgHelp.showModal();
+      helpClose.focus();
+    });
+    helpClose.addEventListener('click', function () { dlgHelp.close(); });
+    copyClose.addEventListener('click', function () { dlgCopy.close(); });
+
+    refTzSelect.addEventListener('change', function () {
+      if (!state.ready) return;
+      const tz = refTzSelect.value;
+      if (!isValidTz(tz)) return;
+      state.settings.refTz = tz;
+      renderAll();
+      scheduleSettingsSave();
+    });
+
+    dateInput.addEventListener('change', function () {
+      if (!state.ready) return;
+      if (isDateStr(dateInput.value)) {
+        state.settings.date = dateInput.value;
+        renderAll();
+        scheduleSettingsSave();
+      } else {
+        dateInput.value = state.settings.date;
+      }
+    });
+
+    btnPrev.addEventListener('click', function () { shiftDate(-1); });
+    btnNext.addEventListener('click', function () { shiftDate(1); });
+    btnToday.addEventListener('click', goToday);
+    btnNow.addEventListener('click', goNow);
+
+    cursorRange.addEventListener('input', function () {
+      if (!state.ready) return;
+      state.settings.cursorMin = clampRound15(Number(cursorRange.value));
+      renderCursor();
+      scheduleSettingsSave();
+    });
+
+    timeline.addEventListener('click', function (event) {
+      if (!state.ready || !state.places.length) return;
+      const rect = timeline.getBoundingClientRect();
+      const cs = getComputedStyle(timeline);
+      const labelW = parseFloat(cs.getPropertyValue('--label-w')) || 126;
+      const x = event.clientX - rect.left - labelW;
+      const slotsW = rect.width - labelW;
+      if (x < 0 || x > slotsW) return;
+      const minutes = Math.round(((x / slotsW) * 1440) / 15) * 15;
+      state.settings.cursorMin = clampRound15(minutes);
+      renderCursor();
+      scheduleSettingsSave();
+    });
+
+    bestList.addEventListener('click', function (event) {
+      const btn = event.target.closest('button[data-start]');
+      if (!btn) return;
+      setCursor(Number(btn.dataset.start), true);
+    });
+
+    btnCopy.addEventListener('click', handleCopy);
+
+    btnAdd.addEventListener('click', function () { openPlaceDialog(null); });
+    tlEmpty.addEventListener('click', function (event) {
+      if (event.target.closest('[data-act="add"]')) openPlaceDialog(null);
+    });
+
+    placeList.addEventListener('click', function (event) {
+      const btn = event.target.closest('button[data-act]');
+      if (!btn) return;
+      const li = btn.closest('li[data-id]');
+      if (!li) return;
+      const place = state.places.find((p) => p.id === li.dataset.id);
+      if (!place) return;
+      const act = btn.dataset.act;
+      if (act === 'edit') openPlaceDialog(place);
+      else if (act === 'del') deletePlace(place);
+      else if (act === 'up') movePlace(place.id, -1);
+      else if (act === 'down') movePlace(place.id, 1);
+    });
+
+    formPlace.addEventListener('submit', savePlace);
+    placeCancel.addEventListener('click', function () { dlgPlace.close(); });
+    tzSearch.addEventListener('input', function () {
+      const current = tzSelect.value;
+      const matched = fillTzSelect(tzSelect, tzSearch.value, current);
+      updateTzPreview(!matched && tzSearch.value.trim() !== '');
+    });
+    tzSelect.addEventListener('change', function () { updateTzPreview(); });
+
+    confirmOk.addEventListener('click', function () { closeConfirm(true); });
+    confirmCancel.addEventListener('click', function () { closeConfirm(false); });
+    dlgConfirm.addEventListener('cancel', function (event) {
+      event.preventDefault();
+      closeConfirm(false);
+    });
+    dlgConfirm.addEventListener('close', function () {
+      if (confirmResolve) {
+        const resolve = confirmResolve;
+        confirmResolve = null;
+        resolve(false);
+      }
+    });
+
+    importCancel.addEventListener('click', function () { closeImport(null); });
+    importMerge.addEventListener('click', function () { closeImport('merge'); });
+    importReplace.addEventListener('click', function () { closeImport('replace'); });
+    dlgImport.addEventListener('cancel', function (event) {
+      event.preventDefault();
+      closeImport(null);
+    });
+    dlgImport.addEventListener('close', function () {
+      if (importResolve) {
+        const resolve = importResolve;
+        importResolve = null;
+        resolve(null);
+      }
+    });
+
+    btnExport.addEventListener('click', exportData);
+    btnImport.addEventListener('click', function () { fileImport.click(); });
+    btnClear.addEventListener('click', clearAll);
+    fileImport.addEventListener('change', async function () {
+      const file = fileImport.files && fileImport.files[0];
+      fileImport.value = '';
+      await importFile(file);
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (document.querySelector('dialog[open]')) return;
+      const t = event.target;
+      const typing = t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+      if (!typing && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+        event.preventDefault();
+        const step = event.shiftKey ? 60 : 15;
+        setCursor(state.settings.cursorMin + (event.key === 'ArrowRight' ? step : -step));
+      }
+      if (!typing && (event.key === 'n' || event.key === 'N')) {
+        event.preventDefault();
+        goNow();
+      }
+    });
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') flushSettings();
+    });
+    window.addEventListener('pagehide', function () { flushSettings(); });
+
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () {
+      if (state.theme === 'auto') applyTheme('auto');
+    });
+
+    if ('BroadcastChannel' in window) {
+      try {
+        const bc = new BroadcastChannel(CONFIG.dbName);
+        bc.addEventListener('message', function (event) {
+          if (event.data && event.data.type === 'changed' && document.visibilityState === 'visible') {
+            reloadPlaces();
+          }
+        });
+        state.broadcast = bc;
+      } catch (e) {}
+    }
+  }
+
+  /* ───────── seed ───────── */
+  async function seedPlaces() {
+    const stamp = nowISO();
+    const list = SEED_PLACES.map((s, i) => ({
+      id: uid(),
+      name: s.name,
+      tz: s.tz,
+      color: s.color,
+      workStart: 540,
+      workEnd: 1080,
+      sort: i,
+      createdAt: stamp,
+      updatedAt: stamp,
+    }));
+    const ok = await persist(function () {
+      return bulkPutRows(STORE_PLACES, list);
+    }, '建立預設地點失敗');
+    if (ok) {
+      state.places = list;
+      try { await metaSet('seeded', true); } catch (e) {}
+    }
+  }
+
+  /* ───────── boot ───────── */
+  let cachedTheme = 'auto';
+  try { cachedTheme = localStorage.getItem(THEME_KEY) || 'auto'; } catch (e) {}
+
+  async function boot() {
+    buildRoseTicks();
+    buildSwatches();
+    applyTheme(cachedTheme);
+    bindEvents();
+
+    try {
+      await db();
+    } catch (err) {
+      console.warn('IndexedDB unavailable, using memory fallback:', err);
+      idbOK = false;
+      storeMode.textContent = '記憶體模式：關閉後資料消失';
+      showBanner('目前無法使用瀏覽器資料庫（常見於 file:// 或無痕模式），資料不會保存。請用「資料備份 → 匯出」保存。');
+    }
+
+    if (idbOK) {
+      storeMode.textContent = '資料存於 IndexedDB';
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          const persisted = await navigator.storage.persisted();
+          if (!persisted) await navigator.storage.persist();
+        }
+      } catch (e) {}
+    }
+
+    let stored = null;
+    try { stored = await metaGet('settings', null); } catch (e) { stored = null; }
+    const defaults = defaultSettings();
+    state.settings = Object.assign({}, defaults, (stored && typeof stored === 'object') ? stored : {});
+
+    if (!isValidTz(state.settings.refTz)) state.settings.refTz = defaults.refTz;
+    if (!isDateStr(state.settings.date)) {
+      state.settings.date = todayStrInTz(state.settings.refTz);
+    }
+    state.settings.cursorMin = clampRound15(state.settings.cursorMin);
+    if (['auto', 'light', 'dark'].indexOf(state.settings.theme) === -1) {
+      state.settings.theme = cachedTheme;
+    }
+    applyTheme(state.settings.theme);
+
+    let placesLoaded = true;
+    try {
+      const rows = await getAllRows(STORE_PLACES);
+      state.places = rows.map(normalizeStoredPlace).filter(Boolean);
+    } catch (err) {
+      console.error(err);
+      state.places = [];
+      placesLoaded = false;
+      showBanner('讀取地點失敗，請重新整理頁面；若持續發生，請先檢查瀏覽器儲存空間。');
+    }
+
+    const seeded = await metaGet('seeded', false);
+    if (placesLoaded && !state.places.length && !seeded) {
+      await seedPlaces();
+    }
+    normalizeOrder();
+
+    fillTzSelect(refTzSelect, '', state.settings.refTz);
+    dateInput.value = state.settings.date;
+
+    state.ready = true;
+    renderAll();
+    requestAnimationFrame(function () { scrollToCursor(); });
+    setInterval(updateNowLine, 30000);
+
+    if (idbOK) refreshUsage();
+  }
+
+  boot().catch(function (err) {
+    console.error(err);
+    showBanner('初始化失敗，請重新整理頁面。若使用 file:// 開啟，請改用本機靜態伺服器。');
+  });
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
