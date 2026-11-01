@@ -1,0 +1,3857 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>WaveCut Mini · 離線音訊剪輯與波形標註</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f6fed'/%3E%3Cpath d='M6 16h3l2-6 4 12 3-9 2 3h6' fill='none' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<script>
+  try {
+    var t = localStorage.getItem('wavecut-theme') || 'auto';
+    if (t === 'auto') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    document.documentElement.dataset.theme = t;
+    document.documentElement.style.colorScheme = t;
+  } catch (e) {}
+</script>
+<style>
+/* 1. tokens ───────────────────────────────────────────── */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f5;
+  --text: #16181d;
+  --muted: #5b6472;
+  --border: #dfe3e8;
+  --accent: #2f6fed;
+  --accent-text: #ffffff;
+  --danger: #c0392b;
+  --ok: #1f8a4c;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --space: 16px;
+  --maxw: 1080px;
+  --maxw-lib: 820px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 8px 24px rgba(16, 24, 40, .06);
+  --wave-bg: #eef1f5;
+  --wave: #2f6fed;
+  --wave-mid: #c9d4e6;
+  --shade: rgba(15, 17, 21, .12);
+  --sel: rgba(47, 111, 237, .22);
+  --sel-line: rgba(47, 111, 237, .65);
+  --playhead: #d43b2f;
+  --c-red: #cf4040;
+  --c-amber: #b57b00;
+  --c-green: #1f8a4c;
+  --c-blue: #2f6fed;
+}
+[data-theme="dark"] {
+  --bg: #0f1115;
+  --surface: #171a21;
+  --surface-2: #1f232c;
+  --text: #e8eaee;
+  --muted: #9aa4b2;
+  --border: #2a2f3a;
+  --accent: #6f9bff;
+  --accent-text: #0b1020;
+  --danger: #ff7b6b;
+  --ok: #4cd18a;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);
+  --wave-bg: #12161d;
+  --wave: #6f9bff;
+  --wave-mid: #2b3443;
+  --shade: rgba(0, 0, 0, .42);
+  --sel: rgba(111, 155, 255, .26);
+  --sel-line: rgba(111, 155, 255, .75);
+  --playhead: #ff6b5e;
+  --c-red: #ff7b6b;
+  --c-amber: #e6b34d;
+  --c-green: #4cd18a;
+  --c-blue: #6f9bff;
+}
+
+/* 2. base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+}
+h1, h2, h3, p, ul, fieldset, menu { margin: 0; }
+h1 { font-size: 20px; font-weight: 650; letter-spacing: .01em; }
+h2 { font-size: 17px; font-weight: 600; }
+fieldset { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px 14px; }
+legend { padding: 0 4px; font-size: 13px; color: var(--muted); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+button, input, textarea, select { font: inherit; color: inherit; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+::placeholder { color: var(--muted); opacity: .8; }
+code, kbd {
+  font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font-size: .92em;
+}
+kbd {
+  border: 1px solid var(--border); border-bottom-width: 2px;
+  border-radius: 5px; padding: 0 5px; background: var(--surface-2);
+  white-space: nowrap;
+}
+.muted { color: var(--muted); }
+.hint { color: var(--muted); font-size: 13px; }
+
+/* 3. layout ───────────────────────────────────────────── */
+.appbar {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px max(16px, calc((100% - var(--maxw)) / 2 + 16px));
+  background: var(--bg);
+  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.appbar__left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.appbar h1 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.appbar__actions { display: flex; gap: 8px; align-items: center; flex: none; }
+.appbar__actions .btn { white-space: nowrap; }
+main {
+  max-width: var(--maxw); margin: 0 auto; padding: var(--space);
+  display: grid; gap: var(--space);
+}
+#view-library { max-width: var(--maxw-lib); }
+.foot {
+  max-width: var(--maxw); margin: 0 auto; padding: 8px 16px 32px;
+  display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  color: var(--muted); font-size: 13px;
+}
+
+/* 4. components ───────────────────────────────────────── */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: var(--space); box-shadow: var(--shadow);
+}
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.field { display: grid; gap: 4px; margin-bottom: 10px; }
+.field > span { font-size: 13px; color: var(--muted); }
+input[type="text"], input[type="search"], input[type="number"], textarea, select {
+  width: 100%; min-height: 42px; padding: 8px 12px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); transition: border-color .15s;
+}
+textarea { resize: vertical; min-height: 64px; }
+input:focus, textarea:focus, select:focus { border-color: var(--accent); }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 15px; cursor: pointer; }
+.check input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 40px; padding: 8px 14px;
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 10px;
+  font-size: 15px; cursor: pointer; text-decoration: none;
+  transition: background .15s, border-color .15s, transform .05s;
+}
+.btn:hover:not(:disabled) { background: var(--surface-2); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn--primary { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+.btn--primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.06); }
+.btn--ghost { background: transparent; }
+.btn--ghost:hover:not(:disabled) { background: var(--surface-2); }
+.btn--danger { color: var(--danger); border-color: transparent; }
+.btn--danger:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.btn--sm { min-height: 34px; padding: 4px 10px; font-size: 14px; }
+.icon-btn {
+  min-width: 40px; min-height: 40px; display: inline-grid; place-items: center;
+  padding: 0 8px;
+  background: transparent; border: 1px solid var(--border);
+  border-radius: 10px; font-size: 15px; cursor: pointer;
+}
+.icon-btn:hover:not(:disabled) { background: var(--surface-2); }
+.icon-btn--lg { min-width: 48px; min-height: 48px; font-size: 18px; }
+.icon-btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-text); border-color: transparent; }
+.ico { display: inline-flex; align-items: center; justify-content: center; }
+.ico--pause { gap: 3px; }
+.ico--pause i { display: block; width: 4px; height: 14px; background: currentColor; border-radius: 1px; }
+
+.banner {
+  margin: 12px auto 0; max-width: calc(var(--maxw) + 32px);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 16px; font-size: 14px;
+  background: #fff4e5; color: #6f4200; border-bottom: 1px solid #f0c48a;
+}
+[data-theme="dark"] .banner { background: #3a2a12; color: #ffd9a0; border-color: #6b4a1d; }
+.banner__close { background: none; border: none; font-size: 16px; cursor: pointer; color: inherit; padding: 4px 6px; }
+
+details.card > summary { cursor: pointer; font-weight: 600; }
+details.card[open] > summary { margin-bottom: 12px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+
+/* library */
+.drop {
+  display: grid; gap: 8px; justify-items: center; text-align: center;
+  padding: 26px 18px; border-style: dashed; border-width: 2px;
+  transition: border-color .15s, background .15s;
+}
+.drop.is-over { border-color: var(--accent); background: var(--sel); }
+.drop__icon { color: var(--accent); }
+.drop h2 { font-size: 18px; }
+.drop p { max-width: 46ch; }
+.status { min-height: 1.2em; font-size: 13px; color: var(--muted); }
+.status.is-busy::before {
+  content: ""; display: inline-block; width: 10px; height: 10px; margin-right: 6px;
+  border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%;
+  animation: spin .8s linear infinite; vertical-align: -1px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.plist { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
+.pcard {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.pcard__main { min-width: 0; }
+.pcard__name { font-weight: 600; overflow-wrap: anywhere; }
+.pcard__meta { color: var(--muted); font-size: 13px; }
+.pcard__actions { display: flex; gap: 4px; flex: none; }
+.tag { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 12px; background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger); }
+
+.empty {
+  padding: 22px 16px; text-align: center; color: var(--muted);
+  border: 1px dashed var(--border); border-radius: var(--radius);
+  font-size: 14px;
+}
+.empty--tight { padding: 14px 12px; }
+
+/* editor header */
+.editor-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.editor-head__main { min-width: 0; }
+.editor-head h2 { overflow-wrap: anywhere; }
+.editor-head__tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* transport */
+.transport { padding: 12px 14px; display: grid; gap: 8px; }
+.transport__main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.time { font-variant-numeric: tabular-nums; font-weight: 600; font-size: 15px; white-space: nowrap; }
+.time .muted { font-weight: 400; }
+.rate { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.rate select { width: auto; min-height: 38px; padding: 4px 8px; }
+.transport__trim { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 6px; border-top: 1px dashed var(--border); }
+.tin { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+.tin input { width: 104px; min-height: 36px; padding: 4px 8px; font-variant-numeric: tabular-nums; font-size: 14px; }
+.badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+
+/* waveform */
+.wave-card { padding: 0; overflow: hidden; position: relative; }
+.wave-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+}
+.wave-head__title { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
+.wave-head__title h2 { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.wave-tools { display: flex; gap: 4px; align-items: center; }
+.wave-tools .icon-btn { min-width: 36px; min-height: 34px; font-size: 14px; }
+.wave-scroll {
+  position: relative; overflow-x: auto; overflow-y: hidden;
+  height: 190px; background: var(--wave-bg);
+  touch-action: pan-x pan-y; overscroll-behavior-x: contain;
+}
+.wave-spacer { position: relative; height: 100%; min-width: 100%; cursor: crosshair; }
+#wave-canvas { position: absolute; top: 0; left: 0; display: block; pointer-events: none; will-change: transform; }
+.wave-layer { position: absolute; inset: 0; pointer-events: none; }
+.wave-empty {
+  position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%);
+  font-size: 13px; color: var(--muted); background: var(--surface);
+  border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px;
+  pointer-events: none; max-width: 90%; text-align: center;
+}
+
+.region {
+  position: absolute; top: 30px; bottom: 6px; z-index: 2;
+  background: color-mix(in srgb, var(--c) 16%, transparent);
+  box-shadow: inset 2px 0 0 var(--c), inset -2px 0 0 var(--c);
+  border-radius: 5px; min-width: 8px;
+  pointer-events: auto; cursor: grab; touch-action: none;
+}
+.region.is-selected { background: color-mix(in srgb, var(--c) 30%, transparent); box-shadow: inset 2px 0 0 var(--c), inset -2px 0 0 var(--c), 0 0 0 1px var(--c); }
+.region__label {
+  position: absolute; left: 6px; bottom: 2px; max-width: calc(100% - 12px);
+  font-size: 11px; line-height: 1.5; padding: 0 5px; border-radius: 4px;
+  background: var(--surface); color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  pointer-events: none;
+}
+.region__edge { position: absolute; top: 0; bottom: 0; width: 10px; cursor: ew-resize; touch-action: none; }
+.region__edge--l { left: -3px; }
+.region__edge--r { right: -3px; }
+
+.marker {
+  position: absolute; top: 26px; bottom: 0; width: 14px; margin-left: -7px; z-index: 3;
+  pointer-events: auto; cursor: pointer; touch-action: none;
+}
+.marker::before {
+  content: ""; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px;
+  background: var(--c); border-radius: 1px;
+}
+.marker__flag {
+  position: absolute; left: 9px; top: 0; max-width: 120px;
+  font-size: 11px; line-height: 1.6; padding: 0 5px;
+  background: var(--c); color: #fff; border-radius: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  pointer-events: none;
+}
+[data-theme="dark"] .marker__flag { color: #10131a; }
+.marker--amber .marker__flag { color: #2a1c00; }
+[data-theme="dark"] .marker--amber .marker__flag { color: #10131a; }
+.marker.is-selected::before { width: 3px; box-shadow: 0 0 0 1px var(--surface); }
+.marker.is-selected .marker__flag { outline: 2px solid var(--text); }
+
+.trim-handle {
+  position: absolute; top: 0; bottom: 0; width: 18px; margin-left: -9px; z-index: 4;
+  pointer-events: auto; cursor: ew-resize; touch-action: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.trim-handle::before {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 2px;
+  background: var(--text); opacity: .55;
+}
+.trim-handle::after {
+  content: ""; width: 12px; height: 30px; border-radius: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  box-shadow: var(--shadow); position: relative;
+}
+.trim-handle:focus-visible::after { outline: 2px solid var(--accent); }
+
+.playhead {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 2px; z-index: 6;
+  background: var(--playhead); pointer-events: none; will-change: transform;
+}
+.playhead__cap {
+  position: absolute; top: 0; left: -5px; width: 12px; height: 10px;
+  background: var(--playhead); clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.wave-hint { padding: 6px 14px 10px; font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* annotations */
+.mlist { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 8px; }
+.mrow {
+  display: grid; grid-template-columns: auto auto auto minmax(0, 1fr) auto auto;
+  gap: 10px; align-items: center; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.mrow.is-selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--sel); }
+.mrow__body { min-width: 0; }
+.mrow__label { font-weight: 550; overflow-wrap: anywhere; }
+.mrow__note { color: var(--muted); font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mrow__meta { color: var(--muted); font-size: 12px; }
+.mtime {
+  font-variant-numeric: tabular-nums; font-size: 13px; padding: 4px 8px;
+  background: var(--surface-2); border: 1px solid var(--border);
+  border-radius: 6px; cursor: pointer; white-space: nowrap;
+}
+.mtime:hover { border-color: var(--accent); }
+.mrow__act { display: flex; gap: 2px; }
+.mrow__act .btn { min-height: 34px; padding: 3px 8px; font-size: 13px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+.dot--red { background: var(--c-red); }
+.dot--amber { background: var(--c-amber); }
+.dot--green { background: var(--c-green); }
+.dot--blue { background: var(--c-blue); }
+.mcheck { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+.mcheck input { width: 16px; height: 16px; accent-color: var(--accent); }
+
+.toolbar { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.toolbar input[type="search"] { flex: 1; min-width: 140px; }
+.toolbar select { width: auto; flex: none; }
+
+/* dialogs */
+dialog {
+  border: none; border-radius: 14px; padding: 20px;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px); overflow: auto;
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow);
+}
+dialog::backdrop { background: rgba(0, 0, 0, .45); }
+dialog form { display: grid; gap: 10px; }
+dialog menu { display: flex; justify-content: flex-end; gap: 8px; padding: 0; margin: 4px 0 0; }
+.dlg-body { display: grid; gap: 14px; }
+.dlg-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.dlg-top .icon-btn { min-width: 34px; min-height: 34px; font-size: 14px; }
+.dlg-body fieldset { display: grid; gap: 8px; }
+.dlg-body .field { margin-bottom: 0; }
+#form-mark.is-marker .grid2 { grid-template-columns: 1fr; }
+dialog:focus { outline: none; }
+.chips { display: flex; gap: 10px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; padding: 4px 6px; border-radius: 6px; }
+.chip input { accent-color: var(--accent); }
+.shortcuts { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; align-items: center; }
+.shortcuts dt { text-align: right; }
+.shortcuts dd { margin: 0; color: var(--muted); }
+
+.toast {
+  position: fixed; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 8px 8px 16px; border-radius: 999px;
+  background: #16181d; color: #fff; box-shadow: 0 8px 24px rgba(0, 0, 0, .3);
+  font-size: 14px; z-index: 60; max-width: calc(100vw - 32px);
+  pointer-events: none;
+}
+.toast .btn { pointer-events: auto; flex: none; white-space: nowrap; }
+#toast-msg { min-width: 0; overflow-wrap: anywhere; }
+[data-theme="dark"] .toast { background: #2b313d; }
+.toast .btn { min-height: 32px; padding: 4px 10px; background: transparent; color: #9dbaff; border-color: transparent; }
+.toast .btn:hover { background: rgba(255, 255, 255, .1); }
+
+/* 5. responsive ───────────────────────────────────────── */
+@media (max-width: 720px) {
+  .appbar { padding-left: 10px; padding-right: 10px; gap: 6px; }
+  .appbar__left { gap: 4px; flex: 1; }
+  .appbar h1 { font-size: 15px; }
+  .appbar__actions { gap: 4px; }
+  .appbar__actions .btn { min-height: 44px; padding: 4px 10px; }
+  .appbar__actions .icon-btn { min-width: 44px; min-height: 44px; }
+  main { padding: 12px; gap: 12px; }
+  .card { padding: 13px; }
+  .wave-card { padding: 0; }
+  .btn { min-height: 44px; }
+  .icon-btn { min-width: 44px; min-height: 44px; }
+  input[type="text"], input[type="search"], input[type="number"], textarea, select { min-height: 46px; }
+  .check { min-height: 44px; }
+  .chip { min-height: 44px; }
+  .dlg-top .icon-btn { min-width: 44px; min-height: 44px; }
+  .mtime { min-height: 44px; padding: 8px 10px; }
+  .marker { width: 20px; margin-left: -10px; }
+  .marker::before { left: 9px; }
+  .marker__flag { left: 12px; }
+  .region__edge { width: 16px; }
+  .region__edge--l { left: -5px; }
+  .region__edge--r { right: -5px; }
+  .trim-handle { width: 28px; margin-left: -14px; }
+  .wave-scroll { height: 168px; }
+  .wave-hint { padding: 6px 12px 10px; font-size: 11px; }
+  .grid2 { grid-template-columns: 1fr; }
+  .pcard { flex-direction: column; align-items: stretch; }
+  .pcard__actions { justify-content: flex-end; }
+  .pcard__actions .btn { flex: 1; }
+  .mrow { grid-template-columns: auto auto minmax(0, 1fr); }
+  .mrow__act { grid-column: 1 / -1; justify-content: flex-end; }
+  .mcheck { grid-column: 1 / -1; }
+  .transport__main { gap: 6px; }
+  .time { font-size: 14px; }
+  .tin input { width: 96px; }
+  .shortcuts { grid-template-columns: 1fr; gap: 2px 0; }
+  .shortcuts dt { text-align: left; }
+  .shortcuts dd { margin-bottom: 6px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <div class="appbar__left">
+    <button id="btn-back" class="icon-btn" type="button" aria-label="返回專案庫" title="返回專案庫" hidden>←</button>
+    <h1>WaveCut Mini</h1>
+  </div>
+  <div class="appbar__actions">
+    <button id="btn-export" class="btn btn--primary btn--sm" type="button" hidden>匯出</button>
+    <button id="btn-help" class="icon-btn" type="button" aria-label="說明與快捷鍵" title="說明與快捷鍵">?</button>
+    <button id="btn-theme" class="icon-btn" type="button" aria-label="切換主題" title="切換主題">◐</button>
+  </div>
+</header>
+
+<div id="banner" class="banner" role="status" hidden>
+  <span id="banner-msg"></span>
+  <button id="banner-close" class="banner__close" type="button" aria-label="關閉提示">✕</button>
+</div>
+
+<!-- ══════════ 專案庫 ══════════ -->
+<main id="view-library">
+  <section class="card drop" id="dropzone" aria-labelledby="drop-title">
+    <div class="drop__icon" aria-hidden="true">
+      <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12h2l1.5-4 2.5 8 2-6 2 4h3l1.5-3 1.5 3h3"/>
+      </svg>
+    </div>
+    <h2 id="drop-title">匯入音訊</h2>
+    <p class="hint">把音檔拖到這裡，或按下方按鈕。支援瀏覽器可解碼的格式（MP3 / WAV / M4A / OGG…）。<br>檔案只留在這台裝置，不會上傳。</p>
+    <button id="btn-pick-audio" class="btn btn--primary" type="button">選擇音訊檔</button>
+    <input id="file-audio" type="file" accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.oga,.opus,.flac,.webm" hidden>
+    <p id="lib-status" class="status" role="status" aria-live="polite"></p>
+    <p class="hint" id="lib-limit"></p>
+  </section>
+
+  <section class="card" aria-labelledby="proj-title">
+    <div class="row">
+      <h2 id="proj-title">專案</h2>
+      <span id="lib-count" class="muted"></span>
+    </div>
+    <ul id="project-list" class="plist" aria-label="專案清單"></ul>
+    <p id="lib-empty" class="empty" hidden></p>
+  </section>
+
+  <details class="card">
+    <summary>資料備份與重設</summary>
+    <div class="actions">
+      <button id="btn-backup-full-lib" class="btn" type="button">完整備份（含音訊）</button>
+      <button id="btn-backup-lite-lib" class="btn" type="button">僅標註</button>
+      <button id="btn-import" class="btn" type="button">匯入備份 JSON</button>
+      <button id="btn-reset" class="btn btn--danger" type="button">清空所有資料</button>
+      <input id="file-backup" type="file" accept="application/json,.json" hidden>
+    </div>
+    <p class="hint">專案與標註存在這台裝置的瀏覽器（IndexedDB）。換裝置或清除瀏覽器資料前，請先匯出備份。</p>
+    <p class="hint" id="storage-usage"></p>
+  </details>
+</main>
+
+<!-- ══════════ 編輯器 ══════════ -->
+<main id="view-editor" hidden>
+  <section class="card">
+    <div class="editor-head">
+      <div class="editor-head__main">
+        <h2 id="proj-name">專案</h2>
+        <p class="hint" id="proj-meta"></p>
+      </div>
+      <div class="editor-head__tools">
+        <button id="btn-rename" class="btn btn--sm" type="button">改名</button>
+        <button id="btn-relink" class="btn btn--sm" type="button" hidden>重新選擇音檔</button>
+        <button id="btn-clear-selection" class="btn btn--sm" type="button" hidden>清除選取</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card transport" aria-label="播放控制">
+    <div class="transport__main">
+      <button id="btn-play" class="icon-btn icon-btn--lg" type="button" aria-label="播放">
+        <span id="ico-play" class="ico">▶</span>
+        <span id="ico-pause" class="ico ico--pause" hidden><i></i><i></i></span>
+      </button>
+      <button id="btn-stop" class="icon-btn" type="button" aria-label="回到開頭" title="回到開頭">⏮</button>
+      <button id="btn-back5" class="icon-btn" type="button" aria-label="後退 5 秒">−5s</button>
+      <button id="btn-fwd5" class="icon-btn" type="button" aria-label="前進 5 秒">+5s</button>
+      <div class="time"><span id="cur-time">0:00.000</span><span class="muted"> / </span><span id="dur-time">0:00.000</span></div>
+      <label class="rate"><span class="muted">速度</span>
+        <select id="rate" aria-label="播放速度">
+          <option value="0.5">0.5x</option>
+          <option value="0.75">0.75x</option>
+          <option value="1" selected>1x</option>
+          <option value="1.25">1.25x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2">2x</option>
+        </select>
+      </label>
+      <button id="btn-loop" class="btn btn--sm" type="button" aria-pressed="false">循環</button>
+    </div>
+    <input id="scrub" type="range" min="0" max="1" step="0.01" value="0" aria-label="播放位置">
+    <div class="transport__trim">
+      <span class="badge">裁切</span>
+      <label class="tin">起 <input id="trim-start" type="text" inputmode="decimal" aria-label="裁切起點，格式 m:ss.mmm"></label>
+      <label class="tin">迄 <input id="trim-end" type="text" inputmode="decimal" aria-label="裁切終點，格式 m:ss.mmm"></label>
+      <button id="btn-set-in" class="btn btn--sm" type="button">設起點 (I)</button>
+      <button id="btn-set-out" class="btn btn--sm" type="button">設終點 (O)</button>
+      <button id="btn-clear-trim" class="btn btn--sm" type="button">清除裁切</button>
+      <label class="check"><input id="play-trim" type="checkbox"> 只播放裁切</label>
+    </div>
+  </section>
+
+  <section class="card wave-card" aria-label="波形">
+    <div class="wave-head">
+      <div class="wave-head__title">
+        <h2>波形</h2>
+        <span class="badge" id="wave-zoom-label">—</span>
+      </div>
+      <div class="wave-tools">
+        <button id="zoom-out" class="icon-btn" type="button" aria-label="縮小波形">−</button>
+        <button id="zoom-fit" class="icon-btn" type="button" aria-label="波形全長顯示">fit</button>
+        <button id="zoom-in" class="icon-btn" type="button" aria-label="放大波形">＋</button>
+      </div>
+    </div>
+    <div id="wave-scroll" class="wave-scroll" role="group" aria-label="波形；點擊定位、拖曳選取，或用下方播放位置滑桿操作">
+      <div id="wave-spacer" class="wave-spacer">
+        <canvas id="wave-canvas" aria-hidden="true"></canvas>
+        <div id="wave-layer" class="wave-layer"></div>
+        <div id="trim-in" class="trim-handle" role="slider" tabindex="0"
+             aria-label="裁切起點" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"></div>
+        <div id="trim-out" class="trim-handle" role="slider" tabindex="0"
+             aria-label="裁切終點" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"></div>
+        <div id="playhead" class="playhead" aria-hidden="true"><span class="playhead__cap"></span></div>
+      </div>
+    </div>
+    <p id="wave-empty" class="wave-empty" hidden></p>
+    <div class="wave-hint">
+      <span>點擊波形定位</span><span>拖曳選取範圍</span><span><kbd>M</kbd> 標記</span><span><kbd>R</kbd> 區段</span><span><kbd>Space</kbd> 播放</span>
+    </div>
+  </section>
+
+  <section class="card" aria-labelledby="marks-title">
+    <div class="row">
+      <h2 id="marks-title">標註 <span id="mark-count" class="muted"></span></h2>
+      <div class="actions">
+        <button id="btn-add-marker" class="btn btn--primary btn--sm" type="button">＋ 標記 (M)</button>
+        <button id="btn-add-region" class="btn btn--sm" type="button">＋ 區段 (R)</button>
+      </div>
+    </div>
+    <div class="toolbar">
+      <input id="mark-search" type="search" placeholder="搜尋標籤或備註…" aria-label="搜尋標註">
+      <select id="mark-filter" aria-label="篩選標註">
+        <option value="all">全部</option>
+        <option value="marker">標記</option>
+        <option value="region">區段</option>
+      </select>
+    </div>
+    <ul id="mark-list" class="mlist" aria-label="標註清單"></ul>
+    <p id="mark-empty" class="empty" hidden></p>
+  </section>
+</main>
+
+<footer class="foot">
+  <span id="foot-info">v1 · 離線可用</span>
+  <span id="store-mode"></span>
+</footer>
+
+<audio id="audio" preload="metadata" hidden></audio>
+
+<!-- ══════════ 標註編輯 ══════════ -->
+<dialog id="dlg-mark" aria-labelledby="dlg-mark-title">
+  <form id="form-mark" autocomplete="off" novalidate>
+    <h2 id="dlg-mark-title">編輯標註</h2>
+    <label class="field">
+      <span>標籤</span>
+      <input id="mk-label" type="text" maxlength="100" required>
+    </label>
+    <div class="grid2">
+      <label class="field"><span>開始</span><input id="mk-start" type="text" inputmode="decimal" required></label>
+      <label class="field" id="mk-end-field"><span>結束</span><input id="mk-end" type="text" inputmode="decimal"></label>
+    </div>
+    <label class="field">
+      <span>備註</span>
+      <textarea id="mk-note" rows="3" maxlength="2000"></textarea>
+    </label>
+    <fieldset class="field">
+      <legend>顏色</legend>
+      <div class="chips">
+        <label class="chip"><input type="radio" name="mk-color" value="red"><span class="dot dot--red"></span>紅</label>
+        <label class="chip"><input type="radio" name="mk-color" value="amber"><span class="dot dot--amber"></span>黃</label>
+        <label class="chip"><input type="radio" name="mk-color" value="green"><span class="dot dot--green"></span>綠</label>
+        <label class="chip"><input type="radio" name="mk-color" value="blue"><span class="dot dot--blue"></span>藍</label>
+      </div>
+    </fieldset>
+    <label class="check" id="mk-include-field"><input id="mk-include" type="checkbox"> 納入多段拼接匯出</label>
+    <p class="hint" id="mk-hint"></p>
+    <menu>
+      <button id="mk-cancel" class="btn" type="button">取消</button>
+      <button class="btn btn--primary" type="submit">儲存</button>
+    </menu>
+  </form>
+</dialog>
+
+<!-- ══════════ 專案改名 ══════════ -->
+<dialog id="dlg-project" aria-labelledby="dlg-project-title">
+  <form id="form-project" autocomplete="off">
+    <h2 id="dlg-project-title">重新命名專案</h2>
+    <label class="field">
+      <span>名稱</span>
+      <input id="proj-name-input" type="text" maxlength="80" required>
+    </label>
+    <menu>
+      <button id="proj-cancel" class="btn" type="button">取消</button>
+      <button class="btn btn--primary" type="submit">儲存</button>
+    </menu>
+  </form>
+</dialog>
+
+<!-- ══════════ 匯出 ══════════ -->
+<dialog id="dlg-export" aria-labelledby="dlg-export-title" tabindex="-1">
+  <div class="dlg-body">
+    <div class="dlg-top">
+      <h2 id="dlg-export-title">匯出</h2>
+      <button id="export-x" class="icon-btn" type="button" aria-label="關閉匯出對話框">✕</button>
+    </div>
+    <fieldset>
+      <legend>WAV 音訊（16-bit PCM）</legend>
+      <label class="check"><input type="radio" name="wav-mode" value="all" checked> 整段音訊</label>
+      <label class="check"><input type="radio" name="wav-mode" value="trim"> 裁切範圍</label>
+      <label class="check"><input type="radio" name="wav-mode" value="segments"> 勾選的區段拼接（<span id="seg-count">0</span>段）</label>
+      <div class="grid2">
+        <label class="field"><span>接縫淡化</span>
+          <select id="fade-ms">
+            <option value="0">無</option>
+            <option value="10" selected>10 ms</option>
+            <option value="50">50 ms</option>
+            <option value="200">200 ms</option>
+          </select>
+        </label>
+        <label class="field"><span>檔名</span><input id="wav-name" type="text" maxlength="60"></label>
+      </div>
+      <div class="actions"><button id="btn-wav" class="btn btn--primary" type="button">匯出 WAV</button></div>
+      <p class="hint" id="wav-hint"></p>
+    </fieldset>
+    <fieldset>
+      <legend>標註</legend>
+      <div class="actions">
+        <button id="btn-csv" class="btn" type="button">匯出 CSV</button>
+        <button id="btn-json" class="btn" type="button">匯出 JSON</button>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>備份</legend>
+      <div class="actions">
+        <button id="btn-backup-full" class="btn" type="button">完整備份（含音訊）</button>
+        <button id="btn-backup-lite" class="btn" type="button">僅標註</button>
+      </div>
+      <p class="hint">含音訊的備份檔較大；大檔的匯出與匯入都需要一些時間。</p>
+    </fieldset>
+    <p class="hint" id="export-status" aria-live="polite"></p>
+    <menu><button id="export-close" class="btn" type="button">關閉</button></menu>
+  </div>
+</dialog>
+
+<!-- ══════════ 說明 ══════════ -->
+<dialog id="dlg-help" aria-labelledby="dlg-help-title" tabindex="-1">
+  <div class="dlg-body">
+    <div class="dlg-top">
+      <h2 id="dlg-help-title">使用說明</h2>
+      <button id="help-x" class="icon-btn" type="button" aria-label="關閉說明">✕</button>
+    </div>
+    <p class="hint">所有音訊與標註只存在這個瀏覽器，不會上傳。要換裝置或清理瀏覽器前，請先備份。</p>
+    <h3>快捷鍵</h3>
+    <dl class="shortcuts">
+      <dt><kbd>Space</kbd></dt><dd>播放／暫停</dd>
+      <dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>前後 1 秒（加 <kbd>Shift</kbd> 為 5 秒）</dd>
+      <dt><kbd>I</kbd> / <kbd>O</kbd></dt><dd>把播放頭設為裁切起點／終點</dd>
+      <dt><kbd>M</kbd></dt><dd>在播放頭新增標記</dd>
+      <dt><kbd>R</kbd></dt><dd>用目前選取範圍新增區段</dd>
+      <dt><kbd>L</kbd></dt><dd>切換循環播放</dd>
+      <dt><kbd>F</kbd></dt><dd>波形全長顯示</dd>
+      <dt><kbd>+</kbd> / <kbd>-</kbd></dt><dd>放大／縮小波形</dd>
+      <dt><kbd>Enter</kbd></dt><dd>編輯選取的標註</dd>
+      <dt><kbd>Delete</kbd></dt><dd>刪除選取的標註（可復原）</dd>
+      <dt><kbd>Esc</kbd></dt><dd>清除選取／關閉對話框</dd>
+    </dl>
+    <h3>操作</h3>
+    <ul class="hint" style="padding-left:18px;display:grid;gap:4px">
+      <li>點一下波形定位；按住拖曳可框選一段範圍。</li>
+      <li>區段可拖動本體移動、拖左右邊緣調整長度；雙擊可編輯。</li>
+      <li>「循環」會重複播放選取範圍（沒有選取時用裁切範圍）。</li>
+      <li>標註清單的「匯出」勾選框決定哪些區段要拼接成一個 WAV。</li>
+    </ul>
+    <h3>限制</h3>
+    <ul class="hint" style="padding-left:18px;display:grid;gap:4px">
+      <li>單檔上限 250 MB、45 分鐘（解碼需要記憶體，長檔請先自行裁切）。</li>
+      <li>WAV 匯出固定 16-bit PCM，取樣率跟隨瀏覽器（通常 44.1 或 48 kHz）。</li>
+      <li>不提供 MP3 匯出（瀏覽器沒有內建編碼器）。</li>
+      <li>Chrome／Edge 直接雙擊 <code>file://</code> 可能封鎖 IndexedDB，建議用本機靜態伺服器開啟。</li>
+    </ul>
+    <menu><button id="help-close" class="btn" type="button">關閉</button></menu>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" role="status" hidden>
+  <span id="toast-msg"></span>
+  <button id="toast-act" class="btn" type="button" hidden></button>
+</div>
+
+<noscript><p style="padding:16px">這個工具需要 JavaScript 才能運作。</p></noscript>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ═════════ CONFIG ═════════ */
+  const CONFIG = {
+    dbName: 'wavecut-mini',
+    version: 1,
+    peakRate: 100,
+    decodeRate: 11025,
+    maxFileMB: 250,
+    maxMinutes: 45,
+    warnMinutes: 20,
+    maxImportMB: 150,
+    audioSoftMB: 30,
+    audioHardMB: 100,
+    maxLabel: 100,
+    maxNote: 2000,
+    maxName: 80,
+  };
+  const MB = 1024 * 1024;
+  const RULER_H = 24;
+  const COLORS = ['red', 'amber', 'green', 'blue'];
+
+  /* ═════════ utils ═════════ */
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+
+  const uid = () => (crypto.randomUUID
+    ? crypto.randomUUID()
+    : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+  const nowISO = () => new Date().toISOString();
+  const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+  const round3 = (v) => Math.round((Number(v) || 0) * 1000) / 1000;
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const pad3 = (n) => String(n).padStart(3, '0');
+  const nextFrame = () => new Promise((r) => setTimeout(r, 0));
+
+  function fmtTime(seconds, withMs) {
+    let ms = Math.round(Math.max(0, Number(seconds) || 0) * 1000);
+    const h = Math.floor(ms / 3600000); ms -= h * 3600000;
+    const m = Math.floor(ms / 60000); ms -= m * 60000;
+    const s = Math.floor(ms / 1000); ms -= s * 1000;
+    const base = (h ? h + ':' + pad2(m) : String(m)) + ':' + pad2(s);
+    return withMs === false ? base : base + '.' + pad3(ms);
+  }
+
+  function parseTime(value) {
+    const raw = String(value == null ? '' : value).trim().replace(',', '.').replace(/，/g, '.');
+    if (!raw) return NaN;
+    const parts = raw.split(':');
+    if (parts.length > 3) return NaN;
+    let total = 0;
+    for (const part of parts) {
+      const p = part.trim();
+      if (!/^\d+(\.\d+)?$/.test(p)) return NaN;
+      total = total * 60 + Number(p);
+    }
+    return Number.isFinite(total) ? total : NaN;
+  }
+
+  function fmtBytes(n) {
+    const v = Number(n) || 0;
+    if (v < 1024) return v + ' B';
+    if (v < MB) return (v / 1024).toFixed(1) + ' KB';
+    return (v / MB).toFixed(1) + ' MB';
+  }
+
+  function truncate(s, n) {
+    s = String(s == null ? '' : s);
+    return s.length > n ? s.slice(0, n) + '…' : s;
+  }
+
+  function stripExt(name) {
+    return String(name || '').replace(/\.[a-z0-9]{1,6}$/i, '');
+  }
+
+  function sanitizeName(name) {
+    return String(name || '').replace(/[\\/:*?"<>|\u0000-\u001f]/g, '-').replace(/\s+/g, ' ').trim().slice(0, 60);
+  }
+
+  const dateFmt = new Intl.DateTimeFormat('zh-Hant', {
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+  });
+  function fmtDate(iso) {
+    const d = new Date(iso);
+    return Number.isNaN(d.getTime()) ? '—' : dateFmt.format(d);
+  }
+
+  function debounce(fn, ms) {
+    let timer = null;
+    const wrapped = function () {
+      const args = arguments;
+      const ctx = this;
+      clearTimeout(timer);
+      timer = setTimeout(() => fn.apply(ctx, args), ms);
+    };
+    wrapped.flush = function () {
+      clearTimeout(timer);
+      return fn.apply(null, arguments);
+    };
+    wrapped.cancel = function () { clearTimeout(timer); };
+    return wrapped;
+  }
+
+  function el(tag, props) {
+    const node = document.createElement(tag);
+    const p = props || {};
+    for (const key of Object.keys(p)) {
+      const v = p[key];
+      if (v == null || v === false) continue;
+      if (key === 'class') node.className = v;
+      else if (key === 'text') node.textContent = v;
+      else if (key === 'style') node.style.cssText = v;
+      else if (key === 'dataset') Object.assign(node.dataset, v);
+      else if (key.slice(0, 2) === 'on' && typeof v === 'function') {
+        node.addEventListener(key.slice(2).toLowerCase(), v);
+      } else if (key in node) {
+        try { node[key] = v; } catch (_) { node.setAttribute(key, v); }
+      } else {
+        node.setAttribute(key, v);
+      }
+    }
+    const kids = Array.prototype.slice.call(arguments, 2);
+    for (const c of kids.flat()) {
+      if (c == null || c === false) continue;
+      node.append(c.nodeType ? c : document.createTextNode(String(c)));
+    }
+    return node;
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = el('a', { href: url, download: filename });
+    document.body.append(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  function bytesToBase64(bytes) {
+    let bin = '';
+    const CH = 0x8000;
+    for (let i = 0; i < bytes.length; i += CH) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + CH));
+    }
+    return btoa(bin);
+  }
+
+  function base64ToBytes(b64) {
+    const bin = atob(b64);
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+
+  function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => {
+        const s = String(fr.result || '');
+        const i = s.indexOf(',');
+        resolve(i >= 0 ? s.slice(i + 1) : '');
+      };
+      fr.onerror = () => reject(fr.error || new Error('讀取檔案失敗'));
+      fr.readAsDataURL(blob);
+    });
+  }
+
+  function base64ToBlob(b64, mime) {
+    const bytes = base64ToBytes(b64);
+    return new Blob([bytes], { type: mime || 'audio/mpeg' });
+  }
+
+  /* ═════════ DOM refs ═════════ */
+  const banner = $('#banner');
+  const bannerMsg = $('#banner-msg');
+  const bannerClose = $('#banner-close');
+  const viewLibrary = $('#view-library');
+  const viewEditor = $('#view-editor');
+  const btnBack = $('#btn-back');
+  const btnExport = $('#btn-export');
+  const btnTheme = $('#btn-theme');
+  const btnHelp = $('#btn-help');
+
+  const dropzone = $('#dropzone');
+  const btnPickAudio = $('#btn-pick-audio');
+  const fileAudio = $('#file-audio');
+  const libStatus = $('#lib-status');
+  const libLimit = $('#lib-limit');
+  const projectList = $('#project-list');
+  const libEmpty = $('#lib-empty');
+  const libCount = $('#lib-count');
+  const storageUsage = $('#storage-usage');
+  const fileBackup = $('#file-backup');
+
+  const projName = $('#proj-name');
+  const projMeta = $('#proj-meta');
+  const btnRename = $('#btn-rename');
+  const btnRelink = $('#btn-relink');
+  const btnClearSelection = $('#btn-clear-selection');
+
+  const audio = $('#audio');
+  const btnPlay = $('#btn-play');
+  const icoPlay = $('#ico-play');
+  const icoPause = $('#ico-pause');
+  const btnStop = $('#btn-stop');
+  const btnBack5 = $('#btn-back5');
+  const btnFwd5 = $('#btn-fwd5');
+  const curTimeEl = $('#cur-time');
+  const durTimeEl = $('#dur-time');
+  const rateSel = $('#rate');
+  const btnLoop = $('#btn-loop');
+  const scrub = $('#scrub');
+  const trimStartInput = $('#trim-start');
+  const trimEndInput = $('#trim-end');
+  const btnSetIn = $('#btn-set-in');
+  const btnSetOut = $('#btn-set-out');
+  const btnClearTrim = $('#btn-clear-trim');
+  const playTrim = $('#play-trim');
+
+  const waveScroll = $('#wave-scroll');
+  const waveSpacer = $('#wave-spacer');
+  const canvas = $('#wave-canvas');
+  const waveLayer = $('#wave-layer');
+  const playhead = $('#playhead');
+  const trimHandleIn = $('#trim-in');
+  const trimHandleOut = $('#trim-out');
+  const waveEmpty = $('#wave-empty');
+  const waveZoomLabel = $('#wave-zoom-label');
+  const zoomInBtn = $('#zoom-in');
+  const zoomOutBtn = $('#zoom-out');
+  const zoomFitBtn = $('#zoom-fit');
+
+  const markCount = $('#mark-count');
+  const markList = $('#mark-list');
+  const markEmpty = $('#mark-empty');
+  const markSearch = $('#mark-search');
+  const markFilter = $('#mark-filter');
+  const btnAddMarker = $('#btn-add-marker');
+  const btnAddRegion = $('#btn-add-region');
+
+  const footInfo = $('#foot-info');
+  const storeMode = $('#store-mode');
+
+  const dlgMark = $('#dlg-mark');
+  const formMark = $('#form-mark');
+  const dlgMarkTitle = $('#dlg-mark-title');
+  const mkLabel = $('#mk-label');
+  const mkStart = $('#mk-start');
+  const mkEnd = $('#mk-end');
+  const mkEndField = $('#mk-end-field');
+  const mkNote = $('#mk-note');
+  const mkInclude = $('#mk-include');
+  const mkIncludeField = $('#mk-include-field');
+  const mkHint = $('#mk-hint');
+  const mkCancel = $('#mk-cancel');
+
+  const dlgProject = $('#dlg-project');
+  const formProject = $('#form-project');
+  const projNameInput = $('#proj-name-input');
+  const projCancel = $('#proj-cancel');
+
+  const dlgExport = $('#dlg-export');
+  const segCount = $('#seg-count');
+  const fadeMsSel = $('#fade-ms');
+  const wavName = $('#wav-name');
+  const wavHint = $('#wav-hint');
+  const btnWav = $('#btn-wav');
+  const btnCsv = $('#btn-csv');
+  const btnJson = $('#btn-json');
+  const btnBackupFull = $('#btn-backup-full');
+  const btnBackupLite = $('#btn-backup-lite');
+  const exportStatus = $('#export-status');
+  const exportClose = $('#export-close');
+  const exportX = $('#export-x');
+
+  const dlgHelp = $('#dlg-help');
+  const helpClose = $('#help-close');
+  const helpX = $('#help-x');
+
+  const toast = $('#toast');
+  const toastMsg = $('#toast-msg');
+  const toastAct = $('#toast-act');
+
+  /* ═════════ storage ═════════ */
+  let idbOK = true;
+  let dbPromise = null;
+  const mem = { projects: new Map(), assets: new Map(), peaks: new Map(), marks: new Map(), meta: new Map() };
+  const STORES = ['projects', 'assets', 'peaks', 'marks'];
+  const keyOf = (store, value) => (store === 'meta' ? value.key : value.id);
+
+  function showBanner(msg) {
+    bannerMsg.textContent = msg;
+    banner.hidden = false;
+  }
+  function hideBanner() { banner.hidden = true; }
+
+  function openDB() {
+    return new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) {
+        reject(Object.assign(new Error('NO_IDB'), { code: 'NO_IDB' }));
+        return;
+      }
+      let req;
+      try { req = indexedDB.open(CONFIG.dbName, CONFIG.version); }
+      catch (err) { reject(err); return; }
+
+      req.onupgradeneeded = (event) => {
+        const db = req.result;
+        const old = event.oldVersion;
+        if (old < 1) {
+          const projects = db.createObjectStore('projects', { keyPath: 'id' });
+          projects.createIndex('updatedAt', 'updatedAt');
+          db.createObjectStore('assets', { keyPath: 'id' });
+          db.createObjectStore('peaks', { keyPath: 'id' });
+          const marks = db.createObjectStore('marks', { keyPath: 'id' });
+          marks.createIndex('projectId', 'projectId');
+          db.createObjectStore('meta', { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = () => {
+        const db = req.result;
+        db.onversionchange = () => {
+          db.close();
+          showBanner('此工具已在其他分頁更新，請重新載入頁面。');
+        };
+        resolve(db);
+      };
+      req.onerror = () => reject(req.error || new Error('DB_OPEN'));
+      req.onblocked = () => showBanner('資料庫被其他分頁占用，請關閉其他分頁後重新載入。');
+    });
+  }
+
+  function db() {
+    if (!dbPromise) dbPromise = openDB();
+    return dbPromise;
+  }
+
+  async function getAll(store) {
+    if (!idbOK) return Array.from(mem[store].values());
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readonly');
+      const req = t.objectStore(store).getAll();
+      t.oncomplete = () => resolve(req.result || []);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+
+  async function getOne(store, key) {
+    if (!idbOK) return mem[store].get(key) || null;
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readonly');
+      const req = t.objectStore(store).get(key);
+      t.oncomplete = () => resolve(req.result || null);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+
+  async function putOne(store, value) {
+    if (!idbOK) { mem[store].set(keyOf(store, value), value); return value; }
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readwrite');
+      t.objectStore(store).put(value);
+      t.oncomplete = () => resolve(value);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+
+  async function putMany(store, values) {
+    if (!values.length) return 0;
+    if (!idbOK) {
+      for (const v of values) mem[store].set(keyOf(store, v), v);
+      return values.length;
+    }
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readwrite');
+      const s = t.objectStore(store);
+      for (const v of values) s.put(v);
+      t.oncomplete = () => resolve(values.length);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+
+  async function delOne(store, key) {
+    if (!idbOK) { mem[store].delete(key); return; }
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readwrite');
+      t.objectStore(store).delete(key);
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+
+  async function clearOne(store) {
+    if (!idbOK) { mem[store].clear(); return; }
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(store, 'readwrite');
+      t.objectStore(store).clear();
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error);
+    });
+  }
+
+  async function marksByProject(projectId) {
+    if (!idbOK) return Array.from(mem.marks.values()).filter((m) => m.projectId === projectId);
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction('marks', 'readonly');
+      const req = t.objectStore('marks').index('projectId').getAll(projectId);
+      t.oncomplete = () => resolve(req.result || []);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error('Transaction aborted'));
+    });
+  }
+
+  /*
+   * 匯入資料時，replace 的清空與寫入必須在同一個 transaction 內：
+   * 任一個 put 失敗 → abort → 原本的資料原封不動。
+   * （分成 clearOne + putMany 會先提交清空，寫入失敗就真的把舊資料刪掉了。）
+   */
+  async function writeImportData(projects, marks, peaks, assets, replace) {
+    if (!idbOK) {
+      const snapshot = {};
+      for (const store of STORES) snapshot[store] = new Map(mem[store]);
+      try {
+        if (replace) for (const store of STORES) mem[store].clear();
+        for (const p of projects) mem.projects.set(p.id, p);
+        for (const m of marks) mem.marks.set(m.id, m);
+        for (const p of peaks) mem.peaks.set(p.id, p);
+        for (const a of assets) mem.assets.set(a.id, a);
+      } catch (err) {
+        for (const store of STORES) {
+          mem[store].clear();
+          for (const [key, value] of snapshot[store]) mem[store].set(key, value);
+        }
+        throw err;
+      }
+      return;
+    }
+
+    const d = await db();
+    return new Promise((resolve, reject) => {
+      const t = d.transaction(STORES, 'readwrite');
+      t.oncomplete = () => resolve();
+      t.onerror = () => reject(t.error || new Error('Import transaction failed'));
+      t.onabort = () => reject(t.error || new Error('Import transaction aborted'));
+      try {
+        if (replace) {
+          for (const store of STORES) t.objectStore(store).clear();
+        }
+        for (const p of projects) t.objectStore('projects').put(p);
+        for (const m of marks) t.objectStore('marks').put(m);
+        for (const p of peaks) t.objectStore('peaks').put(p);
+        for (const a of assets) t.objectStore('assets').put(a);
+      } catch (err) {
+        try { t.abort(); } catch (_) {}
+        reject(err);
+      }
+    });
+  }
+
+  const metaGet = async (key, fallback) => {
+    const row = await getOne('meta', key);
+    return row ? row.value : fallback;
+  };
+  const metaSet = (key, value) => putOne('meta', { key, value });
+
+  async function persist(fn, message) {
+    try {
+      await fn();
+      return true;
+    } catch (err) {
+      const name = err && err.name ? err.name : 'Error';
+      if (name === 'QuotaExceededError') {
+        showBanner('儲存空間已滿。請先匯出備份，並刪除不需要的專案後再試。');
+      } else {
+        showBanner(message + '（' + name + '）');
+      }
+      return false;
+    }
+  }
+
+  /* ═════════ state ═════════ */
+  const state = {
+    view: 'library',
+    theme: 'auto',
+    settings: {},
+    projects: [],
+    allMarks: [],
+    project: null,
+    marks: [],
+    assetRow: null,
+    peaksRow: null,
+    hasAudio: false,
+    assetUrl: null,
+    duration: 0,
+    currentTime: 0,
+    playing: false,
+    rate: 1,
+    loop: false,
+    playTrimEnabled: false,
+    pxPerSec: 100,
+    autoFit: true,
+    selection: null,
+    selectedId: null,
+    query: '',
+    filter: 'all',
+    editingMarkId: null,
+    editingProjectId: null,
+    importMode: 'new',
+    importing: false,
+    scrubbing: false,
+    pendingSeek: null,
+    exporting: false,
+    dragging: false,
+  };
+
+  /* ═════════ theme ═════════ */
+  function applyTheme(theme) {
+    state.theme = theme;
+    const resolved = theme === 'auto'
+      ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      : theme;
+    document.documentElement.dataset.theme = resolved;
+    document.documentElement.style.colorScheme = resolved;
+    btnTheme.textContent = theme === 'auto' ? '◐' : theme === 'dark' ? '☾' : '☀';
+    btnTheme.title = '主題：' + (theme === 'auto' ? '跟隨系統' : theme === 'dark' ? '深色' : '淺色');
+    try { localStorage.setItem('wavecut-theme', theme); } catch (_) {}
+    if (state.view === 'editor') drawWave();
+  }
+
+  async function cycleTheme() {
+    const order = ['auto', 'light', 'dark'];
+    const next = order[(order.indexOf(state.theme) + 1) % order.length];
+    applyTheme(next);
+    state.settings = Object.assign({}, state.settings, { theme: next });
+    await metaSet('settings', state.settings).catch(() => {});
+  }
+
+  /* ═════════ views ═════════ */
+  function showView(view) {
+    state.view = view;
+    viewLibrary.hidden = view !== 'library';
+    viewEditor.hidden = view !== 'editor';
+    btnBack.hidden = view !== 'editor';
+    btnExport.hidden = view !== 'editor';
+    if (view === 'library') {
+      document.title = 'WaveCut Mini · 離線音訊剪輯與波形標註';
+      footInfo.textContent = 'v1 · 離線可用';
+      refreshUsage();
+    } else {
+      document.title = (state.project ? state.project.name : '專案') + ' · WaveCut Mini';
+      footInfo.textContent = state.project ? '專案建立於 ' + fmtDate(state.project.createdAt) : '';
+    }
+  }
+
+  /* ═════════ toast ═════════ */
+  let toastTimer = null;
+  function showToast(message, actionLabel, onAction) {
+    toastMsg.textContent = message;
+    if (actionLabel && onAction) {
+      toastAct.hidden = false;
+      toastAct.textContent = actionLabel;
+      toastAct.onclick = () => {
+        toastAct.onclick = null;
+        hideToast();
+        onAction();
+      };
+    } else {
+      toastAct.hidden = true;
+      toastAct.onclick = null;
+    }
+    toast.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(hideToast, 7000);
+  }
+  function hideToast() {
+    toast.hidden = true;
+    clearTimeout(toastTimer);
+  }
+
+  /* ═════════ library ═════════ */
+  async function loadLibrary() {
+    try {
+      const rows = await Promise.all([getAll('projects'), getAll('marks')]);
+      state.projects = rows[0].sort((a, b) => {
+        const av = a.lastOpenedAt || a.updatedAt || '';
+        const bv = b.lastOpenedAt || b.updatedAt || '';
+        return String(bv).localeCompare(String(av));
+      });
+      state.allMarks = rows[1];
+      renderProjects();
+      refreshUsage();
+    } catch (err) {
+      showBanner('讀取專案失敗，請重新整理頁面。');
+    }
+  }
+
+  function renderProjects() {
+    projectList.replaceChildren();
+    libEmpty.hidden = state.projects.length > 0;
+    if (!state.projects.length) {
+      libEmpty.textContent = '還沒有專案。從上方匯入第一個音訊檔，開始標註。';
+    }
+    const counts = new Map();
+    for (const m of state.allMarks) counts.set(m.projectId, (counts.get(m.projectId) || 0) + 1);
+
+    for (const p of state.projects) {
+      const count = counts.get(p.id) || 0;
+      const missing = p.hasAudio === false;
+      const li = el('li', { class: 'pcard', dataset: { id: p.id } },
+        el('div', { class: 'pcard__main' },
+          el('p', { class: 'pcard__name' },
+            p.name,
+            missing ? el('span', { class: 'tag', text: '缺音訊' }) : null
+          ),
+          el('p', { class: 'pcard__meta' },
+            fmtTime(p.duration, false) + ' · ' + count + ' 個標註 · ' +
+            (p.size ? fmtBytes(p.size) + ' · ' : '') +
+            (p.lastOpenedAt ? '上次開啟 ' + fmtDate(p.lastOpenedAt) : '建立於 ' + fmtDate(p.createdAt))
+          )
+        ),
+        el('div', { class: 'pcard__actions' },
+          el('button', { class: 'btn btn--primary', type: 'button', dataset: { act: 'open' }, text: '開啟' }),
+          el('button', { class: 'btn btn--ghost', type: 'button', dataset: { act: 'rename' }, text: '改名' }),
+          el('button', { class: 'btn btn--ghost btn--danger', type: 'button', dataset: { act: 'del' }, text: '刪除' })
+        )
+      );
+      projectList.append(li);
+    }
+
+    libCount.textContent = state.projects.length
+      ? state.projects.length + ' 個專案 · ' + state.allMarks.length + ' 個標註'
+      : '';
+    libLimit.textContent = '單檔上限 ' + CONFIG.maxFileMB + ' MB、' + CONFIG.maxMinutes + ' 分鐘。';
+  }
+
+  function setLibStatus(msg, busy) {
+    libStatus.textContent = msg || '';
+    libStatus.classList.toggle('is-busy', Boolean(busy && msg));
+  }
+
+  async function refreshUsage() {
+    if (!navigator.storage || !navigator.storage.estimate) return;
+    try {
+      const info = await navigator.storage.estimate();
+      const usage = info.usage || 0;
+      storageUsage.textContent = '此瀏覽器 origin 目前約使用 ' + fmtBytes(usage);
+    } catch (_) {}
+  }
+
+  async function probeAudio(url) {
+    return new Promise((resolve, reject) => {
+      const a = new Audio();
+      let settled = false;
+      const done = (err, value) => {
+        if (settled) return;
+        settled = true;
+        a.onloadedmetadata = null;
+        a.onerror = null;
+        try { a.removeAttribute('src'); a.load(); } catch (_) {}
+        if (err) reject(err); else resolve(value);
+      };
+      a.preload = 'metadata';
+      a.onloadedmetadata = () => {
+        const duration = a.duration;
+        done(Number.isFinite(duration) && duration > 0 ? null : new Error('NO_DURATION'), { duration });
+      };
+      a.onerror = () => done(new Error('METADATA'));
+      setTimeout(() => done(new Error('TIMEOUT')), 15000);
+      a.src = url;
+    });
+  }
+
+  async function decodePeaks(blob) {
+    let buf = null;
+    const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+    if (OAC) {
+      try {
+        const ctx = new OAC(1, 1, CONFIG.decodeRate);
+        buf = await ctx.decodeAudioData(await blob.arrayBuffer());
+      } catch (_) { buf = null; }
+    }
+    if (!buf) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) throw new Error('NO_AUDIO_SUPPORT');
+      const ctx = new AC();
+      try {
+        buf = await ctx.decodeAudioData(await blob.arrayBuffer());
+      } catch (_) {
+        throw new Error('DECODE_FAIL');
+      } finally {
+        try { await ctx.close(); } catch (_) {}
+      }
+    }
+
+    const rate = CONFIG.peakRate;
+    const buckets = Math.max(1, Math.ceil(buf.duration * rate));
+    const data = new Int8Array(buckets * 2);
+    const ch0 = buf.getChannelData(0);
+    const useSecond = buf.numberOfChannels > 1;
+    const ch1 = useSecond ? buf.getChannelData(1) : null;
+    const spb = buf.sampleRate / rate;
+
+    for (let b = 0; b < buckets; b++) {
+      const s0 = Math.floor(b * spb);
+      const s1 = Math.min(ch0.length, Math.max(s0 + 1, Math.floor((b + 1) * spb)));
+      let mn = 0;
+      let mx = 0;
+      for (let i = s0; i < s1; i++) {
+        const v = ch0[i];
+        if (v < mn) mn = v;
+        if (v > mx) mx = v;
+        if (ch1) {
+          const w = ch1[i];
+          if (w < mn) mn = w;
+          if (w > mx) mx = w;
+        }
+      }
+      data[b * 2] = Math.max(-127, Math.min(127, Math.round(mn * 127)));
+      data[b * 2 + 1] = Math.max(-127, Math.min(127, Math.round(mx * 127)));
+    }
+
+    return {
+      rate,
+      data,
+      duration: buf.duration,
+      sampleRate: buf.sampleRate,
+      channels: buf.numberOfChannels,
+    };
+  }
+
+  async function handleAudioFile(file) {
+    if (!file || state.importing) return;
+    state.importing = true;
+    setLibStatus('讀取檔案資訊…', true);
+    let projectId = null;
+    try {
+      if (file.size > CONFIG.maxFileMB * MB) {
+        throw new Error('檔案 ' + fmtBytes(file.size) + ' 超過 ' + CONFIG.maxFileMB + ' MB 上限，請先裁切後再匯入。');
+      }
+      const probeUrl = URL.createObjectURL(file);
+      let duration = 0;
+      try { duration = (await probeAudio(probeUrl)).duration; }
+      catch (_) { duration = 0; }
+      finally { URL.revokeObjectURL(probeUrl); }
+
+      if (duration > CONFIG.maxMinutes * 60) {
+        throw new Error('音訊長度 ' + fmtTime(duration, false) + ' 超過 ' + CONFIG.maxMinutes + ' 分鐘上限，請先切成較短的片段。');
+      }
+      if (duration > CONFIG.warnMinutes * 60) {
+        setLibStatus('音訊較長，正在解碼波形（可能需要數十秒）…', true);
+      } else {
+        setLibStatus('正在解碼波形…', true);
+      }
+
+      const peaks = await decodePeaks(file);
+      const realDuration = round3(peaks.duration);
+      if (!realDuration) throw new Error('解碼後的長度為 0，檔案可能損壞。');
+      if (realDuration > CONFIG.maxMinutes * 60) {
+        throw new Error('音訊長度超過 ' + CONFIG.maxMinutes + ' 分鐘上限。');
+      }
+
+      const project = {
+        id: uid(),
+        name: (stripExt(file.name) || '未命名專案').slice(0, CONFIG.maxName),
+        fileName: file.name,
+        mime: file.type || '',
+        size: file.size,
+        duration: realDuration,
+        sampleRate: 0,
+        channels: 0,
+        trimStart: 0,
+        trimEnd: realDuration,
+        hasAudio: true,
+        note: '',
+        createdAt: nowISO(),
+        updatedAt: nowISO(),
+        lastOpenedAt: nowISO(),
+      };
+      projectId = project.id;
+
+      setLibStatus('正在儲存…', true);
+      const okAsset = await persist(
+        () => putOne('assets', { id: project.id, blob: file, mime: project.mime, name: file.name }),
+        '音訊儲存失敗'
+      );
+      if (!okAsset) throw new Error('音訊無法寫入瀏覽器儲存空間，可能空間不足；請先匯出備份並刪除不需要的專案。');
+      await persist(
+        () => putOne('peaks', { id: project.id, rate: peaks.rate, data: peaks.data, duration: project.duration }),
+        '波形快取儲存失敗'
+      );
+      const okProject = await persist(() => putOne('projects', project), '專案建立失敗');
+      if (!okProject) throw new Error('專案無法寫入瀏覽器儲存空間，可能空間不足。');
+
+      setLibStatus('', false);
+      await loadLibrary();
+      await openProject(project.id);
+      showToast('已匯入「' + truncate(project.name, 20) + '」');
+      hideBanner();
+    } catch (err) {
+      setLibStatus('', false);
+      if (projectId) {
+        await delOne('assets', projectId).catch(() => {});
+        await delOne('peaks', projectId).catch(() => {});
+        await delOne('projects', projectId).catch(() => {});
+      }
+      let msg;
+      if (err && err.message === 'NO_AUDIO_SUPPORT') {
+        msg = '這個瀏覽器沒有可用的音訊解碼功能（缺少 Web Audio），請改用 Chrome、Edge 或 Firefox。';
+      } else if (err && err.message === 'DECODE_FAIL') {
+        msg = '這個音訊格式無法解碼（可能是 DRM 保護或瀏覽器不支援），請轉成 MP3 或 WAV 後再試。';
+      } else {
+        msg = '匯入失敗：' + (err && err.message ? err.message : '未知錯誤');
+      }
+      showBanner(msg);
+    } finally {
+      state.importing = false;
+    }
+  }
+
+  /* ═════════ project lifecycle ═════════ */
+  function revokeAssetUrl() {
+    if (state.assetUrl) {
+      try { URL.revokeObjectURL(state.assetUrl); } catch (_) {}
+      state.assetUrl = null;
+    }
+  }
+
+  function attachAsset() {
+    revokeAssetUrl();
+    if (state.assetRow && state.assetRow.blob) {
+      state.hasAudio = true;
+      state.assetUrl = URL.createObjectURL(state.assetRow.blob);
+      audio.src = state.assetUrl;
+      audio.playbackRate = state.rate;
+      try { audio.load(); } catch (_) {}
+    } else {
+      state.hasAudio = false;
+      try { audio.pause(); audio.removeAttribute('src'); audio.load(); } catch (_) {}
+    }
+    btnRelink.hidden = state.hasAudio;
+    updateAudioControls();
+  }
+
+  async function openProject(id) {
+    const project = state.projects.find((p) => p.id === id) || await getOne('projects', id);
+    if (!project) { showBanner('找不到這個專案。'); return; }
+
+    pauseAudio();
+    state.project = project;
+    state.duration = Number(project.duration) || 0;
+    state.currentTime = clamp(Number(project.trimStart) || 0, 0, state.duration);
+    state.selection = null;
+    state.selectedId = null;
+    state.playing = false;
+    state.loop = false;
+    state.playTrimEnabled = false;
+    state.rate = Number(state.settings.rate) || 1;
+    state.query = '';
+    state.filter = 'all';
+    state.pendingSeek = null;
+    state.scrubbing = false;
+
+    markSearch.value = '';
+    markFilter.value = 'all';
+    rateSel.value = String(state.rate);
+    playTrim.checked = false;
+    btnLoop.setAttribute('aria-pressed', 'false');
+
+    try {
+      const rows = await Promise.all([
+        marksByProject(id),
+        getOne('assets', id),
+        getOne('peaks', id),
+      ]);
+      state.marks = rows[0];
+      state.assetRow = rows[1];
+      state.peaksRow = rows[2];
+    } catch (err) {
+      state.marks = [];
+      state.assetRow = null;
+      state.peaksRow = null;
+      showBanner('讀取專案資料失敗，部分內容可能不完整。');
+    }
+
+    if (!state.peaksRow && state.assetRow && state.assetRow.blob) {
+      try {
+        showBanner('正在重新計算波形…');
+        const pk = await decodePeaks(state.assetRow.blob);
+        state.peaksRow = { id, rate: pk.rate, data: pk.data, duration: state.duration };
+        await putOne('peaks', state.peaksRow).catch(() => {});
+        hideBanner();
+      } catch (_) {
+        showBanner('波形計算失敗，仍可播放與編輯標註。');
+      }
+    }
+
+    showView('editor');
+    attachAsset();
+    seek(state.currentTime);
+    updateProjectHeader();
+    renderEditor();
+    requestAnimationFrame(() => { fitZoom(); });
+
+    project.lastOpenedAt = nowISO();
+    project.updatedAt = project.updatedAt || nowISO();
+    putOne('projects', project).catch(() => {});
+    notifyChange();
+  }
+
+  function leaveEditor() {
+    pauseAudio();
+    saveTrimNow();
+    revokeAssetUrl();
+    state.project = null;
+    state.marks = [];
+    state.assetRow = null;
+    state.peaksRow = null;
+    state.duration = 0;
+    state.currentTime = 0;
+    state.selection = null;
+    state.selectedId = null;
+    state.playing = false;
+    showView('library');
+    loadLibrary();
+  }
+
+  function updateProjectHeader() {
+    if (!state.project) return;
+    projName.textContent = state.project.name;
+    const parts = [fmtTime(state.duration, false)];
+    if (state.project.size) parts.push(fmtBytes(state.project.size));
+    parts.push(state.marks.length + ' 個標註');
+    projMeta.textContent = parts.join(' · ');
+    updateAudioControls();
+  }
+
+  function updateEditorMeta() {
+    if (state.project) updateProjectHeader();
+  }
+
+  /* ═════════ waveform layout ═════════ */
+  function timeToPx(t) { return t * state.pxPerSec; }
+
+  function fitZoom() {
+    const vw = waveScroll.clientWidth || 600;
+    const dur = state.duration || 1;
+    state.pxPerSec = clamp(vw / dur, 0.02, 400);
+    state.autoFit = true;
+    waveScroll.scrollLeft = 0;
+    layoutWave();
+  }
+
+  function setZoom(pps) {
+    if (!state.duration) return;
+    const vw = waveScroll.clientWidth || 600;
+    const centerT = (waveScroll.scrollLeft + vw / 2) / state.pxPerSec;
+    state.pxPerSec = clamp(pps, 0.02, 400);
+    state.autoFit = false;
+    layoutWave();
+    waveScroll.scrollLeft = Math.max(0, centerT * state.pxPerSec - vw / 2);
+    drawWave();
+  }
+
+  function zoomBy(factor) { setZoom(state.pxPerSec * factor); }
+
+  function layoutWave() {
+    const dur = state.duration || 1;
+    const vw = waveScroll.clientWidth || 600;
+    waveSpacer.style.width = Math.max(vw, dur * state.pxPerSec) + 'px';
+    renderWaveOverlays();
+    layoutTrim();
+    renderPlayhead();
+    drawWave();
+    updateZoomLabel();
+  }
+
+  function updateZoomLabel() {
+    const secPerPx = 1 / state.pxPerSec;
+    waveZoomLabel.textContent = secPerPx >= 1
+      ? '1 px ≈ ' + secPerPx.toFixed(1) + ' 秒'
+      : Math.round(state.pxPerSec) + ' px / 秒';
+  }
+
+  let drawScheduled = false;
+  function scheduleDraw() {
+    if (drawScheduled) return;
+    drawScheduled = true;
+    requestAnimationFrame(() => {
+      drawScheduled = false;
+      drawWave();
+    });
+  }
+
+  function pickTickStep(pps) {
+    const steps = [0.1, 0.25, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600];
+    for (const s of steps) if (s * pps >= 64) return s;
+    return 3600;
+  }
+
+  function fmtRuler(t, step) {
+    if (step >= 1) return fmtTime(t, false);
+    const d = step < 0.5 ? 2 : 1;
+    const frac = t - Math.floor(t);
+    return fmtTime(t, false) + '.' + frac.toFixed(d).slice(2);
+  }
+
+  function drawWave() {
+    if (state.view !== 'editor' || !state.project) return;
+    const vw = waveScroll.clientWidth;
+    const H = waveScroll.clientHeight;
+    if (!vw || !H) return;
+
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const pw = Math.round(vw * dpr);
+    const ph = Math.round(H * dpr);
+    if (canvas.width !== pw || canvas.height !== ph) {
+      canvas.width = pw;
+      canvas.height = ph;
+      canvas.style.width = vw + 'px';
+      canvas.style.height = H + 'px';
+    }
+    const sl = waveScroll.scrollLeft;
+    canvas.style.transform = 'translateX(' + sl + 'px)';
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const cs = getComputedStyle(document.documentElement);
+    const read = (name, fallback) => (cs.getPropertyValue(name) || '').trim() || fallback;
+    const waveBg = read('--wave-bg', '#eef1f5');
+    const waveColor = read('--wave', '#2f6fed');
+    const muted = read('--muted', '#5b6472');
+    const border = read('--border', '#dfe3e8');
+    const shade = read('--shade', 'rgba(0,0,0,.1)');
+    const selFill = read('--sel', 'rgba(47,111,237,.22)');
+    const pps = state.pxPerSec;
+    const dur = state.duration || 1;
+    const t0 = sl / pps;
+    const t1 = (sl + vw) / pps;
+
+    ctx.clearRect(0, 0, vw, H);
+    ctx.fillStyle = waveBg;
+    ctx.fillRect(0, 0, vw, H);
+
+    /* ruler */
+    ctx.fillStyle = read('--surface-2', '#f0f2f5');
+    ctx.fillRect(0, 0, vw, RULER_H);
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, RULER_H - 0.5);
+    ctx.lineTo(vw, RULER_H - 0.5);
+    ctx.stroke();
+
+    const step = pickTickStep(pps);
+    const first = Math.floor(t0 / step) * step;
+    ctx.fillStyle = muted;
+    ctx.font = '11px system-ui, -apple-system, "Segoe UI", sans-serif';
+    ctx.textBaseline = 'middle';
+    for (let t = first; t <= t1 + step; t += step) {
+      if (t < 0) continue;
+      const x = Math.round(t * pps - sl) + 0.5;
+      if (x < -40 || x > vw + 40) continue;
+      ctx.strokeStyle = border;
+      ctx.beginPath();
+      ctx.moveTo(x, RULER_H - 5);
+      ctx.lineTo(x, RULER_H);
+      ctx.stroke();
+      ctx.fillText(fmtRuler(t, step), x + 4, 11);
+      if (t > dur) break;
+    }
+
+    const top = RULER_H + 8;
+    const bottom = H - 8;
+    const mid = (top + bottom) / 2;
+    const amp = (bottom - top) / 2;
+
+    ctx.strokeStyle = read('--wave-mid', '#c9d4e6');
+    ctx.beginPath();
+    ctx.moveTo(0, Math.round(mid) + 0.5);
+    ctx.lineTo(vw, Math.round(mid) + 0.5);
+    ctx.stroke();
+
+    /* trim shading */
+    const trim = trimRange();
+    ctx.fillStyle = shade;
+    if (trim.start > t0) {
+      const x = Math.max(0, trim.start * pps - sl);
+      if (x > 0) ctx.fillRect(0, RULER_H, Math.min(x, vw), H - RULER_H);
+    }
+    if (trim.end < t1) {
+      const x = Math.max(0, trim.end * pps - sl);
+      if (x < vw) ctx.fillRect(x, RULER_H, vw - x, H - RULER_H);
+    }
+
+    /* selection */
+    if (state.selection) {
+      const a = Math.max(0, state.selection.start * pps - sl);
+      const b = Math.min(vw, state.selection.end * pps - sl);
+      if (b > a) {
+        ctx.fillStyle = selFill;
+        ctx.fillRect(a, RULER_H, b - a, H - RULER_H);
+        ctx.strokeStyle = read('--sel-line', 'rgba(47,111,237,.6)');
+        ctx.strokeRect(a + 0.5, RULER_H + 0.5, Math.max(0, b - a - 1), H - RULER_H - 1);
+      }
+    }
+
+    /* peaks */
+    const peaks = state.peaksRow;
+    if (peaks && peaks.data && peaks.data.length) {
+      const data = peaks.data;
+      const buckets = Math.floor(data.length / 2);
+      const rate = peaks.rate || CONFIG.peakRate;
+      const smoothPx = (3 / rate) * pps;
+      ctx.fillStyle = waveColor;
+      for (let x = 0; x < vw; x++) {
+        const ta = (sl + x) / pps;
+        const tb = (sl + x + 1) / pps;
+        let i0 = Math.floor(ta * rate);
+        let i1 = Math.ceil(tb * rate);
+        if (i1 <= i0) i1 = i0 + 1;
+        if (i1 - i0 < 3 && smoothPx <= 8) {
+          const center = ((ta + tb) / 2) * rate;
+          i0 = Math.floor(center) - 1;
+          i1 = i0 + 3;
+        }
+        let mn = 0;
+        let mx = 0;
+        for (let i = i0; i < i1; i++) {
+          if (i < 0 || i >= buckets) continue;
+          const a = data[i * 2] / 127;
+          const b = data[i * 2 + 1] / 127;
+          if (a < mn) mn = a;
+          if (b > mx) mx = b;
+        }
+        if (mn === 0 && mx === 0) {
+          ctx.fillRect(x, Math.round(mid), 1, 1);
+        } else {
+          const y1 = Math.round(mid + mn * amp);
+          const y2 = Math.round(mid + mx * amp);
+          ctx.fillRect(x, y1, 1, Math.max(1, y2 - y1));
+        }
+      }
+    }
+  }
+
+  /* ═════════ overlays ═════════ */
+  function renderWaveOverlays() {
+    if (!state.project) return;
+    const pps = state.pxPerSec;
+    const frag = document.createDocumentFragment();
+    const ordered = state.marks.slice().sort((a, b) => a.start - b.start);
+    const laneEnds = [-Infinity, -Infinity];
+
+    for (const m of ordered) {
+      if (m.kind === 'region') {
+        const x = m.start * pps;
+        const w = Math.max(8, (m.end - m.start) * pps);
+        frag.append(el('div', {
+          class: 'region' + (m.id === state.selectedId ? ' is-selected' : ''),
+          dataset: { id: m.id },
+          title: m.label || '區段',
+          style: 'left:' + x + 'px;width:' + w + 'px;--c:var(--c-' + (m.color || 'blue') + ')',
+        },
+          el('span', { class: 'region__label', text: m.label || '區段' }),
+          el('span', { class: 'region__edge region__edge--l', dataset: { edge: 'start' } }),
+          el('span', { class: 'region__edge region__edge--r', dataset: { edge: 'end' } })
+        ));
+      } else {
+        const x = m.start * pps;
+        const labelStart = x + 9;
+        const approx = Math.min(130, (String(m.label || '標記').length * 12) + 18);
+        let lane = 0;
+        if (labelStart >= laneEnds[0]) lane = 0;
+        else if (labelStart >= laneEnds[1]) lane = 1;
+        else lane = laneEnds[0] <= laneEnds[1] ? 0 : 1;
+        laneEnds[lane] = labelStart + approx;
+        frag.append(el('div', {
+          class: 'marker marker--' + (m.color || 'blue') + (m.id === state.selectedId ? ' is-selected' : ''),
+          dataset: { id: m.id },
+          title: m.label || '標記',
+          style: 'left:' + x + 'px;--c:var(--c-' + (m.color || 'blue') + ')',
+        },
+          el('span', { class: 'marker__flag', text: m.label || '標記', style: 'top:' + (lane * 20) + 'px' })
+        ));
+      }
+    }
+    waveLayer.replaceChildren(frag);
+
+    btnClearSelection.hidden = !state.selection;
+    const hasPeaks = Boolean(state.peaksRow && state.peaksRow.data && state.peaksRow.data.length);
+    waveEmpty.hidden = hasPeaks;
+    if (!hasPeaks) {
+      waveEmpty.textContent = state.hasAudio
+        ? '這個專案還沒有波形資料'
+        : '缺少音訊檔，只能檢視標註；請按「重新選擇音檔」';
+    }
+  }
+
+  function layoutTrim() {
+    if (!state.project) return;
+    const pps = state.pxPerSec;
+    const trim = trimRange();
+    const x1 = trim.start * pps;
+    const x2 = trim.end * pps;
+
+    trimHandleIn.style.transform = 'translateX(' + x1 + 'px)';
+    trimHandleOut.style.transform = 'translateX(' + x2 + 'px)';
+    trimHandleIn.setAttribute('aria-valuemin', '0');
+    trimHandleIn.setAttribute('aria-valuemax', String(round3(Math.max(0, trim.end - 0.05))));
+    trimHandleIn.setAttribute('aria-valuenow', String(round3(trim.start)));
+    trimHandleIn.setAttribute('aria-valuetext', fmtTime(trim.start));
+    trimHandleOut.setAttribute('aria-valuemin', String(round3(trim.start + 0.05)));
+    trimHandleOut.setAttribute('aria-valuemax', String(round3(state.duration)));
+    trimHandleOut.setAttribute('aria-valuenow', String(round3(trim.end)));
+    trimHandleOut.setAttribute('aria-valuetext', fmtTime(trim.end));
+  }
+
+  function renderPlayhead() {
+    if (!state.project) return;
+    playhead.style.transform = 'translateX(' + (state.currentTime * state.pxPerSec) + 'px)';
+  }
+
+  function ensureVisible(t) {
+    const pps = state.pxPerSec;
+    const x = t * pps;
+    const vw = waveScroll.clientWidth;
+    if (x < waveScroll.scrollLeft + 4 || x > waveScroll.scrollLeft + vw - 36) {
+      waveScroll.scrollLeft = Math.max(0, x - vw * 0.3);
+    }
+  }
+
+  /* ═════════ playback ═════════ */
+  function trimRange() {
+    const dur = state.duration || 0;
+    const p = state.project || {};
+    let s = clamp(Number(p.trimStart) || 0, 0, dur);
+    let e = clamp(p.trimEnd == null ? dur : Number(p.trimEnd), 0, dur);
+    if (!(e > s)) { s = 0; e = dur; }
+    return { start: round3(s), end: round3(e) };
+  }
+
+  function loopRange() {
+    if (state.selection && state.selection.end - state.selection.start > 0.05) return state.selection;
+    const tr = trimRange();
+    if (tr.start > 0.001 || tr.end < (state.duration || 0) - 0.001) return tr;
+    return { start: 0, end: state.duration || 0 };
+  }
+
+  function playbackStart() {
+    if (state.loop) return loopRange().start;
+    if (state.playTrimEnabled) return trimRange().start;
+    return 0;
+  }
+
+  function playbackEnd() {
+    if (state.loop) return loopRange().end;
+    if (state.playTrimEnabled) return trimRange().end;
+    return state.duration || 0;
+  }
+
+  function updateAudioControls() {
+    const disabled = !state.duration;
+    btnPlay.disabled = disabled || !state.hasAudio;
+    btnStop.disabled = disabled;
+    btnBack5.disabled = disabled;
+    btnFwd5.disabled = disabled;
+    scrub.disabled = disabled;
+    rateSel.disabled = !state.hasAudio;
+    btnLoop.disabled = disabled;
+    playTrim.disabled = disabled;
+    trimStartInput.disabled = disabled;
+    trimEndInput.disabled = disabled;
+    btnSetIn.disabled = disabled;
+    btnSetOut.disabled = disabled;
+    btnClearTrim.disabled = disabled;
+  }
+
+  function updateTimecode() {
+    curTimeEl.textContent = fmtTime(state.currentTime);
+    if (!state.scrubbing && document.activeElement !== scrub) {
+      scrub.value = String(Math.min(state.currentTime, Number(scrub.max) || 0));
+    }
+  }
+
+  function updateTransport() {
+    durTimeEl.textContent = fmtTime(state.duration);
+    scrub.max = String(Math.max(0.01, state.duration || 0));
+    if (!state.scrubbing && document.activeElement !== scrub) {
+      scrub.value = String(clamp(state.currentTime, 0, state.duration || 0));
+    }
+    updateTimecode();
+    updateAudioControls();
+    updatePlayButton();
+  }
+
+  function updatePlayButton() {
+    icoPlay.hidden = state.playing;
+    icoPause.hidden = !state.playing;
+    btnPlay.setAttribute('aria-label', state.playing ? '暫停' : '播放');
+  }
+
+  function seek(t, opts) {
+    const dur = state.duration || 0;
+    const next = clamp(Number(t) || 0, 0, dur);
+    state.currentTime = next;
+    if (state.hasAudio) {
+      if (audio.readyState >= 1) {
+        try { audio.currentTime = next; } catch (_) {}
+      } else {
+        state.pendingSeek = next;
+      }
+    }
+    renderPlayhead();
+    updateTimecode();
+    if (opts && opts.follow) ensureVisible(next);
+  }
+
+  function playAudio() {
+    if (!state.hasAudio) {
+      showToast('這個專案缺少音訊檔，只能檢視與編輯標註');
+      return;
+    }
+    if (!state.duration) return;
+    const start = playbackStart();
+    const end = playbackEnd();
+    if (state.currentTime < start - 0.05 || state.currentTime >= end - 0.03) seek(start);
+    audio.playbackRate = state.rate;
+    const p = audio.play();
+    if (p && p.catch) {
+      p.catch((err) => {
+        showToast(err && err.name === 'NotAllowedError' ? '請再按一次播放（瀏覽器需要互動才能播音）' : '無法播放這個音訊檔');
+      });
+    }
+  }
+
+  function pauseAudio() {
+    try { audio.pause(); } catch (_) {}
+    state.playing = false;
+    updatePlayButton();
+  }
+
+  function togglePlay() {
+    if (!state.hasAudio) { playAudio(); return; }
+    if (audio.paused) playAudio();
+    else pauseAudio();
+  }
+
+  let rafId = null;
+  function startTick() {
+    if (rafId) return;
+    const step = () => {
+      rafId = requestAnimationFrame(step);
+      if (!state.playing) return;
+      if (state.hasAudio) state.currentTime = audio.currentTime;
+      const end = playbackEnd();
+      if (state.currentTime >= end - 0.02) {
+        if (state.loop) {
+          seek(loopRange().start);
+        } else {
+          pauseAudio();
+          seek(end);
+          return;
+        }
+      }
+      renderPlayhead();
+      updateTimecode();
+      if (state.hasAudio) ensureVisible(state.currentTime);
+    };
+    rafId = requestAnimationFrame(step);
+  }
+  function stopTick() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+
+  audio.addEventListener('play', () => {
+    state.playing = true;
+    updatePlayButton();
+    startTick();
+  });
+  audio.addEventListener('pause', () => {
+    state.playing = false;
+    updatePlayButton();
+    stopTick();
+  });
+  audio.addEventListener('ended', () => {
+    state.playing = false;
+    updatePlayButton();
+    if (state.loop) {
+      seek(loopRange().start);
+      playAudio();
+    }
+  });
+  audio.addEventListener('loadedmetadata', () => {
+    if (state.pendingSeek != null) {
+      try { audio.currentTime = state.pendingSeek; } catch (_) {}
+      state.pendingSeek = null;
+    }
+    audio.playbackRate = state.rate;
+  });
+  audio.addEventListener('error', () => {
+    if (!state.hasAudio) return;
+    if (!audio.getAttribute('src')) return;
+    showToast('音訊載入失敗，檔案可能已損壞或格式不受支援');
+  });
+
+  /* ═════════ trim ═════════ */
+  const saveTrimDebounced = debounce(() => { saveTrimNow(); }, 400);
+
+  async function saveTrimNow() {
+    if (!state.project) return;
+    state.project.updatedAt = nowISO();
+    await persist(() => putOne('projects', state.project), '裁切設定儲存失敗');
+  }
+
+  function commitTrim(silent) {
+    if (!state.project) return;
+    updateTrimInputs();
+    layoutTrim();
+    drawWave();
+    if (!silent) saveTrimDebounced();
+    updatePlayButton();
+  }
+
+  function updateTrimInputs() {
+    if (!state.project) return;
+    const tr = trimRange();
+    if (document.activeElement !== trimStartInput) trimStartInput.value = fmtTime(tr.start);
+    if (document.activeElement !== trimEndInput) trimEndInput.value = fmtTime(tr.end);
+  }
+
+  function setTrimStartValue(t) {
+    if (!state.project) return;
+    const tr = trimRange();
+    const v = round3(clamp(t, 0, Math.max(0, tr.end - 0.05)));
+    state.project.trimStart = v;
+    if (v >= (state.project.trimEnd == null ? state.duration : state.project.trimEnd)) {
+      state.project.trimEnd = Math.min(state.duration, v + 0.05);
+    }
+    commitTrim();
+  }
+
+  function setTrimEndValue(t) {
+    if (!state.project) return;
+    const tr = trimRange();
+    const v = round3(clamp(t, tr.start + 0.05, state.duration));
+    state.project.trimEnd = v;
+    commitTrim();
+  }
+
+  async function clearTrim() {
+    if (!state.project) return;
+    state.project.trimStart = 0;
+    state.project.trimEnd = state.duration;
+    commitTrim();
+    await saveTrimNow();
+    showToast('已清除裁切範圍');
+  }
+
+  /* ═════════ marks ═════════ */
+  function nextColor() {
+    const used = state.marks.map((m) => m.color);
+    for (const c of COLORS) if (!used.includes(c)) return c;
+    return COLORS[state.marks.length % COLORS.length];
+  }
+
+  async function addMarker() {
+    if (!state.project) return;
+    const t = round3(state.currentTime);
+    const count = state.marks.filter((m) => m.kind === 'marker').length + 1;
+    const mark = {
+      id: uid(),
+      projectId: state.project.id,
+      kind: 'marker',
+      start: t,
+      end: null,
+      label: '標記 ' + count,
+      note: '',
+      color: nextColor(),
+      include: false,
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+    };
+    if (!await persist(() => putOne('marks', mark), '新增標記失敗')) return;
+    state.marks.push(mark);
+    state.selectedId = mark.id;
+    renderWaveOverlays();
+    renderMarkList();
+    updateEditorMeta();
+    notifyChange();
+    showToast('已新增標記 · ' + fmtTime(t), '編輯', () => openMarkDialog(mark));
+  }
+
+  async function addRegion() {
+    if (!state.project) return;
+    let start;
+    let end;
+    if (state.selection && state.selection.end - state.selection.start >= 0.05) {
+      start = state.selection.start;
+      end = state.selection.end;
+    } else {
+      start = state.currentTime;
+      end = Math.min(state.duration, start + 5);
+      if (end - start < 0.2) {
+        start = Math.max(0, end - 5);
+      }
+    }
+    start = round3(clamp(start, 0, state.duration));
+    end = round3(clamp(end, 0, state.duration));
+    if (end - start < 0.05) {
+      showToast('請先在波形上拖曳選取一段範圍');
+      return;
+    }
+    const count = state.marks.filter((m) => m.kind === 'region').length + 1;
+    const mark = {
+      id: uid(),
+      projectId: state.project.id,
+      kind: 'region',
+      start,
+      end,
+      label: '區段 ' + count,
+      note: '',
+      color: nextColor(),
+      include: true,
+      createdAt: nowISO(),
+      updatedAt: nowISO(),
+    };
+    if (!await persist(() => putOne('marks', mark), '新增區段失敗')) return;
+    state.marks.push(mark);
+    state.selectedId = mark.id;
+    state.selection = null;
+    renderWaveOverlays();
+    renderMarkList();
+    updateEditorMeta();
+    notifyChange();
+    showToast('已新增區段 · ' + fmtTime(start) + '–' + fmtTime(end), '編輯', () => openMarkDialog(mark));
+  }
+
+  function selectMark(id, opts) {
+    state.selectedId = id || null;
+    for (const node of $$('#mark-list .mrow')) {
+      node.classList.toggle('is-selected', node.dataset.id === state.selectedId);
+    }
+    for (const node of $$('#wave-layer .marker, #wave-layer .region')) {
+      node.classList.toggle('is-selected', node.dataset.id === state.selectedId);
+    }
+    if (opts && opts.scroll && id) {
+      const row = $('#mark-list .mrow[data-id="' + CSS.escape(id) + '"]');
+      if (row) row.scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  function openMarkDialog(mark) {
+    if (!mark || !state.project) return;
+    state.editingMarkId = mark.id;
+    dlgMarkTitle.textContent = mark.kind === 'region' ? '編輯區段' : '編輯標記';
+    mkLabel.value = mark.label || '';
+    mkStart.value = fmtTime(mark.start);
+    mkEnd.value = mark.kind === 'region' ? fmtTime(mark.end) : '';
+    mkNote.value = mark.note || '';
+    mkEndField.hidden = mark.kind !== 'region';
+    mkIncludeField.hidden = mark.kind !== 'region';
+    mkInclude.checked = Boolean(mark.include);
+    formMark.classList.toggle('is-marker', mark.kind !== 'region');
+    for (const radio of $$('input[name="mk-color"]')) radio.checked = radio.value === (mark.color || 'blue');
+    mkLabel.setCustomValidity('');
+    mkStart.setCustomValidity('');
+    mkEnd.setCustomValidity('');
+    mkHint.textContent = mark.kind === 'region'
+      ? '區段長度 ' + fmtTime(Math.max(0, (mark.end || mark.start) - mark.start)) + ' · 時間可用 m:ss.mmm 或秒數輸入'
+      : '標記時間可用 m:ss.mmm 或秒數輸入';
+    if (!dlgMark.open) dlgMark.showModal();
+    mkLabel.focus();
+    mkLabel.select();
+  }
+
+  async function saveMarkDialog(event) {
+    event.preventDefault();
+    const mark = state.marks.find((m) => m.id === state.editingMarkId);
+    if (!mark) { dlgMark.close(); return; }
+
+    const label = mkLabel.value.trim().slice(0, CONFIG.maxLabel) || (mark.kind === 'region' ? '未命名區段' : '未命名標記');
+    const start = parseTime(mkStart.value);
+    if (!Number.isFinite(start) || start < 0 || start > state.duration) {
+      mkStart.setCustomValidity('請輸入 0 到 ' + fmtTime(state.duration) + ' 之間的時間');
+      mkStart.reportValidity();
+      return;
+    }
+    let end = null;
+    if (mark.kind === 'region') {
+      end = parseTime(mkEnd.value);
+      if (!Number.isFinite(end) || end > state.duration) {
+        mkEnd.setCustomValidity('請輸入不超過 ' + fmtTime(state.duration) + ' 的時間');
+        mkEnd.reportValidity();
+        return;
+      }
+      if (end - start < 0.05) {
+        mkEnd.setCustomValidity('結束時間必須大於開始時間');
+        mkEnd.reportValidity();
+        return;
+      }
+    }
+    mkStart.setCustomValidity('');
+    mkEnd.setCustomValidity('');
+
+    const colorInput = $('input[name="mk-color"]:checked');
+    const next = Object.assign({}, mark, {
+      label,
+      start: round3(start),
+      end: mark.kind === 'region' ? round3(end) : null,
+      note: mkNote.value.trim().slice(0, CONFIG.maxNote),
+      color: colorInput ? colorInput.value : 'blue',
+      include: mark.kind === 'region' ? mkInclude.checked : false,
+      updatedAt: nowISO(),
+    });
+    if (!await persist(() => putOne('marks', next), '標註儲存失敗')) return;
+    Object.assign(mark, next);
+    dlgMark.close();
+    renderWaveOverlays();
+    renderMarkList();
+    updateEditorMeta();
+    notifyChange();
+    showToast('已儲存標註');
+  }
+
+  async function deleteMark(mark) {
+    if (!mark) return;
+    const snapshot = Object.assign({}, mark);
+    if (!await persist(() => delOne('marks', mark.id), '刪除標註失敗')) return;
+    state.marks = state.marks.filter((m) => m.id !== mark.id);
+    if (state.selectedId === mark.id) state.selectedId = null;
+    renderWaveOverlays();
+    renderMarkList();
+    updateEditorMeta();
+    notifyChange();
+    showToast('已刪除「' + truncate(snapshot.label || '標註', 16) + '」', '復原', async () => {
+      if (!await persist(() => putOne('marks', snapshot), '復原失敗')) return;
+      const sameProject = Boolean(state.project && state.project.id === snapshot.projectId);
+      if (sameProject) {
+        state.marks.push(snapshot);
+        state.selectedId = snapshot.id;
+        renderWaveOverlays();
+        renderMarkList();
+        updateEditorMeta();
+      } else {
+        // 使用者已切換到別的專案：只寫回 DB，不要污染目前專案的清單
+        await loadLibrary();
+      }
+      notifyChange();
+      showToast('已復原');
+    });
+  }
+
+  async function toggleInclude(mark, checked) {
+    const next = Object.assign({}, mark, { include: Boolean(checked), updatedAt: nowISO() });
+    if (!await persist(() => putOne('marks', next), '更新匯出勾選失敗')) return;
+    Object.assign(mark, next);
+    notifyChange();
+  }
+
+  function visibleMarks() {
+    const q = state.query.trim().normalize('NFKC').toLowerCase();
+    return state.marks
+      .filter((m) => state.filter === 'all' || m.kind === state.filter)
+      .filter((m) => !q || ((m.label || '') + ' ' + (m.note || '')).normalize('NFKC').toLowerCase().includes(q))
+      .sort((a, b) => a.start - b.start || String(a.createdAt).localeCompare(String(b.createdAt)));
+  }
+
+  function renderMarkList() {
+    const rows = visibleMarks();
+    markList.replaceChildren();
+    markEmpty.hidden = rows.length > 0;
+    if (!state.marks.length) {
+      markEmpty.textContent = '還沒有標註。播放到想記住的位置按 M，或在波形上拖曳選取後按 R。';
+    } else if (!rows.length) {
+      markEmpty.textContent = state.query
+        ? '找不到符合「' + truncate(state.query, 24) + '」的標註。'
+        : '這個篩選條件下沒有標註。';
+    }
+    markCount.textContent = state.marks.length ? '· ' + state.marks.length : '';
+
+    for (const m of rows) {
+      const isRegion = m.kind === 'region';
+      markList.append(el('li', {
+        class: 'mrow' + (m.id === state.selectedId ? ' is-selected' : ''),
+        dataset: { id: m.id },
+      },
+        el('span', {
+          class: 'dot dot--' + (m.color || 'blue'),
+          'aria-hidden': 'true',
+        }),
+        el('button', {
+          class: 'mtime',
+          type: 'button',
+          dataset: { act: 'jump' },
+          'aria-label': '跳至 ' + fmtTime(m.start),
+          text: fmtTime(m.start),
+        }),
+        el('span', { class: 'badge', text: isRegion ? '區段' : '標記' }),
+        el('div', { class: 'mrow__body' },
+          el('p', { class: 'mrow__label', text: m.label || '（未命名）' }),
+          m.note ? el('p', { class: 'mrow__note', text: m.note }) : null,
+          isRegion ? el('p', { class: 'mrow__meta', text: '長度 ' + fmtTime(m.end - m.start) }) : null
+        ),
+        isRegion
+          ? el('label', { class: 'mcheck', title: '納入多段拼接匯出' },
+              el('input', {
+                type: 'checkbox',
+                checked: Boolean(m.include),
+                dataset: { act: 'include' },
+                'aria-label': '將「' + (m.label || '區段') + '」納入匯出',
+              }),
+              '匯出'
+            )
+          : el('span'),
+        el('div', { class: 'mrow__act' },
+          el('button', { class: 'btn btn--ghost', type: 'button', dataset: { act: 'edit' }, text: '編輯' }),
+          el('button', { class: 'btn btn--ghost btn--danger', type: 'button', dataset: { act: 'del' }, text: '刪除' })
+        )
+      ));
+    }
+  }
+
+  /* ═════════ editor render ═════════ */
+  function renderEditor() {
+    if (!state.project) return;
+    updateProjectHeader();
+    updateTrimInputs();
+    layoutWave();
+    renderMarkList();
+    updateTransport();
+    renderPlayhead();
+  }
+
+  /* ═════════ WAV export ═════════ */
+  function wavHeader(sampleRate, channels, dataBytes) {
+    const buf = new ArrayBuffer(44);
+    const dv = new DataView(buf);
+    const str = (off, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(off + i, s.charCodeAt(i)); };
+    str(0, 'RIFF');
+    dv.setUint32(4, 36 + dataBytes, true);
+    str(8, 'WAVE');
+    str(12, 'fmt ');
+    dv.setUint32(16, 16, true);
+    dv.setUint16(20, 1, true);
+    dv.setUint16(22, channels, true);
+    dv.setUint32(24, sampleRate, true);
+    dv.setUint32(28, sampleRate * channels * 2, true);
+    dv.setUint16(32, channels * 2, true);
+    dv.setUint16(34, 16, true);
+    str(36, 'data');
+    dv.setUint32(40, dataBytes, true);
+    return new Uint8Array(buf);
+  }
+
+  async function decodeAudioForExport(blob) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) throw new Error('這個瀏覽器不支援音訊解碼');
+    let ctx;
+    try { ctx = new AC({ sampleRate: 44100 }); }
+    catch (_) { ctx = new AC(); }
+    try {
+      return await ctx.decodeAudioData(await blob.arrayBuffer());
+    } catch (_) {
+      throw new Error('DECODE_FAIL');
+    } finally {
+      try { await ctx.close(); } catch (_) {}
+    }
+  }
+
+  function collectSegments(mode) {
+    if (mode === 'trim') {
+      const tr = trimRange();
+      return [{ start: tr.start, end: tr.end }];
+    }
+    if (mode === 'segments') {
+      return state.marks
+        .filter((m) => m.kind === 'region' && m.include)
+        .sort((a, b) => a.start - b.start)
+        .map((m) => ({ start: m.start, end: m.end }));
+    }
+    return [{ start: 0, end: state.duration }];
+  }
+
+  async function buildWavBlob(blob, segments, fadeMs, onProgress) {
+    onProgress('解碼音訊…（大檔需要一些時間）');
+    const buf = await decodeAudioForExport(blob);
+    const sr = buf.sampleRate;
+    const ch = Math.min(2, buf.numberOfChannels);
+    const dur = buf.duration;
+
+    const list = segments
+      .map((s) => ({ start: clamp(s.start, 0, dur), end: clamp(s.end, 0, dur) }))
+      .filter((s) => s.end - s.start > 0.01);
+    if (!list.length) throw new Error('沒有可匯出的範圍');
+
+    let cursor = 0;
+    const usable = [];
+    for (const s of list) {
+      s.s0 = Math.round(s.start * sr);
+      s.len = Math.min(Math.round((s.end - s.start) * sr), buf.length - s.s0);
+      if (s.len <= 0) continue;
+      s.outStart = cursor;
+      cursor += s.len;
+      usable.push(s);
+    }
+    const total = cursor;
+    if (!total) throw new Error('沒有可匯出的音訊資料');
+    if (total / sr > 90 * 60) {
+      throw new Error('輸出長度超過 90 分鐘上限，請減少選取的區段。');
+    }
+    if (total * ch * 2 > 700 * MB) {
+      throw new Error('輸出檔案約 ' + fmtBytes(total * ch * 2) + '，超過 700 MB 上限，請減少選取的區段。');
+    }
+
+    const fadeFrames = Math.max(0, Math.round((Number(fadeMs) || 0) / 1000 * sr));
+    let minLen = Infinity;
+    for (const s of usable) if (s.len < minLen) minLen = s.len;
+    const fade = Math.min(fadeFrames, Math.floor(minLen / 2));
+    for (const s of usable) s.fade = Math.min(fade, Math.floor(s.len / 2));
+
+    const srcs = [];
+    for (let c = 0; c < ch; c++) srcs.push(buf.getChannelData(Math.min(c, buf.numberOfChannels - 1)));
+
+    const parts = [wavHeader(sr, ch, total * ch * 2)];
+    const CHUNK = 32768;
+    let segIdx = 0;
+    for (let pos = 0; pos < total; pos += CHUNK) {
+      const n = Math.min(CHUNK, total - pos);
+      const bytes = new Uint8Array(n * ch * 2);
+      const dv = new DataView(bytes.buffer);
+      let o = 0;
+      for (let i = 0; i < n; i++) {
+        const frame = pos + i;
+        while (segIdx < usable.length - 1 && frame >= usable[segIdx].outStart + usable[segIdx].len) segIdx++;
+        const s = usable[segIdx];
+        const off = frame - s.outStart;
+        let gain = 1;
+        if (s.fade > 0) {
+          if (off < s.fade) gain = off / s.fade;
+          else if (off >= s.len - s.fade) gain = Math.max(0, (s.len - 1 - off) / s.fade);
+        }
+        for (let c = 0; c < ch; c++) {
+          const v = srcs[c][s.s0 + off] * gain;
+          dv.setInt16(o, v < 0 ? v * 0x8000 : v * 0x7FFF, true);
+          o += 2;
+        }
+      }
+      parts.push(bytes);
+      if (pos % (CHUNK * 16) === 0) {
+        onProgress('編碼 WAV… ' + Math.round((pos / total) * 100) + '%');
+        await nextFrame();
+      }
+    }
+    onProgress('建立檔案…');
+    return new Blob(parts, { type: 'audio/wav' });
+  }
+
+  function setExportStatus(msg) {
+    exportStatus.textContent = msg || '';
+  }
+
+  function openHelpDialog() {
+    if (dlgHelp.open) return;
+    dlgHelp.showModal();
+    dlgHelp.scrollTop = 0;
+    dlgHelp.focus();
+  }
+
+  function updateWavHint() {
+    const modeInput = $('input[name="wav-mode"]:checked');
+    const mode = modeInput ? modeInput.value : 'all';
+    const segs = collectSegments(mode);
+    let length = 0;
+    for (const s of segs) length += Math.max(0, s.end - s.start);
+    const missing = !state.assetRow;
+    btnWav.disabled = missing;
+    wavHint.textContent = missing
+      ? '缺少音訊檔，無法匯出 WAV。請先重新選擇音檔。'
+      : '預估輸出長度 ' + fmtTime(length) + (mode === 'segments' ? ' · ' + segs.length + ' 段' : '') + ' · 16-bit PCM';
+    segCount.textContent = String(state.marks.filter((m) => m.kind === 'region' && m.include).length);
+  }
+
+  function openExportDialog() {
+    if (!state.project) return;
+    const segs = state.marks.filter((m) => m.kind === 'region' && m.include);
+    const segRadio = $('input[name="wav-mode"][value="segments"]');
+    if (segRadio) {
+      segRadio.disabled = segs.length === 0;
+      const label = segRadio.closest('label');
+      if (label) label.style.opacity = segs.length ? '' : '.5';
+    }
+    if (!segs.length) {
+      const all = $('input[name="wav-mode"][value="all"]');
+      if (all) all.checked = true;
+    }
+    wavName.value = sanitizeName(state.project.name) || 'audio';
+    setExportStatus('');
+    updateWavHint();
+    if (!dlgExport.open) {
+      dlgExport.showModal();
+      dlgExport.scrollTop = 0;
+      const checked = $('input[name="wav-mode"]:checked');
+      if (checked) { try { checked.focus({ preventScroll: true }); } catch (_) {} }
+    }
+  }
+
+  async function exportWavFlow() {
+    if (!state.project || !state.assetRow) {
+      setExportStatus('缺少音訊檔，無法匯出 WAV。');
+      return;
+    }
+    if (state.exporting) {
+      setExportStatus('另一個匯出正在進行中，請稍候。');
+      return;
+    }
+    const modeInput = $('input[name="wav-mode"]:checked');
+    const mode = modeInput ? modeInput.value : 'all';
+    const segments = collectSegments(mode);
+    if (!segments.length) { setExportStatus('沒有可匯出的範圍。'); return; }
+    const fadeMs = Number(fadeMsSel.value) || 0;
+    const name = sanitizeName(wavName.value) || 'audio';
+    const suffix = mode === 'trim' ? '-trim' : mode === 'segments' ? '-segments' : '';
+
+    let outputSeconds = 0;
+    for (const s of segments) outputSeconds += Math.max(0, Math.min(s.end, state.duration) - Math.max(0, s.start));
+    if (outputSeconds > 15 * 60) {
+      const approxMB = Math.round(outputSeconds * 44100 * 2 * 4 / MB);
+      if (!confirm('輸出長度 ' + fmtTime(outputSeconds, false) + '，解碼時約需 ' + approxMB + ' MB 記憶體，可能需要一些時間。仍要匯出嗎？')) {
+        setExportStatus('已取消匯出。');
+        return;
+      }
+    }
+
+    state.exporting = true;
+    btnWav.disabled = true;
+    btnWav.textContent = '匯出中…';
+    try {
+      const blob = await buildWavBlob(state.assetRow.blob, segments, fadeMs, setExportStatus);
+      downloadBlob(blob, name + suffix + '.wav');
+      setExportStatus('已匯出 WAV（' + fmtBytes(blob.size) + '）');
+      showToast('已匯出 WAV');
+    } catch (err) {
+      setExportStatus(err && err.message === 'DECODE_FAIL'
+        ? '這個音訊檔無法解碼，可能是格式不支援或檔案損毀。'
+        : '匯出失敗：' + (err && err.message ? err.message : '未知錯誤'));
+    } finally {
+      state.exporting = false;
+      btnWav.disabled = !state.assetRow;
+      btnWav.textContent = '匯出 WAV';
+    }
+  }
+
+  /* ═════════ CSV / JSON / backup ═════════ */
+  const csvCell = (v) => {
+    const s = String(v == null ? '' : v);
+    return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+
+  function exportCsv() {
+    if (!state.project) return;
+    const rows = state.marks.slice().sort((a, b) => a.start - b.start);
+    const lines = ['種類,開始,結束,長度(秒),標籤,備註'];
+    for (const m of rows) {
+      const isRegion = m.kind === 'region';
+      lines.push([
+        isRegion ? '區段' : '標記',
+        fmtTime(m.start),
+        isRegion ? fmtTime(m.end) : '',
+        isRegion ? (m.end - m.start).toFixed(3) : '',
+        m.label || '',
+        m.note || '',
+      ].map(csvCell).join(','));
+    }
+    const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    downloadBlob(blob, (sanitizeName(state.project.name) || 'marks') + '-marks.csv');
+    setExportStatus('已匯出 ' + rows.length + ' 個標註（CSV）');
+  }
+
+  function peaksToSerializable(peaks) {
+    if (!peaks || !peaks.data) return null;
+    const d = peaks.data;
+    const bytes = new Uint8Array(d.buffer, d.byteOffset, d.byteLength);
+    return {
+      projectId: peaks.id,
+      rate: peaks.rate || CONFIG.peakRate,
+      data: bytesToBase64(bytes),
+    };
+  }
+
+  function exportProjectJson() {
+    if (!state.project) return;
+    const payload = {
+      app: CONFIG.dbName,
+      schemaVersion: CONFIG.version,
+      kind: 'project',
+      exportedAt: nowISO(),
+      data: {
+        project: state.project,
+        marks: state.marks,
+        peaks: peaksToSerializable(state.peaksRow),
+      },
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    downloadBlob(blob, (sanitizeName(state.project.name) || 'project') + '.json');
+    setExportStatus('已匯出專案 JSON（不含音訊）');
+  }
+
+  async function exportBackupFlow(includeAudio) {
+    if (state.exporting) { showToast('備份正在進行中，請稍候'); return; }
+    state.exporting = true;
+    const btn = includeAudio ? btnBackupFull : btnBackupLite;
+    btn.disabled = true;
+    if (state.view === 'library') setLibStatus('正在準備備份…', true);
+    try {
+      setExportStatus('整理資料…');
+      const [projects, marks, peaks] = await Promise.all([
+        getAll('projects'), getAll('marks'), getAll('peaks'),
+      ]);
+      const payload = {
+        app: CONFIG.dbName,
+        schemaVersion: CONFIG.version,
+        exportedAt: nowISO(),
+        includesAudio: Boolean(includeAudio),
+        counts: { projects: projects.length, marks: marks.length, assets: 0 },
+        data: {
+          projects,
+          marks,
+          peaks: peaks.map(peaksToSerializable).filter(Boolean),
+          assets: [],
+        },
+      };
+
+      if (includeAudio) {
+        const assets = await getAll('assets');
+        let total = 0;
+        for (const a of assets) if (a.blob) total += a.blob.size;
+        const mb = total / MB;
+        if (mb > CONFIG.audioHardMB) {
+          setExportStatus('音訊共 ' + mb.toFixed(1) + ' MB，超過 ' + CONFIG.audioHardMB + ' MB 備份上限。請改用「僅標註」或先刪除大專案。');
+          return;
+        }
+        if (mb > CONFIG.audioSoftMB && !confirm('音訊共 ' + mb.toFixed(1) + ' MB，備份檔會超過 ' + Math.round(mb * 1.37) + ' MB，處理需要一些時間。仍要包含音訊嗎？')) {
+          setExportStatus('已取消備份。');
+          return;
+        }
+        let i = 0;
+        for (const a of assets) {
+          i++;
+          if (!a.blob) continue;
+          const progress = '音訊 ' + i + '/' + assets.length + '：轉成 base64…（大檔請稍候）';
+          setExportStatus(progress);
+          if (state.view === 'library') setLibStatus(progress, true);
+          payload.data.assets.push({
+            projectId: a.id,
+            mime: a.mime || a.blob.type || '',
+            name: a.name || '',
+            base64: await blobToBase64(a.blob),
+          });
+          await nextFrame();
+        }
+      }
+
+      setExportStatus('建立備份檔…');
+      const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+      downloadBlob(blob, 'wavecut-backup-' + (includeAudio ? 'full' : 'marks') + '-' + new Date().toISOString().slice(0, 10) + '.json');
+      setExportStatus('已匯出備份（' + fmtBytes(blob.size) + '）');
+      showToast('已匯出備份');
+    } catch (err) {
+      setExportStatus('備份失敗：' + (err && err.message ? err.message : '未知錯誤'));
+    } finally {
+      state.exporting = false;
+      btn.disabled = false;
+      if (state.view === 'library') setLibStatus('', false);
+    }
+  }
+
+  async function importBackup(file) {
+    if (!file) return;
+    if (file.size > CONFIG.maxImportMB * MB) {
+      showBanner('匯入失敗：檔案 ' + fmtBytes(file.size) + ' 超過 ' + CONFIG.maxImportMB + ' MB 上限。');
+      return;
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch (_) {
+      showBanner('匯入失敗：檔案不是有效的 JSON。');
+      return;
+    }
+    const d = parsed && parsed.data;
+    let rawProjects = [];
+    let rawMarks = [];
+    let rawPeaks = [];
+    let rawAssets = [];
+
+    if (d && Array.isArray(d.projects)) {
+      rawProjects = d.projects;
+      rawMarks = Array.isArray(d.marks) ? d.marks : [];
+      rawPeaks = Array.isArray(d.peaks) ? d.peaks : [];
+      rawAssets = Array.isArray(d.assets) ? d.assets : [];
+    } else if (d && d.project) {
+      rawProjects = [d.project];
+      rawMarks = Array.isArray(d.marks) ? d.marks : [];
+      rawPeaks = d.peaks ? [d.peaks] : [];
+    } else if (Array.isArray(parsed)) {
+      rawProjects = parsed;
+    } else {
+      showBanner('匯入失敗：找不到專案資料（預期 data.projects 陣列）。');
+      return;
+    }
+
+    if (typeof parsed.schemaVersion === 'number' && parsed.schemaVersion > CONFIG.version) {
+      showBanner('匯入失敗：此備份來自較新版本的工具（v' + parsed.schemaVersion + '），請更新工具後再匯入。');
+      return;
+    }
+
+    const projects = rawProjects.map(normalizeProject).filter(Boolean);
+    if (!projects.length) {
+      showBanner('匯入失敗：沒有可用的專案（每筆都需要名稱與長度）。');
+      return;
+    }
+    const byId = new Map(projects.map((p) => [p.id, p]));
+
+    const assets = [];
+    for (const raw of rawAssets) {
+      if (!raw || !raw.base64 || !byId.has(raw.projectId)) continue;
+      try {
+        assets.push({
+          id: raw.projectId,
+          blob: base64ToBlob(raw.base64, raw.mime || 'audio/mpeg'),
+          mime: raw.mime || '',
+          name: raw.name || '',
+        });
+      } catch (_) {}
+    }
+    const assetIds = new Set(assets.map((a) => a.id));
+
+    const marks = rawMarks.map((m) => normalizeMark(m, byId)).filter(Boolean);
+    const peaks = rawPeaks.map((p) => normalizePeak(p, byId)).filter(Boolean);
+
+    const replace = confirm(
+      '準備匯入 ' + projects.length + ' 個專案、' + marks.length + ' 個標註、' + assets.length + ' 個音檔。\n\n' +
+      '「確定」= 取代目前全部資料\n' +
+      '「取消」= 與目前資料合併（相同 id 覆蓋）'
+    );
+    if (replace && !confirm('確定要清空目前所有資料？建議先匯出備份。')) return;
+
+    if (replace) {
+      for (const p of projects) p.hasAudio = assetIds.has(p.id);
+    } else {
+      for (const p of projects) {
+        if (assetIds.has(p.id)) { p.hasAudio = true; continue; }
+        try {
+          const existing = await getOne('assets', p.id);
+          p.hasAudio = Boolean(existing && existing.blob);
+        } catch (_) {
+          p.hasAudio = false;
+        }
+      }
+    }
+
+    try {
+      await writeImportData(projects, marks, peaks, assets, replace);
+    } catch (err) {
+      showBanner('匯入失敗，原有資料已保留：' + (err && (err.name || err.message) || '未知錯誤'));
+      if (replace) await loadLibrary();
+      return;
+    }
+
+    if (state.view === 'editor') leaveEditor();
+    else await loadLibrary();
+    hideBanner();
+    notifyChange();
+    showToast('已匯入 ' + projects.length + ' 個專案');
+  }
+
+  function normalizeProject(raw) {
+    if (!raw || typeof raw !== 'object') return null;
+    const duration = Number(raw.duration);
+    if (!Number.isFinite(duration) || duration <= 0) return null;
+    const now = nowISO();
+    const name = String(raw.name || raw.fileName || '').trim().slice(0, CONFIG.maxName) || '未命名專案';
+    let start = clamp(Number(raw.trimStart) || 0, 0, duration);
+    let end = clamp(raw.trimEnd == null ? duration : Number(raw.trimEnd), 0, duration);
+    if (!(end - start >= 0.05)) { start = 0; end = duration; }
+    return {
+      id: typeof raw.id === 'string' && raw.id ? raw.id : uid(),
+      name,
+      fileName: String(raw.fileName || ''),
+      mime: String(raw.mime || ''),
+      size: Number(raw.size) || 0,
+      duration,
+      sampleRate: Number(raw.sampleRate) || 0,
+      channels: Number(raw.channels) || 0,
+      trimStart: round3(start),
+      trimEnd: round3(end),
+      hasAudio: raw.hasAudio !== false,
+      note: String(raw.note || '').slice(0, 500),
+      createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : now,
+      updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : now,
+      lastOpenedAt: typeof raw.lastOpenedAt === 'string' ? raw.lastOpenedAt : now,
+    };
+  }
+
+  function normalizeMark(raw, byId) {
+    if (!raw || typeof raw !== 'object') return null;
+    const projectId = String(raw.projectId || '');
+    const project = byId.get(projectId);
+    if (!project) return null;
+    const kind = raw.kind === 'region' ? 'region' : 'marker';
+    let start = clamp(Number(raw.start) || 0, 0, project.duration);
+    let end = null;
+    if (kind === 'region') {
+      end = clamp(Number(raw.end) || start + 1, 0, project.duration);
+      if (end - start < 0.05) {
+        end = Math.min(project.duration, start + 1);
+        if (end - start < 0.05) start = Math.max(0, end - 0.05);
+      }
+    }
+    const now = nowISO();
+    return {
+      id: typeof raw.id === 'string' && raw.id ? raw.id : uid(),
+      projectId,
+      kind,
+      start: round3(start),
+      end: kind === 'region' ? round3(end) : null,
+      label: String(raw.label || '').slice(0, CONFIG.maxLabel) || (kind === 'region' ? '區段' : '標記'),
+      note: String(raw.note || '').slice(0, CONFIG.maxNote),
+      color: COLORS.includes(raw.color) ? raw.color : 'blue',
+      include: kind === 'region' ? raw.include !== false : false,
+      createdAt: typeof raw.createdAt === 'string' ? raw.createdAt : now,
+      updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : now,
+    };
+  }
+
+  function normalizePeak(raw, byId) {
+    if (!raw || typeof raw !== 'object') return null;
+    const projectId = String(raw.projectId || raw.id || '');
+    const project = byId.get(projectId);
+    if (!project) return null;
+    let data = null;
+    try {
+      if (typeof raw.data === 'string') {
+        const bytes = base64ToBytes(raw.data);
+        data = new Int8Array(bytes.buffer, bytes.byteOffset, bytes.length);
+      } else if (Array.isArray(raw.data)) {
+        data = Int8Array.from(raw.data.map((v) => clamp(Number(v) || 0, -127, 127)));
+      } else if (raw.data && raw.data.buffer) {
+        data = new Int8Array(raw.data.buffer.slice(0));
+      }
+    } catch (_) {
+      data = null;
+    }
+    if (!data || !data.length) return null;
+    return {
+      id: projectId,
+      rate: Number(raw.rate) || CONFIG.peakRate,
+      data,
+      duration: project.duration,
+    };
+  }
+
+  /* ═════════ project actions ═════════ */
+  async function renameProjectFlow(project) {
+    state.editingProjectId = project.id;
+    projNameInput.value = project.name;
+    if (!dlgProject.open) dlgProject.showModal();
+    projNameInput.focus();
+    projNameInput.select();
+  }
+
+  async function saveProjectName(event) {
+    event.preventDefault();
+    const project = state.projects.find((p) => p.id === state.editingProjectId);
+    const name = projNameInput.value.trim().slice(0, CONFIG.maxName);
+    if (!project) { dlgProject.close(); return; }
+    if (!name) {
+      projNameInput.setCustomValidity('請輸入專案名稱');
+      projNameInput.reportValidity();
+      return;
+    }
+    projNameInput.setCustomValidity('');
+    project.name = name;
+    project.updatedAt = nowISO();
+    if (!await persist(() => putOne('projects', project), '改名失敗')) return;
+    dlgProject.close();
+    if (state.project && state.project.id === project.id) {
+      state.project.name = name;
+      updateProjectHeader();
+      document.title = name + ' · WaveCut Mini';
+    }
+    renderProjects();
+    notifyChange();
+    showToast('已更新專案名稱');
+  }
+
+  async function deleteProject(project) {
+    if (!project) return;
+    if (!confirm('刪除專案「' + truncate(project.name, 30) + '」與它的所有標註？\n\n刪除後 7 秒內可以復原。')) return;
+    let snapshot;
+    try {
+      const rows = await Promise.all([
+        marksByProject(project.id),
+        getOne('assets', project.id),
+        getOne('peaks', project.id),
+      ]);
+      snapshot = { project: Object.assign({}, project), marks: rows[0], asset: rows[1], peaks: rows[2] };
+    } catch (_) {
+      showBanner('讀取專案資料失敗，已取消刪除。');
+      return;
+    }
+    try {
+      await delOne('projects', project.id);
+      await delOne('assets', project.id);
+      await delOne('peaks', project.id);
+      const marks = snapshot.marks;
+      for (const m of marks) await delOne('marks', m.id);
+    } catch (err) {
+      showBanner('刪除失敗，請重新整理後再試。');
+      return;
+    }
+    state.projects = state.projects.filter((p) => p.id !== project.id);
+    state.allMarks = state.allMarks.filter((m) => m.projectId !== project.id);
+    renderProjects();
+    notifyChange();
+    showToast('已刪除「' + truncate(project.name, 18) + '」', '復原', async () => {
+      try {
+        await putOne('projects', snapshot.project);
+        if (snapshot.asset) await putOne('assets', snapshot.asset);
+        if (snapshot.peaks) await putOne('peaks', snapshot.peaks);
+        if (snapshot.marks.length) await putMany('marks', snapshot.marks);
+      } catch (err) {
+        showBanner('復原失敗，請重新整理後再試。');
+        return;
+      }
+      await loadLibrary();
+      notifyChange();
+      showToast('已復原專案');
+    });
+  }
+
+  async function relinkProject(file) {
+    if (!file || !state.project) return;
+    setLibStatus('');
+    let duration = 0;
+    const url = URL.createObjectURL(file);
+    try { duration = (await probeAudio(url)).duration; }
+    catch (_) { duration = 0; }
+    finally { URL.revokeObjectURL(url); }
+
+    if (!duration) {
+      showBanner('無法讀取這個音訊檔，請確認格式與檔案完整。');
+      return;
+    }
+    if (Math.abs(duration - state.duration) > 2) {
+      showBanner('音訊長度與專案不符（專案 ' + fmtTime(state.duration, false) + '，檔案 ' + fmtTime(duration, false) + '）。為避免標註位置錯亂，已取消。');
+      return;
+    }
+    if (file.size > CONFIG.maxFileMB * MB) {
+      showBanner('檔案超過 ' + CONFIG.maxFileMB + ' MB 上限。');
+      return;
+    }
+    try {
+      await putOne('assets', { id: state.project.id, blob: file, mime: file.type || '', name: file.name });
+    } catch (_) {
+      showBanner('音訊儲存失敗，可能是空間不足。');
+      return;
+    }
+    state.assetRow = { id: state.project.id, blob: file, mime: file.type || '', name: file.name };
+    state.project.hasAudio = true;
+    state.project.fileName = file.name;
+    state.project.size = file.size;
+    state.project.updatedAt = nowISO();
+    await persist(() => putOne('projects', state.project), '專案更新失敗');
+    attachAsset();
+    seek(state.currentTime);
+    if (!state.peaksRow) {
+      try {
+        const pk = await decodePeaks(file);
+        state.peaksRow = { id: state.project.id, rate: pk.rate, data: pk.data, duration: state.duration };
+        await putOne('peaks', state.peaksRow).catch(() => {});
+      } catch (_) {}
+    }
+    layoutWave();
+    renderProjects();
+    hideBanner();
+    showToast('已接回音訊檔');
+  }
+
+  async function clearAllData() {
+    const n = state.projects.length;
+    if (!confirm('確定清空全部 ' + n + ' 個專案與所有標註？此動作無法復原，建議先匯出備份。')) return;
+    try {
+      for (const store of STORES) await clearOne(store);
+    } catch (err) {
+      showBanner('清空失敗，請重新整理後再試。');
+      return;
+    }
+    state.projects = [];
+    state.allMarks = [];
+    if (state.view === 'editor') leaveEditor();
+    else await loadLibrary();
+    showToast('已清空所有資料');
+    notifyChange();
+  }
+
+  /* ═════════ events ═════════ */
+  let pendingPointer = null;
+
+  function timeAtClientX(clientX) {
+    const rect = waveSpacer.getBoundingClientRect();
+    const x = clientX - rect.left;
+    return clamp(x / state.pxPerSec, 0, state.duration || 0);
+  }
+
+  function startMarkDrag(event, mark, mode) {
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const original = { start: mark.start, end: mark.end };
+    const node = waveLayer.querySelector('.region[data-id="' + CSS.escape(mark.id) + '"]');
+    let moved = false;
+
+    const onMove = (ev) => {
+      const dx = ev.clientX - startX;
+      if (Math.abs(dx) > 2) moved = true;
+      const dt = dx / state.pxPerSec;
+      const minLen = 0.05;
+      let s = original.start;
+      let e = original.end;
+      if (mode === 'move') {
+        const len = original.end - original.start;
+        s = clamp(original.start + dt, 0, Math.max(0, state.duration - len));
+        e = s + len;
+      } else if (mode === 'start') {
+        s = clamp(original.start + dt, 0, original.end - minLen);
+      } else {
+        e = clamp(original.end + dt, original.start + minLen, state.duration);
+      }
+      mark.start = round3(s);
+      mark.end = round3(e);
+      if (node) {
+        node.style.left = (s * state.pxPerSec) + 'px';
+        node.style.width = Math.max(8, (e - s) * state.pxPerSec) + 'px';
+      }
+    };
+
+    const onUp = async () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      if (!moved) { renderWaveOverlays(); return; }
+      mark.updatedAt = nowISO();
+      const ok = await persist(() => putOne('marks', mark), '標註儲存失敗');
+      if (!ok) {
+        mark.start = original.start;
+        mark.end = original.end;
+      }
+      renderWaveOverlays();
+      renderMarkList();
+      notifyChange();
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
+
+  function startTrimDrag(event, which) {
+    event.preventDefault();
+    event.stopPropagation();
+    const startX = event.clientX;
+    const original = trimRange();
+    let moved = false;
+
+    const onMove = (ev) => {
+      const dt = (ev.clientX - startX) / state.pxPerSec;
+      if (Math.abs(ev.clientX - startX) > 1) moved = true;
+      if (which === 'in') {
+        setTrimStartValue(original.start + dt);
+      } else {
+        setTrimEndValue(original.end + dt);
+      }
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      if (moved) saveTrimDebounced();
+      layoutTrim();
+      drawWave();
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
+
+  function bindEvents() {
+    /* library */
+    btnPickAudio.addEventListener('click', () => {
+      state.importMode = 'new';
+      fileAudio.click();
+    });
+
+    fileAudio.addEventListener('change', async () => {
+      const file = fileAudio.files && fileAudio.files[0];
+      fileAudio.value = '';
+      if (!file) return;
+      if (state.importMode === 'relink') await relinkProject(file);
+      else await handleAudioFile(file);
+    });
+
+    btnRelink.addEventListener('click', () => {
+      state.importMode = 'relink';
+      fileAudio.click();
+    });
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('is-over');
+    });
+    dropzone.addEventListener('dragleave', (e) => {
+      if (!dropzone.contains(e.relatedTarget)) dropzone.classList.remove('is-over');
+    });
+    dropzone.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('is-over');
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file) await handleAudioFile(file);
+    });
+    window.addEventListener('dragover', (e) => { e.preventDefault(); });
+    window.addEventListener('drop', (e) => {
+      if (!e.target.closest || !e.target.closest('#dropzone')) e.preventDefault();
+    });
+
+    projectList.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const li = btn.closest('.pcard');
+      if (!li) return;
+      const project = state.projects.find((p) => p.id === li.dataset.id);
+      if (!project) return;
+      const act = btn.dataset.act;
+      if (act === 'open') openProject(project.id);
+      else if (act === 'rename') renameProjectFlow(project);
+      else if (act === 'del') deleteProject(project);
+    });
+
+    $('#btn-backup-full-lib').addEventListener('click', () => exportBackupFlow(true));
+    $('#btn-backup-lite-lib').addEventListener('click', () => exportBackupFlow(false));
+    $('#btn-import').addEventListener('click', () => fileBackup.click());
+    fileBackup.addEventListener('change', async () => {
+      const file = fileBackup.files && fileBackup.files[0];
+      fileBackup.value = '';
+      await importBackup(file);
+    });
+    $('#btn-reset').addEventListener('click', clearAllData);
+
+    /* header */
+    btnBack.addEventListener('click', leaveEditor);
+    btnTheme.addEventListener('click', cycleTheme);
+    btnHelp.addEventListener('click', openHelpDialog);
+    btnExport.addEventListener('click', openExportDialog);
+    bannerClose.addEventListener('click', hideBanner);
+    helpClose.addEventListener('click', () => dlgHelp.close());
+    helpX.addEventListener('click', () => dlgHelp.close());
+    exportX.addEventListener('click', () => dlgExport.close());
+    [dlgHelp, dlgExport].forEach((d) => {
+      d.addEventListener('click', (e) => { if (e.target === d) d.close(); });
+    });
+
+    /* transport */
+    btnPlay.addEventListener('click', togglePlay);
+    btnStop.addEventListener('click', () => {
+      pauseAudio();
+      seek(playbackStart());
+    });
+    btnBack5.addEventListener('click', () => seek(state.currentTime - 5, { follow: true }));
+    btnFwd5.addEventListener('click', () => seek(state.currentTime + 5, { follow: true }));
+
+    rateSel.addEventListener('change', () => {
+      state.rate = Number(rateSel.value) || 1;
+      audio.playbackRate = state.rate;
+      state.settings = Object.assign({}, state.settings, { rate: state.rate });
+      metaSet('settings', state.settings).catch(() => {});
+    });
+
+    btnLoop.addEventListener('click', () => {
+      state.loop = !state.loop;
+      btnLoop.setAttribute('aria-pressed', String(state.loop));
+      const tr = trimRange();
+      const trimmed = tr.start > 0.001 || tr.end < state.duration - 0.001;
+      const what = state.selection ? '選取範圍' : trimmed ? '裁切範圍' : '整段音訊';
+      showToast(state.loop ? '循環播放：' + what : '已關閉循環');
+    });
+
+    playTrim.addEventListener('change', () => {
+      state.playTrimEnabled = playTrim.checked;
+      if (state.playTrimEnabled) {
+        const tr = trimRange();
+        if (state.currentTime < tr.start || state.currentTime > tr.end) seek(tr.start);
+      }
+    });
+
+    scrub.addEventListener('input', () => {
+      state.scrubbing = true;
+      seek(Number(scrub.value));
+    });
+    scrub.addEventListener('change', () => { state.scrubbing = false; });
+    scrub.addEventListener('pointerup', () => { state.scrubbing = false; });
+    scrub.addEventListener('pointercancel', () => { state.scrubbing = false; });
+
+    trimStartInput.addEventListener('change', () => {
+      const v = parseTime(trimStartInput.value);
+      if (!Number.isFinite(v)) {
+        trimStartInput.value = fmtTime(trimRange().start);
+        showToast('請輸入有效時間，例如 1:23.500');
+        return;
+      }
+      setTrimStartValue(v);
+      saveTrimNow();
+    });
+    trimEndInput.addEventListener('change', () => {
+      const v = parseTime(trimEndInput.value);
+      if (!Number.isFinite(v)) {
+        trimEndInput.value = fmtTime(trimRange().end);
+        showToast('請輸入有效時間，例如 1:23.500');
+        return;
+      }
+      setTrimEndValue(v);
+      saveTrimNow();
+    });
+    trimStartInput.addEventListener('focus', () => trimStartInput.select());
+    trimEndInput.addEventListener('focus', () => trimEndInput.select());
+
+    btnSetIn.addEventListener('click', () => {
+      const t = round3(state.currentTime);
+      const tr = trimRange();
+      if (t >= tr.end - 0.05) {
+        state.project.trimEnd = Math.min(state.duration, t + 1);
+      }
+      state.project.trimStart = round3(clamp(t, 0, Math.max(0, (state.project.trimEnd || state.duration) - 0.05)));
+      commitTrim();
+      showToast('已設為裁切起點 · ' + fmtTime(state.project.trimStart));
+    });
+
+    btnSetOut.addEventListener('click', () => {
+      const t = round3(state.currentTime);
+      const tr = trimRange();
+      if (t <= tr.start + 0.05) {
+        state.project.trimStart = Math.max(0, t - 1);
+      }
+      state.project.trimEnd = round3(clamp(t, (state.project.trimStart || 0) + 0.05, state.duration));
+      commitTrim();
+      showToast('已設為裁切終點 · ' + fmtTime(state.project.trimEnd));
+    });
+
+    btnClearTrim.addEventListener('click', clearTrim);
+
+    /* waveform */
+    waveScroll.addEventListener('scroll', scheduleDraw);
+    zoomInBtn.addEventListener('click', () => zoomBy(1.4));
+    zoomOutBtn.addEventListener('click', () => zoomBy(1 / 1.4));
+    zoomFitBtn.addEventListener('click', fitZoom);
+
+    waveSpacer.addEventListener('pointerdown', (e) => {
+      if (!state.project) return;
+      if (e.target.closest('.marker, .region, .trim-handle')) return;
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      const t = timeAtClientX(e.clientX);
+      pendingPointer = {
+        x: e.clientX,
+        t0: t,
+        id: e.pointerId,
+        touch: e.pointerType !== 'mouse',
+        moved: false,
+        cancelled: false,
+      };
+      if (e.pointerType === 'mouse') {
+        e.preventDefault();
+        try { waveSpacer.setPointerCapture(e.pointerId); } catch (_) {}
+      }
+    });
+
+    waveSpacer.addEventListener('pointermove', (e) => {
+      if (!pendingPointer || e.pointerId !== pendingPointer.id) return;
+      const dx = e.clientX - pendingPointer.x;
+      if (pendingPointer.touch) {
+        if (Math.abs(dx) > 8) pendingPointer.cancelled = true;
+        return;
+      }
+      if (Math.abs(dx) < 3) return;
+      pendingPointer.moved = true;
+      const t = timeAtClientX(e.clientX);
+      state.selection = {
+        start: round3(Math.min(pendingPointer.t0, t)),
+        end: round3(Math.max(pendingPointer.t0, t)),
+      };
+      btnClearSelection.hidden = false;
+      drawWave();
+      if (e.cancelable) e.preventDefault();
+    });
+
+    waveSpacer.addEventListener('pointerup', (e) => {
+      if (!pendingPointer || e.pointerId !== pendingPointer.id) return;
+      const info = pendingPointer;
+      pendingPointer = null;
+      if (info.touch) {
+        if (info.cancelled) return;
+        seek(timeAtClientX(e.clientX));
+        state.selection = null;
+        btnClearSelection.hidden = true;
+        drawWave();
+        return;
+      }
+      try { waveSpacer.releasePointerCapture(e.pointerId); } catch (_) {}
+      if (!info.moved) {
+        seek(timeAtClientX(e.clientX));
+        state.selection = null;
+        btnClearSelection.hidden = true;
+        drawWave();
+        return;
+      }
+      if (state.selection && state.selection.end - state.selection.start < 0.05) {
+        state.selection = null;
+      }
+      btnClearSelection.hidden = !state.selection;
+      drawWave();
+      if (state.selection) {
+        showToast('已選取 ' + fmtTime(state.selection.end - state.selection.start, false) + '，按 R 建立區段', '建立區段', addRegion);
+      }
+    });
+
+    waveSpacer.addEventListener('pointercancel', () => { pendingPointer = null; });
+
+    btnClearSelection.addEventListener('click', () => {
+      state.selection = null;
+      btnClearSelection.hidden = true;
+      drawWave();
+    });
+
+    waveLayer.addEventListener('pointerdown', (e) => {
+      const region = e.target.closest('.region');
+      const marker = e.target.closest('.marker');
+      if (region) {
+        const mark = state.marks.find((m) => m.id === region.dataset.id);
+        if (!mark) return;
+        selectMark(mark.id);
+        const edge = e.target.closest('.region__edge');
+        startMarkDrag(e, mark, edge ? (edge.dataset.edge === 'start' ? 'start' : 'end') : 'move');
+        return;
+      }
+      if (marker) {
+        const mark = state.marks.find((m) => m.id === marker.dataset.id);
+        if (!mark) return;
+        selectMark(mark.id);
+        seek(mark.start);
+      }
+    });
+
+    waveLayer.addEventListener('dblclick', (e) => {
+      const node = e.target.closest('.region, .marker');
+      if (!node) return;
+      const mark = state.marks.find((m) => m.id === node.dataset.id);
+      if (mark) openMarkDialog(mark);
+    });
+
+    trimHandleIn.addEventListener('pointerdown', (e) => startTrimDrag(e, 'in'));
+    trimHandleOut.addEventListener('pointerdown', (e) => startTrimDrag(e, 'out'));
+
+    trimHandleIn.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      e.stopPropagation();
+      const step = e.shiftKey ? 0.1 : 1;
+      setTrimStartValue(trimRange().start + (e.key === 'ArrowLeft' ? -step : step));
+      saveTrimDebounced();
+    });
+    trimHandleOut.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      e.stopPropagation();
+      const step = e.shiftKey ? 0.1 : 1;
+      setTrimEndValue(trimRange().end + (e.key === 'ArrowLeft' ? -step : step));
+      saveTrimDebounced();
+    });
+
+    /* marks */
+    btnAddMarker.addEventListener('click', addMarker);
+    btnAddRegion.addEventListener('click', addRegion);
+
+    markSearch.addEventListener('input', debounce(() => {
+      state.query = markSearch.value;
+      renderMarkList();
+    }, 150));
+
+    markFilter.addEventListener('change', () => {
+      state.filter = markFilter.value;
+      renderMarkList();
+    });
+
+    markList.addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-act]');
+      if (!btn) return;
+      const row = btn.closest('.mrow');
+      const mark = state.marks.find((m) => m.id === row.dataset.id);
+      if (!mark) return;
+      const act = btn.dataset.act;
+      if (act === 'jump') {
+        selectMark(mark.id, { scroll: true });
+        seek(mark.start, { follow: true });
+      } else if (act === 'edit') {
+        selectMark(mark.id);
+        openMarkDialog(mark);
+      } else if (act === 'del') {
+        deleteMark(mark);
+      }
+    });
+
+    markList.addEventListener('change', (e) => {
+      const box = e.target.closest('input[data-act="include"]');
+      if (!box) return;
+      const row = box.closest('.mrow');
+      const mark = state.marks.find((m) => m.id === row.dataset.id);
+      if (mark) toggleInclude(mark, box.checked);
+    });
+
+    /* dialogs */
+    formMark.addEventListener('submit', saveMarkDialog);
+    mkCancel.addEventListener('click', () => dlgMark.close());
+    dlgMark.addEventListener('close', () => { state.editingMarkId = null; });
+
+    btnRename.addEventListener('click', () => {
+      if (state.project) renameProjectFlow(state.project);
+    });
+    formProject.addEventListener('submit', saveProjectName);
+    projCancel.addEventListener('click', () => dlgProject.close());
+
+    $$('input[name="wav-mode"]').forEach((r) => r.addEventListener('change', updateWavHint));
+    fadeMsSel.addEventListener('change', updateWavHint);
+    btnWav.addEventListener('click', exportWavFlow);
+    btnCsv.addEventListener('click', exportCsv);
+    btnJson.addEventListener('click', exportProjectJson);
+    btnBackupFull.addEventListener('click', () => exportBackupFlow(true));
+    btnBackupLite.addEventListener('click', () => exportBackupFlow(false));
+    exportClose.addEventListener('click', () => dlgExport.close());
+    wavName.addEventListener('focus', () => wavName.select());
+
+    /* keyboard */
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const tag = (e.target && e.target.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || tag === 'dialog') return;
+      if (e.target && e.target.isContentEditable) return;
+      if (document.querySelector('dialog[open]')) return;
+      const onControl = e.target && e.target.closest && e.target.closest('button, a, summary, [role="button"]');
+      if (onControl && (e.key === ' ' || e.key === 'Enter')) return;
+
+      if (state.view === 'library') {
+        if (e.key === '?') { e.preventDefault(); openHelpDialog(); }
+        return;
+      }
+      if (!state.project) return;
+
+      switch (e.key) {
+        case ' ':
+          e.preventDefault();
+          togglePlay();
+          break;
+        case 'ArrowLeft':
+          e.preventDefault();
+          seek(state.currentTime - (e.shiftKey ? 5 : 1), { follow: true });
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          seek(state.currentTime + (e.shiftKey ? 5 : 1), { follow: true });
+          break;
+        case 'm': case 'M':
+          e.preventDefault();
+          addMarker();
+          break;
+        case 'r': case 'R':
+          e.preventDefault();
+          addRegion();
+          break;
+        case 'i': case 'I':
+          e.preventDefault();
+          btnSetIn.click();
+          break;
+        case 'o': case 'O':
+          e.preventDefault();
+          btnSetOut.click();
+          break;
+        case 'l': case 'L':
+          e.preventDefault();
+          btnLoop.click();
+          break;
+        case 'f': case 'F':
+          e.preventDefault();
+          fitZoom();
+          break;
+        case '+': case '=':
+          e.preventDefault();
+          zoomBy(1.4);
+          break;
+        case '-': case '_':
+          e.preventDefault();
+          zoomBy(1 / 1.4);
+          break;
+        case 'Enter':
+          if (state.selectedId) {
+            e.preventDefault();
+            const m = state.marks.find((x) => x.id === state.selectedId);
+            if (m) openMarkDialog(m);
+          }
+          break;
+        case 'Delete': case 'Backspace':
+          e.preventDefault();
+          if (state.selectedId) {
+            const m = state.marks.find((x) => x.id === state.selectedId);
+            if (m) deleteMark(m);
+          }
+          break;
+        case 'Escape':
+          state.selection = null;
+          btnClearSelection.hidden = true;
+          selectMark(null);
+          drawWave();
+          break;
+        case '?':
+          e.preventDefault();
+          openHelpDialog();
+          break;
+        default:
+          break;
+      }
+    });
+
+    /* resize / theme / storage */
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        if (state.view === 'editor') {
+          if (state.autoFit) fitZoom();
+          else {
+            layoutWave();
+            renderPlayhead();
+          }
+        }
+      }, 120);
+    });
+
+    if (window.ResizeObserver) {
+      const ro = new ResizeObserver(() => {
+        if (state.view === 'editor' && state.project) {
+          if (state.autoFit) fitZoom();
+          else layoutWave();
+        }
+      });
+      ro.observe(waveScroll);
+    }
+
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+      if (state.theme === 'auto') applyTheme('auto');
+    });
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && state.project) saveTrimNow();
+    });
+
+    window.addEventListener('beforeunload', () => {
+      if (state.project) saveTrimNow();
+      pauseAudio();
+    });
+  }
+
+  /* ═════════ broadcast ═════════ */
+  let channel = null;
+  function notifyChange() {
+    if (!channel) return;
+    try { channel.postMessage({ type: 'changed', at: Date.now() }); } catch (_) {}
+  }
+
+  /* ═════════ boot ═════════ */
+  function renderStorageMode() {
+    if (idbOK) {
+      storeMode.textContent = '資料存於 IndexedDB';
+    } else {
+      storeMode.textContent = '記憶體模式：關閉後資料消失';
+    }
+  }
+
+  let cachedTheme = 'auto';
+  let hasCachedTheme = false;
+
+  async function boot() {
+    try {
+      const stored = localStorage.getItem('wavecut-theme');
+      if (stored) { cachedTheme = stored; hasCachedTheme = true; }
+    } catch (_) {}
+    applyTheme(cachedTheme);
+    bindEvents();
+
+    const hasWebAudio = Boolean(
+      window.AudioContext || window.webkitAudioContext ||
+      window.OfflineAudioContext || window.webkitOfflineAudioContext
+    );
+    if (!hasWebAudio) {
+      btnPickAudio.disabled = true;
+      setLibStatus('此瀏覽器不支援 Web Audio，無法匯入新音訊；仍可匯入備份檢視標註。');
+      showBanner('這個瀏覽器沒有音訊解碼功能（缺少 Web Audio），無法匯入音訊。請改用 Chrome、Edge 或 Firefox。');
+    }
+
+    try {
+      await db();
+    } catch (err) {
+      idbOK = false;
+      storeMode.textContent = '記憶體模式：關閉後資料消失';
+      showBanner('目前無法使用瀏覽器資料庫（常見於 file:// 或無痕模式），資料不會保存。請用「資料備份 → 匯出」保存，或改用本機靜態伺服器開啟。');
+    }
+
+    if (idbOK) {
+      try {
+        if (navigator.storage && navigator.storage.persist) {
+          // 不要 await：部分瀏覽器會跳權限詢問，等待會讓啟動卡住
+          navigator.storage.persisted()
+            .then((persisted) => (persisted ? true : navigator.storage.persist()))
+            .catch(() => {});
+        }
+      } catch (_) {}
+    }
+    renderStorageMode();
+
+    try {
+      state.settings = (await metaGet('settings', {})) || {};
+      // localStorage 是同步鏡像，通常比剛寫入的 meta 新；有值就以它為準
+      if (!hasCachedTheme && state.settings.theme) applyTheme(state.settings.theme);
+      if (state.settings.rate) {
+        state.rate = Number(state.settings.rate) || 1;
+        rateSel.value = String(state.rate);
+      }
+    } catch (_) {}
+
+    if ('BroadcastChannel' in window) {
+      try {
+        channel = new BroadcastChannel(CONFIG.dbName);
+        channel.addEventListener('message', (e) => {
+          if (e.data && e.data.type === 'changed' && state.view === 'library' && document.visibilityState === 'visible') {
+            loadLibrary();
+          }
+        });
+      } catch (_) { channel = null; }
+    }
+
+    await loadLibrary();
+  }
+
+  boot();
+})();
+</script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

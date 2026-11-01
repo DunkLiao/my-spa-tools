@@ -1,0 +1,2541 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>樹狀「五個為什麼」障礙排解筆記 | 5 Whys RCA Tree</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌳</text></svg>">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-elevated: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --border-focus: #3b82f6;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --danger: #ef4444;
+      --danger-light: #fef2f2;
+      --success: #10b981;
+      --success-light: #ecfdf5;
+      --warning: #f59e0b;
+      --warning-light: #fffbeb;
+      --purple: #8b5cf6;
+      --purple-light: #f5f3ff;
+      --radius-sm: 6px;
+      --radius: 10px;
+      --radius-lg: 14px;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --line-color: #cbd5e1;
+      --canvas-dot: #cbd5e1;
+      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", sans-serif;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0b1120;
+      --surface: #1e293b;
+      --surface-elevated: #283548;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+      --border-focus: #60a5fa;
+      --primary: #3b82f6;
+      --primary-hover: #60a5fa;
+      --primary-light: #1e3a8a33;
+      --danger: #f87171;
+      --danger-light: #7f1d1d33;
+      --success: #34d399;
+      --success-light: #064e3b33;
+      --warning: #fbbf24;
+      --warning-light: #78350f33;
+      --purple: #a78bfa;
+      --purple-light: #4c1d9533;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.4);
+      --shadow-lg: 0 12px 20px -3px rgb(0 0 0 / 0.5);
+      --line-color: #475569;
+      --canvas-dot: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-shrink: 0;
+      z-index: 30;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 700;
+      font-size: 1.15rem;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+    }
+    .brand-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #2563eb, #8b5cf6);
+      color: white;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+    }
+    .brand-sub {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-left: 0.25rem;
+      padding: 2px 6px;
+      background: var(--bg);
+      border-radius: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .case-picker-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+      max-width: 380px;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons & Inputs */
+    button, .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      padding: 0.45rem 0.75rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.825rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      user-select: none;
+    }
+    button:hover:not(:disabled), .btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--border-focus);
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    button.btn-primary {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    button.btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+    }
+    button.btn-danger {
+      color: var(--danger);
+      border-color: var(--border);
+    }
+    button.btn-danger:hover {
+      background: var(--danger-light);
+      border-color: var(--danger);
+    }
+    button.btn-sm {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.75rem;
+    }
+    button.btn-icon {
+      padding: 0.45rem;
+      aspect-ratio: 1;
+    }
+
+    input, select, textarea {
+      padding: 0.45rem 0.65rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+      font-family: inherit;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 2px var(--primary-light);
+    }
+
+    /* Sub-header / Case Meta Bar */
+    .case-meta-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0.65rem 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-shrink: 0;
+      z-index: 20;
+    }
+    .case-title-area {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex: 1;
+      min-width: 0;
+    }
+    .case-title-text {
+      font-size: 1.05rem;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .badge {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      white-space: nowrap;
+    }
+    .badge-investigating { background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary); }
+    .badge-mitigated { background: var(--warning-light); color: var(--warning); border: 1px solid var(--warning); }
+    .badge-resolved { background: var(--success-light); color: var(--success); border: 1px solid var(--success); }
+    .badge-p1 { background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-p2 { background: var(--warning-light); color: var(--warning); border: 1px solid var(--warning); }
+    .badge-p3 { background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary); }
+
+    .view-toggles {
+      display: flex;
+      align-items: center;
+      background: var(--bg);
+      padding: 2px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .view-btn {
+      border: none;
+      background: transparent;
+      padding: 0.3rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .view-btn.active {
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Main Workspace */
+    .workspace {
+      flex: 1;
+      display: flex;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Tree View / Canvas */
+    .canvas-viewport {
+      flex: 1;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+      cursor: grab;
+      user-select: none;
+      background-color: var(--bg);
+      background-image: radial-gradient(var(--canvas-dot) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    .canvas-viewport:active {
+      cursor: grabbing;
+    }
+
+    .canvas-transform {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform-origin: 0 0;
+      min-width: 100%;
+      min-height: 100%;
+      padding: 60px 100px 200px 60px;
+    }
+
+    svg.connections-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1;
+      overflow: visible;
+    }
+
+    .tree-wrapper {
+      position: relative;
+      z-index: 2;
+      display: inline-flex;
+    }
+
+    /* Horizontal Tree Layout */
+    .tree-layout-horizontal {
+      display: flex;
+      align-items: center;
+    }
+    .tree-layout-horizontal .tree-node-group {
+      display: flex;
+      align-items: center;
+    }
+    .tree-layout-horizontal .tree-children-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-left: 3.5rem;
+      position: relative;
+    }
+
+    /* Vertical Tree Layout */
+    .tree-layout-vertical {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .tree-layout-vertical .tree-node-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .tree-layout-vertical .tree-children-container {
+      display: flex;
+      flex-direction: row;
+      gap: 2rem;
+      margin-top: 3.5rem;
+      position: relative;
+    }
+
+    /* Tree Node Card */
+    .tree-node-card {
+      width: 290px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 0.85rem;
+      position: relative;
+      cursor: default;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      user-select: text;
+    }
+    .tree-node-card:hover {
+      box-shadow: var(--shadow-lg);
+      border-color: var(--border-focus);
+    }
+    .tree-node-card.root-problem {
+      border-color: #3b82f6;
+      border-width: 2px;
+      background: linear-gradient(to bottom right, var(--surface), var(--primary-light));
+      width: 320px;
+    }
+    .tree-node-card.is-root-cause {
+      border-color: #8b5cf6;
+      border-width: 2px;
+      box-shadow: 0 0 0 3px var(--purple-light), var(--shadow);
+      background: linear-gradient(to bottom right, var(--surface), var(--purple-light));
+    }
+    .tree-node-card.status-refuted {
+      opacity: 0.65;
+      background: var(--bg);
+      border-style: dashed;
+    }
+    .tree-node-card.status-refuted .node-title {
+      text-decoration: line-through;
+    }
+
+    /* Node Header */
+    .node-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      margin-bottom: 0.45rem;
+    }
+    .node-depth-badge {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 1px 7px;
+      border-radius: 4px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+    }
+    .depth-root { background: #3b82f6; color: white; border-color: #3b82f6; }
+    .depth-w1 { background: #0284c7; color: white; border-color: #0284c7; }
+    .depth-w2 { background: #0d9488; color: white; border-color: #0d9488; }
+    .depth-w3 { background: #16a34a; color: white; border-color: #16a34a; }
+    .depth-w4 { background: #d97706; color: white; border-color: #d97706; }
+    .depth-w5 { background: #dc2626; color: white; border-color: #dc2626; }
+    .depth-deep { background: #4f46e5; color: white; border-color: #4f46e5; }
+
+    .node-status-pill {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 10px;
+    }
+    .pill-confirmed { background: var(--success-light); color: var(--success); }
+    .pill-refuted { background: var(--bg); color: var(--text-muted); border: 1px solid var(--border); }
+    .pill-investigating { background: var(--primary-light); color: var(--primary); }
+    .pill-root-cause { background: var(--purple-light); color: var(--purple); font-weight: 700; }
+
+    .node-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--text);
+      margin-bottom: 0.4rem;
+      word-break: break-word;
+    }
+    .node-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .node-evidence {
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: 0.35rem 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text);
+      border-left: 3px solid var(--primary);
+      margin-bottom: 0.5rem;
+    }
+    .node-actions-counter {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--purple);
+      background: var(--purple-light);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+
+    /* Node Card Footer Actions */
+    .node-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid var(--border);
+      padding-top: 0.45rem;
+      margin-top: 0.25rem;
+    }
+    .node-tools {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .btn-node-tool {
+      border: none;
+      background: transparent;
+      padding: 0.25rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+    .btn-node-tool:hover {
+      background: var(--bg);
+      color: var(--text);
+    }
+    .btn-node-tool.tool-add {
+      color: var(--primary);
+      font-weight: 600;
+    }
+    .btn-node-tool.tool-add:hover {
+      background: var(--primary-light);
+    }
+
+    .btn-collapse-toggle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: bold;
+      cursor: pointer;
+      position: absolute;
+      z-index: 5;
+    }
+    .btn-collapse-toggle:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    /* Collapse button position for horizontal */
+    .tree-layout-horizontal .btn-collapse-toggle {
+      right: -10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    /* Collapse button position for vertical */
+    .tree-layout-vertical .btn-collapse-toggle {
+      bottom: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    /* Canvas Floating Overlay Controls */
+    .canvas-controls {
+      position: absolute;
+      bottom: 1.25rem;
+      right: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      background: var(--surface);
+      padding: 0.4rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      z-index: 25;
+    }
+    .canvas-controls button {
+      padding: 0.4rem;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .canvas-controls button:hover {
+      background: var(--bg);
+    }
+
+    .canvas-stats-overlay {
+      position: absolute;
+      top: 1rem;
+      left: 1rem;
+      background: var(--surface);
+      padding: 0.5rem 0.85rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+      background: color-mix(in srgb, var(--surface) 90%, transparent);
+    }
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+    .stat-val {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* Outline View & Countermeasures View */
+    .tab-panel-full {
+      flex: 1;
+      height: 100%;
+      overflow-y: auto;
+      padding: 2rem 1.5rem;
+      max-width: 960px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Outline view styling */
+    .outline-tree-item {
+      margin-left: 1.5rem;
+      border-left: 2px solid var(--border);
+      padding-left: 1rem;
+      margin-bottom: 0.75rem;
+      position: relative;
+    }
+    .outline-node-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.8rem;
+      box-shadow: var(--shadow-sm);
+    }
+    .outline-node-row:hover {
+      border-color: var(--border-focus);
+    }
+
+    /* Countermeasures Table */
+    .cm-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border);
+    }
+    .cm-table th, .cm-table td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      font-size: 0.84rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .cm-table th {
+      background: var(--bg);
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+    }
+    .cm-table tr:last-child td {
+      border-bottom: none;
+    }
+    .cm-table tr:hover td {
+      background: var(--primary-light);
+    }
+
+    /* Dialogs / Modals */
+    dialog {
+      margin: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      color: var(--text);
+      padding: 1.5rem;
+      max-width: 580px;
+      width: 90%;
+      box-shadow: var(--shadow-lg);
+      z-index: 100;
+    }
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.45);
+      backdrop-filter: blur(3px);
+    }
+    .dialog-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .dialog-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    .form-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      color: var(--text-muted);
+    }
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .dialog-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Action items inside Node Dialog */
+    .node-action-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.45rem;
+      background: var(--bg);
+      padding: 0.4rem 0.6rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+    .node-action-item input[type="text"] {
+      flex: 1;
+    }
+
+    /* Toast Notification */
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      z-index: 99999;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 0.65rem 1rem;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      animation: toastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      pointer-events: auto;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Report Markdown / Preview Modal */
+    #report-dialog {
+      max-width: 820px;
+    }
+    .report-preview-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      max-height: 480px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      color: var(--text);
+      user-select: text;
+    }
+
+    /* Cases Drawer / List Modal */
+    .case-card-item {
+      padding: 0.85rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 0.65rem;
+      background: var(--surface);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      transition: all 0.15s ease;
+    }
+    .case-card-item:hover {
+      border-color: var(--border-focus);
+      background: var(--bg);
+    }
+    .case-card-item.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    /* Help Tooltip */
+    .help-hint {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      cursor: help;
+      margin-left: 0.25rem;
+    }
+
+    /* Print: 只列印報告 */
+    @media print {
+      body > *:not(#report-dialog) { display: none !important; }
+      #report-dialog { position: static; display: block; max-width: none; width: 100%; border: none; box-shadow: none; }
+      #report-dialog .dialog-header, #report-dialog .dialog-actions, #report-dialog button { display: none !important; }
+      .report-preview-box { max-height: none; overflow: visible; border: none; }
+      body { height: auto; overflow: visible; }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      header { padding: 0.5rem 0.75rem; flex-wrap: wrap; }
+      .case-picker-wrap { order: 3; max-width: 100%; width: 100%; }
+      .case-meta-bar { padding: 0.5rem 0.75rem; flex-wrap: wrap; }
+      .canvas-transform { padding: 40px 20px 100px 20px; }
+      .tree-node-card { width: 250px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header>
+    <div class="brand" id="btn-brand-home" title="樹狀「五個為什麼」障礙排解筆記">
+      <div class="brand-icon">🌳</div>
+      <div>
+        <span>5 Whys RCA</span>
+        <span class="brand-sub">障礙排解筆記</span>
+      </div>
+    </div>
+
+    <!-- Case Selector -->
+    <div class="case-picker-wrap">
+      <select id="case-select" style="flex:1; font-weight: 600;" title="切換排解案例"></select>
+      <button id="btn-new-case" class="btn-primary" title="新增障礙排解案例">＋ 新案例</button>
+      <button id="btn-manage-cases" class="btn-icon" title="管理所有案例清單">📁</button>
+    </div>
+
+    <!-- Global Toolbar -->
+    <div class="toolbar">
+      <button id="btn-demo-data" title="載入實戰範本案例">💡 載入範本</button>
+      <button id="btn-export-report" title="產生 RCA 檢討分析報告">📑 生成報告</button>
+      <button id="btn-export-json" title="匯出完整備份 JSON">📥 匯出</button>
+      <button id="btn-import-json" title="匯入備份 JSON">📤 匯入</button>
+      <input type="file" id="file-import-input" accept=".json" style="display:none;">
+      <button id="btn-theme-toggle" class="btn-icon" title="切換深淺模式">🌓</button>
+    </div>
+  </header>
+
+  <!-- Case Metadata & View Switcher Bar -->
+  <div class="case-meta-bar">
+    <div class="case-title-area">
+      <span id="badge-severity" class="badge badge-p1">P1</span>
+      <span id="badge-status" class="badge badge-investigating">調查中</span>
+      <h2 id="current-case-title" class="case-title-text">載入中...</h2>
+      <button id="btn-edit-case-meta" class="btn-icon btn-sm" title="編輯案例資訊與問題定義">✏️</button>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:0.75rem;">
+      <!-- Tree orientation switch (Horizontal / Vertical) -->
+      <div class="view-toggles" id="orientation-toggle" title="切換樹狀圖展開方向">
+        <button class="view-btn active" data-orientation="horizontal">➡️ 橫向樹</button>
+        <button class="view-btn" data-orientation="vertical">⬇️ 縱向樹</button>
+      </div>
+
+      <!-- Main View Switcher -->
+      <div class="view-toggles" id="view-mode-toggle">
+        <button class="view-btn active" data-view="tree">🌲 樹狀圖</button>
+        <button class="view-btn" data-view="outline">📑 大綱清單</button>
+        <button class="view-btn" data-view="countermeasures">🛡️ 改善對策 (<span id="cm-count-badge">0</span>)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Workspace Container -->
+  <main class="workspace">
+
+    <!-- View 1: Interactive Infinite Tree Canvas -->
+    <div id="view-tree-container" class="canvas-viewport">
+      <!-- Live Stats Overlay -->
+      <div class="canvas-stats-overlay">
+        <div class="stat-item" title="五個為什麼最大探究深度">
+          <span>🔍 最大深度：</span><span class="stat-val" id="stat-max-depth">0</span>
+        </div>
+        <div class="stat-item" title="推論與因果假設節點總數">
+          <span>🌿 假設節點：</span><span class="stat-val" id="stat-total-nodes">0</span>
+        </div>
+        <div class="stat-item" title="已鎖定的根本真因">
+          <span>🎯 根本真因：</span><span class="stat-val" id="stat-root-causes">0</span>
+        </div>
+        <div class="stat-item" title="滾動滑鼠滾輪縮放，按住畫布空白處拖曳平移">
+          <span style="opacity:0.7;">💡 滾輪縮放 / 拖曳平移</span>
+        </div>
+      </div>
+
+      <!-- Canvas zoom/pan container -->
+      <div id="canvas-transform" class="canvas-transform">
+        <svg id="connections-svg" class="connections-svg"></svg>
+        <div id="tree-root-wrapper" class="tree-wrapper tree-layout-horizontal">
+          <!-- Tree Nodes Rendered Dynamically Here -->
+        </div>
+      </div>
+
+      <!-- Canvas Controls Floating Overlay -->
+      <div class="canvas-controls">
+        <button id="btn-zoom-in" title="放大 (+)">🔍+</button>
+        <button id="btn-zoom-out" title="縮小 (-)">🔍-</button>
+        <button id="btn-zoom-reset" title="重置視野 (1:1)">🎯</button>
+        <button id="btn-add-w1-direct" title="為核心問題新增一條直接原因分支 (Why 1)">＋原因</button>
+      </div>
+    </div>
+
+    <!-- View 2: Indented Outline View -->
+    <div id="view-outline-container" class="tab-panel-full" style="display: none;">
+      <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 style="font-size: 1.1rem; font-weight: 700;">📑 因果推論大綱結構</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">層級化展示核心障礙現象與各層級「為什麼」之驗證狀態與論證細節</p>
+        </div>
+        <button id="btn-expand-all-outline" class="btn-sm">展開全部</button>
+      </div>
+      <div id="outline-content"></div>
+    </div>
+
+    <!-- View 3: Countermeasures & Actions View -->
+    <div id="view-countermeasures-container" class="tab-panel-full" style="display: none;">
+      <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 style="font-size: 1.1rem; font-weight: 700;">🛡️ 根本原因與改善預防對策 (CAPA)</h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">針對各分支探究出的根本原因 (Root Cause)，制定預防再次發生的具體防範行動</p>
+        </div>
+      </div>
+      <div id="countermeasures-content"></div>
+    </div>
+
+  </main>
+
+  <!-- Modal 1: Node Edit Dialog -->
+  <dialog id="node-dialog">
+    <div class="dialog-header">
+      <div class="dialog-title" id="node-dialog-title">編輯因果假設節點</div>
+      <button class="btn-icon" onclick="document.getElementById('node-dialog').close()">✕</button>
+    </div>
+    <form id="node-form">
+      <input type="hidden" id="node-form-id">
+      <input type="hidden" id="node-form-parent-id">
+
+      <div class="form-group">
+        <label for="node-form-title">
+          為什麼會發生？原因 / 假設敘述
+          <span style="color:var(--danger)">*</span>
+        </label>
+        <textarea id="node-form-title" rows="2" required placeholder="例如：資料庫連線集區（Connection Pool）全數耗盡"></textarea>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="node-form-status">查證與驗證狀態</label>
+          <select id="node-form-status">
+            <option value="investigating">🔍 調查中 (Investigating)</option>
+            <option value="confirmed">✅ 已證實是真因 (Confirmed)</option>
+            <option value="refuted">❌ 已排除 / 非此原因 (Refuted)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="display:flex; align-items:center; gap:0.4rem; height:100%; padding-top:1.4rem;">
+            <input type="checkbox" id="node-form-is-root-cause" style="width:16px; height:16px;">
+            <span style="font-weight:700; color:var(--purple);">🎯 標記為根本原因 (Root Cause)</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="node-form-evidence">
+          事實證據 / Log 紀錄 / 觀測數據 (Evidence & Facts)
+        </label>
+        <textarea id="node-form-evidence" rows="2" placeholder="例如：Grafana 監控顯示 Active Connection 在 14:02 達到上限 200，API 出現 PoolTimeoutException"></textarea>
+      </div>
+
+      <!-- Action Items Section -->
+      <div class="form-group" style="margin-top: 1rem; border-top: 1px dashed var(--border); padding-top: 0.75rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+          <label style="margin-bottom:0;">預防改善對策 (Action Items / Countermeasures)</label>
+          <button type="button" id="btn-add-action-item" class="btn-sm">＋ 新增對策行動</button>
+        </div>
+        <div id="node-actions-list">
+          <!-- Dynamic Action Items Input -->
+        </div>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" onclick="document.getElementById('node-dialog').close()">取消</button>
+        <button type="submit" class="btn-primary">儲存節點</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal 2: Case Metadata Dialog -->
+  <dialog id="case-meta-dialog">
+    <div class="dialog-header">
+      <div class="dialog-title" id="case-dialog-title">障礙排解案例基本資訊</div>
+      <button class="btn-icon" onclick="document.getElementById('case-meta-dialog').close()">✕</button>
+    </div>
+    <form id="case-meta-form">
+      <input type="hidden" id="case-form-id">
+
+      <div class="form-group">
+        <label for="case-form-title">案例名稱 / 障礙主題 <span style="color:var(--danger)">*</span></label>
+        <input type="text" id="case-form-title" required placeholder="例如：線上結帳服務於促銷期間發生 504 Gateway Timeout">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="case-form-status">處理狀態</label>
+          <select id="case-form-status">
+            <option value="investigating">🔴 調查中 (Investigating)</option>
+            <option value="mitigated">🟡 暫時緩解 (Mitigated)</option>
+            <option value="resolved">🟢 根本解決 (Resolved)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="case-form-severity">影響嚴重度等級</label>
+          <select id="case-form-severity">
+            <option value="P1">P1 - 核心業務中斷 (Critical)</option>
+            <option value="P2">P2 - 主要功能受損 (Major)</option>
+            <option value="P3">P3 - 一般效能/部分異常 (Minor)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="case-form-detected-at">發生 / 偵測時間</label>
+          <input type="datetime-local" id="case-form-detected-at">
+        </div>
+        <div class="form-group">
+          <label for="case-form-owner">主責調查人 / 團隊</label>
+          <input type="text" id="case-form-owner" placeholder="例如：SRE 基礎架構小組 / 結帳核心隊">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="case-form-problem">
+          核心問題現象描述 (Problem Statement - 5W2H)
+          <span style="color:var(--danger)">*</span>
+        </label>
+        <textarea id="case-form-problem" rows="3" required placeholder="發生了什麼？何時發生？影響範圍？實際表現與預期落差？"></textarea>
+      </div>
+
+      <div class="dialog-actions">
+        <button type="button" onclick="document.getElementById('case-meta-dialog').close()">取消</button>
+        <button type="submit" class="btn-primary">儲存案例</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Modal 3: Manage Cases Dialog -->
+  <dialog id="manage-cases-dialog" style="max-width: 640px;">
+    <div class="dialog-header">
+      <div class="dialog-title">障礙排解案例列表</div>
+      <button class="btn-icon" onclick="document.getElementById('manage-cases-dialog').close()">✕</button>
+    </div>
+    <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 0.8rem; color: var(--text-muted);">本機 IndexedDB 安全儲存之所有 RCA 筆記</span>
+      <button id="btn-create-case-inside-dialog" class="btn-primary btn-sm">＋ 建立新案例</button>
+    </div>
+    <div id="cases-list-container" style="max-height: 400px; overflow-y: auto;">
+      <!-- Rendered dynamically -->
+    </div>
+    <div class="dialog-actions">
+      <button type="button" onclick="document.getElementById('manage-cases-dialog').close()">關閉</button>
+    </div>
+  </dialog>
+
+  <!-- Modal 4: RCA Report Dialog (Markdown / Copy) -->
+  <dialog id="report-dialog">
+    <div class="dialog-header">
+      <div class="dialog-title">📋 產生 RCA 檢討分析報告</div>
+      <button class="btn-icon" onclick="document.getElementById('report-dialog').close()">✕</button>
+    </div>
+    <div style="margin-bottom: 0.85rem; display: flex; justify-content: space-between; align-items: center;">
+      <span style="font-size: 0.82rem; color: var(--text-muted);">已自動將樹狀因果鏈與對策編排為標準 Postmortem 格式</span>
+      <div style="display:flex; gap:0.4rem;">
+        <button id="btn-copy-report-md" class="btn-primary btn-sm">📋 複製 Markdown</button>
+        <button id="btn-print-report" class="btn-sm">🖨️ 列印 / 另存 PDF</button>
+      </div>
+    </div>
+    <div id="report-preview" class="report-preview-box"></div>
+    <div class="dialog-actions">
+      <button type="button" onclick="document.getElementById('report-dialog').close()">關閉</button>
+    </div>
+  </dialog>
+
+  <div id="toast-container"></div>
+
+  <script>
+    /* =====================================================================
+       1. IndexedDB Wrapper (AppDB)
+       ===================================================================== */
+    class MiniDB {
+      constructor(dbName = 'FiveWhysRcaDB', version = 1, storeName = 'cases') {
+        this.dbName = dbName;
+        this.version = version;
+        this.storeName = storeName;
+        this.db = null;
+      }
+      async init() {
+        if (this.db) return this.db;
+        return new Promise((resolve, reject) => {
+          const req = indexedDB.open(this.dbName, this.version);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(this.storeName)) {
+              db.createObjectStore(this.storeName, { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = (e) => { this.db = e.target.result; resolve(this.db); };
+          req.onerror = (e) => reject(e.target.error);
+        });
+      }
+      async getAll() {
+        await this.init();
+        return new Promise((res, rej) => {
+          const tx = this.db.transaction(this.storeName, 'readonly');
+          const req = tx.objectStore(this.storeName).getAll();
+          req.onsuccess = () => res(req.result || []);
+          req.onerror = () => rej(req.error);
+        });
+      }
+      async get(id) {
+        await this.init();
+        return new Promise((res, rej) => {
+          const tx = this.db.transaction(this.storeName, 'readonly');
+          const req = tx.objectStore(this.storeName).get(id);
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+      }
+      async put(item) {
+        await this.init();
+        return new Promise((res, rej) => {
+          const tx = this.db.transaction(this.storeName, 'readwrite');
+          const req = tx.objectStore(this.storeName).put(item);
+          req.onsuccess = () => res(req.result);
+          req.onerror = () => rej(req.error);
+        });
+      }
+      async delete(id) {
+        await this.init();
+        return new Promise((res, rej) => {
+          const tx = this.db.transaction(this.storeName, 'readwrite');
+          const req = tx.objectStore(this.storeName).delete(id);
+          req.onsuccess = () => res(true);
+          req.onerror = () => rej(req.error);
+        });
+      }
+      async clear() {
+        await this.init();
+        return new Promise((res, rej) => {
+          const tx = this.db.transaction(this.storeName, 'readwrite');
+          const req = tx.objectStore(this.storeName).clear();
+          req.onsuccess = () => res(true);
+          req.onerror = () => rej(req.error);
+        });
+      }
+    }
+
+    /* =====================================================================
+       2. Real-World Demo Case Template
+       ===================================================================== */
+    function getDemoCase() {
+      const now = new Date();
+      return {
+        id: 'demo-rca-case-001',
+        title: '線上電商結帳服務於促銷活動期間發生 504 Gateway Timeout 障礙',
+        severity: 'P1',
+        status: 'resolved',
+        detectedAt: toLocalInputValue(new Date(now.getTime() - 86400000 * 2)),
+        owner: 'SRE 平台小組 & 訂單核心架構隊',
+        problemStatement: '2026 年雙 11 促銷開跑時，結帳 API (POST /api/v1/checkout) 錯誤率突增至 48%，回應延遲暴增至 30 秒並拋出 504 Gateway Timeout，導致約 3,200 名用戶結帳失敗。',
+        updatedAt: Date.now(),
+        tree: {
+          id: 'root',
+          title: '結帳 API 大量超時並拋出 504 Gateway Timeout',
+          status: 'confirmed',
+          evidence: 'APM 追蹤顯示 14:00~14:18 期間，每秒 850 次結帳請求中有 410 次出現 504 超時。',
+          isRootCause: false,
+          actions: [],
+          collapsed: false,
+          children: [
+            {
+              id: 'w1-1',
+              title: '為什麼 1：結帳微服務無法取得後端 PostgreSQL 資料庫連線',
+              status: 'confirmed',
+              evidence: 'Pod 應用程式日誌出現大量的 HikariPool-1 - Connection is not available, request timed out after 30000ms。',
+              isRootCause: false,
+              actions: [],
+              collapsed: false,
+              children: [
+                {
+                  id: 'w2-1',
+                  title: '為什麼 2：資料庫連線池上限 150 條已被既有慢查詢全數佔用',
+                  status: 'confirmed',
+                  evidence: 'pg_stat_activity 檢視發現 145 個連線皆處於 active 狀態，平均執行時間超過 12 秒。',
+                  isRootCause: false,
+                  actions: [],
+                  collapsed: false,
+                  children: [
+                    {
+                      id: 'w3-1',
+                      title: '為什麼 3：優惠券折價券驗證 SQL 執行極度緩慢且無 Redis 快取',
+                      status: 'confirmed',
+                      evidence: 'EXPLAIN ANALYZE 顯示 SELECT * FROM user_coupons 進行全表循序掃描 (Seq Scan)，缺乏複合索引且無快取層。',
+                      isRootCause: false,
+                      actions: [],
+                      collapsed: false,
+                      children: [
+                        {
+                          id: 'w4-1',
+                          title: '為什麼 4：活動上線前 2 小時緊急合併新折扣功能，跳過了資料庫慢查詢審核',
+                          status: 'confirmed',
+                          evidence: 'Git 提交紀錄顯示 PR #1842 於活動前一小時由開發者自行 Force-merged，未附帶 Query Plan 審查。',
+                          isRootCause: false,
+                          actions: [],
+                          collapsed: false,
+                          children: [
+                            {
+                              id: 'w5-1',
+                              title: '為什麼 5 (真因)：重大促銷活動前夕缺乏「發布凍結期 (Code Freeze)」規範與高流量 SQL 容量壓測檢核機制',
+                              status: 'confirmed',
+                              evidence: '訪談研發團隊得知目前發布流程無自動化防呆，活動前允許無條件熱更新。',
+                              isRootCause: true,
+                              actions: [
+                                { id: 'act-1', text: '建立重大檔期活動前 48 小時「Code Freeze」強制管制流程', done: true },
+                                { id: 'act-2', text: '在 CI/CD 引入慢查詢防護與 SQL EXPLAIN 自動化分析檢驗門檻', done: false },
+                                { id: 'act-3', text: '將優惠券驗證邏輯全面改寫為 Redis 多級快取架構', done: true }
+                              ],
+                              collapsed: false,
+                              children: []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              id: 'w1-2',
+              title: '為什麼 1 (平行分支)：下游付款閘道 (Payment Gateway) 處理延遲拉長至 15 秒',
+              status: 'confirmed',
+              evidence: '第三方金流業者連線健康度儀表板在 14:05 顯示其處理負載偏高。',
+              isRootCause: false,
+              actions: [],
+              collapsed: false,
+              children: [
+                {
+                  id: 'w2-2',
+                  title: '為什麼 2：服務端熔斷降級 (Circuit Breaker) 未在金流延遲時及時啟動隔離',
+                  status: 'confirmed',
+                  evidence: 'Resilience4j 熔斷閾值錯誤配置為連續失敗 80 次且逾時 45 秒才熔斷，形同虛設。',
+                  isRootCause: false,
+                  actions: [],
+                  collapsed: false,
+                  children: [
+                    {
+                      id: 'w3-2',
+                      title: '為什麼 3 (真因)：微服務韌性參數 (Resilience Config) 缺乏生產環境驗證標準，沿用了本機寬鬆預設值',
+                      status: 'confirmed',
+                      evidence: '配置檔案 application-prod.yml 中 circuitbreaker 區塊直接繼承自 application-dev.yml。',
+                      isRootCause: true,
+                      actions: [
+                        { id: 'act-4', text: '重新校正生產環境所有對外依賴呼叫之 Circuit Breaker 閾值 (超時設為 3 秒、失敗率 20% 自動熔斷)', done: true },
+                        { id: 'act-5', text: '每季實施 Chaos Engineering (混沌工程) 模擬下游服務斷網與延遲演練', done: false }
+                      ],
+                      collapsed: false,
+                      children: []
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              id: 'w1-3',
+              title: '為什麼 1 (排除分支)：是否為 Kubernetes 叢集節點記憶體不足 (OOMKilled)？',
+              status: 'refuted',
+              evidence: '檢查 dmesg 與 k8s events，未出現任何 OOMKilled 紀錄，Pod 記憶體使用率僅在 55% 穩定水位。',
+              isRootCause: false,
+              actions: [],
+              collapsed: false,
+              children: []
+            }
+          ]
+        }
+      };
+    }
+
+    /* =====================================================================
+       3. Global State
+       ===================================================================== */
+    const db = new MiniDB();
+    let currentCase = null;
+    let allCases = [];
+    let currentView = 'tree'; // 'tree', 'outline', 'countermeasures'
+    let currentOrientation = 'horizontal'; // 'horizontal', 'vertical'
+
+    // Canvas Pan & Zoom State
+    let zoomLevel = 1.0;
+    let panX = 40;
+    let panY = 60;
+    let isPanning = false;
+    let startPanX = 0;
+    let startPanY = 0;
+
+    /* =====================================================================
+       4. UI Utilities & Toast
+       ===================================================================== */
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      const icon = type === 'error' ? '⚠️' : (type === 'success' ? '✅' : 'ℹ️');
+      toast.innerHTML = `<span>${icon}</span><span>${escapeHTML(msg)}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.2s ease';
+        setTimeout(() => toast.remove(), 200);
+      }, 2600);
+    }
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // datetime-local 需要本地時間（toISOString 為 UTC，會差時區）
+    function toLocalInputValue(d) {
+      const p = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
+
+    // 驗證並正規化匯入的案例，避免壞資料造成渲染崩潰
+    function normalizeImportedCase(cs) {
+      if (!cs || typeof cs !== 'object' || typeof cs.id !== 'string' || !cs.id) return null;
+      if (!cs.tree || typeof cs.tree !== 'object') return null;
+      let count = 0;
+      function fixNode(n) {
+        if (!n || typeof n !== 'object' || ++count > 5000) return null;
+        n.id = typeof n.id === 'string' && n.id ? n.id : generateId('why');
+        n.title = String(n.title ?? '');
+        n.evidence = String(n.evidence ?? '');
+        n.status = ['investigating', 'confirmed', 'refuted'].includes(n.status) ? n.status : 'investigating';
+        n.isRootCause = !!n.isRootCause;
+        n.collapsed = !!n.collapsed;
+        n.actions = (Array.isArray(n.actions) ? n.actions : [])
+          .filter(a => a && typeof a === 'object')
+          .map(a => ({ id: typeof a.id === 'string' && a.id ? a.id : generateId('act'), text: String(a.text ?? ''), done: !!a.done }));
+        n.children = (Array.isArray(n.children) ? n.children : []).map(fixNode).filter(Boolean);
+        return n;
+      }
+      if (!fixNode(cs.tree)) return null;
+      cs.title = String(cs.title ?? '未命名案例');
+      cs.severity = ['P1', 'P2', 'P3'].includes(cs.severity) ? cs.severity : 'P2';
+      cs.status = ['investigating', 'mitigated', 'resolved'].includes(cs.status) ? cs.status : 'investigating';
+      cs.detectedAt = String(cs.detectedAt ?? '');
+      cs.owner = String(cs.owner ?? '');
+      cs.problemStatement = String(cs.problemStatement ?? '');
+      cs.updatedAt = Number(cs.updatedAt) || Date.now();
+      return cs;
+    }
+
+    function generateId(prefix = 'node') {
+      return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).substr(2, 5)}`;
+    }
+
+    /* =====================================================================
+       5. Tree Operations & Helpers
+       ===================================================================== */
+    function findNode(node, id) {
+      if (!node) return null;
+      if (node.id === id) return node;
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          const res = findNode(child, id);
+          if (res) return res;
+        }
+      }
+      return null;
+    }
+
+    function findParentNode(root, childId) {
+      if (!root || !root.children) return null;
+      for (const child of root.children) {
+        if (child.id === childId) return root;
+        const res = findParentNode(child, childId);
+        if (res) return res;
+      }
+      return null;
+    }
+
+    function getNodeDepth(root, targetId, currentDepth = 0) {
+      if (root.id === targetId) return currentDepth;
+      if (root.children) {
+        for (const child of root.children) {
+          const d = getNodeDepth(child, targetId, currentDepth + 1);
+          if (d !== -1) return d;
+        }
+      }
+      return -1;
+    }
+
+    function calculateStats(root) {
+      let totalNodes = 0;
+      let rootCauses = 0;
+      let maxDepth = 0;
+      let totalActions = 0;
+      let doneActions = 0;
+
+      function traverse(n, depth) {
+        totalNodes++;
+        if (depth > maxDepth) maxDepth = depth;
+        if (n.isRootCause) rootCauses++;
+        if (n.actions && n.actions.length > 0) {
+          totalActions += n.actions.length;
+          doneActions += n.actions.filter(a => a.done).length;
+        }
+        if (n.children && n.children.length > 0) {
+          n.children.forEach(c => traverse(c, depth + 1));
+        }
+      }
+
+      if (root) traverse(root, 0);
+      return { totalNodes, rootCauses, maxDepth, totalActions, doneActions };
+    }
+
+    function getDepthBadgeClass(depth, isRootCause) {
+      if (isRootCause) return { text: '🎯 根本原因', cls: 'pill-root-cause' };
+      if (depth === 0) return { text: '問題現象', cls: 'depth-root' };
+      if (depth === 1) return { text: 'Why 1', cls: 'depth-w1' };
+      if (depth === 2) return { text: 'Why 2', cls: 'depth-w2' };
+      if (depth === 3) return { text: 'Why 3', cls: 'depth-w3' };
+      if (depth === 4) return { text: 'Why 4', cls: 'depth-w4' };
+      if (depth === 5) return { text: 'Why 5', cls: 'depth-w5' };
+      return { text: `Why ${depth}`, cls: 'depth-deep' };
+    }
+
+    /* =====================================================================
+       6. Rendering Engine (Tree, Outline, Countermeasures)
+       ===================================================================== */
+    function renderApp() {
+      if (!currentCase) return;
+
+      // Update Case Header Bar
+      document.getElementById('current-case-title').textContent = currentCase.title;
+      const statusBadge = document.getElementById('badge-status');
+      statusBadge.className = 'badge';
+      if (currentCase.status === 'investigating') {
+        statusBadge.classList.add('badge-investigating');
+        statusBadge.textContent = '🔴 調查中';
+      } else if (currentCase.status === 'mitigated') {
+        statusBadge.classList.add('badge-mitigated');
+        statusBadge.textContent = '🟡 暫時緩解';
+      } else {
+        statusBadge.classList.add('badge-resolved');
+        statusBadge.textContent = '🟢 根本解決';
+      }
+
+      const sevBadge = document.getElementById('badge-severity');
+      sevBadge.className = 'badge';
+      if (currentCase.severity === 'P1') {
+        sevBadge.classList.add('badge-p1');
+        sevBadge.textContent = 'P1 嚴重';
+      } else if (currentCase.severity === 'P2') {
+        sevBadge.classList.add('badge-p2');
+        sevBadge.textContent = 'P2 主要';
+      } else {
+        sevBadge.classList.add('badge-p3');
+        sevBadge.textContent = 'P3 一般';
+      }
+
+      // Calculate Stats
+      const stats = calculateStats(currentCase.tree);
+      document.getElementById('stat-max-depth').textContent = stats.maxDepth;
+      document.getElementById('stat-total-nodes').textContent = stats.totalNodes;
+      document.getElementById('stat-root-causes').textContent = stats.rootCauses;
+      document.getElementById('cm-count-badge').textContent = `${stats.doneActions}/${stats.totalActions}`;
+
+      // Render Active View
+      if (currentView === 'tree') {
+        document.getElementById('view-tree-container').style.display = 'block';
+        document.getElementById('view-outline-container').style.display = 'none';
+        document.getElementById('view-countermeasures-container').style.display = 'none';
+        renderTreeCanvas();
+      } else if (currentView === 'outline') {
+        document.getElementById('view-tree-container').style.display = 'none';
+        document.getElementById('view-outline-container').style.display = 'block';
+        document.getElementById('view-countermeasures-container').style.display = 'none';
+        renderOutlineView();
+      } else if (currentView === 'countermeasures') {
+        document.getElementById('view-tree-container').style.display = 'none';
+        document.getElementById('view-outline-container').style.display = 'none';
+        document.getElementById('view-countermeasures-container').style.display = 'block';
+        renderCountermeasuresView();
+      }
+    }
+
+    // --- 6.1 Tree Canvas Rendering ---
+    function renderTreeCanvas() {
+      const rootWrapper = document.getElementById('tree-root-wrapper');
+      rootWrapper.className = `tree-wrapper tree-layout-${currentOrientation}`;
+      rootWrapper.innerHTML = '';
+
+      if (!currentCase.tree) return;
+
+      // Recursive DOM generator
+      function createNodeElement(node, depth = 0) {
+        const group = document.createElement('div');
+        group.className = 'tree-node-group';
+        group.dataset.nodeId = node.id;
+
+        const isRoot = depth === 0;
+        const depthBadge = getDepthBadgeClass(depth, node.isRootCause);
+
+        // Status Text & Class
+        let statusBadgeText = '調查中';
+        let statusBadgeClass = 'pill-investigating';
+        if (node.status === 'confirmed') {
+          statusBadgeText = '✅ 已證實';
+          statusBadgeClass = 'pill-confirmed';
+        } else if (node.status === 'refuted') {
+          statusBadgeText = '❌ 已排除';
+          statusBadgeClass = 'pill-refuted';
+        }
+
+        const card = document.createElement('div');
+        card.className = `tree-node-card ${isRoot ? 'root-problem' : ''} ${node.isRootCause ? 'is-root-cause' : ''} status-${node.status || 'investigating'}`;
+        card.id = `card-${node.id}`;
+        card.dataset.id = node.id;
+
+        const actionsCount = (node.actions || []).length;
+        const actionsBadge = actionsCount > 0 
+          ? `<div class="node-actions-counter" title="已關聯 ${actionsCount} 項防範行動">🛡️ ${actionsCount} 項對策</div>` 
+          : '';
+
+        const evidenceBox = node.evidence 
+          ? `<div class="node-evidence" title="事實證據"><strong style="font-size:0.7rem; color:var(--text-muted); display:block;">【佐證事實/數據】</strong>${escapeHTML(node.evidence)}</div>` 
+          : '';
+
+        card.innerHTML = `
+          <div class="node-header">
+            <span class="node-depth-badge ${depthBadge.cls}">${depthBadge.text}</span>
+            <span class="node-status-pill ${statusBadgeClass}">${statusBadgeText}</span>
+          </div>
+          <div class="node-title">${escapeHTML(node.title)}</div>
+          ${evidenceBox}
+          ${actionsBadge}
+          <div class="node-footer">
+            <div class="node-tools">
+              <button class="btn-node-tool tool-add btn-add-child" data-id="${node.id}" title="針對此原因繼續問「為什麼？」(向下探究)">＋下層 Why</button>
+              ${!isRoot ? `<button class="btn-node-tool btn-add-sibling" data-id="${node.id}" title="新增同層級原因 (平行分支)">＋同級</button>` : ''}
+              ${!isRoot ? `<button class="btn-node-tool btn-toggle-rc" data-id="${node.id}" title="切換是否為根本原因">🎯</button>` : ''}
+            </div>
+            <div class="node-tools">
+              <button class="btn-node-tool btn-edit-node" data-id="${node.id}" title="編輯內容與證據">✏️</button>
+              ${!isRoot ? `<button class="btn-node-tool btn-del-node" data-id="${node.id}" style="color:var(--danger);" title="刪除此節點與子分支">🗑️</button>` : ''}
+            </div>
+          </div>
+        `;
+
+        // If has children, attach collapse toggle button
+        const hasChildren = node.children && node.children.length > 0;
+        if (hasChildren) {
+          const toggleBtn = document.createElement('button');
+          toggleBtn.className = 'btn-collapse-toggle';
+          toggleBtn.title = node.collapsed ? '展開子分支' : '收合子分支';
+          toggleBtn.textContent = node.collapsed ? `+${node.children.length}` : '−';
+          toggleBtn.dataset.id = node.id;
+          toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            node.collapsed = !node.collapsed;
+            saveCurrentCase();
+            renderApp();
+          });
+          card.appendChild(toggleBtn);
+        }
+
+        group.appendChild(card);
+
+        // Render children container if not collapsed
+        if (hasChildren && !node.collapsed) {
+          const childrenContainer = document.createElement('div');
+          childrenContainer.className = 'tree-children-container';
+          node.children.forEach(child => {
+            childrenContainer.appendChild(createNodeElement(child, depth + 1));
+          });
+          group.appendChild(childrenContainer);
+        }
+
+        return group;
+      }
+
+      rootWrapper.appendChild(createNodeElement(currentCase.tree, 0));
+
+      // Schedule SVG Connector recalculation
+      requestAnimationFrame(updateTreeConnections);
+    }
+
+    // --- 6.2 SVG Connector Lines Calculation ---
+    function updateTreeConnections() {
+      const svg = document.getElementById('connections-svg');
+      svg.innerHTML = '';
+      if (!currentCase.tree) return;
+
+      const canvasTransform = document.getElementById('canvas-transform');
+      const canvasRect = canvasTransform.getBoundingClientRect();
+
+      function drawLines(node) {
+        if (!node.children || node.children.length === 0 || node.collapsed) return;
+
+        const parentCard = document.getElementById(`card-${node.id}`);
+        if (!parentCard) return;
+        const parentRect = parentCard.getBoundingClientRect();
+
+        // Calculate parent point relative to canvas-transform container (divided by zoomLevel)
+        let pX, pY;
+        if (currentOrientation === 'horizontal') {
+          pX = (parentRect.right - canvasRect.left) / zoomLevel;
+          pY = (parentRect.top + parentRect.height / 2 - canvasRect.top) / zoomLevel;
+        } else {
+          pX = (parentRect.left + parentRect.width / 2 - canvasRect.left) / zoomLevel;
+          pY = (parentRect.bottom - canvasRect.top) / zoomLevel;
+        }
+
+        node.children.forEach(child => {
+          const childCard = document.getElementById(`card-${child.id}`);
+          if (!childCard) return;
+          const childRect = childCard.getBoundingClientRect();
+
+          let cX, cY;
+          if (currentOrientation === 'horizontal') {
+            cX = (childRect.left - canvasRect.left) / zoomLevel;
+            cY = (childRect.top + childRect.height / 2 - canvasRect.top) / zoomLevel;
+          } else {
+            cX = (childRect.left + childRect.width / 2 - canvasRect.left) / zoomLevel;
+            cY = (childRect.top - canvasRect.top) / zoomLevel;
+          }
+
+          // Generate Bezier path
+          let d = '';
+          if (currentOrientation === 'horizontal') {
+            const midX = (pX + cX) / 2;
+            d = `M ${pX} ${pY} C ${midX} ${pY}, ${midX} ${cY}, ${cX} ${cY}`;
+          } else {
+            const midY = (pY + cY) / 2;
+            d = `M ${pX} ${pY} C ${pX} ${midY}, ${cX} ${midY}, ${cX} ${cY}`;
+          }
+
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', d);
+          path.setAttribute('fill', 'none');
+          path.setAttribute('stroke', getComputedStyle(document.documentElement).getPropertyValue('--line-color').trim() || '#94a3b8');
+          path.setAttribute('stroke-width', '2');
+          path.setAttribute('stroke-linecap', 'round');
+          if (child.status === 'refuted') {
+            path.setAttribute('stroke-dasharray', '5 4');
+            path.setAttribute('opacity', '0.5');
+          } else if (child.isRootCause) {
+            path.setAttribute('stroke', '#8b5cf6');
+            path.setAttribute('stroke-width', '2.5');
+          }
+          svg.appendChild(path);
+
+          drawLines(child);
+        });
+      }
+
+      drawLines(currentCase.tree);
+    }
+
+    // --- 6.3 Indented Outline Rendering ---
+    function renderOutlineView() {
+      const container = document.getElementById('outline-content');
+      container.innerHTML = '';
+
+      function renderNodeOutline(node, depth = 0) {
+        const item = document.createElement('div');
+        item.className = 'outline-tree-item';
+        if (depth === 0) item.style.marginLeft = '0';
+
+        const isRoot = depth === 0;
+        const depthBadge = getDepthBadgeClass(depth, node.isRootCause);
+
+        const row = document.createElement('div');
+        row.className = 'outline-node-row';
+        row.innerHTML = `
+          <div style="flex-shrink:0;">
+            <span class="node-depth-badge ${depthBadge.cls}">${depthBadge.text}</span>
+          </div>
+          <div style="flex:1;">
+            <div style="font-weight:600; font-size:0.9rem; margin-bottom:0.25rem;">
+              ${escapeHTML(node.title)}
+            </div>
+            ${node.evidence ? `<div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.35rem;"><strong>證據：</strong>${escapeHTML(node.evidence)}</div>` : ''}
+            ${(node.actions && node.actions.length > 0) ? `
+              <div style="margin-top:0.35rem; display:flex; flex-wrap:wrap; gap:0.4rem;">
+                ${node.actions.map(a => `<span class="badge" style="background:var(--purple-light); color:var(--purple);">${a.done ? '✅' : '⏳'} ${escapeHTML(a.text)}</span>`).join('')}
+              </div>
+            ` : ''}
+          </div>
+          <div style="display:flex; gap:0.3rem;">
+            <button class="btn-node-tool btn-add-child" data-id="${node.id}">＋Why</button>
+            <button class="btn-node-tool btn-edit-node" data-id="${node.id}">✏️ 編輯</button>
+          </div>
+        `;
+
+        item.appendChild(row);
+
+        if (node.children && node.children.length > 0) {
+          node.children.forEach(c => item.appendChild(renderNodeOutline(c, depth + 1)));
+        }
+        return item;
+      }
+
+      container.appendChild(renderNodeOutline(currentCase.tree, 0));
+    }
+
+    // --- 6.4 Countermeasures / Actions Rendering ---
+    function renderCountermeasuresView() {
+      const container = document.getElementById('countermeasures-content');
+      container.innerHTML = '';
+
+      // Collect all root causes and actions
+      const rootCausesList = [];
+      function traverse(n) {
+        if (n.isRootCause || (n.actions && n.actions.length > 0)) {
+          rootCausesList.push(n);
+        }
+        if (n.children) n.children.forEach(traverse);
+      }
+      traverse(currentCase.tree);
+
+      if (rootCausesList.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center; padding:3rem 1rem; color:var(--text-muted); border:2px dashed var(--border); border-radius:var(--radius);">
+            <div style="font-size:2rem; margin-bottom:0.5rem;">🎯</div>
+            <div style="font-weight:600;">目前尚無標記「根本原因」或「改善對策」</div>
+            <p style="font-size:0.82rem; margin-top:0.35rem;">請在樹狀圖中點擊因果節點上的 🎯 圖示，或進入編輯面板新增改善行動！</p>
+          </div>
+        `;
+        return;
+      }
+
+      let html = `
+        <table class="cm-table">
+          <thead>
+            <tr>
+              <th style="width: 32%;">根本原因 (Root Cause)</th>
+              <th style="width: 48%;">預防改善對策行動 (Corrective Actions)</th>
+              <th style="width: 10%;">執行狀態</th>
+              <th style="width: 10%; text-align:right;">操作</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+
+      rootCausesList.forEach(node => {
+        const actions = node.actions || [];
+        if (actions.length === 0) {
+          html += `
+            <tr>
+              <td>
+                <div style="font-weight:600; color:var(--purple); font-size:0.88rem;">${escapeHTML(node.title)}</div>
+                ${node.evidence ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.25rem;">${escapeHTML(node.evidence)}</div>` : ''}
+              </td>
+              <td colspan="2" style="color:var(--text-muted); font-style:italic;">
+                尚未設定對策，點擊右側按鈕進行補充
+              </td>
+              <td style="text-align:right;">
+                <button class="btn-node-tool btn-edit-node" data-id="${node.id}">✏️ 補充對策</button>
+              </td>
+            </tr>
+          `;
+        } else {
+          actions.forEach((act, idx) => {
+            html += `
+              <tr>
+                ${idx === 0 ? `
+                  <td rowspan="${actions.length}" style="vertical-align:top; border-right:1px solid var(--border);">
+                    <div style="font-weight:600; color:var(--purple); font-size:0.88rem;">${escapeHTML(node.title)}</div>
+                    ${node.evidence ? `<div style="font-size:0.75rem; color:var(--text-muted); margin-top:0.3rem;">${escapeHTML(node.evidence)}</div>` : ''}
+                  </td>
+                ` : ''}
+                <td>
+                  <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer;">
+                    <input type="checkbox" class="cm-check-toggle" data-node-id="${node.id}" data-action-id="${act.id}" ${act.done ? 'checked' : ''}>
+                    <span style="${act.done ? 'text-decoration:line-through; color:var(--text-muted);' : 'font-weight:500;'}">${escapeHTML(act.text)}</span>
+                  </label>
+                </td>
+                <td>
+                  <span class="badge ${act.done ? 'badge-resolved' : 'badge-investigating'}">
+                    ${act.done ? '已完成' : '進行中'}
+                  </span>
+                </td>
+                <td style="text-align:right;">
+                  <button class="btn-node-tool btn-edit-node" data-id="${node.id}">✏️ 編輯</button>
+                </td>
+              </tr>
+            `;
+          });
+        }
+      });
+
+      html += `</tbody></table>`;
+      container.innerHTML = html;
+    }
+
+    /* =====================================================================
+       7. Canvas Navigation (Pan & Zoom)
+       ===================================================================== */
+    const canvasViewport = document.getElementById('view-tree-container');
+    const canvasTransform = document.getElementById('canvas-transform');
+
+    function applyTransform() {
+      canvasTransform.style.transform = `translate(${panX}px, ${panY}px) scale(${zoomLevel})`;
+      updateTreeConnections();
+    }
+
+    canvasViewport.addEventListener('mousedown', (e) => {
+      // Ignore if clicking on buttons or cards
+      if (e.target.closest('.tree-node-card') || e.target.closest('button') || e.target.closest('.canvas-controls') || e.target.closest('.canvas-stats-overlay')) {
+        return;
+      }
+      isPanning = true;
+      startPanX = e.clientX - panX;
+      startPanY = e.clientY - panY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isPanning) return;
+      panX = e.clientX - startPanX;
+      panY = e.clientY - startPanY;
+      applyTransform();
+    });
+
+    window.addEventListener('mouseup', () => {
+      isPanning = false;
+    });
+
+    // Wheel zoom
+    canvasViewport.addEventListener('wheel', (e) => {
+      if (currentView !== 'tree') return;
+      e.preventDefault();
+      const zoomFactor = 1.08;
+      const rect = canvasViewport.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      let newZoom = e.deltaY < 0 ? zoomLevel * zoomFactor : zoomLevel / zoomFactor;
+      newZoom = Math.min(Math.max(0.35, newZoom), 2.2);
+
+      // Pan towards cursor
+      panX = mouseX - (mouseX - panX) * (newZoom / zoomLevel);
+      panY = mouseY - (mouseY - panY) * (newZoom / zoomLevel);
+      zoomLevel = newZoom;
+      applyTransform();
+    }, { passive: false });
+
+    // Zoom Buttons
+    document.getElementById('btn-zoom-in').addEventListener('click', () => {
+      zoomLevel = Math.min(zoomLevel * 1.2, 2.2);
+      applyTransform();
+    });
+    document.getElementById('btn-zoom-out').addEventListener('click', () => {
+      zoomLevel = Math.max(zoomLevel / 1.2, 0.35);
+      applyTransform();
+    });
+    document.getElementById('btn-zoom-reset').addEventListener('click', () => {
+      zoomLevel = 1.0;
+      panX = 40;
+      panY = 60;
+      applyTransform();
+    });
+
+    window.addEventListener('resize', () => {
+      if (currentView === 'tree') updateTreeConnections();
+    });
+
+    /* =====================================================================
+       8. Node Add / Edit / Delete / Toggle Operations
+       ===================================================================== */
+    const nodeDialog = document.getElementById('node-dialog');
+    const nodeForm = document.getElementById('node-form');
+    const nodeFormId = document.getElementById('node-form-id');
+    const nodeFormParentId = document.getElementById('node-form-parent-id');
+    const nodeFormTitle = document.getElementById('node-form-title');
+    const nodeFormStatus = document.getElementById('node-form-status');
+    const nodeFormIsRootCause = document.getElementById('node-form-is-root-cause');
+    const nodeFormEvidence = document.getElementById('node-form-evidence');
+    const nodeActionsList = document.getElementById('node-actions-list');
+
+    function openNodeDialogForEdit(nodeId) {
+      const node = findNode(currentCase.tree, nodeId);
+      if (!node) return;
+
+      nodeFormId.value = node.id;
+      nodeFormParentId.value = '';
+      document.getElementById('node-dialog-title').textContent = node.id === 'root' ? '編輯問題現象核心' : '編輯因果假設節點';
+      nodeFormTitle.value = node.title || '';
+      nodeFormStatus.value = node.status || 'investigating';
+      nodeFormIsRootCause.checked = !!node.isRootCause;
+      nodeFormEvidence.value = node.evidence || '';
+
+      // Render existing action items in dialog
+      nodeActionsList.innerHTML = '';
+      (node.actions || []).forEach(act => addActionItemInputRow(act.text, act.done, act.id));
+
+      nodeDialog.showModal();
+    }
+
+    function openNodeDialogForAddChild(parentId) {
+      const parent = findNode(currentCase.tree, parentId);
+      if (!parent) return;
+
+      const parentDepth = getNodeDepth(currentCase.tree, parentId);
+      const nextDepth = parentDepth + 1;
+
+      nodeFormId.value = '';
+      nodeFormParentId.value = parentId;
+      document.getElementById('node-dialog-title').textContent = `新增 Why ${nextDepth} 原因假設`;
+      nodeFormTitle.value = '';
+      nodeFormStatus.value = 'investigating';
+      nodeFormIsRootCause.checked = false;
+      nodeFormEvidence.value = '';
+      nodeActionsList.innerHTML = '';
+
+      nodeDialog.showModal();
+    }
+
+    function addActionItemInputRow(text = '', done = false, id = null) {
+      const row = document.createElement('div');
+      row.className = 'node-action-item';
+      const actId = id || generateId('act');
+      row.innerHTML = `
+        <input type="checkbox" ${done ? 'checked' : ''} class="act-done-check" title="標記完成">
+        <input type="text" value="${escapeHTML(text)}" placeholder="請輸入對策內容..." class="act-text-input">
+        <button type="button" class="btn-icon btn-sm" style="color:var(--danger);" onclick="this.closest('.node-action-item').remove()">✕</button>
+      `;
+      row.dataset.actionId = actId;
+      nodeActionsList.appendChild(row);
+    }
+
+    document.getElementById('btn-add-action-item').addEventListener('click', () => {
+      addActionItemInputRow();
+    });
+
+    // Form Submit
+    nodeForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nodeId = nodeFormId.value;
+      const parentId = nodeFormParentId.value;
+
+      // Extract actions from input list
+      const actions = [];
+      nodeActionsList.querySelectorAll('.node-action-item').forEach(row => {
+        const text = row.querySelector('.act-text-input').value.trim();
+        const done = row.querySelector('.act-done-check').checked;
+        const actId = row.dataset.actionId || generateId('act');
+        if (text) {
+          actions.push({ id: actId, text, done });
+        }
+      });
+
+      if (nodeId) {
+        // Edit existing
+        const node = findNode(currentCase.tree, nodeId);
+        if (node) {
+          node.title = nodeFormTitle.value.trim();
+          node.status = nodeFormStatus.value;
+          node.isRootCause = nodeFormIsRootCause.checked;
+          node.evidence = nodeFormEvidence.value.trim();
+          node.actions = actions;
+        }
+      } else if (parentId) {
+        // Add new child
+        const parent = findNode(currentCase.tree, parentId);
+        if (parent) {
+          if (!parent.children) parent.children = [];
+          parent.children.push({
+            id: generateId('why'),
+            title: nodeFormTitle.value.trim(),
+            status: nodeFormStatus.value,
+            isRootCause: nodeFormIsRootCause.checked,
+            evidence: nodeFormEvidence.value.trim(),
+            actions,
+            collapsed: false,
+            children: []
+          });
+        }
+      }
+
+      try {
+        await saveCurrentCase();
+      } catch (err) {
+        showToast('儲存失敗: ' + err.message, 'error');
+        return;
+      }
+      nodeDialog.close();
+      renderApp();
+      showToast('因果節點已儲存');
+    });
+
+    // Direct Add Why 1 from floating button
+    document.getElementById('btn-add-w1-direct').addEventListener('click', () => {
+      openNodeDialogForAddChild('root');
+    });
+
+    // Click Delegation for Tree & Outline Actions
+    document.addEventListener('click', async (e) => {
+      // Add Child
+      const btnAddChild = e.target.closest('.btn-add-child');
+      if (btnAddChild) {
+        openNodeDialogForAddChild(btnAddChild.dataset.id);
+        return;
+      }
+
+      // Add Sibling
+      const btnAddSibling = e.target.closest('.btn-add-sibling');
+      if (btnAddSibling) {
+        const childId = btnAddSibling.dataset.id;
+        const parent = findParentNode(currentCase.tree, childId);
+        if (parent) {
+          openNodeDialogForAddChild(parent.id);
+        }
+        return;
+      }
+
+      // Edit Node
+      const btnEditNode = e.target.closest('.btn-edit-node');
+      if (btnEditNode) {
+        openNodeDialogForEdit(btnEditNode.dataset.id);
+        return;
+      }
+
+      // Toggle Root Cause
+      const btnToggleRc = e.target.closest('.btn-toggle-rc');
+      if (btnToggleRc) {
+        const node = findNode(currentCase.tree, btnToggleRc.dataset.id);
+        if (node) {
+          node.isRootCause = !node.isRootCause;
+          await saveCurrentCase();
+          renderApp();
+          showToast(node.isRootCause ? '已標記為根本原因 (Root Cause)' : '已取消根本原因標記');
+        }
+        return;
+      }
+
+      // Delete Node
+      const btnDelNode = e.target.closest('.btn-del-node');
+      if (btnDelNode) {
+        const nodeId = btnDelNode.dataset.id;
+        if (confirm('確定要刪除此因果假設及其所有下層分支嗎？此動作無法復原。')) {
+          deleteNodeFromTree(currentCase.tree, nodeId);
+          await saveCurrentCase();
+          renderApp();
+          showToast('已刪除分支節點');
+        }
+        return;
+      }
+
+      // Countermeasure checkbox toggle
+      if (e.target.classList.contains('cm-check-toggle')) {
+        const nodeId = e.target.dataset.nodeId;
+        const actId = e.target.dataset.actionId;
+        const node = findNode(currentCase.tree, nodeId);
+        if (node && node.actions) {
+          const act = node.actions.find(a => a.id === actId);
+          if (act) {
+            act.done = e.target.checked;
+            await saveCurrentCase();
+            renderApp();
+            showToast(act.done ? '對策已標記完成！' : '對策標記為進行中');
+          }
+        }
+      }
+    });
+
+    function deleteNodeFromTree(root, targetId) {
+      if (!root || !root.children) return;
+      const idx = root.children.findIndex(c => c.id === targetId);
+      if (idx !== -1) {
+        root.children.splice(idx, 1);
+        return;
+      }
+      root.children.forEach(c => deleteNodeFromTree(c, targetId));
+    }
+
+    /* =====================================================================
+       9. Case Management & IndexedDB Persistence
+       ===================================================================== */
+    async function saveCurrentCase() {
+      if (!currentCase) return;
+      currentCase.updatedAt = Date.now();
+      await db.put(currentCase);
+    }
+
+    async function loadCasesList() {
+      allCases = await db.getAll();
+      allCases.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+      const select = document.getElementById('case-select');
+      select.innerHTML = '';
+      allCases.forEach(cs => {
+        const opt = document.createElement('option');
+        opt.value = cs.id;
+        opt.textContent = `${cs.severity || 'P1'} | ${cs.title}`;
+        if (currentCase && cs.id === currentCase.id) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    async function switchCase(caseId) {
+      const cs = await db.get(caseId);
+      if (cs) {
+        currentCase = cs;
+        renderApp();
+        applyTransform();
+      }
+    }
+
+    document.getElementById('case-select').addEventListener('change', (e) => {
+      switchCase(e.target.value);
+    });
+
+    // Create New Case
+    document.getElementById('btn-new-case').addEventListener('click', () => {
+      openCaseMetaDialogForNew();
+    });
+    document.getElementById('btn-create-case-inside-dialog').addEventListener('click', () => {
+      document.getElementById('manage-cases-dialog').close();
+      openCaseMetaDialogForNew();
+    });
+
+    function openCaseMetaDialogForNew() {
+      const dialog = document.getElementById('case-meta-dialog');
+      document.getElementById('case-dialog-title').textContent = '建立新障礙排解案例';
+      document.getElementById('case-form-id').value = '';
+      document.getElementById('case-form-title').value = '';
+      document.getElementById('case-form-status').value = 'investigating';
+      document.getElementById('case-form-severity').value = 'P1';
+      document.getElementById('case-form-detected-at').value = toLocalInputValue(new Date());
+      document.getElementById('case-form-owner').value = '';
+      document.getElementById('case-form-problem').value = '';
+      dialog.showModal();
+    }
+
+    // Edit Current Case Meta
+    document.getElementById('btn-edit-case-meta').addEventListener('click', () => {
+      if (!currentCase) return;
+      const dialog = document.getElementById('case-meta-dialog');
+      document.getElementById('case-dialog-title').textContent = '編輯障礙案例資訊';
+      document.getElementById('case-form-id').value = currentCase.id;
+      document.getElementById('case-form-title').value = currentCase.title;
+      document.getElementById('case-form-status').value = currentCase.status;
+      document.getElementById('case-form-severity').value = currentCase.severity;
+      document.getElementById('case-form-detected-at').value = currentCase.detectedAt || '';
+      document.getElementById('case-form-owner').value = currentCase.owner || '';
+      document.getElementById('case-form-problem').value = currentCase.problemStatement || '';
+      dialog.showModal();
+    });
+
+    // Save Case Meta Form
+    document.getElementById('case-meta-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formId = document.getElementById('case-form-id').value;
+      const title = document.getElementById('case-form-title').value.trim();
+      const status = document.getElementById('case-form-status').value;
+      const severity = document.getElementById('case-form-severity').value;
+      const detectedAt = document.getElementById('case-form-detected-at').value;
+      const owner = document.getElementById('case-form-owner').value.trim();
+      const problem = document.getElementById('case-form-problem').value.trim();
+
+      if (formId) {
+        // Edit existing
+        currentCase.title = title;
+        currentCase.status = status;
+        currentCase.severity = severity;
+        currentCase.detectedAt = detectedAt;
+        currentCase.owner = owner;
+        currentCase.problemStatement = problem;
+        if (currentCase.tree) currentCase.tree.title = problem;
+      } else {
+        // Create new
+        const newCase = {
+          id: generateId('case'),
+          title,
+          status,
+          severity,
+          detectedAt,
+          owner,
+          problemStatement: problem,
+          updatedAt: Date.now(),
+          tree: {
+            id: 'root',
+            title: problem,
+            status: 'confirmed',
+            evidence: '',
+            isRootCause: false,
+            actions: [],
+            collapsed: false,
+            children: []
+          }
+        };
+        currentCase = newCase;
+      }
+
+      try {
+        await saveCurrentCase();
+        await loadCasesList();
+      } catch (err) {
+        showToast('儲存失敗: ' + err.message, 'error');
+        return;
+      }
+      document.getElementById('case-meta-dialog').close();
+      renderApp();
+      showToast('案例資訊已更新');
+    });
+
+    // Manage Cases Dialog
+    document.getElementById('btn-manage-cases').addEventListener('click', () => {
+      renderManageCasesList();
+      document.getElementById('manage-cases-dialog').showModal();
+    });
+
+    function renderManageCasesList() {
+      const container = document.getElementById('cases-list-container');
+      container.innerHTML = '';
+      allCases.forEach(cs => {
+        const card = document.createElement('div');
+        card.className = `case-card-item ${currentCase && cs.id === currentCase.id ? 'active' : ''}`;
+        card.innerHTML = `
+          <div style="flex:1;">
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+              <span class="badge ${cs.severity === 'P1' ? 'badge-p1' : (cs.severity === 'P2' ? 'badge-p2' : 'badge-p3')}">${cs.severity}</span>
+              <strong style="font-size:0.95rem;">${escapeHTML(cs.title)}</strong>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted);">
+              更新時間：${new Date(cs.updatedAt).toLocaleString()} | 負責人：${escapeHTML(cs.owner || '未指派')}
+            </div>
+          </div>
+          <div style="display:flex; gap:0.4rem;">
+            <button class="btn-sm btn-primary btn-select-case" data-id="${cs.id}">切換開啟</button>
+            <button class="btn-sm btn-danger btn-delete-case" data-id="${cs.id}">刪除</button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    document.getElementById('cases-list-container').addEventListener('click', async (e) => {
+      const btnSelect = e.target.closest('.btn-select-case');
+      if (btnSelect) {
+        await switchCase(btnSelect.dataset.id);
+        document.getElementById('manage-cases-dialog').close();
+        return;
+      }
+      const btnDelete = e.target.closest('.btn-delete-case');
+      if (btnDelete) {
+        const id = btnDelete.dataset.id;
+        if (allCases.length <= 1) {
+          alert('請至少保留一個案例！');
+          return;
+        }
+        if (confirm('確定要永久刪除此案例嗎？')) {
+          await db.delete(id);
+          await loadCasesList();
+          if (currentCase.id === id) {
+            currentCase = allCases[0];
+            await loadCasesList(); // 重新整理下拉選單選取狀態
+          }
+          renderManageCasesList();
+          renderApp();
+          showToast('案例已刪除');
+        }
+      }
+    });
+
+    /* =====================================================================
+       10. View Mode & Orientation Switching
+       ===================================================================== */
+    document.getElementById('view-mode-toggle').addEventListener('click', (e) => {
+      const btn = e.target.closest('.view-btn');
+      if (!btn) return;
+      document.querySelectorAll('#view-mode-toggle .view-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentView = btn.dataset.view;
+      renderApp();
+    });
+
+    document.getElementById('orientation-toggle').addEventListener('click', (e) => {
+      const btn = e.target.closest('.view-btn');
+      if (!btn) return;
+      document.querySelectorAll('#orientation-toggle .view-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentOrientation = btn.dataset.orientation;
+      renderTreeCanvas();
+    });
+
+    document.getElementById('btn-expand-all-outline').addEventListener('click', () => {
+      function expand(n) {
+        n.collapsed = false;
+        if (n.children) n.children.forEach(expand);
+      }
+      expand(currentCase.tree);
+      saveCurrentCase();
+      renderApp();
+    });
+
+    /* =====================================================================
+       11. Report Generator (Markdown Postmortem)
+       ===================================================================== */
+    function generatePostmortemMarkdown() {
+      if (!currentCase) return '';
+      const stats = calculateStats(currentCase.tree);
+
+      let md = `# 【RCA 事故檢討分析報告】${currentCase.title}\n\n`;
+      md += `> **生成時間**：${new Date().toLocaleString()}  \n`;
+      md += `> **事故等級**：\`${currentCase.severity}\` | **狀態**：\`${currentCase.status}\`  \n`;
+      md += `> **發生時間**：${currentCase.detectedAt ? new Date(currentCase.detectedAt).toLocaleString() : '未記載'}  \n`;
+      md += `> **調查人員**：${currentCase.owner || '未記載'}  \n\n`;
+
+      md += `## 一、核心問題現象與影響 (Problem Statement)\n\n`;
+      md += `${currentCase.problemStatement || '無詳細描述'}\n\n`;
+
+      md += `## 二、五個為什麼因果鏈分析 (5 Whys Root Cause Tree)\n\n`;
+      function buildMdTree(node, depth = 0) {
+        const indent = '  '.repeat(depth);
+        const depthLabel = depth === 0 ? '【核心障礙】' : `[Why ${depth}]`;
+        const rcTag = node.isRootCause ? ' 🎯 **【根本原因 (Root Cause)】**' : '';
+        const statusTag = node.status === 'confirmed' ? '✅ 已證實' : (node.status === 'refuted' ? '❌ 已排除' : '🔍 調查中');
+
+        let text = `${indent}- ${depthLabel} (${statusTag}) ${node.title}${rcTag}\n`;
+        if (node.evidence) {
+          text += `${indent}  - 🔎 *佐證數據*：${node.evidence}\n`;
+        }
+        if (node.children) {
+          node.children.forEach(c => {
+            text += buildMdTree(c, depth + 1);
+          });
+        }
+        return text;
+      }
+      md += buildMdTree(currentCase.tree, 0);
+      md += `\n`;
+
+      md += `## 三、鎖定之根本原因 (Identified Root Causes)\n\n`;
+      const rootCauses = [];
+      function collectRc(n) {
+        if (n.isRootCause) rootCauses.push(n);
+        if (n.children) n.children.forEach(collectRc);
+      }
+      collectRc(currentCase.tree);
+
+      if (rootCauses.length === 0) {
+        md += `*尚無標記為根本原因之節點。*\n\n`;
+      } else {
+        rootCauses.forEach((rc, i) => {
+          md += `### 根本真因 ${i + 1}：${rc.title}\n`;
+          if (rc.evidence) md += `- **佐證事實**：${rc.evidence}\n`;
+          md += `\n`;
+        });
+      }
+
+      md += `## 四、改善與預防措施 (CAPA - Corrective and Preventive Actions)\n\n`;
+      let actionIdx = 1;
+      let hasActions = false;
+      function collectActions(n) {
+        if (n.actions && n.actions.length > 0) {
+          n.actions.forEach(a => {
+            hasActions = true;
+            const check = a.done ? '[x]' : '[ ]';
+            md += `${actionIdx++}. ${check} ${a.text} *(源自真因：${n.title})*\n`;
+          });
+        }
+        if (n.children) n.children.forEach(collectActions);
+      }
+      collectActions(currentCase.tree);
+
+      if (!hasActions) {
+        md += `*尚未填寫預防改善措施。*\n\n`;
+      } else {
+        md += `\n`;
+      }
+
+      md += `---\n*本報告由「樹狀五個為什麼障礙排解筆記 (5 Whys RCA SPA)」自動產出*`;
+      return md;
+    }
+
+    document.getElementById('btn-export-report').addEventListener('click', () => {
+      const md = generatePostmortemMarkdown();
+      document.getElementById('report-preview').textContent = md;
+      document.getElementById('report-dialog').showModal();
+    });
+
+    document.getElementById('btn-copy-report-md').addEventListener('click', async () => {
+      const text = document.getElementById('report-preview').textContent;
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('已複製 Markdown 報告至剪貼簿！');
+      } catch (err) {
+        showToast('複製失敗，請手動選取文字');
+      }
+    });
+
+    document.getElementById('btn-print-report').addEventListener('click', () => {
+      window.print();
+    });
+
+    /* =====================================================================
+       12. Backup JSON Export & Import
+       ===================================================================== */
+    document.getElementById('btn-export-json').addEventListener('click', async () => {
+      const allData = await db.getAll();
+      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `5whys-rca-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('已匯出完整備份 JSON 檔案');
+    });
+
+    const fileImportInput = document.getElementById('file-import-input');
+    document.getElementById('btn-import-json').addEventListener('click', () => fileImportInput.click());
+
+    fileImportInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const json = JSON.parse(text);
+        const list = Array.isArray(json) ? json : [json];
+        const valid = list.map(normalizeImportedCase).filter(Boolean);
+        if (valid.length === 0) {
+          showToast('匯入失敗：JSON 格式不符', 'error');
+        } else {
+          for (const item of valid) await db.put(item);
+          currentCase = valid[0];
+          await loadCasesList();
+          renderApp();
+          applyTransform();
+          showToast(`已匯入 ${valid.length} 個案例` + (valid.length < list.length ? `（略過 ${list.length - valid.length} 筆無效資料）` : ''), 'success');
+        }
+      } catch (err) {
+        showToast('讀取檔案失敗: ' + err.message, 'error');
+      }
+      fileImportInput.value = '';
+    });
+
+    // Load Demo Data Button
+    document.getElementById('btn-demo-data').addEventListener('click', async () => {
+      if (confirm('是否載入實戰範本案例（電商結帳 504 逾時事故）？')) {
+        const demo = getDemoCase();
+        await db.put(demo);
+        await loadCasesList();
+        currentCase = demo;
+        renderApp();
+        applyTransform();
+        showToast('已載入實戰範本案例！');
+      }
+    });
+
+    /* =====================================================================
+       13. Theme Toggle & Initial Initialization
+       ===================================================================== */
+    document.getElementById('btn-theme-toggle').addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const target = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', target);
+      localStorage.setItem('5whys-theme', target);
+      if (currentView === 'tree') updateTreeConnections();
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Restore Theme
+      const savedTheme = localStorage.getItem('5whys-theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', savedTheme);
+
+      // Initialize DB & Data
+      try {
+        allCases = await db.getAll();
+        if (allCases.length === 0) {
+          // First time launch: auto-seed demo case
+          const demo = getDemoCase();
+          await db.put(demo);
+          allCases = [demo];
+        }
+        currentCase = allCases[0];
+        await loadCasesList();
+        renderApp();
+        applyTransform();
+      } catch (err) {
+        showToast('資料庫初始化異常: ' + err.message, 'error');
+      }
+    });
+  </script>
+
+  <!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+  <a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+  <style>
+    #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+      font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+      background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+      padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+      box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+    #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+    #hf-home-entry:active{transform:translateY(0)}
+    @media print{#hf-home-entry{display:none}}
+  </style>
+</body>
+</html>

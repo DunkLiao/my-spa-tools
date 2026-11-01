@@ -48,7 +48,8 @@ my-spa-tools/
 │  ├─ sql-pii-cleaner/  sql-lineage-analyzer/
 │  ├─ sql-lab/                    SQL Lab 離線 SQL 測試工具（沙箱、匯入與測試案例）
 │  ├─ schema-studio/             Schema Studio SQL 欄位映射與 DDL 產生器
-│  └─ cte-builder-pro/           CTE 組裝工作台（WITH 積木、相依檢查、清單資料、版本與 SQL 匯出）
+│  ├─ cte-builder-pro/           CTE 組裝工作台（WITH 積木、相依檢查、清單資料、版本與 SQL 匯出）
+│  └─ csv-to-ddl-forge/          CSV to DDL Forge（CSV／TSV 匯入、欄位型態推斷、六種方言 DDL 與欄位規格書）
 ├─ data/                         資料工具
 │  ├─ matrix-pivot/              表格矩陣轉置與格式轉換器
 │  ├─ csv-cleaner/               CSV 格式清理器（含 Big5／CP950 讀寫）
@@ -80,7 +81,8 @@ my-spa-tools/
 │  ├─ five-forces-dashboard/     五力分析儀表板（波特五力評分、雷達圖、洞察建議與 PNG 匯出）
 │  ├─ swot-tows-studio/         SWOT 可視化產生器與 TOWS 交叉戰略矩陣（四象限權重、行動方案與 PNG／Markdown／JSON 匯出）
 │  ├─ world-time-planner/       多時區協調羅盤（24 小時共識帶、最佳會議重疊時段與 JSON 備份）
-│  └─ zen-typewriter-editor/     Zen Typewriter 打字機心流編輯器（打字機聲效、Markdown 預覽與文稿庫）
+│  ├─ zen-typewriter-editor/     Zen Typewriter 打字機心流編輯器（打字機聲效、Markdown 預覽與文稿庫）
+│  └─ five-whys-rca-tree/        樹狀「五個為什麼」障礙排解筆記（因果樹、大綱、改善對策與 RCA 報告）
 ├─ design/                       設計工具
 │  ├─ bento-grid-studio/         Bento Studio 版型產生器（拖曳縮放、10 種主題與 Tailwind／CSS／JSON 匯出）
 │  ├─ design-debt-analyzer/      設計債務分析器（Figma／CSS／Tokens 匯入、Debt Score、整併建議與趨勢）
@@ -103,7 +105,8 @@ my-spa-tools/
    ├─ groovebox/                 Groovebox 單檔鼓機（8 軌合成鼓、8／16／32 步、Swing、節奏庫與 MIDI／JSON 匯出）
    ├─ soundcraft/                SoundCraft 音樂創作與靈感工作台（和弦進行、歌詞和弦稿紙、16 步鼓機、靈感錄音與 JSON 備份）
    ├─ violin-practice/           琴日常小提琴練習夥伴（每日練習計時、調音器、節拍與點按測試、初學課程與練習紀錄）
-   └─ ukulele-lab/               烏克麗麗練習室 Uke Lab（74 個和弦指法、節拍與刷弦、調音器、進行與抽考、歌本與日誌）
+   ├─ ukulele-lab/               烏克麗麗練習室 Uke Lab（74 個和弦指法、節拍與刷弦、調音器、進行與抽考、歌本與日誌）
+   └─ wavecut-mini/              WaveCut Mini 離線音訊剪輯與波形標註（波形剪輯、裁切起訖、標記與區段、WAV／CSV／JSON 匯出）
 ```
 
 分類層固定為八類：`agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`、`music/`。每個工具自成一層子資料夾，HTML 檔名沿用工具原名。**所有工具頁面都位於根目錄下兩層**（`<類別>/<工具>/<檔名>.html`）。
@@ -170,7 +173,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 89 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 92 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。
