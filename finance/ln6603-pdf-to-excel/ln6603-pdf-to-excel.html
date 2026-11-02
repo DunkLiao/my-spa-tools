@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LN6603 PDF → Excel 轉換器</title>
+<style>
+:root{--pri:#1f4e79;--pri2:#2e75b6;--bg:#f4f6f9;--card:#fff;--bd:#d9dee5;--ok:#2e7d32;--ng:#c62828;--warn:#e65100}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:#222;font-size:14px}
+header{background:var(--pri);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:12px}
+header h1{font-size:18px;margin:0}
+header .sub{opacity:.8;font-size:12px}
+main{max-width:1500px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:14px;margin-bottom:14px}
+#drop{border:2px dashed var(--pri2);border-radius:8px;padding:26px;text-align:center;cursor:pointer;background:#f8fbff;transition:.2s}
+#drop.over{background:#e3f0ff}
+#fileList{margin-top:8px;font-size:13px;color:#555}
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:10px}
+button{background:var(--pri2);color:#fff;border:0;border-radius:6px;padding:8px 16px;font-size:14px;cursor:pointer;font-family:inherit}
+button:hover{filter:brightness(1.1)}button:disabled{background:#9aa;cursor:not-allowed}
+button.sec{background:#fff;color:var(--pri);border:1px solid var(--pri2)}
+button.del{background:#fff;color:var(--ng);border:1px solid var(--ng);padding:4px 10px}
+#progWrap{height:8px;background:#e6e9ee;border-radius:4px;overflow:hidden;flex:1;min-width:200px}
+#prog{height:100%;width:0;background:var(--pri2);transition:.2s}
+#status{font-size:13px;color:#444}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--pri);margin-bottom:10px}
+.tab{padding:8px 16px;cursor:pointer;border-radius:6px 6px 0 0;background:#e6ebf2;color:var(--pri)}
+.tab.on{background:var(--pri);color:#fff}
+.pane{display:none}.pane.on{display:block}
+.tblWrap{overflow:auto;max-height:62vh;border:1px solid var(--bd)}
+table{border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+th{position:sticky;top:0;background:var(--pri);color:#fff;padding:6px 8px;z-index:1}
+td{border-bottom:1px solid #eee;padding:4px 8px}
+td.ocr{background:#e3f2fd}
+td.n{text-align:right;font-family:Consolas,monospace}
+td[contenteditable]:focus{outline:2px solid var(--pri2);background:#fffde7}
+tr.warn td{background:#fff3e0}
+tr:hover td{background:#eef5ff}
+.stat{display:inline-block;padding:4px 10px;border-radius:12px;background:#e8eef6;margin-right:6px;font-size:13px}
+.ok{color:var(--ok);font-weight:bold}.ng{color:var(--ng);font-weight:bold}
+textarea{width:100%;height:60vh;font-family:"MS Gothic","Consolas",monospace;font-size:12px;white-space:pre;overflow:auto}
+input[type=text],input[type=number],select{padding:6px;border:1px solid var(--bd);border-radius:4px;font-family:inherit}
+.pager{display:flex;gap:6px;align-items:center;margin-top:8px}
+.muted{color:#777;font-size:12px}
+.hint{background:#fffbe6;border-left:4px solid #f0b400;padding:8px 12px;font-size:13px;margin-top:10px}
+</style>
+</head>
+<body>
+<header><h1>📄 LN6603 約定融資額度統計表 PDF → Excel</h1><span class="sub">純前端・檔案不上傳・紀錄存於本機 IndexedDB</span></header>
+<main>
+<div class="card">
+  <div id="drop">把 <b>PDF</b>（或已轉好的 <b>merge.txt</b>）拖曳到這裡，或點擊選擇檔案（可多選）
+    <input type="file" id="file" accept=".pdf,.txt" multiple hidden></div>
+  <div id="fileList"></div>
+  <div class="row">
+    <label>TXT 編碼 <select id="enc"><option value="big5">Big5</option><option value="utf-8">UTF-8</option></select></label>
+    <label><input type="checkbox" id="optExtra"> 附加「BRNO／頁次／來源檔」欄（放在最後面）</label>
+    <label><input type="checkbox" id="optFilterC"> 匯出時「不可撤銷記號」預設只篩選 C（同 VBA）</label>
+  </div>
+  <div class="row">
+    <label>戶名辨識 <select id="ocrMode">
+      <option value="auto">自動（PDF 讀不到中文時改用 OCR）</option>
+      <option value="always">一律用 OCR</option>
+      <option value="off">不使用 OCR</option></select></label>
+    <label>OCR 範圍 <select id="ocrScope">
+      <option value="all">全部資料列</option>
+      <option value="C">只有不可撤銷記號＝C</option></select></label>
+    <button class="sec" id="btnOcr" disabled>🔍 重新 OCR 戶名</button>
+    <span id="dictInfo" class="muted"></span>
+    <button class="del" id="btnDictClr">清除戶名字典</button>
+  </div>
+  <div class="hint">此報表 PDF 的中文字型沒有內嵌文字對照，瀏覽器讀不出戶名，所以改用 <b>OCR（Tesseract.js，本機執行）</b>辨識戶名欄。
+    結果會依「統一編號」存進本機戶名字典，下個月同一客戶就不用再辨識。<b>淡藍色</b>的戶名是 OCR 結果，請抽查；直接修改後也會更新字典。</div>
+  <div class="row">
+    <button id="btnRun" disabled>▶ 開始轉換</button>
+    <button id="btnXlsx" class="sec" disabled>⬇ 匯出 Excel</button>
+    <div id="progWrap"><div id="prog"></div></div>
+    <span id="status">載入元件中…</span>
+  </div>
+</div>
+
+<div class="card">
+  <div class="tabs">
+    <div class="tab on" data-p="pPrev">預覽／修正</div>
+    <div class="tab" data-p="pChk">驗證</div>
+    <div class="tab" data-p="pTxt">重組文字（merge.txt）</div>
+    <div class="tab" data-p="pHis">轉換紀錄</div>
+  </div>
+  <div id="pPrev" class="pane on">
+    <div class="row" style="margin-top:0">
+      <span id="stats"></span>
+      <input type="text" id="q" placeholder="搜尋 統編／戶名／帳號…" style="width:240px">
+      <label><input type="checkbox" id="onlyC"> 只看不可撤銷記號＝C</label>
+      <label><input type="checkbox" id="onlyWarn"> 只看異常列</label>
+    </div>
+    <p class="muted">儲存格可直接點擊修改，修改後匯出即為修正後內容。</p>
+    <div class="tblWrap"><table id="tbl"></table></div>
+    <div class="pager"><button class="sec" id="pgPrev">‹ 上一頁</button><span id="pgInfo"></span><button class="sec" id="pgNext">下一頁 ›</button></div>
+  </div>
+  <div id="pChk" class="pane"><div id="chk"></div></div>
+  <div id="pTxt" class="pane">
+    <div class="row" style="margin-top:0"><button class="sec" id="btnTxt">⬇ 下載 merge.txt（可給舊 VBA 使用）</button>
+    <span class="muted">依 PDF 文字座標還原的固定寬度文字，用來檢查 PDF 抽字是否正確。</span></div>
+    <textarea id="txt" readonly></textarea>
+  </div>
+  <div id="pHis" class="pane"><div id="his"></div></div>
+</div>
+</main>
+<script>
+/* ===== LN6603 解析核心（可獨立測試） ===== */
+const HDRS = "統一編號|共用額度|戶名|科目|帳號|對象別|訂約金額|契約起迄日|帳號餘額|約定融資額度|不可撤銷記號|最後動用期限|停止撥貸記號|循環|活期|性質別|用途別|撥款方式|參貸比率%".split("|");
+const NUMCOLS = new Set([6, 8, 9, 18]);           // 0-based：訂約金額、帳號餘額、約定融資額度、參貸比率%
+const RE_ID = /^[A-Za-z0-9]{6,10}$/;
+const RE_DATE = /\d{2,3}\/\d{2}\/\d{2}-\s?\d{2,3}\/\d{2}\/\d{2}/;
+const RE_DATE_TOKEN = /^\d{2,3}\/\d{2}\/\d{2}-?(\d{2,3}\/\d{2}\/\d{2})?$/;
+const RE_SEP = /^[=＝]+$/;
+
+/** 顯示寬度：全形 2、半形 1（同 VBA MidW） */
+function dispW(s) { let w = 0; for (const ch of s) w += ch.codePointAt(0) > 255 ? 2 : 1; return w; }
+/** 移除 XML/Excel 不允許的控制字元與私用區字元（PDF 抽字常夾帶 \u0000，會讓 Excel 修復時整格被刪除） */
+const BAD_CH = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F\uFFFD\uFFFE\uFFFF\u200B-\u200F\u2028\u2029\uFEFF]|[\uD800-\uDFFF](?![\uDC00-\uDFFF])/g;
+const sanitize = s => String(s ?? "").replace(BAD_CH, "").normalize("NFC");
+const isSpace = ch => ch === " " || ch === "\u3000" || ch === "\t";
+
+/** 把一段字串（起點 x、每個顯示欄寬 u）切成 token，各帶 x0/x1 */
+function tokenize(str, x, u) {
+  const out = []; let col = 0, cur = "", c0 = 0;
+  for (const ch of str) {
+    const w = ch.codePointAt(0) > 255 ? 2 : 1;
+    if (isSpace(ch)) { if (cur) { out.push({ t: cur, x0: x + c0 * u, x1: x + col * u }); cur = ""; } }
+    else { if (!cur) c0 = col; cur += ch; }
+    col += w;
+  }
+  if (cur) out.push({ t: cur, x0: x + c0 * u, x1: x + col * u });
+  return out;
+}
+
+/** PDF.js textContent.items → 行（每行 token 陣列，依 x 排序） */
+function pdfItemsToLines(items, yTolRatio = 0.45) {
+  const segs = [];
+  for (const it of items) {
+    const str = sanitize(it.str);
+    if (!str.trim()) continue;
+    const [, , c, d, x, y] = it.transform;
+    const fs = Math.hypot(c, d) || it.height || 10;
+    const dw = dispW(str);
+    const u = dw > 0 && it.width > 0 ? it.width / dw : fs / 2;
+    segs.push({ y, fs, toks: tokenize(str, x, u) });
+  }
+  segs.sort((a, b) => b.y - a.y);
+  const lines = [];
+  for (const s of segs) {
+    const L = lines[lines.length - 1];
+    if (L && Math.abs(L.y - s.y) <= s.fs * yTolRatio) L.toks.push(...s.toks);
+    else lines.push({ y: s.y, fs: s.fs, toks: [...s.toks] });
+  }
+  for (const L of lines) L.toks.sort((a, b) => a.x0 - b.x0);
+  // 估算本頁半形字寬（數字 token 中位數）
+  const us = [];
+  for (const L of lines) for (const t of L.toks) if (/^[\d,./-]+$/.test(t.t)) us.push((t.x1 - t.x0) / t.t.length);
+  us.sort((a, b) => a - b);
+  const unit = us.length ? us[us.length >> 1] : 5;
+  return { lines, unit };
+}
+
+/** 純文字行 → token（x 以顯示欄為單位） */
+function textToLines(text) {
+  return { lines: text.split(/\r?\n/).map(s => ({ toks: tokenize(sanitize(s), 0, 1) })), unit: 1 };
+}
+
+/** 依 token 座標還原為固定寬度文字（可輸出成 merge.txt 供舊 VBA 使用） */
+function lineToText(L, unit, originX) {
+  let s = "", col = 0;
+  for (const t of L.toks) {
+    let target = Math.max(0, Math.round((t.x0 - originX) / unit));
+    if (target < col) target = col + (s ? 1 : 0);
+    s += " ".repeat(target - col) + t.t; col = target + dispW(t.t);
+  }
+  return s;
+}
+const lineStr = L => L.toks.map(t => t.t).join(" ");
+
+/** 以「====」分隔線決定 19 欄的 x 範圍，指派 token */
+function assignByColumns(toks, spans) {
+  const cells = spans.map(() => []);
+  for (const t of toks) {
+    let best = -1, bestOv = 0, bestDist = Infinity, near = -1;
+    spans.forEach((s, i) => {
+      const ov = Math.min(t.x1, s.x1) - Math.max(t.x0, s.x0);
+      if (ov > bestOv) { bestOv = ov; best = i; }
+      const d = Math.abs((t.x0 + t.x1) / 2 - (s.x0 + s.x1) / 2);
+      if (d < bestDist) { bestDist = d; near = i; }
+    });
+    cells[best >= 0 ? best : near].push(t.t);
+  }
+  return cells.map((a, i) => a.join(i === 2 ? " " : ""));
+}
+
+/** 無分隔線時：沿用 VBA 由右往左的 token 規則 */
+function assignByTokens(toks) {
+  const t = toks.map(x => x.t), f = new Array(19).fill("");
+  const di = t.findIndex(x => RE_DATE_TOKEN.test(x));
+  if (di < 0) return null;
+  let date = t[di], k = di + 1;
+  if (/-$/.test(date) && t[k]) date += t[k++];
+  f[7] = date;
+  f[0] = t[0]; let p = 1;
+  if (/^\d{2}$/.test(t[1] || "")) { f[1] = t[1]; p = 2; }
+  const lt = t.slice(p, di), n = lt.length - 1;
+  if (n < 2) return null;
+  f[6] = lt[n]; f[5] = lt[n - 1];
+  if (/^\d{12}$/.test(lt[n - 2])) { f[4] = lt[n - 2]; f[3] = lt[n - 3] || ""; f[2] = lt.slice(0, n - 3).join(" "); }
+  else { f[3] = lt[n - 2]; f[2] = lt.slice(0, n - 2).join(" "); }
+  const rt = t.slice(k);
+  for (let i = 0; i < 9 && i < rt.length; i++) f[8 + i] = rt[i];
+  if (rt.length === 10) { if (rt[9].includes(".")) f[18] = rt[9]; else f[17] = rt[9]; }
+  if (rt.length >= 11) { f[17] = rt[9]; f[18] = rt[10]; }
+  return f;
+}
+
+function validateRow(row) {
+  const warn = [];
+  if (!row[2]) warn.push("戶名空白");
+  if (row[4] && !/^\d{12}$/.test(row[4])) warn.push("帳號非12碼");
+  if (!RE_DATE.test(row[7])) warn.push("起迄日格式");
+  [6, 8, 9].forEach(i => { if (row[i] === "") warn.push(HDRS[i] + "非數值"); });
+  if (!["Y", "N", "C"].includes(row[10])) warn.push("不可撤銷記號異常");
+  return warn;
+}
+function toNum(v) {
+  const x = String(v ?? "").replace(/[, ]/g, "");
+  return x && !isNaN(x) ? Number(x) : "";
+}
+
+/**
+ * 解析一個檔案的所有頁面
+ * pages: [{lines, unit}]，回傳 {rows, issues, totals, text}
+ */
+function parseReport(pages, fileName = "", state = { spans: null }) {
+  const rows = [], issues = [], totals = [], textOut = [];
+  let brno = "", pageNo = "";
+  pages.forEach((pg, pi) => {
+    const { lines, unit } = pg;
+    const originX = Math.min(...lines.filter(L => L.toks.length).map(L => L.toks[0].x0), Infinity);
+    for (const L of lines) {
+      if (!L.toks.length) { textOut.push(""); continue; }
+      textOut.push(lineToText(L, unit, isFinite(originX) ? originX : 0));
+      const raw = lineStr(L);
+      const mB = raw.match(/BRNO\s*=\s*(\w+)/); if (mB) brno = mB[1];
+      const mP = raw.match(/PAGE\s*:\s*(\d+)/); if (mP) pageNo = mP[1];
+      if (L.toks.length >= 10 && L.toks.every(t => RE_SEP.test(t.t))) {
+        if (L.toks.length === 19) state.spans = L.toks.map(t => ({ x0: t.x0, x1: t.x1 }));
+        continue;
+      }
+      if (raw.includes("約定融資金額加總")) {
+        const nums = L.toks.map(t => t.t).filter(s => /^-?[\d,]+$/.test(s));
+        if (nums.length) totals.push({ file: fileName, brno, value: toNum(nums[nums.length - 1]) });
+        continue;
+      }
+      const first = L.toks[0].t.replace(/\u3000/g, "");
+      if (!RE_ID.test(first) || !RE_DATE.test(raw.replace(/- /g, "-"))) {
+        if (RE_DATE.test(raw)) issues.push({ file: fileName, page: pi + 1, reason: "有日期但統一編號不符", raw });
+        continue;
+      }
+      let f = state.spans ? assignByColumns(L.toks, state.spans) : assignByTokens(L.toks);
+      if (!f) { issues.push({ file: fileName, page: pi + 1, reason: "無法拆欄", raw }); continue; }
+      f = f.map(v => sanitize(v).replace(/\u3000/g, "").trim());
+      f[7] = f[7].replace(/ /g, "");
+      const row = f.map((v, i) => NUMCOLS.has(i) ? toNum(v) : v);
+      const sp = state.spans;
+      rows.push({ data: row, brno, page: pageNo || String(pi + 1), file: fileName, raw, pdfPage: pi + 1,
+        geo: (L.y !== undefined && sp) ? { y: L.y, fs: L.fs, x0: sp[2].x0, x1: sp[3].x0 } : null });
+    }
+    textOut.push("\f");
+  });
+  return { rows, issues, totals, text: textOut.join("\r\n") };
+}
+
+
+/* ===================== 外部函式庫載入（先找同資料夾 lib/，再用 CDN） ===================== */
+const LIBS = [
+  ["lib/pdf.min.js", "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"],
+  ["lib/exceljs.min.js", "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"],
+  ["lib/jszip.min.js", "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"]
+];
+let PDF_LOCAL = false;
+function loadScript(src) {
+  return new Promise((ok, ng) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = ng; document.head.appendChild(s); });
+}
+async function loadLibs() {
+  for (const [local, cdn] of LIBS) {
+    try { await loadScript(local); if (local.includes("pdf")) PDF_LOCAL = true; }
+    catch { await loadScript(cdn); }
+  }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_LOCAL ? "lib/pdf.worker.min.js"
+    : "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+const CMAP_URL = () => PDF_LOCAL ? "lib/cmaps/" : "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/";
+
+/* ===================== IndexedDB ===================== */
+const DB = {
+  db: null,
+  open() {
+    return new Promise((ok, ng) => {
+      const r = indexedDB.open("ln6603_spa", 1);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        d.createObjectStore("history", { keyPath: "id", autoIncrement: true });
+        d.createObjectStore("settings");
+      };
+      r.onsuccess = () => { this.db = r.result; ok(); };
+      r.onerror = () => ng(r.error);
+    });
+  },
+  tx(store, mode, fn) {
+    return new Promise((ok, ng) => {
+      const t = this.db.transaction(store, mode), s = t.objectStore(store);
+      const req = fn(s); t.oncomplete = () => ok(req && req.result); t.onerror = () => ng(t.error);
+    });
+  },
+  put: (st, v, k) => DB.tx(st, "readwrite", s => s.put(v, k)),
+  get: (st, k) => DB.tx(st, "readonly", s => s.get(k)),
+  all: st => DB.tx(st, "readonly", s => s.getAll()),
+  del: (st, k) => DB.tx(st, "readwrite", s => s.delete(k))
+};
+
+/* ===================== 狀態與 UI ===================== */
+const $ = id => document.getElementById(id);
+let files = [], RES = null, page = 0;
+const PAGE = 100;
+
+function setProg(p, msg) { $("prog").style.width = (p * 100).toFixed(0) + "%"; if (msg) $("status").textContent = msg; }
+
+function pickFiles(list) {
+  files = [...list].filter(f => /\.(pdf|txt)$/i.test(f.name));
+  $("fileList").textContent = files.length ? "已選擇：" + files.map(f => f.name).join("、") : "";
+  $("btnRun").disabled = !files.length;
+}
+$("drop").onclick = () => $("file").click();
+$("file").onchange = e => pickFiles(e.target.files);
+["dragover", "dragenter"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.add("over"); }));
+["dragleave", "drop"].forEach(ev => $("drop").addEventListener(ev, e => { e.preventDefault(); $("drop").classList.remove("over"); }));
+$("drop").addEventListener("drop", e => pickFiles(e.dataTransfer.files));
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  document.querySelectorAll(".tab,.pane").forEach(x => x.classList.remove("on"));
+  t.classList.add("on"); $(t.dataset.p).classList.add("on");
+  if (t.dataset.p === "pHis") renderHistory();
+});
+
+/* ===================== 轉換 ===================== */
+const PDF_DOCS = {};
+async function readPdf(file, onPage) {
+  const doc = PDF_DOCS[file.name] = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), cMapUrl: CMAP_URL(), cMapPacked: true }).promise;
+  const pages = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const p = await doc.getPage(i);
+    pages.push(pdfItemsToLines((await p.getTextContent()).items));
+    onPage(i, doc.numPages);
+  }
+  return pages;
+}
+
+$("btnRun").onclick = async () => {
+  $("btnRun").disabled = true;
+  const all = { rows: [], issues: [], totals: [], text: [], files: files.map(f => f.name) };
+  try {
+    for (let fi = 0; fi < files.length; fi++) {
+      const f = files[fi], state = { spans: null };
+      let pages;
+      if (/\.txt$/i.test(f.name)) {
+        const buf = await f.arrayBuffer();
+        pages = [textToLines(new TextDecoder($("enc").value).decode(buf))];
+      } else {
+        pages = await readPdf(f, (i, n) => setProg((fi + i / n) / files.length, `讀取 ${f.name} 第 ${i}/${n} 頁…`));
+      }
+      const r = parseReport(pages, f.name, state);
+      if (!state.spans) r.issues.unshift({ file: f.name, page: "-", reason: "找不到 19 段「====」分隔線，改用 token 規則拆欄，請特別檢查", raw: "" });
+      all.rows.push(...r.rows); all.issues.push(...r.issues);  // issues 這裡只含非資料列提醒 all.totals.push(...r.totals); all.text.push(r.text);
+    }
+    all.text = all.text.join("\r\n");
+    RES = all; page = 0;
+    const blank = all.rows.filter(r => !r.data[2]).length;
+    const mode = $("ocrMode").value;
+    if (all.rows.some(r => r.geo) && (mode === "always" || (mode === "auto" && blank > all.rows.length * 0.3))) await ocrNames();
+    else applyDict();
+    rebuildIssues();
+    setProg(1, `完成！共 ${all.rows.length} 筆資料，${all.issues.length} 個提醒。`);
+    if (!all.rows.length) alert("未擷取到任何資料列。\n請到「重組文字」分頁檢查 PDF 抽出的文字是否正常（若為亂碼或空白，代表 PDF 為掃描影像或字型無法對應）。");
+    renderAll();
+    await saveHistory();
+  } catch (e) {
+    console.error(e); setProg(0, "錯誤：" + e.message); alert("轉換失敗：" + e.message);
+  }
+  $("btnRun").disabled = false;
+};
+
+/* ===================== 戶名 OCR ===================== */
+let NAME_DICT = {};
+const updDictInfo = () => $("dictInfo").textContent = `戶名字典：${Object.keys(NAME_DICT).length} 筆`;
+const saveDict = () => { updDictInfo(); return DB.put("settings", NAME_DICT, "nameDict"); };
+$("btnDictClr").onclick = async () => { if (confirm("確定清除本機戶名字典？")) { NAME_DICT = {}; await saveDict(); } };
+
+function applyDict() {
+  RES.rows.forEach(r => { if (!r.data[2] && NAME_DICT[r.data[0]]) { r.data[2] = NAME_DICT[r.data[0]]; r.nameSrc = "dict"; } });
+}
+let TESS_LOCAL = false;
+async function loadTesseract() {
+  if (window.Tesseract) return;
+  try { await loadScript("lib/tesseract/tesseract.min.js"); TESS_LOCAL = true; }
+  catch { await loadScript("https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"); }
+}
+const cleanOcr = s => sanitize(s).replace(/\s+/g, "").replace(/[|_~`'"‘’“”\[\]{}<>=+*^]/g, "");
+
+async function ocrNames() {
+  const scope = $("ocrScope").value, mode = $("ocrMode").value;
+  const target = RES.rows.filter(r => r.geo && PDF_DOCS[r.file] && (scope === "all" || r.data[10] === "C"));
+  // 1) 先套字典；2) 同一統編只辨識一次
+  const todo = new Map();
+  for (const r of target) {
+    const id = r.data[0];
+    if (NAME_DICT[id]) { r.data[2] = NAME_DICT[id]; r.nameSrc = "dict"; continue; }
+    if (mode !== "always" && r.data[2]) continue;
+    if (!todo.has(id)) todo.set(id, []);
+    todo.get(id).push(r);
+  }
+  if (!todo.size) return;
+  setProg(0, "載入 OCR 元件（第一次需下載中文辨識檔，約 10～20MB）…");
+  await loadTesseract();
+  const nW = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1));
+  const opt = TESS_LOCAL ? { workerPath: "lib/tesseract/worker.min.js", corePath: "lib/tesseract/", langPath: "lib/tesseract/lang/" } : {};
+  const sch = Tesseract.createScheduler();
+  for (let i = 0; i < nW; i++) {
+    const w = await Tesseract.createWorker("chi_tra", 1, opt);
+    await w.setParameters({ tessedit_pageseg_mode: "7", preserve_interword_spaces: "0" });
+    sch.addWorker(w);
+  }
+  // 依 檔案＋頁 分組，每頁只渲染一次
+  const groups = new Map();
+  for (const [id, rs] of todo) { const k = rs[0].file + "\u0001" + rs[0].pdfPage; if (!groups.has(k)) groups.set(k, []); groups.get(k).push([id, rs]); }
+  let done = 0; const total = todo.size, SCALE = 4, PAD = 12;
+  try {
+    for (const [k, list] of groups) {
+      const [file, pn] = k.split("\u0001");
+      const pg = await PDF_DOCS[file].getPage(+pn), vp = pg.getViewport({ scale: SCALE });
+      const cv = document.createElement("canvas"); cv.width = vp.width; cv.height = vp.height;
+      const ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+      await pg.render({ canvasContext: ctx, viewport: vp }).promise;
+      await Promise.all(list.map(async ([id, rs]) => {
+        const g = rs[0].geo;
+        const [ax, ay] = vp.convertToViewportPoint(g.x0 - 1, g.y + g.fs * 0.95);
+        const [bx, by] = vp.convertToViewportPoint(g.x1 - 2, g.y - g.fs * 0.28);
+        const x = Math.max(0, Math.min(ax, bx)), y = Math.max(0, Math.min(ay, by));
+        const w = Math.abs(bx - ax), h = Math.abs(by - ay);
+        const c2 = document.createElement("canvas"); c2.width = w + PAD * 2; c2.height = h + PAD * 2;
+        const x2 = c2.getContext("2d"); x2.fillStyle = "#fff"; x2.fillRect(0, 0, c2.width, c2.height);
+        x2.drawImage(cv, x, y, w, h, PAD, PAD, w, h);
+        const { data } = await sch.addJob("recognize", c2);
+        const name = cleanOcr(data.text);
+        if (name) { NAME_DICT[id] = name; rs.forEach(r => { r.data[2] = name; r.nameSrc = "ocr"; }); }
+        done++;
+        if (done % 10 === 0 || done === total) setProg(done / total, `OCR 戶名 ${done} / ${total}（同統編只辨識一次）…`);
+      }));
+      pg.cleanup();
+    }
+  } finally {
+    await sch.terminate();
+    await saveDict();
+  }
+  // 其他未在 todo 內、但同統編的列也補上
+  RES.rows.forEach(r => { if (!r.data[2] && NAME_DICT[r.data[0]]) { r.data[2] = NAME_DICT[r.data[0]]; r.nameSrc = "dict"; } });
+}
+$("btnOcr").onclick = async () => {
+  $("btnOcr").disabled = $("btnRun").disabled = true;
+  try {
+    // 重新 OCR：清掉範圍內列的字典值，強制重辨識
+    const scope = $("ocrScope").value;
+    if (confirm("要忽略字典、強制重新辨識範圍內的戶名嗎？\n（取消＝只辨識字典沒有的）")) {
+      RES.rows.forEach(r => { if (r.geo && (scope === "all" || r.data[10] === "C")) { delete NAME_DICT[r.data[0]]; r.data[2] = ""; r.nameSrc = ""; } });
+    }
+    const m = $("ocrMode").value; if (m === "off") $("ocrMode").value = "auto";
+    await ocrNames(); $("ocrMode").value = m;
+    rebuildIssues(); renderAll(); setProg(1, "戶名 OCR 完成。");
+  } catch (e) { console.error(e); alert("OCR 失敗：" + e.message); }
+  $("btnRun").disabled = false; renderAll();
+};
+
+/* ===================== 預覽 ===================== */
+function filtered() {
+  const q = $("q").value.trim(), onlyC = $("onlyC").checked, onlyW = $("onlyWarn").checked;
+  return RES.rows.filter(r =>
+    (!onlyC || r.data[10] === "C") &&
+    (!onlyW || r.warn) &&
+    (!q || r.data.some(v => String(v).includes(q))));
+}
+function rebuildIssues() {
+  RES.issues = RES.issues.filter(i => i.ri === undefined);
+  RES.rows.forEach((r, ri) => {
+    const w = validateRow(r.data);
+    r.warn = w.length > 0;
+    if (w.length) RES.issues.push({ ri, file: r.file, page: r.pdfPage || r.page, reason: w.join("、"), raw: r.raw || "" });
+  });
+}
+function renderAll() {
+  if (RES.rows.length && RES.rows[0].warn === undefined) rebuildIssues();
+  $("btnXlsx").disabled = !RES.rows.length;
+  $("btnOcr").disabled = !RES.rows.some(r => r.geo && PDF_DOCS[r.file]);
+  renderTable(); renderCheck();
+  $("txt").value = RES.text;
+}
+function renderTable() {
+  const rows = filtered(), pages = Math.max(1, Math.ceil(rows.length / PAGE));
+  page = Math.min(page, pages - 1);
+  const cCount = RES.rows.filter(r => r.data[10] === "C").length;
+  $("stats").innerHTML = `<span class="stat">全部 ${RES.rows.length} 筆</span><span class="stat">C：${cCount} 筆</span><span class="stat">符合條件 ${rows.length} 筆</span>`;
+  const extra = $("optExtra").checked;
+  let h = "<tr><th>#</th>" + HDRS.map(x => `<th>${x}</th>`).join("") + (extra ? "<th>BRNO</th><th>頁次</th><th>來源檔</th>" : "") + "</tr>";
+  rows.slice(page * PAGE, (page + 1) * PAGE).forEach(r => {
+    const idx = RES.rows.indexOf(r);
+    h += `<tr class="${r.warn ? "warn" : ""}"><td class="muted">${idx + 1}</td>` +
+      r.data.map((v, c) => `<td contenteditable data-r="${idx}" data-c="${c}" class="${NUMCOLS.has(c) ? "n" : ""}${c === 2 && r.nameSrc ? " ocr" : ""}" ${c === 2 && r.nameSrc ? 'title="' + (r.nameSrc === "ocr" ? "OCR 辨識結果，請確認" : "取自戶名字典") + '"' : ""}>${fmt(v, c)}</td>`).join("") +
+      (extra ? `<td>${r.brno}</td><td>${r.page}</td><td>${esc(r.file)}</td>` : "") + "</tr>";
+  });
+  $("tbl").innerHTML = h;
+  $("pgInfo").textContent = `第 ${page + 1} / ${pages} 頁`;
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function fmt(v, c) {
+  if (v === "" || v == null) return "";
+  if (c === 18) return Number(v).toFixed(3);
+  if (NUMCOLS.has(c)) return Number(v).toLocaleString("en-US");
+  return esc(v);
+}
+$("tbl").addEventListener("focusout", e => {
+  const td = e.target; if (!td.dataset || td.dataset.r === undefined) return;
+  const r = +td.dataset.r, c = +td.dataset.c, v = td.textContent.trim();
+  const old = RES.rows[r].data[c];
+  RES.rows[r].data[c] = NUMCOLS.has(c) ? toNum(v) : sanitize(v);
+  if (old === RES.rows[r].data[c]) return;
+  if (c === 2) {   // 戶名修改 → 更新字典並套用到同統編各列
+    const id = RES.rows[r].data[0], name = RES.rows[r].data[2];
+    if (name) { NAME_DICT[id] = name; saveDict(); }
+    RES.rows.forEach(x => { if (x.data[0] === id) { x.data[2] = name; x.nameSrc = ""; } });
+  }
+  rebuildIssues(); renderTable(); renderCheck();
+});
+["q", "onlyC", "onlyWarn", "optExtra"].forEach(id => $(id).addEventListener("input", () => { page = 0; RES && renderTable(); }));
+$("pgPrev").onclick = () => { if (page > 0) { page--; renderTable(); } };
+$("pgNext").onclick = () => { page++; renderTable(); };
+
+/* ===================== 驗證 ===================== */
+function renderCheck() {
+  const by = {};
+  RES.rows.forEach(r => { const k = r.file + "|" + r.brno; (by[k] ||= { file: r.file, brno: r.brno, n: 0, sum: 0, total: null }); by[k].n++; by[k].sum += Number(r.data[9]) || 0; });
+  RES.totals.forEach(t => { const k = t.file + "|" + t.brno; (by[k] ||= { file: t.file, brno: t.brno, n: 0, sum: 0, total: null }); by[k].total = (by[k].total || 0) + t.value; });
+  let h = `<h3>① 各 BRNO「約定融資額度」合計 vs 報表「約定融資金額加總」</h3>
+  <div class="tblWrap" style="max-height:40vh"><table><tr><th>來源檔</th><th>BRNO</th><th>筆數</th><th>明細合計</th><th>報表加總</th><th>差異</th><th>結果</th></tr>`;
+  Object.values(by).forEach(b => {
+    const diff = b.total == null ? null : b.sum - b.total;
+    h += `<tr><td>${esc(b.file)}</td><td>${b.brno}</td><td class="n">${b.n}</td><td class="n">${b.sum.toLocaleString()}</td>
+      <td class="n">${b.total == null ? "—" : b.total.toLocaleString()}</td><td class="n">${diff == null ? "" : diff.toLocaleString()}</td>
+      <td>${b.total == null ? '<span class="muted">報表無加總列</span>' : diff === 0 ? '<span class="ok">✔ 相符</span>' : '<span class="ng">✘ 不符</span>'}</td></tr>`;
+  });
+  h += `</table></div><p class="muted">若報表加總是「跨頁累計」而且同一個 BRNO 分成多個檔案，差異可能來自分檔，請以合併後的檔案比對。</p>
+  <h3>② 異常／提醒（${RES.issues.length}）</h3>`;
+  h += RES.issues.length ? `<div class="tblWrap" style="max-height:40vh"><table><tr><th>來源檔</th><th>頁</th><th>原因</th><th>原始行</th></tr>` +
+    RES.issues.map(i => `<tr><td>${esc(i.file)}</td><td>${i.page}</td><td class="ng">${esc(i.reason)}</td><td style="font-family:monospace">${esc(i.raw)}</td></tr>`).join("") + "</table></div>"
+    : '<p class="ok">沒有異常 👍</p>';
+  $("chk").innerHTML = h;
+}
+
+/* ===================== 匯出 Excel ===================== */
+$("btnXlsx").onclick = async () => {
+  const extra = $("optExtra").checked, filterC = $("optFilterC").checked;
+  const hdr = HDRS.concat(extra ? ["BRNO", "頁次", "來源檔"] : []);
+  const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet("LN_6603_DTL", { views: [{ state: "frozen", ySplit: 1 }] });
+  ws.addRow(hdr);
+  RES.rows.forEach(r => {
+    const row = ws.addRow(r.data.concat(extra ? [r.brno, r.page, r.file] : []).map(v => typeof v === "string" ? sanitize(v) : v));
+    if (filterC && r.data[10] !== "C") row.hidden = true;
+  });
+  const n = RES.rows.length + 1;
+  hdr.forEach((h, i) => {
+    const col = ws.getColumn(i + 1);
+    col.numFmt = i === 6 || i === 8 || i === 9 ? "#,##0" : i === 18 ? "0.000" : "@";
+    let w = dispW(h);
+    RES.rows.forEach(r => { const v = i < 19 ? fmt(r.data[i], i) : ""; w = Math.max(w, dispW(String(v))); });
+    col.width = Math.min(Math.max(w + 2, 6), 40);
+  });
+  const h1 = ws.getRow(1);
+  h1.eachCell(c => {
+    c.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1F4E79" } };
+    c.alignment = { horizontal: "center", vertical: "middle" };
+    c.numFmt = "@";
+  });
+  const lastCol = ws.getColumn(hdr.length).letter;
+  ws.autoFilter = `A1:${lastCol}${n}`;
+
+  // 驗證工作表
+  const vs = wb.addWorksheet("驗證");
+  vs.addRow(["來源檔", "BRNO", "報表約定融資金額加總"]);
+  RES.totals.forEach(t => vs.addRow([t.file, t.brno, t.value]));
+  vs.getColumn(3).numFmt = "#,##0"; vs.columns.forEach(c => c.width = 22);
+
+  let buf = await wb.xlsx.writeBuffer();
+  if (filterC) {  // ExcelJS 不支援預設篩選條件 → 直接修補 XML（同 VBA AutoFilter Field:=11, "C"）
+    const zip = await JSZip.loadAsync(buf), p = "xl/worksheets/sheet1.xml";
+    let xml = await zip.file(p).async("string");
+    xml = xml.replace(/<autoFilter ref="([^"]+)"\s*\/>/,
+      '<autoFilter ref="$1"><filterColumn colId="10"><filters><filter val="C"/></filters></filterColumn></autoFilter>');
+    zip.file(p, xml);
+    buf = await zip.generateAsync({ type: "arraybuffer" });
+  }
+  const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  download(new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }), `LN_6603_DTL_${stamp}.xlsx`);
+};
+function download(blob, name) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+$("btnTxt").onclick = () => RES && download(new Blob(["\ufeff" + RES.text], { type: "text/plain" }), "merge.txt");
+
+/* ===================== 轉換紀錄 ===================== */
+async function saveHistory() {
+  await DB.put("history", { time: new Date().toLocaleString("zh-TW"), files: RES.files, count: RES.rows.length, issues: RES.issues.length, res: RES });
+  const all = await DB.all("history");
+  for (const h of all.slice(0, Math.max(0, all.length - 20))) await DB.del("history", h.id);   // 只留最近 20 次
+}
+async function renderHistory() {
+  const all = (await DB.all("history")).reverse();
+  $("his").innerHTML = all.length ? `<table><tr><th>時間</th><th>檔案</th><th>筆數</th><th>提醒</th><th></th></tr>` +
+    all.map(h => `<tr><td>${h.time}</td><td>${esc(h.files.join("、"))}</td><td class="n">${h.count}</td><td class="n">${h.issues}</td>
+    <td><button class="sec" data-load="${h.id}">載入</button> <button class="del" data-del="${h.id}">刪除</button></td></tr>`).join("") + "</table>"
+    : '<p class="muted">尚無紀錄</p>';
+}
+$("his").onclick = async e => {
+  const l = e.target.dataset.load, d = e.target.dataset.del;
+  if (l) { RES = (await DB.get("history", +l)).res; RES.rows.forEach(r => delete r.warn); RES.issues = RES.issues.filter(i => i.ri === undefined && !/戶名空白|帳號非|起迄日|非數值|不可撤銷/.test(i.reason)); page = 0; renderAll(); document.querySelector('.tab[data-p="pPrev"]').click(); setProg(1, "已載入歷史紀錄"); }
+  if (d && confirm("確定刪除這筆紀錄？")) { await DB.del("history", +d); renderHistory(); }
+};
+
+/* ===================== 設定保存 ===================== */
+["enc", "optExtra", "optFilterC", "ocrMode", "ocrScope"].forEach(id => $(id).addEventListener("change", () =>
+  DB.put("settings", { enc: $("enc").value, extra: $("optExtra").checked, filterC: $("optFilterC").checked, ocrMode: $("ocrMode").value, ocrScope: $("ocrScope").value }, "opt2")));
+
+/* ===================== 啟動 ===================== */
+(async () => {
+  try {
+    await DB.open();
+    const o = await DB.get("settings", "opt2");   // 改用新 key：舊版存的「篩選 C＝勾選」不再沿用
+    if (o) { $("enc").value = o.enc; $("optExtra").checked = o.extra; $("optFilterC").checked = !!o.filterC;
+      if (o.ocrMode) $("ocrMode").value = o.ocrMode; if (o.ocrScope) $("ocrScope").value = o.ocrScope; }
+    NAME_DICT = (await DB.get("settings", "nameDict")) || {}; updDictInfo();
+    await loadLibs();
+    setProg(0, "就緒，請選擇檔案。");
+  } catch (e) {
+    setProg(0, "元件載入失敗：" + (e.message || "請確認網路或 lib/ 資料夾"));
+  }
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
