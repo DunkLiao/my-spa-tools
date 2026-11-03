@@ -213,19 +213,42 @@ function assignByTokens(toks) {
   if (/^\d{12}$/.test(lt[n - 2])) { f[4] = lt[n - 2]; f[3] = lt[n - 3] || ""; f[2] = lt.slice(0, n - 3).join(" "); }
   else { f[3] = lt[n - 2]; f[2] = lt.slice(0, n - 2).join(" "); }
   const rt = t.slice(k);
-  for (let i = 0; i < 9 && i < rt.length; i++) f[8 + i] = rt[i];
-  if (rt.length === 10) { if (rt[9].includes(".")) f[18] = rt[9]; else f[17] = rt[9]; }
-  if (rt.length >= 11) { f[17] = rt[9]; f[18] = rt[10]; }
+  // 帳號餘額、約定融資額度、不可撤銷記號（Y/N/C）定位，避免數字與記號黏在一起
+  // 以「最後動用期限」(7 位數字) 為錨點；其前為 帳號餘額、約定融資額度、[不可撤銷記號 可空白]
+  let ri = 0;
+  let anchor = rt.findIndex(x => /^\d{7}$/.test(x));
+  if (anchor < 0) anchor = Math.min(rt.length, 3);
+  const pre = rt.slice(0, anchor);
+  if (pre.length && /^[YNC]$/i.test(pre[pre.length - 1])) f[10] = pre.pop().toUpperCase();
+  else f[10] = "";
+  f[9] = pre.length ? pre.pop() : "";
+  f[8] = pre.length ? pre.pop() : "";
+  ri = anchor;
+  const rest = rt.slice(ri);
+  for (let i = 0; i < 6 && i < rest.length; i++) f[11 + i] = rest[i];
+  if (rest.length === 7) { if (rest[6].includes(".")) f[18] = rest[6]; else f[17] = rest[6]; }
+  if (rest.length >= 8) { f[17] = rest[6]; f[18] = rest[7]; }
   return f;
 }
 
+/** 戶名清理：去除溢位重複片段，超過 32 顯示寬度截斷 */
+const NAME_W = 32;
+function cleanName(s) {
+  s = String(s || "").replace(/[\u3000\s]+/g, " ").trim();
+  const parts = s.split(" ");
+  const keep = [parts[0]];
+  for (const p of parts.slice(1)) if (p && !keep[0].includes(p)) keep.push(p);   // 報表溢位常重複戶名尾段
+  let out = "", w = 0;
+  for (const ch of keep.join(" ")) { const cw = dispW(ch); if (w + cw > NAME_W) break; out += ch; w += cw; }
+  return out.trim();
+}
 function validateRow(row) {
   const warn = [];
   if (!row[2]) warn.push("戶名空白");
   if (row[4] && !/^\d{12}$/.test(row[4])) warn.push("帳號非12碼");
   if (!RE_DATE.test(row[7])) warn.push("起迄日格式");
   [6, 8, 9].forEach(i => { if (row[i] === "") warn.push(HDRS[i] + "非數值"); });
-  if (!["Y", "N", "C"].includes(row[10])) warn.push("不可撤銷記號異常");
+  if (!["Y", "N", "C", ""].includes(row[10])) warn.push("不可撤銷記號異常");
   return warn;
 }
 function toNum(v) {
@@ -263,10 +286,11 @@ function parseReport(pages, fileName = "", state = { spans: null }) {
         if (RE_DATE.test(raw)) issues.push({ file: fileName, page: pi + 1, reason: "有日期但統一編號不符", raw });
         continue;
       }
-      let f = state.spans ? assignByColumns(L.toks, state.spans) : assignByTokens(L.toks);
+      let f = (state.spans && !state.txt) ? assignByColumns(L.toks, state.spans) : assignByTokens(L.toks);
       if (!f) { issues.push({ file: fileName, page: pi + 1, reason: "無法拆欄", raw }); continue; }
       f = f.map(v => sanitize(v).replace(/\u3000/g, "").trim());
       f[7] = f[7].replace(/ /g, "");
+      f[2] = cleanName(f[2]);
       const row = f.map((v, i) => NUMCOLS.has(i) ? toNum(v) : v);
       const sp = state.spans;
       rows.push({ data: row, brno, page: pageNo || String(pi + 1), file: fileName, raw, pdfPage: pi + 1,
@@ -366,7 +390,7 @@ $("btnRun").onclick = async () => {
   const all = { rows: [], issues: [], totals: [], text: [], files: files.map(f => f.name) };
   try {
     for (let fi = 0; fi < files.length; fi++) {
-      const f = files[fi], state = { spans: null };
+      const f = files[fi], state = { spans: null, txt: /\.txt$/i.test(f.name) };
       let pages;
       if (/\.txt$/i.test(f.name)) {
         const buf = await f.arrayBuffer();
@@ -375,8 +399,9 @@ $("btnRun").onclick = async () => {
         pages = await readPdf(f, (i, n) => setProg((fi + i / n) / files.length, `讀取 ${f.name} 第 ${i}/${n} 頁…`));
       }
       const r = parseReport(pages, f.name, state);
-      if (!state.spans) r.issues.unshift({ file: f.name, page: "-", reason: "找不到 19 段「====」分隔線，改用 token 規則拆欄，請特別檢查", raw: "" });
-      all.rows.push(...r.rows); all.issues.push(...r.issues);  // issues 這裡只含非資料列提醒 all.totals.push(...r.totals); all.text.push(r.text);
+      if (!state.spans && !state.txt) r.issues.unshift({ file: f.name, page: "-", reason: "找不到 19 段「====」分隔線，改用 token 規則拆欄，請特別檢查", raw: "" });
+      all.rows.push(...r.rows); all.issues.push(...r.issues);
+      all.totals.push(...r.totals); all.text.push(r.text);
     }
     all.text = all.text.join("\r\n");
     RES = all; page = 0;

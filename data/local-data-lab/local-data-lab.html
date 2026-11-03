@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; base-uri 'none'; form-action 'none'">
+<title>Local Data Lab ─ 離線資料處理工作台</title>
+<style>
+:root{--bg:#f3f5f9;--panel:#fff;--ink:#1f2937;--mute:#6b7280;--line:#e2e5ea;--brand:#2563eb;--brand-d:#1d4ed8;--ok:#15803d;--warn:#b45309;--err:#dc2626;--info:#0369a1;--hl:#fff3bf;--side:#0f172a;--sideink:#cbd5e1;--soft:#eef2ff;--shadow:0 1px 3px rgba(0,0,0,.08)}
+[data-theme=dark]{--bg:#0b1220;--panel:#16203a;--ink:#e5e7eb;--mute:#94a3b8;--line:#2b3a5c;--brand:#3b82f6;--brand-d:#60a5fa;--ok:#4ade80;--warn:#fbbf24;--err:#f87171;--info:#38bdf8;--hl:#5b4a0a;--side:#050a16;--soft:#1e2b4d;--shadow:none}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:14px;display:grid;grid-template-rows:48px 1fr 26px;grid-template-columns:184px 1fr}
+header{grid-column:1/3;background:var(--side);color:#fff;display:flex;align-items:center;gap:12px;padding:0 14px}
+header .logo{font-weight:700;font-size:16px;letter-spacing:.3px}
+header select{background:#1e293b;color:#fff;border:1px solid #334155;max-width:260px}
+header .sp{flex:1}
+nav{background:var(--side);padding:6px 0;overflow:auto}
+nav a{display:block;padding:10px 16px;color:var(--sideink);text-decoration:none;border-left:3px solid transparent;cursor:pointer}
+nav a:hover{background:#1e293b}
+nav a.on{background:#1e293b;color:#fff;border-left-color:var(--brand)}
+main{overflow:auto;padding:18px 22px}
+footer{grid-column:1/3;background:var(--panel);border-top:1px solid var(--line);color:var(--mute);font-size:12px;display:flex;align-items:center;padding:0 14px;gap:18px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:16px;margin:0 0 10px}h3{font-size:14px;margin:0 0 8px}
+.sub{color:var(--mute);margin:0 0 14px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card.err{border-color:var(--err);color:var(--err)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row.top{align-items:flex-start}
+.col{display:flex;flex-direction:column;gap:6px}
+.sp{flex:1}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}body{grid-template-columns:140px 1fr}}
+input,select,textarea,button{font:inherit;color:var(--ink)}
+input[type=text],input[type=number],input:not([type]),select,textarea{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px;min-width:0}
+textarea{width:100%;min-height:140px;font-family:Consolas,"Courier New",monospace;font-size:13px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--brand);outline-offset:-1px}
+.btn{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{background:var(--brand-d);color:#fff}
+.btn.danger{color:var(--err)}.btn.danger:hover{border-color:var(--err)}
+.btn.sm{padding:2px 8px;font-size:12px}
+.btn[disabled]{opacity:.5;cursor:not-allowed}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--mute)}
+label.f>input,label.f>select{font-size:14px;color:var(--ink)}
+label.ck{display:inline-flex;gap:5px;align-items:center;cursor:pointer}
+.muted{color:var(--mute)}.pad{padding:6px 2px}.ok{color:var(--ok)}.warn{color:var(--warn)}.errc{color:var(--err)}.infoc{color:var(--info)}
+.tblwrap{overflow:auto;max-height:62vh;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+table.tbl{border-collapse:collapse;width:max-content;min-width:100%;font-size:13px}
+.tbl th,.tbl td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:4px 8px;white-space:nowrap;max-width:320px;overflow:hidden;text-overflow:ellipsis;text-align:left}
+.tbl th{position:sticky;top:0;background:var(--soft);z-index:2;user-select:none}
+.tbl th.sortable{cursor:pointer}
+.tbl td.no,.tbl th.no{color:var(--mute);background:var(--soft);text-align:right;position:sticky;left:0}
+.tbl td.no{z-index:1}.tbl th.no{z-index:3}
+.tbl tr:hover td{background:rgba(37,99,235,.06)}
+.tbl td.hl{background:var(--hl)!important}
+.tbl td.add,.tbl tr.add td{background:rgba(22,163,74,.13)}
+.tbl tr.del td{background:rgba(220,38,38,.12)}
+.tbl td.e{background:rgba(220,38,38,.18)}.tbl td.w{background:rgba(217,119,6,.2)}.tbl td.i{background:rgba(3,105,161,.15)}
+.tbl input.cell{width:100%;min-width:120px;padding:2px 4px}
+.stat{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
+.stat .s{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 16px;min-width:110px;cursor:default}
+.stat .s b{display:block;font-size:22px}
+.stat .s.click{cursor:pointer}.stat .s.on{outline:2px solid var(--brand)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;max-height:120px;overflow:auto;padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.chips label{background:var(--soft);border-radius:14px;padding:2px 10px;cursor:pointer;display:inline-flex;gap:4px;align-items:center}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;color:var(--mute);cursor:pointer}
+.drop.over{border-color:var(--brand);background:var(--soft)}
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;color:#fff;z-index:99}
+.spin{width:34px;height:34px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.modal-bg{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:90;padding:20px}
+.modal{background:var(--panel);border-radius:12px;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.modal .mh{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700}
+.modal .mb{padding:16px 18px;overflow:auto}
+.modal .mf{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;justify-content:flex-end}
+#toasts{position:fixed;right:16px;bottom:38px;display:flex;flex-direction:column;gap:8px;z-index:120}
+.toast{background:#111827;color:#fff;padding:10px 16px;border-radius:8px;max-width:420px;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+.toast.ok{background:#15803d}.toast.err{background:#b91c1c}.toast.warn{background:#b45309}
+.mod-card{cursor:pointer;transition:.15s}.mod-card:hover{border-color:var(--brand);transform:translateY(-2px)}
+.mod-card .ic{font-size:26px}
+.tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;background:var(--soft)}
+.tag.e{background:rgba(220,38,38,.18);color:var(--err)}.tag.w{background:rgba(217,119,6,.2);color:var(--warn)}.tag.i{background:rgba(3,105,161,.15);color:var(--info)}
+.list-item{display:flex;gap:8px;align-items:center;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:6px;background:var(--panel)}
+.list-item.off{opacity:.5}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px}
+pre.box{background:var(--soft);padding:10px;border-radius:8px;white-space:pre-wrap;margin:0;font-size:12.5px}
+.diffold{color:var(--err);text-decoration:line-through}.diffnew{color:var(--ok);font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🧪 Local Data Lab</span>
+  <span class="muted" style="color:#94a3b8">專案</span>
+  <select id="projSel" title="目前專案"></select>
+  <span class="sp"></span>
+  <button class="btn sm" id="btnBackup">💾 快速備份</button>
+  <button class="btn sm" id="btnTheme">🌓 主題</button>
+</header>
+<nav id="nav"></nav>
+<main id="main"></main>
+<footer><span id="stProj"></span><span id="stDs"></span><span class="sp"></span><span id="stMsg">🔒 100% 本機處理，不連網、不需 API Key</span></footer>
+<div id="toasts"></div>
+<script>
+'use strict';
+/* =====================================================================
+   Local Data Lab  v1.1   Vanilla JS 單檔 SPA ／ IndexedDB ／ 完全離線
+   ===================================================================== */
+
+/* ------------------------------ Util ------------------------------ */
+const Util = {
+  VERSION: '1.1',
+  collator: new Intl.Collator('zh-Hant'),
+  uid: () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+  now: () => new Date().toISOString(),
+  pad: (n, l = 2) => String(n).padStart(l, '0'),
+  fmtDT(s) { const d = new Date(s), p = Util.pad; return `${d.getFullYear()}/${p(d.getMonth() + 1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; },
+  debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; },
+  toHalf: s => s.replace(/[\uFF01-\uFF5E]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).replace(/\u3000/g, ' '),
+  toFull: s => s.replace(/[!-~]/g, c => String.fromCharCode(c.charCodeAt(0) + 0xFEE0)).replace(/ /g, '\u3000'),
+  trim: s => s.replace(/^[\s\u3000]+|[\s\u3000]+$/g, ''),
+  esc: s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+  num(v) {
+    if (v == null) return NaN;
+    let s = Util.toHalf(String(v)).trim(), neg = false;
+    if (!s) return NaN;
+    if (/^\(.*\)$/.test(s)) { neg = true; s = s.slice(1, -1); }
+    s = s.replace(/[,\s]/g, '');
+    if (!/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(s)) return NaN;
+    const n = Number(s); return neg ? -n : n;
+  },
+  parseDate(v) {
+    if (v == null) return null;
+    let s = Util.toHalf(String(v)).trim().replace(/^民國/, 'R').replace(/\s+/g, ' ');
+    s = s.replace(/\s*\d{1,2}:\d{2}(:\d{2})?.*$/, '').trim();
+    let m, y, mo, d;
+    if ((m = s.match(/^(\d{4})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})日?$/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+    else if ((m = s.match(/^(\d{4})(\d{2})(\d{2})$/))) { y = +m[1]; mo = +m[2]; d = +m[3]; }
+    else if ((m = s.match(/^R?(\d{2,3})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})日?$/))) { y = +m[1] + 1911; mo = +m[2]; d = +m[3]; }
+    else if ((m = s.match(/^(\d{3})(\d{2})(\d{2})$/))) { y = +m[1] + 1911; mo = +m[2]; d = +m[3]; }
+    else return null;
+    const dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return { y, m: mo, d, t: dt.getTime() };
+  },
+  fmtDate(o, f) {
+    const p = Util.pad;
+    return f.replace(/yyyy/g, o.y).replace(/yyy/g, p(o.y - 1911, 3)).replace(/MM/g, p(o.m)).replace(/dd/g, p(o.d))
+      .replace(/(?<![a-zA-Z])M(?![a-zA-Z])/g, o.m).replace(/(?<![a-zA-Z])d(?![a-zA-Z])/g, o.d);
+  },
+  seedNum(s) {
+    s = String(s).trim(); if (/^-?\d+$/.test(s)) return parseInt(s, 10) | 0;
+    let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h | 0;
+  },
+  mulberry32(a) {
+    return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  },
+  sha256(msg) {
+    const primes = []; for (let n = 2; primes.length < 64; n++) if (primes.every(p => n % p)) primes.push(n);
+    const fr = x => Math.floor((x - Math.floor(x)) * 4294967296);
+    const K = primes.map(p => fr(Math.cbrt(p))); let H = primes.slice(0, 8).map(p => fr(Math.sqrt(p)));
+    const b = new TextEncoder().encode(msg), l = b.length, nb = ((l + 9 + 63) >> 6) << 6, buf = new Uint8Array(nb);
+    buf.set(b); buf[l] = 0x80; const dv = new DataView(buf.buffer);
+    dv.setUint32(nb - 8, Math.floor(l * 8 / 4294967296)); dv.setUint32(nb - 4, (l * 8) >>> 0);
+    const w = new Uint32Array(64), rr = (x, n) => (x >>> n) | (x << (32 - n));
+    for (let o = 0; o < nb; o += 64) {
+      for (let i = 0; i < 16; i++) w[i] = dv.getUint32(o + i * 4);
+      for (let i = 16; i < 64; i++) { const s0 = rr(w[i - 15], 7) ^ rr(w[i - 15], 18) ^ (w[i - 15] >>> 3), s1 = rr(w[i - 2], 17) ^ rr(w[i - 2], 19) ^ (w[i - 2] >>> 10); w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0; }
+      let [a, b2, c, d, e, f, g, hh] = H;
+      for (let i = 0; i < 64; i++) {
+        const S1 = rr(e, 6) ^ rr(e, 11) ^ rr(e, 25), ch = (e & f) ^ (~e & g), t1 = (hh + S1 + ch + K[i] + w[i]) | 0;
+        const S0 = rr(a, 2) ^ rr(a, 13) ^ rr(a, 22), mj = (a & b2) ^ (a & c) ^ (b2 & c), t2 = (S0 + mj) | 0;
+        hh = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b2; b2 = a; a = (t1 + t2) | 0;
+      }
+      H = [H[0] + a | 0, H[1] + b2 | 0, H[2] + c | 0, H[3] + d | 0, H[4] + e | 0, H[5] + f | 0, H[6] + g | 0, H[7] + hh | 0];
+    }
+    return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+  },
+  /* 營利事業統一編號檢查：財政部自 112/4/1 起，檢查邏輯由「可被 10 整除」改為「可被 5 整除」（新舊號碼皆適用） */
+  taxId(s) {
+    if (!/^\d{8}$/.test(s)) return false;
+    const w = [1, 2, 1, 2, 1, 2, 4, 1]; let sum = 0;
+    for (let i = 0; i < 8; i++) { const p = +s[i] * w[i]; sum += Math.floor(p / 10) + p % 10; }
+    return sum % 5 === 0 || (s[6] === '7' && (sum + 1) % 5 === 0);
+  },
+  /* 比較：數字在前（依數值），其餘依中文排序；為全序，不會因混合型別而排序錯亂 */
+  cmpKeys(an, as, bn, bs) {
+    const x = !isNaN(an), y = !isNaN(bn);
+    if (x && y) return an - bn;
+    if (x) return -1; if (y) return 1;
+    return Util.collator.compare(as, bs);
+  },
+  cmpVals(a, b) { return Util.cmpKeys(Util.num(a), String(a), Util.num(b), String(b)); }
+};
+
+/* ------------------------------ CSV ------------------------------ */
+const CSV = {
+  detect(text) {
+    const lines = text.split(/\r?\n/).slice(0, 12).filter(x => x.trim()); let best = ',', score = 0;
+    if (!lines.length) return best;
+    for (const c of ['\t', ',', ';', '|']) {
+      const cnt = lines.map(l => l.split(c).length - 1), min = Math.min(...cnt);
+      const sc = cnt.every(x => x === cnt[0]) ? cnt[0] * 2 : min;
+      if (sc > score) { score = sc; best = c; }
+    }
+    return best;
+  },
+  parse(text, delim = ',') {
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    const rows = [], n = text.length, dl = delim.length; let row = [], f = '', q = false, i = 0;
+    while (i < n) {
+      const c = text[i];
+      if (q) {
+        if (c === '"') { if (text[i + 1] === '"') { f += '"'; i += 2; continue; } q = false; i++; continue; }
+        f += c; i++; continue;
+      }
+      if (c === '"' && f === '') { q = true; i++; continue; }
+      if (c === delim[0] && (dl === 1 || text.startsWith(delim, i))) { row.push(f); f = ''; i += dl; continue; }
+      if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); f = ''; rows.push(row); row = []; i++; continue; }
+      f += c; i++;
+    }
+    if (f !== '' || row.length) { row.push(f); rows.push(row); }
+    return rows;
+  },
+  cell(v, d, protect) {
+    v = v == null ? '' : String(v);
+    if (protect && (/^0\d+$/.test(v) || /^\d{12,}$/.test(v))) return `="${v}"`;
+    return (v.includes(d) || /["\r\n]/.test(v)) ? '"' + v.replace(/"/g, '""') + '"' : v;
+  },
+  stringify(columns, rows, d = ',', protect = false) {
+    const out = [columns.map(c => CSV.cell(c, d, false)).join(d)];
+    for (const r of rows) out.push(r.map(v => CSV.cell(v, d, protect)).join(d));
+    return out.join('\r\n');
+  },
+  unprotect: v => { const m = /^="(.*)"$/.exec(v); return m ? m[1] : v; }
+};
+
+/* ------------------------------ IndexedDB ------------------------------ */
+const CH = 1000;
+const DB = {
+  db: null,
+  open() {
+    return new Promise((ok, no) => {
+      if (typeof indexedDB === 'undefined') return no(new Error('此瀏覽器不支援 IndexedDB'));
+      const r = indexedDB.open('LocalDataLab', 1);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        d.createObjectStore('projects', { keyPath: 'id' }).createIndex('updatedAt', 'updatedAt');
+        d.createObjectStore('datasets', { keyPath: 'id' }).createIndex('projectId', 'projectId');
+        d.createObjectStore('rows', { keyPath: ['datasetId', 'chunkNo'] }).createIndex('datasetId', 'datasetId');
+        d.createObjectStore('templates', { keyPath: 'id' }).createIndex('type', 'type');
+        d.createObjectStore('rules', { keyPath: 'id' });
+        d.createObjectStore('results', { keyPath: 'id' }).createIndex('projectId', 'projectId');
+        d.createObjectStore('history', { keyPath: 'id', autoIncrement: true }).createIndex('datasetId', 'datasetId');
+        d.createObjectStore('settings', { keyPath: 'key' });
+      };
+      r.onsuccess = () => { this.db = r.result; this.db.onversionchange = () => this.db.close(); ok(); };
+      r.onerror = () => no(r.error);
+      r.onblocked = () => no(new Error('資料庫被其他分頁佔用，請關閉其他分頁後重試'));
+    });
+  },
+  _p: req => new Promise((ok, no) => { req.onsuccess = () => ok(req.result); req.onerror = () => no(req.error); }),
+  os(s, m = 'readonly') { return this.db.transaction(s, m).objectStore(s); },
+  get(s, k) { return this._p(this.os(s).get(k)); },
+  all(s) { return this._p(this.os(s).getAll()); },
+  put(s, v) { return this._p(this.os(s, 'readwrite').put(v)); },
+  del(s, k) { return this._p(this.os(s, 'readwrite').delete(k)); },
+  byIndex(s, i, v) { return this._p(this.os(s).index(i).getAll(v)); },
+  delByIndex(s, i, v) {
+    return new Promise((ok, no) => {
+      const tx = this.db.transaction(s, 'readwrite'), cur = tx.objectStore(s).index(i).openCursor(IDBKeyRange.only(v));
+      cur.onsuccess = () => { const c = cur.result; if (c) { c.delete(); c.continue(); } };
+      tx.oncomplete = ok; tx.onerror = () => no(tx.error); tx.onabort = () => no(tx.error);
+    });
+  },
+  saveRows(id, rows) {
+    return new Promise((ok, no) => {
+      const tx = this.db.transaction('rows', 'readwrite'), os = tx.objectStore('rows'), cur = os.index('datasetId').openCursor(IDBKeyRange.only(id));
+      cur.onsuccess = () => {
+        const c = cur.result;
+        if (c) { c.delete(); c.continue(); return; }
+        for (let i = 0, n = 0; i < rows.length; i += CH, n++) os.put({ datasetId: id, chunkNo: n, data: rows.slice(i, i + CH) });
+      };
+      tx.oncomplete = ok; tx.onerror = () => no(tx.error); tx.onabort = () => no(tx.error || new Error('寫入中止（可能儲存空間不足）'));
+    });
+  },
+  async loadRows(id) {
+    const ch = await this.byIndex('rows', 'datasetId', id);
+    ch.sort((a, b) => a.chunkNo - b.chunkNo);
+    const out = []; for (const c of ch) for (const r of c.data) out.push(r);
+    return out;
+  }
+};
+const Cfg = {
+  async get(k, d) { const r = await DB.get('settings', k); return r ? r.value : d; },
+  set(k, v) { return DB.put('settings', { key: k, value: v }); }
+};
+
+/* ------------------------------ Data layer ------------------------------ */
+const Data = {
+  cache: {},
+  list: async pid => (await DB.byIndex('datasets', 'projectId', pid)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+  async create(pid, name, columns, rows, extra = {}) {
+    const ds = { id: Util.uid(), projectId: pid, name, columns: columns.slice(), rowCount: rows.length, source: extra.source || null, parentId: extra.parentId || null, createdAt: Util.now(), updatedAt: Util.now() };
+    await DB.saveRows(ds.id, rows); await DB.put('datasets', ds);
+    this._keep(ds.id, { ds, rows }); return ds;
+  },
+  _keep(id, v) {
+    this.cache[id] = v; const ks = Object.keys(this.cache);
+    while (ks.length > 4) { const k = ks.shift(); if (k !== id) delete this.cache[k]; }
+  },
+  async get(id) {
+    if (!this.cache[id]) { const ds = await DB.get('datasets', id); if (!ds) return null; this._keep(id, { ds, rows: await DB.loadRows(id) }); }
+    return this.cache[id];
+  },
+  /* 整份資料寫回（用於清洗覆蓋、復原快照）。c 為資料容器，不依賴快取是否仍存在 */
+  async persist(id, c) {
+    c = c || this.cache[id]; if (!c) throw new Error('資料不在記憶體中，無法儲存');
+    c.ds.rowCount = c.rows.length; c.ds.updatedAt = Util.now();
+    await DB.saveRows(id, c.rows); await DB.put('datasets', c.ds);
+  },
+  /* 只寫回被修改列所在的那一塊（編輯儲存格用，立即儲存，不需整份重寫） */
+  async saveCell(c, ri) {
+    const n = Math.floor(ri / CH);
+    await DB.put('rows', { datasetId: c.ds.id, chunkNo: n, data: c.rows.slice(n * CH, n * CH + CH) });
+    c.ds.updatedAt = Util.now(); await DB.put('datasets', c.ds);
+  },
+  async replace(id, columns, rows) { const c = await this.get(id); c.ds.columns = columns.slice(); c.rows = rows; await this.persist(id, c); },
+  async remove(id) { delete this.cache[id]; await DB.delByIndex('rows', 'datasetId', id); await DB.del('datasets', id); await DB.delByIndex('history', 'datasetId', id); },
+  async log(dsId, op, params, affected) { try { await DB.put('history', { datasetId: dsId, ts: Util.now(), op, params, affected }); } catch (e) { } }
+};
+
+/* ------------------------------ Undo / Redo ------------------------------ */
+const Hist = {
+  m: {},
+  g(id) { return this.m[id] || (this.m[id] = { u: [], r: [] }); },
+  push(id, e) { const x = this.g(id); x.u.push(e); if (x.u.length > 30) x.u.shift(); x.r = []; },
+  async undo(id) { const x = this.g(id), e = x.u.pop(); if (!e) return UI.toast('沒有可復原的動作'); x.r.push(e); await this.apply(id, e, -1); UI.toast('已復原'); },
+  async redo(id) { const x = this.g(id), e = x.r.pop(); if (!e) return UI.toast('沒有可重做的動作'); x.u.push(e); await this.apply(id, e, 1); UI.toast('已重做'); },
+  async apply(id, e, dir) {
+    const c = await Data.get(id); if (!c) return;
+    if (e.type === 'cell') {
+      c.rows = c.rows.slice(); const row = c.rows[e.r].slice(); row[e.c] = dir < 0 ? e.old : e.nw; c.rows[e.r] = row;
+      await Data.saveCell(c, e.r);
+    } else {
+      const s = dir < 0 ? e.before : e.after; c.ds.columns = s.columns.slice(); c.rows = s.rows;
+      await Data.persist(id, c);
+    }
+    Router.refresh();
+  }
+};
+
+/* ------------------------------ Clean engine ------------------------------ */
+const mapCols = (columns, rows, names, fn) => {
+  const idx = (names || []).map(n => columns.indexOf(n)).filter(i => i >= 0); let aff = 0;
+  const out = rows.map(r => {
+    let c = null;
+    for (const i of idx) { const o = r[i] == null ? '' : r[i], nv = fn(o, r); if (nv !== o) { if (!c) c = r.slice(); c[i] = nv; } }
+    if (c) { aff++; return c; } return r;
+  });
+  return { columns, rows: out, affected: aff, missing: (names || []).length - idx.length };
+};
+const uniqName = (C, n) => { if (!C.includes(n)) return n; let i = 2; while (C.includes(n + '_' + i)) i++; return n + '_' + i; };
+const OPDEF = {
+  trim: { name: '去除前後空白', cols: 'multi', run: (C, R, c, p) => mapCols(C, R, c, Util.trim) },
+  half: { name: '全形 → 半形', cols: 'multi', run: (C, R, c, p) => mapCols(C, R, c, Util.toHalf) },
+  full: { name: '半形 → 全形', cols: 'multi', run: (C, R, c, p) => mapCols(C, R, c, Util.toFull) },
+  replace: {
+    name: '尋找／取代', cols: 'multi',
+    params: [{ k: 'find', label: '尋找' }, { k: 'to', label: '取代為' }, { k: 'regex', label: '使用 Regex', type: 'check' }, { k: 'ci', label: '不分大小寫', type: 'check' }],
+    run(C, R, c, p) {
+      if (!p.find) throw new Error('請輸入要尋找的文字');
+      const re = new RegExp(p.regex ? p.find : Util.esc(p.find), 'g' + (p.ci ? 'i' : ''));
+      return mapCols(C, R, c, v => v.replace(re, p.regex ? (p.to || '') : () => p.to || ''));
+    }
+  },
+  case: {
+    name: '大小寫轉換', cols: 'multi', params: [{ k: 'mode', label: '轉換', type: 'select', opts: [['upper', '全部大寫'], ['lower', '全部小寫']] }],
+    run: (C, R, c, p) => mapCols(C, R, c, v => p.mode === 'lower' ? v.toLowerCase() : v.toUpperCase())
+  },
+  date: {
+    name: '日期標準化', cols: 'multi', params: [{ k: 'out', label: '輸出格式（yyyy 西元、yyy 民國、MM、dd）', def: 'yyyy/MM/dd' }],
+    run(C, R, c, p) {
+      let bad = 0; const f = p.out || 'yyyy/MM/dd';
+      const r = mapCols(C, R, c, v => { if (!v.trim()) return v; const d = Util.parseDate(v); if (!d) { bad++; return v; } return Util.fmtDate(d, f); });
+      r.warn = bad ? `${bad} 筆無法辨識為日期，已保留原值` : ''; return r;
+    }
+  },
+  number: {
+    name: '數字清理（去千分位、括號負數）', cols: 'multi',
+    run: (C, R, c, p) => mapCols(C, R, c, v => {
+      let s = Util.toHalf(v).trim(); if (!s) return v; let neg = false;
+      if (/^\(.*\)$/.test(s)) { neg = true; s = s.slice(1, -1); }
+      s = s.replace(/[,\s$]|NT|TWD|元/gi, '');
+      if (/^[+-]?(\d+\.?\d*|\.\d+)$/.test(s)) { s = s.replace(/^\+/, ''); if (neg) s = '-' + s.replace(/^-/, ''); return s; }
+      return v;
+    })
+  },
+  pad: {
+    name: '補字元（如統編補 0 至 8 碼）', cols: 'multi',
+    params: [{ k: 'len', label: '目標長度', type: 'number', def: 8 }, { k: 'ch', label: '補的字元', def: '0' }, { k: 'side', label: '補在', type: 'select', opts: [['l', '左側'], ['r', '右側']] }],
+    run(C, R, c, p) { const L = +p.len || 0, ch = (p.ch || '0')[0]; return mapCols(C, R, c, v => v === '' || v.length >= L ? v : (p.side === 'r' ? v.padEnd(L, ch) : v.padStart(L, ch))); }
+  },
+  split: {
+    name: '欄位拆分', cols: 'single', params: [{ k: 'sep', label: '分隔字元（\\t 代表 Tab）', def: ',' }, { k: 'names', label: '新欄名（逗號分隔，可留空）' }],
+    run(C, R, c, p) {
+      const ci = C.indexOf(c[0]); if (ci < 0) throw new Error('找不到欄位：' + c[0]);
+      const sep = (p.sep || ',').replace(/\\t/g, '\t'), parts = R.map(r => String(r[ci] ?? '').split(sep));
+      let n = Math.min(20, Math.max(1, ...parts.map(x => x.length)));
+      let names = (p.names || '').split(/[,，]/).map(s => s.trim()).filter(Boolean);
+      if (names.length) n = names.length; else names = Array.from({ length: n }, (_, i) => `${c[0]}_${i + 1}`);
+      const cc = C.slice(); names = names.map(nm => { const u = uniqName(cc, nm); cc.push(u); return u; });
+      const rows = R.map((r, i) => r.concat(Array.from({ length: n }, (_, k) => parts[i][k] ?? '')));
+      return { columns: cc, rows, affected: R.length };
+    }
+  },
+  merge: {
+    name: '欄位合併', cols: 'multi', params: [{ k: 'sep', label: '連接字元', def: '' }, { k: 'name', label: '新欄名', def: '合併欄' }],
+    run(C, R, c, p) {
+      const idx = c.map(n => C.indexOf(n)).filter(i => i >= 0); if (!idx.length) throw new Error('請選擇要合併的欄位');
+      const sep = (p.sep || '').replace(/\\t/g, '\t');
+      return { columns: C.concat([uniqName(C, p.name || '合併欄')]), rows: R.map(r => r.concat([idx.map(i => r[i] ?? '').join(sep)])), affected: R.length };
+    }
+  },
+  dedupe: {
+    name: '去除重複列', cols: 'multiOpt', params: [{ k: 'keep', label: '保留', type: 'select', opts: [['first', '第一筆'], ['last', '最後一筆']] }],
+    run(C, R, c, p) {
+      const idx = (c.length ? c : C).map(n => C.indexOf(n)).filter(i => i >= 0), seen = new Set(), keep = [];
+      const src = p.keep === 'last' ? R.slice().reverse() : R;
+      for (const r of src) { const k = idx.map(i => r[i] ?? '').join('\u0001'); if (!seen.has(k)) { seen.add(k); keep.push(r); } }
+      if (p.keep === 'last') keep.reverse();
+      return { columns: C, rows: keep, affected: R.length - keep.length };
+    }
+  },
+  emptyrows: { name: '刪除全空白列', cols: 'none', run(C, R) { const rows = R.filter(r => r.some(v => String(v ?? '').trim() !== '')); return { columns: C, rows, affected: R.length - rows.length }; } },
+  rename: {
+    name: '欄位改名', cols: 'single', params: [{ k: 'to', label: '新欄名' }],
+    run(C, R, c, p) {
+      const i = C.indexOf(c[0]); if (i < 0 || !p.to) throw new Error('請選擇欄位並輸入新名稱');
+      if (p.to !== c[0] && C.includes(p.to)) throw new Error(`欄位名稱「${p.to}」已存在`);
+      const cc = C.slice(); cc[i] = p.to; return { columns: cc, rows: R, affected: 0 };
+    }
+  },
+  delcol: {
+    name: '刪除欄位', cols: 'multi',
+    run(C, R, c) {
+      const del = new Set(c.map(n => C.indexOf(n)).filter(i => i >= 0)); const keep = C.map((_, i) => i).filter(i => !del.has(i));
+      if (!keep.length) throw new Error('不能刪除全部欄位');
+      return { columns: keep.map(i => C[i]), rows: R.map(r => keep.map(i => r[i])), affected: del.size };
+    }
+  }
+};
+const Clean = {
+  describe(op) { const d = OPDEF[op.type]; const ps = d.params ? d.params.map(x => op.p[x.k] !== undefined && op.p[x.k] !== '' ? `${x.label.split('（')[0]}=${op.p[x.k] === true ? '是' : op.p[x.k]}` : '').filter(Boolean).join('，') : ''; return `${d.name}${op.cols.length ? ' ［' + op.cols.join('、') + '］' : ''}${ps ? ' ─ ' + ps : ''}`; },
+  run(columns, rows, recipe) {
+    let C = columns, R = rows; const log = [];
+    for (const op of recipe) {
+      if (op.enabled === false) continue;
+      const d = OPDEF[op.type];
+      try {
+        const res = d.run(C, R, op.cols || [], op.p || {});
+        C = res.columns; R = res.rows;
+        log.push({ label: Clean.describe(op), affected: res.affected, warn: res.warn || (res.missing ? `${res.missing} 個指定欄位不存在，已略過` : '') });
+      } catch (e) { log.push({ label: Clean.describe(op), affected: 0, error: e.message }); }
+    }
+    return { columns: C, rows: R, log };
+  }
+};
+
+/* ------------------------------ Compare engine ------------------------------ */
+const Compare = {
+  diff(A, B, o) {
+    const common = A.columns.filter(c => B.columns.includes(c)), ign = new Set(o.ignore || []);
+    const cmp = common.filter(c => !ign.has(c) && !o.keys.includes(c));
+    const ka = o.keys.map(k => A.columns.indexOf(k)), kb = o.keys.map(k => B.columns.indexOf(k));
+    const ca = cmp.map(c => A.columns.indexOf(c)), cb = cmp.map(c => B.columns.indexOf(c));
+    const norm = v => { v = v == null ? '' : String(v); if (o.trim) v = v.trim(); if (o.ci) v = v.toLowerCase(); return v; };
+    const keyOf = (r, ix) => ix.map(i => norm(r[i])).join('\u0001');
+    const eq = (x, y) => {
+      if (norm(x) === norm(y)) return true;
+      if (o.tol > 0) { const a = Util.num(x), b = Util.num(y); if (!isNaN(a) && !isNaN(b)) return Math.abs(a - b) <= o.tol; }
+      return false;
+    };
+    const mapA = new Map(), dupA = [], dupB = [], items = [], seenB = new Set();
+    A.rows.forEach((r, i) => { const k = keyOf(r, ka); if (mapA.has(k)) dupA.push(i + 1); else mapA.set(k, { r, i }); });
+    const used = new Set(), sum = { add: 0, del: 0, mod: 0, same: 0 };
+    B.rows.forEach((rb, ib) => {
+      const k = keyOf(rb, kb);
+      if (seenB.has(k)) { dupB.push(ib + 1); return; } seenB.add(k);
+      const a = mapA.get(k);
+      if (!a) { sum.add++; items.push({ status: 'add', key: kb.map(i => rb[i] ?? ''), changes: [], rb, ib: ib + 1 }); return; }
+      used.add(k); const ch = [];
+      cmp.forEach((c, j) => { const x = a.r[ca[j]] ?? '', y = rb[cb[j]] ?? ''; if (!eq(x, y)) ch.push([c, x, y]); });
+      if (ch.length) { sum.mod++; items.push({ status: 'mod', key: kb.map(i => rb[i] ?? ''), changes: ch, ra: a.r, rb, ia: a.i + 1, ib: ib + 1 }); }
+      else { sum.same++; items.push({ status: 'same', key: kb.map(i => rb[i] ?? ''), changes: [], ra: a.r, rb, ia: a.i + 1, ib: ib + 1 }); }
+    });
+    for (const [k, a] of mapA) if (!used.has(k)) { sum.del++; items.push({ status: 'del', key: ka.map(i => a.r[i] ?? ''), changes: [], ra: a.r, ia: a.i + 1 }); }
+    return { summary: sum, items, compared: cmp, onlyA: A.columns.filter(c => !B.columns.includes(c)), onlyB: B.columns.filter(c => !A.columns.includes(c)), dupA, dupB, keys: o.keys };
+  }
+};
+
+/* ------------------------------ Validate engine ------------------------------ */
+const VTYPES = {
+  required: { name: '必填', params: [] },
+  regex: { name: '符合 Regex', params: [{ k: 'pattern', label: 'Regex（例：^\\d{8}$）' }] },
+  length: { name: '長度範圍', params: [{ k: 'min', label: '最小長度' }, { k: 'max', label: '最大長度' }] },
+  range: { name: '數值範圍', params: [{ k: 'min', label: '最小值' }, { k: 'max', label: '最大值' }] },
+  date: { name: '合法日期', params: [] },
+  unique: { name: '不可重複', params: [] },
+  inList: { name: '必須在清單內', params: [{ k: 'list', label: '清單（逗號或換行分隔）' }] },
+  notInList: { name: '不可在清單內', params: [{ k: 'list', label: '清單（逗號或換行分隔）' }] },
+  compare: { name: '與另一欄比較', params: [{ k: 'colB', label: '另一欄', type: 'col' }, { k: 'op', label: '本欄應', type: 'select', opts: [['<=', '≤'], ['<', '＜'], ['=', '＝'], ['!=', '≠'], ['>=', '≥'], ['>', '＞']] }] },
+  taxId: { name: '台灣統一編號（含檢查碼）', params: [] }
+};
+const Validate = {
+  summary(r) {
+    const P = r.params || {}, t = VTYPES[r.type].name;
+    switch (r.type) {
+      case 'regex': return `${t}：${P.pattern || ''}`;
+      case 'length': case 'range': return `${t}：${P.min || '－'} ~ ${P.max || '－'}`;
+      case 'inList': case 'notInList': return `${t}（${(P.list || '').split(/[,，\n]/).filter(Boolean).length} 項）`;
+      case 'compare': return `${t}：${P.op || '<='} ${P.colB || ''}`;
+      default: return t;
+    }
+  },
+  run(columns, rows, rules) {
+    const issues = [], CAP = 50000, flagged = new Set(); let capped = false; const skipped = [];
+    for (const r of rules) {
+      if (r.enabled === false) continue;
+      const ci = columns.indexOf(r.column); if (ci < 0) { skipped.push(r.name + '（欄位不存在：' + r.column + '）'); continue; }
+      const P = r.params || {}; let chk;
+      switch (r.type) {
+        case 'required': chk = v => v.trim() === '' ? '必填欄位為空' : null; break;
+        case 'regex': { let re; try { re = new RegExp(P.pattern || ''); } catch (e) { throw new Error(`規則「${r.name}」Regex 錯誤：${e.message}`); } chk = v => v === '' || re.test(v) ? null : '格式不符'; break; }
+        case 'length': { const mn = P.min === '' || P.min == null ? -1 : +P.min, mx = P.max === '' || P.max == null ? Infinity : +P.max; chk = v => v === '' || (v.length >= mn && v.length <= mx) ? null : `長度 ${v.length} 超出範圍`; break; }
+        case 'range': { const mn = P.min === '' || P.min == null ? -Infinity : +P.min, mx = P.max === '' || P.max == null ? Infinity : +P.max; chk = v => { if (v === '') return null; const n = Util.num(v); if (isNaN(n)) return '非數值'; return n < mn ? `小於 ${mn}` : n > mx ? `大於 ${mx}` : null; }; break; }
+        case 'date': chk = v => v === '' || Util.parseDate(v) ? null : '不是合法日期'; break;
+        case 'unique': { const cnt = new Map(); for (const row of rows) { const v = row[ci] ?? ''; if (v !== '') cnt.set(v, (cnt.get(v) || 0) + 1); } chk = v => v !== '' && cnt.get(v) > 1 ? `重複（共 ${cnt.get(v)} 筆）` : null; break; }
+        case 'inList': { const s = new Set((P.list || '').split(/[,，\n]/).map(x => x.trim()).filter(Boolean)); chk = v => v === '' || s.has(v) ? null : '不在允許清單內'; break; }
+        case 'notInList': { const s = new Set((P.list || '').split(/[,，\n]/).map(x => x.trim()).filter(Boolean)); chk = v => v !== '' && s.has(v) ? '屬於禁止清單' : null; break; }
+        case 'taxId': chk = v => v === '' || Util.taxId(v) ? null : '統一編號格式或檢查碼錯誤'; break;
+        case 'compare': {
+          const cj = columns.indexOf(P.colB); if (cj < 0) { skipped.push(r.name + '（比較欄不存在）'); continue; }
+          const op = P.op || '<=';
+          chk = (v, row) => {
+            const w = row[cj] ?? ''; if (v === '' || w === '') return null;
+            let d; const da = Util.parseDate(v), db = Util.parseDate(w);
+            if (da && db) d = da.t - db.t; else { const a = Util.num(v), b = Util.num(w); d = (!isNaN(a) && !isNaN(b)) ? a - b : String(v).localeCompare(String(w)); }
+            const ok = op === '<=' ? d <= 0 : op === '<' ? d < 0 : op === '=' ? d === 0 : op === '!=' ? d !== 0 : op === '>=' ? d >= 0 : d > 0;
+            return ok ? null : `${r.column} 應 ${op} ${P.colB}`;
+          }; break;
+        }
+        default: continue;
+      }
+      for (let i = 0; i < rows.length; i++) {
+        const v = rows[i][ci] ?? '', m = chk(String(v), rows[i]);
+        if (m) { flagged.add(i); if (issues.length < CAP) issues.push({ row: i + 1, col: r.column, val: v, rule: r.name, sev: r.severity || 'error', msg: m }); else capped = true; }
+      }
+    }
+    const cnt = { error: 0, warning: 0, info: 0 }; issues.forEach(x => cnt[x.sev]++);
+    return { issues, cnt, flaggedRows: flagged.size, capped, skipped };
+  }
+};
+
+/* ------------------------------ Sample engine ------------------------------ */
+const Sample = {
+  pick(arr, k, rng) { const a = arr.slice(), n = Math.min(k, a.length); for (let i = 0; i < n; i++) { const j = i + Math.floor(rng() * (a.length - i)); [a[i], a[j]] = [a[j], a[i]]; } return a.slice(0, n); },
+  run(columns, rows, o) {
+    const N = rows.length, rng = Util.mulberry32(Util.seedNum(o.seed)), notes = []; let sel = [];
+    const n = Math.max(0, Math.min(N, +o.n || 0));
+    if (o.method === 'random') sel = this.pick([...Array(N).keys()], n, rng);
+    else if (o.method === 'systematic') {
+      if (!n) sel = []; else { const k = Math.max(1, Math.floor(N / n)), st = Math.floor(rng() * k); notes.push(`間隔 k=${k}，起點第 ${st + 1} 列`); for (let i = st; i < N && sel.length < n; i += k) sel.push(i); }
+    } else if (o.method === 'stratified') {
+      const ci = columns.indexOf(o.col); if (ci < 0) throw new Error('請選擇分層欄位');
+      const g = new Map(); rows.forEach((r, i) => { const k = r[ci] ?? ''; if (!g.has(k)) g.set(k, []); g.get(k).push(i); });
+      const groups = [...g.entries()].sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+      if (o.smode === 'fixed') { for (const [, ids] of groups) sel.push(...this.pick(ids, n, rng)); notes.push(`每層抽 ${n} 筆（共 ${groups.length} 層）`); }
+      else {
+        const shares = groups.map(([k, ids]) => ({ ids, q: n * ids.length / N })), base = shares.map(s => Math.min(s.ids.length, Math.floor(s.q)));
+        let left = n - base.reduce((a, b) => a + b, 0);
+        const order = shares.map((s, i) => [i, s.q - Math.floor(s.q)]).sort((a, b) => b[1] - a[1]);
+        for (const [i] of order) { if (left <= 0) break; if (base[i] < shares[i].ids.length) { base[i]++; left--; } }
+        shares.forEach((s, i) => sel.push(...this.pick(s.ids, base[i], rng))); notes.push(`依各層比例分配，共 ${groups.length} 層`);
+      }
+    } else if (o.method === 'threshold') {
+      const ci = columns.indexOf(o.col); if (ci < 0) throw new Error('請選擇金額欄位');
+      const th = Util.num(o.th); if (isNaN(th)) throw new Error('請輸入有效的門檻金額');
+      const must = [], rest = []; rows.forEach((r, i) => { const v = Util.num(r[ci]); (!isNaN(v) && v >= th ? must : rest).push(i); });
+      sel = must.slice(); notes.push(`金額 ≥ ${th} 必抽 ${must.length} 筆`);
+      if (must.length >= n) notes.push('必抽筆數已達或超過目標筆數，不再補抽');
+      else { sel.push(...this.pick(rest, n - must.length, rng)); notes.push(`其餘隨機補足 ${sel.length - must.length} 筆`); }
+    }
+    sel = [...new Set(sel)].sort((a, b) => a - b);
+    return { idx: sel, notes };
+  }
+};
+
+/* ------------------------------ Mask engine ------------------------------ */
+const MTYPES = {
+  none: '不遮罩', keepEnds: '保留前後碼', name: '姓名（遮中間）', email: 'Email', full: '全部遮蔽', regex: 'Regex 取代', hash: 'SHA-256 雜湊'
+};
+const Mask = {
+  apply(v, r) {
+    v = v == null ? '' : String(v); if (v === '' || !r || r.type === 'none') return v;
+    const ch = (r.ch || '*')[0];
+    switch (r.type) {
+      case 'keepEnds': { const a = Math.max(0, +r.a || 0), b = Math.max(0, +r.b || 0), L = [...v]; if (L.length <= a + b) return ch.repeat(L.length); return L.slice(0, a).join('') + ch.repeat(L.length - a - b) + (b ? L.slice(L.length - b).join('') : ''); }
+      case 'name': { const L = [...v.trim()]; if (L.length <= 1) return v; if (L.length === 2) return L[0] + 'Ｏ'; return L[0] + 'Ｏ'.repeat(L.length - 2) + L[L.length - 1]; }
+      case 'email': { const i = v.indexOf('@'); if (i < 1) return ch.repeat(v.length); return v[0] + ch.repeat(Math.max(2, i - 1)) + v.slice(i); }
+      case 'full': return ch.repeat([...v].length);
+      case 'regex': { try { return v.replace(new RegExp(r.find || '', 'g'), r.to || ''); } catch (e) { return v; } }
+      case 'hash': return Util.sha256((r.salt || '') + v);
+    }
+    return v;
+  },
+  suggest(columns, rows) {
+    const out = {}, S = rows.slice(0, 300);
+    columns.forEach((c, i) => {
+      const vals = S.map(r => String(r[i] ?? '')).filter(Boolean), t = x => vals.length && vals.filter(v => x.test(v)).length / vals.length > 0.6;
+      if (/姓名|名字|聯絡人|負責人|代表人|^name$/i.test(c)) out[c] = { type: 'name' };
+      else if (/e-?mail|信箱|電子郵件/i.test(c) || t(/^[^@\s]+@[^@\s]+\.[^@\s]+$/)) out[c] = { type: 'email', ch: '*' };
+      else if (/身分證|身份證|ID_?NO/i.test(c) || t(/^[A-Z][12]\d{8}$/)) out[c] = { type: 'keepEnds', a: 3, b: 1, ch: '*' };
+      else if (/電話|手機|行動|mobile|tel|phone/i.test(c) || t(/^0\d{8,9}$/)) out[c] = { type: 'keepEnds', a: 4, b: 3, ch: '*' };
+      else if (/帳號|帳戶|卡號|account/i.test(c) || t(/^\d{10,19}$/)) out[c] = { type: 'keepEnds', a: 4, b: 4, ch: '*' };
+      else if (/地址|住址|address/i.test(c)) out[c] = { type: 'keepEnds', a: 6, b: 0, ch: '*' };
+    });
+    return out;
+  }
+};
+
+/* ------------------------------ Text parse engine ------------------------------ */
+const Parse = {
+  un: s => String(s || '').replace(/\\n/g, '\n').replace(/\\t/g, '\t'),
+  split(text, mode, val) {
+    text = text.replace(/\r\n?/g, '\n'); let parts;
+    if (mode === 'blank') parts = text.split(/\n[ \t\u3000]*\n/);
+    else if (mode === 'line') parts = text.split('\n');
+    else if (mode === 'string') parts = val ? text.split(Parse.un(val)) : [text];
+    else if (mode === 'regex') {
+      if (!val) parts = [text];
+      else { let re; try { re = new RegExp(val, 'gm'); } catch (e) { throw new Error('記錄分隔 Regex 錯誤：' + e.message); } parts = text.replace(re, m => m === '' ? m : '\u0001').split('\u0001'); }
+    }
+    else parts = [text];
+    return parts.map(s => s.replace(/^\n+|\n+$/g, '')).filter(s => s.trim() !== '');
+  },
+  extract(rec, f) {
+    switch (f.mode) {
+      case 'between': {
+        let st = 0; const s = Parse.un(f.start);
+        if (s) { const i = rec.indexOf(s); if (i < 0) return ''; st = i + s.length; }
+        const e = f.end ? Parse.un(f.end) : '\n', j = rec.indexOf(e, st);
+        return rec.slice(st, j >= 0 ? j : rec.length).trim();
+      }
+      case 'regex': { try { const m = new RegExp(f.pattern, 'm').exec(rec); return m ? (m[+f.group || 0] ?? '').trim() : ''; } catch (e) { throw new Error(`欄位「${f.name}」Regex 錯誤：${e.message}`); } }
+      case 'line': { const L = rec.split('\n'); return (L[(+f.line || 1) - 1] ?? '').trim(); }
+      case 'fixed': { const first = rec.split('\n')[0]; return first.substr((+f.from || 1) - 1, +f.len || 0).trim(); }
+    }
+    return '';
+  },
+  run(text, cfg) {
+    const recs = Parse.split(text, cfg.rmode, cfg.rval), fields = cfg.fields.filter(f => f.name);
+    const rows = recs.map(r => fields.map(f => { let v = Parse.extract(r, f); if (f.num) { v = OPDEF.number.run(['x'], [[v]], ['x'], {}).rows[0][0]; } return v; }));
+    return { columns: fields.map(f => f.name), rows, records: recs.length };
+  }
+};
+//#ENGINE_END
+
+/* ------------------------------ DOM helpers ------------------------------ */
+const h = (tag, attrs, ...kids) => {
+  const e = document.createElement(tag);
+  if (attrs) for (const k in attrs) {
+    const v = attrs[k]; if (v == null || v === false || k === 'value') continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'checked' || k === 'disabled' || k === 'multiple') e[k] = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) { if (c == null || c === false) continue; e.append(c.nodeType ? c : document.createTextNode(String(c))); }
+  if (attrs && attrs.value !== undefined && attrs.value !== null) e.value = attrs.value;
+  return e;
+};
+Element.prototype.setKids = function (x) { this.replaceChildren(...[x].flat(Infinity).filter(k => k != null && k !== false)); return this; };
+const $ = s => document.querySelector(s);
+const fmtN = n => Number(n).toLocaleString();
+
+const UI = {
+  stack: [],
+  toast(msg, type = '', ms = 3200) { const t = h('div', { class: 'toast ' + type }, msg); $('#toasts').append(t); setTimeout(() => t.remove(), ms); },
+  modal(title, body, btns = [{ text: '關閉' }], opts = {}) {
+    const bg = h('div', { class: 'modal-bg' }); let done;
+    const onKey = e => { if (e.key === 'Escape' && !opts.sticky && UI.stack[UI.stack.length - 1] === close) close(); };
+    const close = () => { document.removeEventListener('keydown', onKey); UI.stack = UI.stack.filter(f => f !== close); bg.remove(); if (done) done(); };
+    UI.stack.push(close); document.addEventListener('keydown', onKey);
+    const foot = h('div', { class: 'mf' }, btns.map(b => h('button', {
+      class: 'btn' + (b.primary ? ' primary' : '') + (b.danger ? ' danger' : ''),
+      onclick: async () => { const r = b.onclick ? await b.onclick(close) : undefined; if (r !== false) close(); }
+    }, b.text)));
+    bg.append(h('div', { class: 'modal', style: opts.wide ? { maxWidth: '1000px' } : null }, h('div', { class: 'mh' }, title), h('div', { class: 'mb' }, body), foot));
+    bg.addEventListener('mousedown', e => { if (e.target === bg && !opts.sticky) close(); });
+    document.body.append(bg);
+    return { close, closed: new Promise(r => done = r) };
+  },
+  confirm(msg, danger) { return new Promise(res => { let v = false; UI.modal('請確認', h('div', null, msg), [{ text: '取消' }, { text: '確定', primary: !danger, danger, onclick: () => { v = true; } }]).closed.then(() => res(v)); }); },
+  prompt(label, def = '') { return new Promise(res => { const i = h('input', { type: 'text', value: def, style: { width: '100%' } }); let v = null; const m = UI.modal(label, i, [{ text: '取消' }, { text: '確定', primary: true, onclick: () => { v = i.value.trim(); } }]); i.focus(); i.select(); i.addEventListener('keydown', e => { if (e.key === 'Enter') { v = i.value.trim(); m.close(); } }); m.closed.then(() => res(v)); }); },
+  choice(msg, opts) { return new Promise(res => { let v = null; UI.modal('請選擇', h('div', null, msg), [{ text: '取消' }, ...opts.map(o => ({ text: o.text, primary: o.primary, onclick: () => { v = o.value; } }))]).closed.then(() => res(v)); }); },
+  async busy(msg, fn) {
+    const o = h('div', { class: 'overlay' }, h('div', { class: 'spin' }), h('div', null, msg)); document.body.append(o);
+    await new Promise(r => setTimeout(r, 30));
+    try { return await fn(); } finally { o.remove(); }
+  }
+};
+const dl = (name, content, mime = 'text/csv;charset=utf-8') => {
+  const blob = new Blob([content], { type: mime }), a = h('a', { href: URL.createObjectURL(blob), download: name.replace(/[\\/:*?"<>|]/g, '_') });
+  document.body.append(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+};
+const copyText = async t => { try { await navigator.clipboard.writeText(t); } catch (e) { const ta = h('textarea', { style: { position: 'fixed', opacity: 0 } }); ta.value = t; document.body.append(ta); ta.select(); document.execCommand('copy'); ta.remove(); } };
+function exportDlg(name, columns, rows) {
+  const fmt = h('select', null, h('option', { value: 'csv' }, 'CSV（UTF-8 含 BOM，Excel 可直接開啟）'), h('option', { value: 'tsv' }, 'TSV'), h('option', { value: 'json' }, 'JSON'));
+  const prot = h('input', { type: 'checkbox', checked: true });
+  const fn = h('input', { type: 'text', value: name, style: { width: '100%' } });
+  const body = h('div', { class: 'col' }, h('div', { class: 'muted' }, `${fmtN(rows.length)} 列 × ${columns.length} 欄`),
+    h('label', { class: 'f' }, '檔名（不含副檔名）', fn), h('label', { class: 'f' }, '格式', fmt),
+    h('label', { class: 'ck' }, prot, '保留前導 0（以 ="0123" 格式輸出，Excel 不會把統編變成數字；下載與複製皆適用）'));
+  UI.modal('匯出', body, [{ text: '關閉' },
+    { text: '📋 複製（可貼入 Excel）', onclick: async () => { await copyText(CSV.stringify(columns, rows, '\t', prot.checked)); UI.toast('已複製到剪貼簿', 'ok'); return false; } },
+    {
+      text: '⬇ 下載', primary: true, onclick: () => {
+        const f = fmt.value, base = fn.value || name;
+        if (f === 'json') dl(base + '.json', JSON.stringify(rows.map(r => Object.fromEntries(columns.map((c, i) => [c, r[i] ?? '']))), null, 1), 'application/json');
+        else if (f === 'tsv') dl(base + '.tsv', '\uFEFF' + CSV.stringify(columns, rows, '\t', prot.checked), 'text/tab-separated-values;charset=utf-8');
+        else dl(base + '.csv', '\uFEFF' + CSV.stringify(columns, rows, ',', prot.checked));
+        UI.toast('已開始下載', 'ok');
+      }
+    }]);
+}
+function tbl(cols, rows, o = {}) {
+  const max = o.max || 200, noCol = o.noCol !== false, t = h('table', { class: 'tbl' });
+  t.append(h('thead', null, h('tr', null, noCol ? h('th', { class: 'no' }, '#') : null, cols.map(c => h('th', null, c)))));
+  const tb = h('tbody');
+  rows.slice(0, max).forEach((r, i) => {
+    const tr = h('tr', { class: o.rowCls ? o.rowCls(r, i) : null });
+    if (noCol) tr.append(h('td', { class: 'no' }, o.rowNo ? o.rowNo(r, i) : i + 1));
+    cols.forEach((c, j) => { const v = r[j]; tr.append(h('td', { class: o.cellCls ? o.cellCls(r, i, j) : null, title: v }, v)); });
+    tb.append(tr);
+  });
+  t.append(tb);
+  return h('div', null, h('div', { class: 'tblwrap' }, t), rows.length > max ? h('div', { class: 'muted pad' }, `僅顯示前 ${fmtN(max)} 列，共 ${fmtN(rows.length)} 列（完整內容請匯出）`) : null);
+}
+function checkList(options, selected = []) {
+  const sel = new Set(selected), boxes = options.map(o => { const cb = h('input', { type: 'checkbox', checked: sel.has(o) }); cb.dataset.v = o; return cb; });
+  const el = h('div', { class: 'chips' }, options.map((o, i) => h('label', null, boxes[i], o)));
+  return { el, get: () => boxes.filter(b => b.checked).map(b => b.dataset.v), set: arr => { const s = new Set(arr); boxes.forEach(b => b.checked = s.has(b.dataset.v)); } };
+}
+const sel = (opts, val, onchange) => h('select', { value: val, onchange: onchange ? e => onchange(e.target.value) : null }, opts.map(o => Array.isArray(o) ? h('option', { value: o[0] }, o[1]) : h('option', { value: o }, o)));
+const field = (label, input) => h('label', { class: 'f' }, label, input);
+const pageHead = (t, s) => [h('h1', null, t), h('p', { class: 'sub' }, s)];
+const emptyHint = () => h('div', { class: 'card' }, h('h2', null, '尚無資料集'), h('p', { class: 'muted' }, '目前專案還沒有任何資料集，請先匯入檔案、貼上資料，或使用「文字解析」建立。'), h('a', { class: 'btn primary', href: '#/import' }, '📥 前往匯入'));
+async function dsPicker(label, value, onchange) {
+  const list = await Data.list(S.pid);
+  const s = h('select', { value: value, onchange: e => onchange(e.target.value) }, list.map(d => h('option', { value: d.id }, `${d.name}（${fmtN(d.rowCount)} 列 × ${d.columns.length} 欄）`)));
+  return { list, el: field(label, s), select: s };
+}
+async function pickDs(arg) {
+  const list = await Data.list(S.pid); if (arg) S.dsId = arg;
+  if (!list.length) return null;
+  if (!list.find(d => d.id === S.dsId)) S.dsId = list[0].id;
+  Cfg.set('dsId', S.dsId); return list;
+}
+const guessKey = cols => cols.find(c => /統一編號|統編|編號|代號|^id$/i.test(c)) || cols[0];
+
+/* ------------------------------ App state / router ------------------------------ */
+const S = { pid: null, dsId: null };
+const NAV = [['home', '🏠 首頁'], ['import', '📥 匯入'], ['grid', '📊 資料表'], ['clean', '🧹 資料清洗'], ['compare', '🔍 資料比對'], ['validate', '🕵️ 異常檢核'], ['sample', '📋 稽核抽樣'], ['mask', '🔐 敏感遮罩'], ['parse', '🧩 文字解析'], ['projects', '📚 專案／備份'], ['settings', '⚙ 設定']];
+const Views = {};
+const Router = {
+  tk: 0, lastHash: null, cur: 'home',
+  /* 先在記憶體中完成渲染，確認仍是最新一次導覽才換上畫面，避免快速切換時畫面錯亂 */
+  async go() {
+    const tk = ++this.tk, hash = location.hash, [name = 'home', arg] = hash.replace(/^#\//, '').split('/');
+    const known = Object.prototype.hasOwnProperty.call(Views, name), key = known ? name : 'home', V = Views[key];
+    document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.dataset.r === key));
+    this.cur = key; const box = h('div');
+    try { await V(box, arg); } catch (e) { console.error(e); box.append(h('div', { class: 'card err' }, '發生錯誤：' + e.message)); }
+    if (tk !== this.tk) return;
+    const main = $('#main'), keep = this.lastHash === hash ? main.scrollTop : 0;
+    main.replaceChildren(box); main.scrollTop = keep; this.lastHash = hash;
+    await App.status();
+  },
+  refresh() { return this.go(); }
+};
+
+/* ============================ Views ============================ */
+
+/* ---- Home ---- */
+Views.home = async main => {
+  const list = await Data.list(S.pid);
+  main.append(...pageHead('Local Data Lab', '完全離線、單一 HTML 的資料處理工作台：資料只留在這台電腦的瀏覽器裡（IndexedDB），不連網、不需 API Key。'));
+  const mods = [['import', '📥', '匯入資料', 'CSV / TSV / TXT、貼上 Excel 內容，支援 Big5'], ['grid', '📊', '資料表', '搜尋、篩選、排序、編輯、欄位統計'], ['clean', '🧹', '資料清洗', '去空白、全半形、日期、補零、去重，可存成配方'],
+  ['compare', '🔍', '資料比對', '新舊版差異：新增／刪除／修改，逐欄列出'], ['validate', '🕵️', '異常檢核', '規則引擎，含統一編號檢查碼'], ['sample', '📋', '稽核抽樣', '隨機／等距／分層／門檻，Seed 可重現'],
+  ['mask', '🔐', '敏感遮罩', '身分證、電話、姓名、帳號、雜湊'], ['parse', '🧩', '文字解析', '把固定格式文字轉成表格，可存模板'], ['projects', '📚', '專案／備份', '備份與還原 JSON、處理紀錄']];
+  main.append(h('div', { class: 'grid3' }, mods.map(([r, ic, t, d]) => h('div', { class: 'card mod-card', onclick: () => location.hash = '#/' + r }, h('div', { class: 'ic' }, ic), h('h3', null, t), h('div', { class: 'muted' }, d)))));
+  main.append(h('div', { class: 'card' }, h('h2', null, '目前專案的資料集'),
+    list.length ? tbl(['名稱', '列數', '欄數', '更新時間'], list.slice(0, 8).map(d => [d.name, fmtN(d.rowCount), d.columns.length, Util.fmtDT(d.updatedAt)]), { noCol: false }) : h('div', { class: 'muted' }, '尚無資料集，請先到「匯入」。'),
+    h('p', { class: 'muted' }, '💡 清除瀏覽器網站資料會一併清除 IndexedDB，請定期使用「專案／備份」匯出 JSON。')));
+};
+
+/* ---- Import ---- */
+Views.import = async main => {
+  main.append(...pageHead('匯入資料', '支援 .csv / .tsv / .txt，或直接從 Excel 複製後貼上。'));
+  let buf = null, text = '', fname = '';
+  const enc = sel([['auto', '自動偵測'], ['utf-8', 'UTF-8'], ['big5', 'Big5（繁體舊系統）'], ['utf-16le', 'UTF-16 LE']], await Cfg.get('enc', 'auto'));
+  const dsel = h('select', { value: 'auto' }, h('option', { value: 'auto' }, '自動偵測'), h('option', { value: ',' }, '逗號 ,'), h('option', { value: '\t' }, 'Tab'), h('option', { value: '|' }, '直線 |'), h('option', { value: ';' }, '分號 ;'), h('option', { value: 'custom' }, '自訂…'));
+  const cust = h('input', { type: 'text', placeholder: '自訂分隔', style: { width: '80px' } });
+  const hdr = h('input', { type: 'checkbox', checked: true }), skip = h('input', { type: 'number', value: 0, min: 0, style: { width: '70px' } }), trimc = h('input', { type: 'checkbox', checked: false });
+  const name = h('input', { type: 'text', style: { width: '240px' }, placeholder: '資料集名稱' });
+  const paste = h('textarea', { placeholder: '或在此貼上資料（可直接從 Excel 複製）…', style: { minHeight: '90px' } });
+  const info = h('div', { class: 'muted' }), prev = h('div'); let parsed = null;
+  const fileIn = h('input', { type: 'file', accept: '.csv,.tsv,.txt,.tab,.dat', style: { display: 'none' }, onchange: e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadFile(f); } });
+  const drop = h('div', { class: 'drop', onclick: () => fileIn.click() }, '📂 點擊選擇檔案，或將檔案拖曳到這裡');
+  ['dragover', 'dragenter'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+  async function loadFile(f) { buf = await f.arrayBuffer(); fname = f.name; name.value = f.name.replace(/\.[^.]+$/, ''); paste.value = ''; drop.textContent = `✅ 已選擇：${f.name}（${fmtN(f.size)} bytes）`; decode(); }
+  function decode() {
+    if (!buf) return; const u = new Uint8Array(buf); let e = enc.value;
+    if (e === 'auto') {
+      if (u[0] === 0xFF && u[1] === 0xFE) e = 'utf-16le';
+      else { try { text = new TextDecoder('utf-8', { fatal: true }).decode(u); refresh(); return; } catch (x) { e = 'big5'; } }
+    }
+    try { text = new TextDecoder(e).decode(u); } catch (x) { UI.toast('此瀏覽器不支援編碼 ' + e, 'err'); return; }
+    refresh();
+  }
+  function refresh() {
+    const src = buf ? text : paste.value; if (!src.trim()) { prev.replaceChildren(); info.textContent = ''; parsed = null; return; }
+    let d = dsel.value === 'auto' ? CSV.detect(src) : dsel.value === 'custom' ? (cust.value || ',') : dsel.value;
+    let rows = CSV.parse(src, d); rows = rows.slice(Math.max(0, +skip.value || 0)).filter(r => r.some(v => v !== ''));
+    if (!rows.length) { prev.replaceChildren(h('div', { class: 'muted' }, '沒有可用資料')); parsed = null; return; }
+    const width = Math.max(...rows.map(r => r.length)); let cols;
+    if (hdr.checked) { cols = rows.shift(); } else cols = [];
+    cols = cols.map(c => (c ?? '').trim()); while (cols.length < width) cols.push(''); const seen = {};
+    cols = cols.map((c, i) => { c = c || `欄${i + 1}`; if (seen[c]) { seen[c]++; c += '_' + seen[c]; } else seen[c] = 1; return c; });
+    let ragged = 0; rows = rows.map(r => { if (r.length !== width) ragged++; r = r.map(v => { v = CSV.unprotect(v); return trimc.checked ? Util.trim(v) : v; }); while (r.length < width) r.push(''); return r; });
+    const bad = (src.match(/\uFFFD/g) || []).length;
+    parsed = { columns: cols, rows };
+    info.className = 'muted'; info.textContent = `分隔符：${d === '\t' ? 'Tab' : d}　｜　${fmtN(rows.length)} 列 × ${cols.length} 欄` + (ragged ? `　｜　⚠ ${ragged} 列欄數不一致（已補空白）` : '') + (bad > 3 ? `　｜　⚠ 偵測到 ${bad} 個亂碼字元，請試試改用 Big5 編碼` : '');
+    if (bad > 3) info.className = 'warn';
+    prev.replaceChildren(tbl(cols, rows, { max: 20 }));
+  }
+  const redo = Util.debounce(() => buf ? decode() : refresh(), 250);
+  [enc, dsel, hdr, skip, trimc].forEach(e => e.addEventListener('change', () => { if (e === enc) Cfg.set('enc', enc.value); redo(); }));
+  cust.addEventListener('input', redo); skip.addEventListener('input', redo);
+  paste.addEventListener('input', () => { buf = null; fname = '貼上資料'; drop.textContent = '📂 點擊選擇檔案，或將檔案拖曳到這裡'; if (!name.value) name.value = '貼上資料_' + Util.fmtDT(Util.now()).slice(5).replace(/[ :\/]/g, ''); redo(); });
+  main.append(h('div', { class: 'card' }, drop, fileIn, h('div', { class: 'pad' }), paste),
+    h('div', { class: 'card' }, h('div', { class: 'row top' }, field('編碼', enc), field('分隔符', h('div', { class: 'row' }, dsel, cust)), field('略過前 N 列', skip), h('label', { class: 'ck', style: { marginTop: '18px' } }, hdr, '第一列為標題'), h('label', { class: 'ck', style: { marginTop: '18px' } }, trimc, '去除儲存格前後空白')), h('div', { class: 'pad' }), info, prev),
+    h('div', { class: 'card row' }, field('資料集名稱', name), h('button', {
+      class: 'btn primary', style: { marginTop: '16px' }, onclick: async () => {
+        if (!parsed) return UI.toast('請先選擇檔案或貼上資料', 'warn');
+        const nm = name.value.trim() || '未命名資料集';
+        const ds = await UI.busy('寫入 IndexedDB…', () => Data.create(S.pid, nm, parsed.columns, parsed.rows, { source: { fileName: fname, encoding: enc.value, delimiter: dsel.value } }));
+        S.dsId = ds.id; Cfg.set('dsId', ds.id); UI.toast(`已匯入 ${fmtN(ds.rowCount)} 列`, 'ok'); location.hash = '#/grid/' + ds.id;
+      }
+    }, '✅ 匯入為資料集')));
+};
+
+/* ---- Grid ---- */
+const Gst = {};
+Views.grid = async (main, arg) => {
+  const list = await pickDs(arg); main.append(...pageHead('資料表', '搜尋、篩選、排序；雙擊儲存格可編輯（Ctrl+Z 復原）；Shift+點欄名可多欄排序。'));
+  if (!list) return main.append(emptyHint());
+  const id = S.dsId, c = await Data.get(id), st = Gst[id] || (Gst[id] = { q: '', fcol: '', fop: 'contains', fval: '', sort: [], page: 0, size: 100 });
+  const ncol = c.ds.columns.length;
+  if (st.fcol !== '' && +st.fcol >= ncol) st.fcol = '';
+  st.sort = st.sort.filter(s => s.c < ncol);
+  const picker = h('select', { value: id, onchange: e => { S.dsId = e.target.value; Cfg.set('dsId', S.dsId); Router.refresh(); } }, list.map(d => h('option', { value: d.id }, `${d.name}（${fmtN(d.rowCount)} 列）`)));
+  const q = h('input', { type: 'text', placeholder: '🔎 全文搜尋', value: st.q, style: { width: '200px' } });
+  const fc = sel([['', '（不篩選）'], ...c.ds.columns.map((x, i) => [String(i), x])], st.fcol), fo = sel([['contains', '包含'], ['eq', '等於'], ['ne', '不等於'], ['gt', '＞'], ['lt', '＜'], ['ge', '≥'], ['le', '≤'], ['empty', '為空白'], ['nonempty', '非空白'], ['regex', 'Regex']], st.fop), fv = h('input', { type: 'text', value: st.fval, placeholder: '篩選值', style: { width: '150px' } });
+  const stats = sel([['', '欄位統計…'], ...c.ds.columns.map((x, i) => [String(i), x])], '', v => { if (v !== '') colStats(+v); stats.value = ''; });
+  const info = h('span', { class: 'muted' }), body = h('div'), pg = h('div', { class: 'row pad' });
+  let view = [];
+  function compute() {
+    let idx = c.rows.map((_, i) => i); const ql = q.value.trim().toLowerCase();
+    if (ql) idx = idx.filter(i => c.rows[i].some(v => String(v ?? '').toLowerCase().includes(ql)));
+    if (fc.value !== '') {
+      const ci = +fc.value, op = fo.value, val = fv.value; let re = null; if (op === 'regex') { try { re = new RegExp(val); } catch (e) { re = null; } }
+      idx = idx.filter(i => {
+        const v = String(c.rows[i][ci] ?? '');
+        switch (op) {
+          case 'contains': return v.includes(val); case 'eq': return v === val; case 'ne': return v !== val;
+          case 'empty': return v.trim() === ''; case 'nonempty': return v.trim() !== ''; case 'regex': return re ? re.test(v) : true;
+          default: { const d = Util.cmpVals(v, val); return op === 'gt' ? d > 0 : op === 'lt' ? d < 0 : op === 'ge' ? d >= 0 : d <= 0; }
+        }
+      });
+    }
+    if (st.sort.length) {
+      /* 先為每個排序欄位預先計算一次排序鍵，避免在比較函式中重複解析數字（10 萬列時差異極大） */
+      const ks = st.sort.map(s => { const keys = new Array(c.rows.length); for (let i = 0; i < keys.length; i++) { const v = c.rows[i][s.c] ?? ''; keys[i] = [Util.num(v), String(v)]; } return { keys, dir: s.dir }; });
+      idx.sort((a, b) => { for (const k of ks) { const x = k.keys[a], y = k.keys[b], d = Util.cmpKeys(x[0], x[1], y[0], y[1]); if (d) return d * k.dir; } return a - b; });
+    }
+    view = idx;
+  }
+  function draw() {
+    const pages = Math.max(1, Math.ceil(view.length / st.size)); st.page = Math.min(st.page, pages - 1);
+    const from = st.page * st.size, slice = view.slice(from, from + st.size), cols = c.ds.columns;
+    const t = h('table', { class: 'tbl' });
+    t.append(h('thead', null, h('tr', null, h('th', { class: 'no' }, '#'), cols.map((n, i) => {
+      const so = st.sort.findIndex(s => s.c === i), ar = so >= 0 ? (st.sort[so].dir > 0 ? ' ▲' : ' ▼') + (st.sort.length > 1 ? so + 1 : '') : '';
+      return h('th', {
+        class: 'sortable', title: '點擊排序（Shift 多欄）', onclick: e => {
+          const ex = st.sort.find(s => s.c === i);
+          if (e.shiftKey) { if (ex) { if (ex.dir > 0) ex.dir = -1; else st.sort = st.sort.filter(s => s !== ex); } else st.sort.push({ c: i, dir: 1 }); }
+          else st.sort = ex ? (ex.dir > 0 ? [{ c: i, dir: -1 }] : []) : [{ c: i, dir: 1 }];
+          compute(); draw();
+        }
+      }, n + ar);
+    }))));
+    const tb = h('tbody');
+    slice.forEach(ri => {
+      const tr = h('tr', null, h('td', { class: 'no' }, ri + 1));
+      cols.forEach((_, ci) => {
+        const td = h('td', { title: c.rows[ri][ci] }, c.rows[ri][ci]);
+        td.addEventListener('dblclick', () => {
+          if (td.querySelector('input')) return; const old = c.rows[ri][ci] ?? '', inp = h('input', { class: 'cell', type: 'text', value: old }); td.replaceChildren(inp); inp.focus(); inp.select();
+          let fin = false;
+          const done = ok => {
+            if (fin) return; fin = true; const nv = inp.value;
+            if (ok && nv !== old) {
+              Hist.push(id, { type: 'cell', r: ri, c: ci, old, nw: nv }); c.rows = c.rows.slice(); const row = c.rows[ri].slice(); row[ci] = nv; c.rows[ri] = row;
+              Data.saveCell(c, ri).then(() => App.status()).catch(e => UI.toast('儲存失敗：' + e.message, 'err', 6000));
+            }
+            td.replaceChildren(String(c.rows[ri][ci] ?? '')); td.title = c.rows[ri][ci] ?? '';
+          };
+          inp.addEventListener('keydown', e => { if (e.key === 'Enter') done(true); else if (e.key === 'Escape') done(false); });
+          inp.addEventListener('blur', () => done(true));
+        });
+        tr.append(td);
+      }); tb.append(tr);
+    });
+    t.append(tb); body.replaceChildren(h('div', { class: 'tblwrap' }, t));
+    info.textContent = `顯示 ${fmtN(view.length)} / ${fmtN(c.rows.length)} 列 × ${cols.length} 欄`;
+    pg.replaceChildren(h('button', { class: 'btn sm', disabled: st.page === 0, onclick: () => { st.page--; draw(); } }, '◀ 上一頁'), `第 ${st.page + 1} / ${pages} 頁`,
+      h('button', { class: 'btn sm', disabled: st.page >= pages - 1, onclick: () => { st.page++; draw(); } }, '下一頁 ▶'),
+      sel([['50', '每頁 50'], ['100', '每頁 100'], ['200', '每頁 200'], ['500', '每頁 500']], String(st.size), v => { st.size = +v; st.page = 0; draw(); }));
+  }
+  function colStats(ci) {
+    const vals = c.rows.map(r => String(r[ci] ?? '')), ne = vals.filter(v => v.trim() !== ''), cnt = new Map(); ne.forEach(v => cnt.set(v, (cnt.get(v) || 0) + 1));
+    const nums = ne.map(Util.num).filter(x => !isNaN(x)), allNum = ne.length && nums.length === ne.length;
+    const sorted = ne.slice().sort((a, b) => Util.cmpVals(a, b)), top = [...cnt.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+    const kv = [['總列數', fmtN(vals.length)], ['非空白', fmtN(ne.length)], ['空白', fmtN(vals.length - ne.length)], ['相異值', fmtN(cnt.size)], ['最小', sorted[0] ?? '－'], ['最大', sorted[sorted.length - 1] ?? '－']];
+    if (allNum) kv.push(['合計', fmtN(nums.reduce((a, b) => a + b, 0))], ['平均', (nums.reduce((a, b) => a + b, 0) / nums.length).toLocaleString(undefined, { maximumFractionDigits: 4 })]);
+    UI.modal('欄位統計：' + c.ds.columns[ci], h('div', null, h('div', { class: 'kv' }, kv.map(([k, v]) => [h('b', null, k), String(v)])), h('h3', { style: { marginTop: '14px' } }, 'Top 10 值'), tbl(['值', '次數'], top, { noCol: false })));
+  }
+  [q, fv].forEach(e => e.addEventListener('input', Util.debounce(() => { st.q = q.value; st.fval = fv.value; st.page = 0; compute(); draw(); }, 250)));
+  [fc, fo].forEach(e => e.addEventListener('change', () => { st.fcol = fc.value; st.fop = fo.value; st.page = 0; compute(); draw(); }));
+  main.append(h('div', { class: 'card' }, h('div', { class: 'row' }, picker, q, fc, fo, fv, stats, h('span', { class: 'sp' }),
+    h('button', { class: 'btn sm', onclick: () => Hist.undo(id) }, '↶ 復原'), h('button', { class: 'btn sm', onclick: () => Hist.redo(id) }, '↷ 重做'),
+    h('button', { class: 'btn sm', onclick: () => exportDlg(c.ds.name, c.ds.columns, view.map(i => c.rows[i])) }, '⬇ 匯出目前結果')), h('div', { class: 'pad' }), info, body, pg));
+  compute(); draw();
+};
+
+/* ---- Clean ---- */
+const CleanState = { recipe: [], last: null };
+Views.clean = async (main, arg) => {
+  const list = await pickDs(arg); main.append(...pageHead('資料清洗', '把清洗步驟組成「配方」，可預覽影響筆數、另存新資料集或覆蓋（可復原），也能存成範本重複使用。'));
+  if (!list) return main.append(emptyHint());
+  const id = S.dsId, c = await Data.get(id), R = CleanState.recipe, cols = c.ds.columns;
+  const picker = h('select', { value: id, onchange: e => { S.dsId = e.target.value; Cfg.set('dsId', S.dsId); Router.refresh(); } }, list.map(d => h('option', { value: d.id }, `${d.name}（${fmtN(d.rowCount)} 列）`)));
+  const opSel = sel(Object.entries(OPDEF).map(([k, v]) => [k, v.name]), 'trim', () => buildForm());
+  const formBox = h('div', { class: 'col' }), recipeBox = h('div'), outBox = h('div'); let readForm;
+  function buildForm() {
+    const d = OPDEF[opSel.value], parts = []; let colsGet = () => [];
+    if (d.cols !== 'none') {
+      if (d.cols === 'single') { const s = sel(cols, cols[0]); parts.push(field('欄位', s)); colsGet = () => [s.value]; }
+      else { const cl = checkList(cols); parts.push(field(d.cols === 'multiOpt' ? '依據欄位（不選＝整列完全相同才算重複）' : '套用欄位（可複選）', cl.el), h('div', { class: 'row' }, h('button', { class: 'btn sm', onclick: () => cl.set(cols) }, '全選'), h('button', { class: 'btn sm', onclick: () => cl.set([]) }, '全不選'))); colsGet = cl.get; }
+    }
+    const pg = {};
+    (d.params || []).forEach(p => {
+      let inp;
+      if (p.type === 'check') inp = h('input', { type: 'checkbox' }); else if (p.type === 'select') inp = sel(p.opts, p.opts[0][0]); else if (p.type === 'col') inp = sel(cols, cols[0]);
+      else inp = h('input', { type: p.type === 'number' ? 'number' : 'text', value: p.def ?? '' });
+      pg[p.k] = () => p.type === 'check' ? inp.checked : inp.value;
+      parts.push(p.type === 'check' ? h('label', { class: 'ck' }, inp, p.label) : field(p.label, inp));
+    });
+    readForm = () => { const p = {}; for (const k in pg) p[k] = pg[k](); return { type: opSel.value, cols: colsGet(), p, enabled: true }; };
+    formBox.replaceChildren(...parts);
+  }
+  function drawRecipe() {
+    recipeBox.setKids(R.length ? R.map((op, i) => h('div', { class: 'list-item' + (op.enabled === false ? ' off' : '') },
+      h('input', { type: 'checkbox', checked: op.enabled !== false, onchange: e => { op.enabled = e.target.checked; drawRecipe(); } }), h('span', { class: 'sp' }, `${i + 1}. ${Clean.describe(op)}`),
+      h('button', { class: 'btn sm', onclick: () => { if (i > 0) { [R[i - 1], R[i]] = [R[i], R[i - 1]]; drawRecipe(); } } }, '↑'), h('button', { class: 'btn sm', onclick: () => { if (i < R.length - 1) { [R[i + 1], R[i]] = [R[i], R[i + 1]]; drawRecipe(); } } }, '↓'),
+      h('button', { class: 'btn sm danger', onclick: () => { R.splice(i, 1); drawRecipe(); } }, '✕'))) : h('div', { class: 'muted' }, '配方是空的，請從左邊加入步驟。'));
+  }
+  function logView(res) {
+    return h('div', null, h('h3', null, '執行報告'), res.log.map((l, i) => h('div', { class: l.error ? 'errc' : l.warn ? 'warn' : '' }, `${i + 1}. ${l.label} → ${l.error ? '❌ ' + l.error : `影響 ${fmtN(l.affected)} 筆${l.warn ? '　⚠ ' + l.warn : ''}`}`)));
+  }
+  async function preview() {
+    if (!R.length) return UI.toast('請先加入步驟', 'warn');
+    const res = await UI.busy('計算中…', async () => Clean.run(cols, c.rows, R));
+    outBox.replaceChildren(h('div', { class: 'card' }, logView(res), h('div', { class: 'pad' }), h('div', { class: 'muted' }, `結果：${fmtN(res.rows.length)} 列 × ${res.columns.length} 欄（預覽，尚未儲存）`), tbl(res.columns, res.rows, { max: 20, cellCls: (r, i, j) => { const o = c.rows[i]; const oj = cols.indexOf(res.columns[j]); return o && oj >= 0 && o.length === r.length && o[oj] !== r[j] ? 'hl' : null; } })));
+  }
+  async function exec(overwrite) {
+    if (!R.length) return UI.toast('請先加入步驟', 'warn');
+    const nm = overwrite ? null : await UI.prompt('新資料集名稱', c.ds.name + '_清洗後'); if (!overwrite && !nm) return;
+    if (overwrite && !await UI.confirm('確定覆蓋原資料集？（本次工作階段內可用 Ctrl+Z 復原）')) return;
+    let newDs = null, res;
+    try {
+      res = await UI.busy('處理中…', async () => {
+        const r = Clean.run(cols, c.rows, R);
+        if (!r.columns.length) throw new Error('結果沒有任何欄位，已取消');
+        if (overwrite) { Hist.push(id, { type: 'snap', before: { columns: cols.slice(), rows: c.rows }, after: { columns: r.columns, rows: r.rows } }); await Data.replace(id, r.columns, r.rows); }
+        else { newDs = await Data.create(S.pid, nm, r.columns, r.rows, { parentId: id }); S.dsId = newDs.id; Cfg.set('dsId', newDs.id); }
+        return r;
+      });
+    } catch (e) { return UI.toast('處理失敗：' + e.message, 'err', 6000); }
+    await Data.log(id, 'clean', R.map(o => ({ type: o.type, cols: o.cols, p: o.p })), res.log.reduce((a, b) => a + b.affected, 0));
+    if (overwrite) { CleanState.last = { log: res.log, id }; UI.toast('已覆蓋原資料集', 'ok'); Router.refresh(); }   /* 重新載入畫面，確保欄位清單與資料同步 */
+    else { UI.toast('已建立新資料集', 'ok'); outBox.replaceChildren(h('div', { class: 'card' }, logView(res), h('div', { class: 'pad' }), h('button', { class: 'btn primary', onclick: () => location.hash = '#/grid/' + newDs.id }, '📊 開啟新資料集'))); App.status(); }
+  }
+  const tpls = (await DB.byIndex('templates', 'type', 'clean')).sort((a, b) => a.name.localeCompare(b.name));
+  const tsel = h('select', null, h('option', { value: '' }, '載入配方範本…'), tpls.map(t => h('option', { value: t.id }, t.name)));
+  tsel.addEventListener('change', () => { const t = tpls.find(x => x.id === tsel.value); if (t) { R.length = 0; R.push(...JSON.parse(JSON.stringify(t.data))); drawRecipe(); UI.toast('已載入：' + t.name, 'ok'); } });
+  main.append(h('div', { class: 'card' }, h('div', { class: 'row' }, field('資料集', picker), h('span', { class: 'muted' }, `${fmtN(c.rows.length)} 列 × ${cols.length} 欄`), h('span', { class: 'sp' }), h('button', { class: 'btn sm', onclick: () => Hist.undo(id) }, '↶ 復原'), h('button', { class: 'btn sm', onclick: () => Hist.redo(id) }, '↷ 重做'))),
+    h('div', { class: 'grid2' },
+      h('div', { class: 'card' }, h('h2', null, '① 新增清洗步驟'), field('操作', opSel), formBox, h('div', { class: 'pad' }), h('button', { class: 'btn primary', onclick: () => { try { const op = readForm(); const d = OPDEF[op.type]; if ((d.cols === 'multi') && !op.cols.length) return UI.toast('請至少選擇一個欄位', 'warn'); R.push(op); drawRecipe(); } catch (e) { UI.toast(e.message, 'err'); } } }, '➕ 加入配方')),
+      h('div', { class: 'card' }, h('h2', null, '② 配方'), recipeBox, h('div', { class: 'pad' }),
+        h('div', { class: 'row' }, h('button', { class: 'btn', onclick: preview }, '👁 預覽影響筆數'), h('button', { class: 'btn primary', onclick: () => exec(false) }, '▶ 執行並另存'), h('button', { class: 'btn danger', onclick: () => exec(true) }, '▶ 執行並覆蓋')),
+        h('div', { class: 'pad' }), h('div', { class: 'row' }, tsel,
+          h('button', { class: 'btn sm', onclick: async () => { if (!R.length) return UI.toast('配方是空的', 'warn'); const n = await UI.prompt('配方範本名稱', '我的清洗配方'); if (!n) return; await DB.put('templates', { id: Util.uid(), type: 'clean', name: n, data: JSON.parse(JSON.stringify(R)), updatedAt: Util.now() }); UI.toast('已儲存範本', 'ok'); Router.refresh(); } }, '💾 另存範本'),
+          h('button', { class: 'btn sm danger', onclick: async () => { const t = tpls.find(x => x.id === tsel.value); if (!t) return UI.toast('請先選擇範本', 'warn'); if (await UI.confirm(`刪除範本「${t.name}」？`, true)) { await DB.del('templates', t.id); Router.refresh(); } } }, '刪除範本'),
+          h('button', { class: 'btn sm', onclick: () => { R.length = 0; drawRecipe(); } }, '清空')))),
+    outBox);
+  buildForm(); drawRecipe();
+  if (CleanState.last && CleanState.last.id === id) { outBox.replaceChildren(h('div', { class: 'card' }, logView(CleanState.last))); }
+  CleanState.last = null;
+};
+
+/* ---- Compare ---- */
+Views.compare = async main => {
+  main.append(...pageHead('資料比對', '指定 Key 欄位，找出兩份資料的新增、刪除、修改。'));
+  const list = await Data.list(S.pid); if (list.length < 1) return main.append(emptyHint());
+  const pa = await dsPicker('A：舊版（基準）', list[Math.min(1, list.length - 1)].id, () => buildCols()), pb = await dsPicker('B：新版', list[0].id, () => buildCols());
+  pa.select.value = list[Math.min(1, list.length - 1)].id; pb.select.value = list[0].id;
+  const colBox = h('div'), out = h('div'), trim = h('input', { type: 'checkbox', checked: true }), ci = h('input', { type: 'checkbox' }), tol = h('input', { type: 'number', value: 0, min: 0, step: 'any', style: { width: '90px' } });
+  let keyL, ignL, A, B;
+  async function buildCols() {
+    A = await Data.get(pa.select.value); B = await Data.get(pb.select.value);
+    const common = A.ds.columns.filter(x => B.ds.columns.includes(x));
+    keyL = checkList(common, [guessKey(common)].filter(Boolean)); ignL = checkList(common, []);
+    colBox.replaceChildren(h('div', { class: 'grid2' }, field(`Key 欄位（可複選＝複合 Key）｜共同欄位 ${common.length} 個`, keyL.el), field('忽略不比對的欄位（如更新時間）', ignL.el)));
+    if (pa.select.value === pb.select.value) colBox.append(h('div', { class: 'warn pad' }, '⚠ A 與 B 是同一份資料集'));
+  }
+  async function run() {
+    const keys = keyL.get(); if (!keys.length) return UI.toast('請至少選擇一個 Key 欄位', 'warn');
+    const res = await UI.busy('比對中…', async () => Compare.diff({ columns: A.ds.columns, rows: A.rows }, { columns: B.ds.columns, rows: B.rows }, { keys, ignore: ignL.get(), trim: trim.checked, ci: ci.checked, tol: +tol.value || 0 }));
+    show(res, keys);
+  }
+  function show(res, keys) {
+    const s = res.summary; let flt = 'all';
+    const names = { add: '➕ 新增', del: '➖ 刪除', mod: '✏️ 修改', same: '＝ 未變更' }, body = h('div'), cards = h('div', { class: 'stat' });
+    function draw() {
+      cards.replaceChildren(...[['all', '全部', s.add + s.del + s.mod + s.same], ['add', '➕ 新增', s.add], ['del', '➖ 刪除', s.del], ['mod', '✏️ 修改', s.mod], ['same', '＝ 未變更', s.same]].map(([k, n, v]) => h('div', { class: 's click' + (flt === k ? ' on' : ''), onclick: () => { flt = k; draw(); } }, h('b', null, fmtN(v)), n)));
+      const items = res.items.filter(x => flt === 'all' ? true : x.status === flt), shown = items.slice(0, 1000);
+      const t = h('table', { class: 'tbl' }); t.append(h('thead', null, h('tr', null, h('th', null, '狀態'), res.keys.map(k => h('th', null, k)), h('th', null, 'A 列'), h('th', null, 'B 列'), h('th', null, '差異內容'))));
+      const tb = h('tbody'); shown.forEach(x => tb.append(h('tr', { class: x.status === 'add' ? 'add' : x.status === 'del' ? 'del' : null }, h('td', null, names[x.status]), x.key.map(k => h('td', null, k)), h('td', null, x.ia ?? ''), h('td', null, x.ib ?? ''),
+        h('td', { style: { whiteSpace: 'normal' } }, x.changes.map(([c, o, n]) => h('div', null, h('b', null, c + '：'), h('span', { class: 'diffold' }, o === '' ? '(空)' : o), ' → ', h('span', { class: 'diffnew' }, n === '' ? '(空)' : n)))))));
+      t.append(tb); body.setKids([h('div', { class: 'tblwrap' }, t), items.length > shown.length ? h('div', { class: 'muted pad' }, `僅顯示前 1,000 筆，共 ${fmtN(items.length)} 筆（完整請匯出）`) : null]);
+    }
+    const notes = [];
+    if (res.onlyA.length) notes.push(`僅存在 A 的欄位：${res.onlyA.join('、')}`); if (res.onlyB.length) notes.push(`僅存在 B 的欄位：${res.onlyB.join('、')}`);
+    if (res.dupA.length) notes.push(`⚠ A 有 ${res.dupA.length} 列 Key 重複（僅取第一筆）：列 ${res.dupA.slice(0, 10).join(', ')}${res.dupA.length > 10 ? '…' : ''}`);
+    if (res.dupB.length) notes.push(`⚠ B 有 ${res.dupB.length} 列 Key 重複（僅取第一筆）：列 ${res.dupB.slice(0, 10).join(', ')}${res.dupB.length > 10 ? '…' : ''}`);
+    const exp = () => {
+      const cols = ['狀態', ...res.keys, '欄位', '舊值', '新值', 'A列', 'B列'], rows = [];
+      res.items.filter(x => x.status !== 'same').forEach(x => { if (x.status === 'mod') x.changes.forEach(([c, o, n]) => rows.push([names[x.status], ...x.key, c, o, n, x.ia, x.ib])); else rows.push([names[x.status], ...x.key, '', '', '', x.ia ?? '', x.ib ?? '']); });
+      exportDlg(`比對差異_${A.ds.name}_vs_${B.ds.name}`, cols, rows);
+    };
+    const save = async () => { await DB.put('results', { id: Util.uid(), projectId: S.pid, kind: 'compare', createdAt: Util.now(), title: `${A.ds.name} → ${B.ds.name}`, input: { keys: res.keys }, summary: s }); UI.toast('已儲存到專案紀錄', 'ok'); };
+    out.replaceChildren(h('div', { class: 'card' }, h('h2', null, `比對結果：${A.ds.name} → ${B.ds.name}`), cards, notes.map(n => h('div', { class: 'warn' }, n)), h('div', { class: 'row pad' }, h('button', { class: 'btn', onclick: exp }, '⬇ 匯出差異明細'), h('button', { class: 'btn', onclick: save }, '💾 儲存摘要到專案')), body));
+    draw();
+  }
+  await buildCols();
+  main.append(h('div', { class: 'card' }, h('div', { class: 'grid2' }, pa.el, pb.el), h('div', { class: 'pad' }), colBox, h('div', { class: 'row' }, h('label', { class: 'ck' }, trim, '忽略前後空白'), h('label', { class: 'ck' }, ci, '忽略大小寫'), field('數值容差（0＝需完全相同）', tol), h('button', { class: 'btn primary', style: { marginTop: '16px' }, onclick: run }, '🔍 開始比對'))), out);
+};
+
+/* ---- Validate ---- */
+const VState = { rules: [] };
+Views.validate = async (main, arg) => {
+  const list = await pickDs(arg); main.append(...pageHead('異常檢核', '建立規則，一次找出資料裡的錯誤、警告與提醒。'));
+  if (!list) return main.append(emptyHint());
+  const id = S.dsId, c = await Data.get(id), cols = c.ds.columns, R = VState.rules;
+  const picker = h('select', { value: id, onchange: e => { S.dsId = e.target.value; Cfg.set('dsId', S.dsId); Router.refresh(); } }, list.map(d => h('option', { value: d.id }, `${d.name}（${fmtN(d.rowCount)} 列）`)));
+  const colS = sel(cols, cols[0]), typeS = sel(Object.entries(VTYPES).map(([k, v]) => [k, v.name]), 'required', () => buildP()), sevS = sel([['error', '🔴 錯誤'], ['warning', '🟡 警告'], ['info', '🔵 提醒']], 'error'), nameI = h('input', { type: 'text', placeholder: '規則名稱（可留空自動產生）', style: { width: '220px' } });
+  const pBox = h('div', { class: 'row' }), ruleBox = h('div'), outBox = h('div'); let getP;
+  function buildP() {
+    const d = VTYPES[typeS.value], g = {};
+    pBox.replaceChildren(...d.params.map(p => { let i; if (p.type === 'select') i = sel(p.opts, p.opts[0][0]); else if (p.type === 'col') i = sel(cols, cols[Math.min(1, cols.length - 1)]); else if (p.k === 'list') i = h('textarea', { style: { minHeight: '60px', width: '260px' } }); else i = h('input', { type: 'text', style: { width: p.k === 'pattern' ? '230px' : '110px' } }); g[p.k] = () => i.value; return field(p.label, i); }));
+    getP = () => { const o = {}; for (const k in g) o[k] = g[k](); return o; };
+  }
+  function drawRules() {
+    ruleBox.setKids(R.length ? R.map((r, i) => h('div', { class: 'list-item' + (r.enabled === false ? ' off' : '') }, h('input', { type: 'checkbox', checked: r.enabled !== false, onchange: e => { r.enabled = e.target.checked; drawRules(); } }),
+      h('span', { class: 'tag ' + (r.severity === 'error' ? 'e' : r.severity === 'warning' ? 'w' : 'i') }, r.severity === 'error' ? '錯誤' : r.severity === 'warning' ? '警告' : '提醒'), h('b', null, r.name), h('span', { class: 'muted sp' }, `［${r.column}］ ${Validate.summary(r)}`),
+      h('button', { class: 'btn sm danger', onclick: () => { R.splice(i, 1); drawRules(); } }, '✕'))) : h('div', { class: 'muted' }, '尚未建立規則。'));
+  }
+  function addRule() {
+    const p = getP(), t = typeS.value; if (t === 'regex' && !p.pattern) return UI.toast('請輸入 Regex', 'warn'); if ((t === 'inList' || t === 'notInList') && !p.list.trim()) return UI.toast('請輸入清單', 'warn');
+    const r = { id: Util.uid(), name: '', column: colS.value, type: t, params: p, severity: sevS.value, enabled: true }; r.name = nameI.value.trim() || `${r.column}：${Validate.summary(r)}`; R.push(r); nameI.value = ''; drawRules();
+  }
+  async function run() {
+    if (!R.length) return UI.toast('請先建立規則', 'warn');
+    let res; try { res = await UI.busy('檢核中…', async () => Validate.run(cols, c.rows, R)); } catch (e) { return UI.toast(e.message, 'err', 6000); }
+    let sev = 'all', rowsOnly = false; const body = h('div'), cards = h('div', { class: 'stat' });
+    const sevCls = { error: 'e', warning: 'w', info: 'i' }, sevTxt = { error: '🔴 錯誤', warning: '🟡 警告', info: '🔵 提醒' };
+    const rank = { error: 3, warning: 2, info: 1 };
+    const bad = new Map(), rowsBySev = { all: new Set(), error: new Set(), warning: new Set(), info: new Set() };
+    res.issues.forEach(x => { const k = x.row + '|' + x.col; bad.set(k, Math.max(bad.get(k) || 0, rank[x.sev])); rowsBySev.all.add(x.row); rowsBySev[x.sev].add(x.row); });
+    function draw() {
+      cards.replaceChildren(...[['all', '全部問題', res.issues.length], ['error', '🔴 錯誤', res.cnt.error], ['warning', '🟡 警告', res.cnt.warning], ['info', '🔵 提醒', res.cnt.info]].map(([k, n, v]) => h('div', { class: 's click' + (sev === k ? ' on' : ''), onclick: () => { sev = k; draw(); } }, h('b', null, fmtN(v)), n)), h('div', { class: 's' }, h('b', null, fmtN(res.flaggedRows)), `有問題的列（共 ${fmtN(c.rows.length)}）`));
+      const items = res.issues.filter(x => sev === 'all' || x.sev === sev);
+      if (!rowsOnly) body.replaceChildren(tbl(['列號', '欄位', '值', '規則', '嚴重度', '說明'], items.map(x => [x.row, x.col, x.val, x.rule, sevTxt[x.sev], x.msg]), { max: 1000, noCol: false, cellCls: (r, i, j) => j === 4 ? sevCls[items[i].sev] : null }));
+      else { const ids = [...rowsBySev[sev]].sort((a, b) => a - b); body.replaceChildren(tbl(cols, ids.map(r => c.rows[r - 1]), { max: 500, rowNo: (r, i) => ids[i], cellCls: (r, i, j) => { const m = bad.get(ids[i] + '|' + cols[j]); return m === 3 ? 'e' : m === 2 ? 'w' : m === 1 ? 'i' : null; } })); }
+    }
+    const expIssues = () => exportDlg(`檢核問題_${c.ds.name}`, ['列號', '欄位', '值', '規則', '嚴重度', '說明'], res.issues.map(x => [x.row, x.col, x.val, x.rule, sevTxt[x.sev], x.msg]));
+    const expMarked = () => { const by = new Map(); res.issues.forEach(x => { if (!by.has(x.row)) by.set(x.row, []); by.get(x.row).push(`[${sevTxt[x.sev].slice(3)}]${x.col}:${x.msg}`); }); exportDlg(`檢核標記_${c.ds.name}`, [...cols, '問題數', '問題說明'], c.rows.map((r, i) => [...r, (by.get(i + 1) || []).length, (by.get(i + 1) || []).join('；')])); };
+    const save = async () => { await DB.put('results', { id: Util.uid(), projectId: S.pid, kind: 'validate', createdAt: Util.now(), title: c.ds.name, input: { rules: R.length }, summary: { ...res.cnt, flaggedRows: res.flaggedRows, rows: c.rows.length } }); UI.toast('已儲存到專案紀錄', 'ok'); };
+    outBox.replaceChildren(h('div', { class: 'card' }, h('h2', null, '檢核結果'), cards, res.skipped.length ? h('div', { class: 'warn' }, '已略過：' + res.skipped.join('；')) : null, res.capped ? h('div', { class: 'warn' }, '⚠ 問題數量過多，僅保留前 50,000 筆') : null,
+      h('div', { class: 'row pad' }, h('label', { class: 'ck' }, h('input', { type: 'checkbox', onchange: e => { rowsOnly = e.target.checked; draw(); } }), '只看有問題的列（原始資料並標色）'), h('span', { class: 'sp' }), h('button', { class: 'btn', onclick: expIssues }, '⬇ 匯出問題清單'), h('button', { class: 'btn', onclick: expMarked }, '⬇ 匯出標記後資料'), h('button', { class: 'btn', onclick: save }, '💾 儲存摘要')), body)); draw();
+  }
+  const rsets = (await DB.all('rules')).sort((a, b) => a.name.localeCompare(b.name)), rs = h('select', null, h('option', { value: '' }, '載入規則組…'), rsets.map(r => h('option', { value: r.id }, `${r.name}（${r.rules.length} 條）`)));
+  rs.addEventListener('change', () => { const t = rsets.find(x => x.id === rs.value); if (t) { R.length = 0; R.push(...JSON.parse(JSON.stringify(t.rules))); drawRules(); UI.toast('已載入：' + t.name, 'ok'); } });
+  const fileIn = h('input', { type: 'file', accept: '.json', style: { display: 'none' }, onchange: async e => { try { const j = JSON.parse(await e.target.files[0].text()); if (!Array.isArray(j.rules)) throw new Error('格式不正確'); R.length = 0; R.push(...j.rules); drawRules(); UI.toast('已匯入規則', 'ok'); } catch (x) { UI.toast('匯入失敗：' + x.message, 'err'); } e.target.value = ''; } });
+  main.append(h('div', { class: 'card row' }, field('資料集', picker), h('span', { class: 'muted' }, `${fmtN(c.rows.length)} 列`)),
+    h('div', { class: 'grid2' }, h('div', { class: 'card' }, h('h2', null, '① 新增規則'), h('div', { class: 'row top' }, field('欄位', colS), field('規則類型', typeS), field('嚴重度', sevS)), pBox, h('div', { class: 'row pad' }, nameI, h('button', { class: 'btn primary', onclick: addRule }, '➕ 加入規則')),
+      h('p', { class: 'muted' }, '除「必填」「不可重複」外，空白值不會被判為錯誤；需要時請另加「必填」。')),
+      h('div', { class: 'card' }, h('h2', null, '② 規則清單'), ruleBox, h('div', { class: 'pad' }), h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: run }, '▶ 執行檢核'), rs,
+        h('button', { class: 'btn sm', onclick: async () => { if (!R.length) return UI.toast('規則是空的', 'warn'); const n = await UI.prompt('規則組名稱', '我的檢核規則'); if (!n) return; await DB.put('rules', { id: Util.uid(), name: n, rules: JSON.parse(JSON.stringify(R)), updatedAt: Util.now() }); UI.toast('已儲存規則組', 'ok'); Router.refresh(); } }, '💾 存規則組'),
+        h('button', { class: 'btn sm danger', onclick: async () => { const t = rsets.find(x => x.id === rs.value); if (!t) return UI.toast('請先選擇規則組', 'warn'); if (await UI.confirm(`刪除規則組「${t.name}」？`, true)) { await DB.del('rules', t.id); Router.refresh(); } } }, '刪除'),
+        h('button', { class: 'btn sm', onclick: () => dl('檢核規則.json', JSON.stringify({ app: 'LocalDataLab', rules: R }, null, 1), 'application/json') }, '⬇ 匯出 JSON'), h('button', { class: 'btn sm', onclick: () => fileIn.click() }, '⬆ 匯入 JSON'), fileIn))), outBox);
+  buildP(); drawRules();
+};
+
+/* ---- Sample ---- */
+Views.sample = async (main, arg) => {
+  const list = await pickDs(arg); main.append(...pageHead('稽核抽樣', '同一份資料 + 同一個 Seed，一定抽出同樣的結果，方便複核與留存。'));
+  if (!list) return main.append(emptyHint());
+  const id = S.dsId, c = await Data.get(id), cols = c.ds.columns;
+  const picker = h('select', { value: id, onchange: e => { S.dsId = e.target.value; Cfg.set('dsId', S.dsId); Router.refresh(); } }, list.map(d => h('option', { value: d.id }, `${d.name}（${fmtN(d.rowCount)} 列）`)));
+  const method = sel([['random', '簡單隨機'], ['systematic', '系統（等距）'], ['stratified', '分層抽樣'], ['threshold', '門檻必抽 + 隨機補足']], 'random', () => opt());
+  const n = h('input', { type: 'number', value: Math.min(50, c.rows.length), min: 1, style: { width: '100px' } }), seed = h('input', { type: 'text', value: new Date().toISOString().slice(0, 10).replace(/-/g, ''), style: { width: '140px' } });
+  const extra = h('div', { class: 'row' }), out = h('div'); let g = {};
+  function opt() {
+    g = {}; const m = method.value, p = [];
+    if (m === 'stratified') { g.col = sel(cols, cols[0]); g.smode = sel([['prop', '依比例分配（總筆數＝上方筆數）'], ['fixed', '每層固定筆數（＝上方筆數）']], 'prop'); p.push(field('分層欄位', g.col), field('分配方式', g.smode)); }
+    if (m === 'threshold') { g.col = sel(cols, cols.find(x => /金額|額度|amount/i.test(x)) || cols[0]); g.th = h('input', { type: 'text', value: '1000000', style: { width: '140px' } }); p.push(field('金額欄位', g.col), field('門檻（≥ 必抽）', g.th)); }
+    extra.replaceChildren(...p);
+  }
+  async function run() {
+    let r; try { r = Sample.run(cols, c.rows, { method: method.value, n: n.value, seed: seed.value, col: g.col && g.col.value, smode: g.smode && g.smode.value, th: g.th && g.th.value }); } catch (e) { return UI.toast(e.message, 'err'); }
+    const rows = r.idx.map(i => c.rows[i]), mt = method.options[method.selectedIndex].text;
+    const desc = [`資料集：${c.ds.name}（共 ${fmtN(c.rows.length)} 列）`, `方法：${mt}`, `目標筆數：${n.value}`, `Seed：${seed.value}`, ...(g.col ? [`欄位：${g.col.value}`] : []), ...r.notes, `實際抽出：${fmtN(rows.length)} 筆`, `執行時間：${Util.fmtDT(Util.now())}`].join('\n');
+    out.replaceChildren(h('div', { class: 'card' }, h('h2', null, `抽樣結果：${fmtN(rows.length)} 筆`), h('pre', { class: 'box' }, desc), h('div', { class: 'row pad' },
+      h('button', { class: 'btn', onclick: () => exportDlg(`抽樣_${c.ds.name}`, ['原始列號', ...cols], r.idx.map((i, k) => [i + 1, ...rows[k]])) }, '⬇ 匯出（含原始列號）'), h('button', { class: 'btn', onclick: () => dl(`抽樣說明_${c.ds.name}.txt`, '\uFEFF' + desc, 'text/plain;charset=utf-8') }, '⬇ 匯出抽樣說明'),
+      h('button', { class: 'btn', onclick: async () => { const nm = await UI.prompt('另存為資料集名稱', c.ds.name + '_抽樣'); if (!nm) return; await Data.create(S.pid, nm, cols, rows, { parentId: id }); UI.toast('已建立資料集', 'ok'); } }, '💾 另存為資料集'),
+      h('button', { class: 'btn', onclick: async () => { await DB.put('results', { id: Util.uid(), projectId: S.pid, kind: 'sample', createdAt: Util.now(), title: c.ds.name, input: { method: method.value, n: n.value, seed: seed.value }, summary: { picked: rows.length, total: c.rows.length }, detail: { rowNos: r.idx.map(i => i + 1), desc } }); UI.toast('已儲存到專案紀錄', 'ok'); } }, '📌 儲存抽樣紀錄')),
+      tbl(cols, rows, { max: 200, rowNo: (x, i) => r.idx[i] + 1 })));
+  }
+  main.append(h('div', { class: 'card' }, h('div', { class: 'row top' }, field('資料集', picker), field('抽樣方法', method), field('抽樣筆數', n), field('Seed（任意文字或數字）', seed), h('button', { class: 'btn', style: { marginTop: '16px' }, onclick: () => seed.value = String(Math.floor(Math.random() * 1e9)) }, '🎲')), h('div', { class: 'pad' }), extra, h('div', { class: 'pad' }), h('button', { class: 'btn primary', onclick: run }, '▶ 執行抽樣')), out);
+  opt();
+};
+
+/* ---- Mask ---- */
+Views.mask = async (main, arg) => {
+  const list = await pickDs(arg); main.append(...pageHead('敏感資料遮罩', '遮罩後另存為新資料集，不會動到原始資料。'));
+  if (!list) return main.append(emptyHint());
+  const id = S.dsId, c = await Data.get(id), cols = c.ds.columns, rules = {};
+  const picker = h('select', { value: id, onchange: e => { S.dsId = e.target.value; Cfg.set('dsId', S.dsId); Router.refresh(); } }, list.map(d => h('option', { value: d.id }, `${d.name}（${fmtN(d.rowCount)} 列）`)));
+  const box = h('div'), prev = h('div');
+  function drawRules() {
+    box.replaceChildren(...cols.map(col => {
+      const r = rules[col] || (rules[col] = { type: 'none' }), det = h('span', { class: 'row' });
+      const t = sel(Object.entries(MTYPES), r.type, v => { r.type = v; build(); prevDraw(); });
+      function build() {
+        const mk = (k, ph, w = 60, def = '') => h('input', { type: 'text', placeholder: ph, title: ph, value: r[k] ?? def, style: { width: w + 'px' }, oninput: e => { r[k] = e.target.value; prevDraw(); } });
+        if (r.type === 'keepEnds') { r.ch = r.ch || '*'; r.a = r.a ?? 0; r.b = r.b ?? 0; det.replaceChildren('保留前', mk('a', '前幾碼', 40), '後', mk('b', '後幾碼', 40), '遮罩字元', mk('ch', '字元', 36)); }
+        else if (r.type === 'email' || r.type === 'full') { r.ch = r.ch || '*'; det.replaceChildren('遮罩字元', mk('ch', '字元', 36)); }
+        else if (r.type === 'regex') det.replaceChildren('尋找', mk('find', 'Regex', 130), '取代為', mk('to', '取代', 90));
+        else if (r.type === 'hash') det.replaceChildren('加鹽（可空）', mk('salt', 'Salt', 120));
+        else det.replaceChildren();
+      }
+      build(); return h('div', { class: 'list-item' }, h('b', { style: { width: '150px', overflow: 'hidden', textOverflow: 'ellipsis' } }, col), t, det);
+    }));
+  }
+  function apply(rows) { const act = cols.map((x, i) => [i, rules[x]]).filter(([, r]) => r && r.type !== 'none'); return rows.map(r => { if (!act.length) return r; const o = r.slice(); for (const [i, rl] of act) o[i] = Mask.apply(o[i], rl); return o; }); }
+  function prevDraw() { const head = c.rows.slice(0, 8), after = apply(head); prev.replaceChildren(h('h3', null, '預覽（前 8 列，遮罩後）'), tbl(cols, after, { max: 8, cellCls: (r, i, j) => head[i][j] !== r[j] ? 'hl' : null })); }
+  main.append(h('div', { class: 'card row' }, field('資料集', picker), h('button', { class: 'btn', style: { marginTop: '16px' }, onclick: () => { const s = Mask.suggest(cols, c.rows); Object.keys(rules).forEach(k => rules[k] = { type: 'none' }); Object.assign(rules, s); drawRules(); prevDraw(); UI.toast(`已自動建議 ${Object.keys(s).length} 個欄位`, 'ok'); } }, '✨ 自動建議遮罩欄位')),
+    h('div', { class: 'card' }, h('h2', null, '遮罩規則'), box), h('div', { class: 'card' }, prev, h('div', { class: 'pad' }), h('button', {
+      class: 'btn primary', onclick: async () => {
+        if (!Object.values(rules).some(r => r.type !== 'none')) return UI.toast('尚未設定任何遮罩', 'warn');
+        const nm = await UI.prompt('遮罩後資料集名稱', c.ds.name + '_遮罩'); if (!nm) return;
+        const ds = await UI.busy('遮罩處理中…', async () => Data.create(S.pid, nm, cols, apply(c.rows), { parentId: id })); UI.toast(`已建立：${ds.name}`, 'ok'); S.dsId = ds.id; location.hash = '#/grid/' + ds.id;
+      }
+    }, '🔐 執行遮罩並另存')));
+  drawRules(); prevDraw();
+};
+
+/* ---- Parse ---- */
+const PState = { fields: [], rmode: 'blank', rval: '' };
+Views.parse = async main => {
+  main.append(...pageHead('文字解析', '把固定格式的文字（如 TXT）依規則轉成表格，規則可存成模板。'));
+  const ta = h('textarea', { placeholder: '貼上文字，或匯入 TXT 檔…', style: { minHeight: '220px' } }), F = PState.fields, out = h('div'), fBox = h('div');
+  const rmode = sel([['blank', '以空白行分隔'], ['line', '每行一筆'], ['string', '指定分隔字串'], ['regex', 'Regex 分隔'], ['all', '整份文字為一筆']], PState.rmode), rval = h('input', { type: 'text', value: PState.rval, placeholder: '分隔字串／Regex', style: { width: '200px' } });
+  rmode.addEventListener('change', () => PState.rmode = rmode.value); rval.addEventListener('input', () => PState.rval = rval.value);
+  const fileIn = h('input', { type: 'file', accept: '.txt,.text,.log,.csv', style: { display: 'none' }, onchange: async e => { const f = e.target.files[0]; if (!f) return; const u = new Uint8Array(await f.arrayBuffer()); try { ta.value = new TextDecoder('utf-8', { fatal: true }).decode(u); } catch (x) { ta.value = new TextDecoder('big5').decode(u); } e.target.value = ''; UI.toast('已載入 ' + f.name, 'ok'); } });
+  const sample = '客戶名稱：ABC股份有限公司\n統一編號：12345678\n授信額度：20,000,000\n信用評等：A+\n\n客戶名稱：XYZ國際有限公司\n統一編號：87654321\n授信額度：5,500,000\n信用評等：BBB';
+  function addField(f) { F.push(f || { name: '', mode: 'between', start: '', end: '\\n', pattern: '', group: 1, line: 1, from: 1, len: 8, num: false }); drawF(); }
+  function drawF() {
+    fBox.setKids(F.length ? F.map((f, i) => {
+      const mk = (k, ph, w = 100) => h('input', { type: 'text', value: f[k] ?? '', placeholder: ph, title: ph, style: { width: w + 'px' }, oninput: e => f[k] = e.target.value }), det = h('span', { class: 'row' });
+      const build = () => { if (f.mode === 'between') det.replaceChildren(mk('start', '起始字串', 120), mk('end', '結束字串（空＝行尾）', 120)); else if (f.mode === 'regex') det.replaceChildren(mk('pattern', 'Regex', 200), mk('group', '群組#', 50)); else if (f.mode === 'line') det.replaceChildren(mk('line', '第幾行', 60)); else det.replaceChildren(mk('from', '起始位置(1起)', 90), mk('len', '長度', 60)); };
+      build();
+      return h('div', { class: 'list-item' }, mk('name', '欄位名稱', 110), sel([['between', '起訖字串'], ['regex', 'Regex'], ['line', '第 N 行'], ['fixed', '固定寬度']], f.mode, v => { f.mode = v; build(); }), det,
+        h('label', { class: 'ck', title: '數字清理' }, h('input', { type: 'checkbox', checked: !!f.num, onchange: e => f.num = e.target.checked }), '數字'), h('button', { class: 'btn sm danger', onclick: () => { F.splice(i, 1); drawF(); } }, '✕'));
+    }) : h('div', { class: 'muted' }, '尚未定義欄位。'));
+  }
+  let last = null;
+  function run() {
+    if (!ta.value.trim()) return UI.toast('請先貼上文字', 'warn'); if (!F.some(f => f.name)) return UI.toast('請至少定義一個欄位名稱', 'warn');
+    try { last = Parse.run(ta.value, { rmode: rmode.value, rval: rval.value, fields: F }); } catch (e) { return UI.toast(e.message, 'err', 6000); }
+    out.replaceChildren(h('div', { class: 'card' }, h('h2', null, `解析結果：${fmtN(last.records)} 筆記錄 → ${fmtN(last.rows.length)} 列`), tbl(last.columns, last.rows, { max: 200 }), h('div', { class: 'row pad' },
+      h('button', { class: 'btn primary', onclick: async () => { const nm = await UI.prompt('資料集名稱', '解析結果_' + Util.fmtDT(Util.now()).slice(5, 10).replace('/', '')); if (!nm) return; const ds = await Data.create(S.pid, nm, last.columns, last.rows); S.dsId = ds.id; Cfg.set('dsId', ds.id); UI.toast('已建立資料集', 'ok'); location.hash = '#/grid/' + ds.id; } }, '💾 存成資料集'), h('button', { class: 'btn', onclick: () => exportDlg('解析結果', last.columns, last.rows) }, '⬇ 匯出'))));
+  }
+  const tpls = (await DB.byIndex('templates', 'type', 'parse')).sort((a, b) => a.name.localeCompare(b.name)), ts = h('select', null, h('option', { value: '' }, '載入解析模板…'), tpls.map(t => h('option', { value: t.id }, t.name)));
+  ts.addEventListener('change', () => { const t = tpls.find(x => x.id === ts.value); if (t) { F.length = 0; F.push(...JSON.parse(JSON.stringify(t.data.fields))); rmode.value = PState.rmode = t.data.rmode; rval.value = PState.rval = t.data.rval || ''; drawF(); UI.toast('已載入：' + t.name, 'ok'); } });
+  main.append(h('div', { class: 'card' }, h('h2', null, '① 來源文字'), ta, h('div', { class: 'row pad' }, h('button', { class: 'btn sm', onclick: () => fileIn.click() }, '📂 匯入 TXT'), fileIn, h('button', { class: 'btn sm', onclick: () => { ta.value = sample; if (!F.length) { addField({ name: '客戶名稱', mode: 'between', start: '客戶名稱：', end: '\\n' }); addField({ name: '統一編號', mode: 'between', start: '統一編號：', end: '\\n' }); addField({ name: '授信額度', mode: 'regex', pattern: '授信額度[:：]\\s*([\\d,]+)', group: 1, num: true }); addField({ name: '信用評等', mode: 'between', start: '信用評等：', end: '\\n' }); } } }, '載入範例'))),
+    h('div', { class: 'card' }, h('h2', null, '② 記錄分隔與欄位定義'), h('div', { class: 'row' }, field('記錄分隔', rmode), field('分隔內容', rval)), h('div', { class: 'pad' }), fBox, h('div', { class: 'row pad' }, h('button', { class: 'btn', onclick: () => addField() }, '➕ 新增欄位'), h('button', { class: 'btn primary', onclick: run }, '▶ 解析'), h('span', { class: 'sp' }), ts,
+      h('button', { class: 'btn sm', onclick: async () => { if (!F.length) return UI.toast('尚未定義欄位', 'warn'); const n = await UI.prompt('模板名稱', '我的解析模板'); if (!n) return; await DB.put('templates', { id: Util.uid(), type: 'parse', name: n, data: { rmode: rmode.value, rval: rval.value, fields: JSON.parse(JSON.stringify(F)) }, updatedAt: Util.now() }); UI.toast('已儲存模板', 'ok'); Router.refresh(); } }, '💾 存模板'),
+      h('button', { class: 'btn sm danger', onclick: async () => { const t = tpls.find(x => x.id === ts.value); if (!t) return UI.toast('請先選擇模板', 'warn'); if (await UI.confirm(`刪除模板「${t.name}」？`, true)) { await DB.del('templates', t.id); Router.refresh(); } } }, '刪除'))), out);
+  drawF();
+};
+
+/* ---- Projects / Backup ---- */
+const Proj = {
+  async ensure() {
+    let ps = await DB.all('projects');
+    if (!ps.length) { const p = { id: Util.uid(), name: '預設專案', description: '', createdAt: Util.now(), updatedAt: Util.now() }; await DB.put('projects', p); ps = [p]; }
+    const saved = await Cfg.get('pid', null); S.pid = ps.find(p => p.id === saved) ? saved : ps[0].id; S.dsId = await Cfg.get('dsId', null);
+  },
+  async setCur(id) { S.pid = id; S.dsId = null; await Cfg.set('pid', id); await Cfg.set('dsId', null); },
+  async remove(pid) {
+    for (const d of await Data.list(pid)) await Data.remove(d.id);
+    await DB.delByIndex('results', 'projectId', pid); await DB.del('projects', pid);
+  },
+  async backup(scope, withRows) {
+    const projects = (await DB.all('projects')).filter(p => scope === 'all' || p.id === S.pid), pids = new Set(projects.map(p => p.id));
+    const datasets = (await DB.all('datasets')).filter(d => pids.has(d.projectId)), rows = [];
+    if (withRows) for (const d of datasets) rows.push(...await DB.byIndex('rows', 'datasetId', d.id));
+    return { app: 'LocalDataLab', schemaVersion: 1, exportedAt: Util.now(), withRows, projects, datasets, rows, results: (await DB.all('results')).filter(r => pids.has(r.projectId)), templates: await DB.all('templates'), rules: await DB.all('rules') };
+  },
+  async restore(j) {
+    if (!j || j.app !== 'LocalDataLab' || !Array.isArray(j.projects)) throw new Error('不是有效的 Local Data Lab 備份檔');
+    const have = new Set((await DB.all('projects')).map(p => p.id)), conflicts = j.projects.filter(p => have.has(p.id)); let mode = 'overwrite';
+    if (conflicts.length) { mode = await UI.choice(`備份中有 ${conflicts.length} 個專案的 ID 與現有專案相同，要如何處理？`, [{ text: '覆蓋現有專案', value: 'overwrite' }, { text: '另存為新專案', value: 'new', primary: true }]); if (!mode) return null; }
+    return UI.busy('還原中…', () => Proj._restore(j, mode, have));
+  },
+  async _restore(j, mode, have) {
+    const pmap = {}, dmap = {}, noRows = !j.withRows;
+    j.projects.forEach(p => { pmap[p.id] = (mode === 'new' && have.has(p.id)) ? Util.uid() : p.id; });
+    const dsets = j.datasets.map(d => { const nd = { ...d, projectId: pmap[d.projectId] || d.projectId }; if (mode === 'new' && pmap[d.projectId] !== d.projectId) nd.id = Util.uid(); if (noRows) nd.rowCount = 0; dmap[d.id] = nd.id; return nd; });
+    for (const p of j.projects) { const np = { ...p, id: pmap[p.id] }; if (np.id !== p.id) np.name += '（還原）'; if (mode === 'overwrite' && have.has(p.id)) await Proj.remove(p.id); await DB.put('projects', np); }
+    const byDs = {}; (j.rows || []).forEach(r => { (byDs[dmap[r.datasetId]] = byDs[dmap[r.datasetId]] || []).push(r); });
+    for (const d of dsets) { await DB.put('datasets', d); const ch = (byDs[d.id] || []).sort((a, b) => a.chunkNo - b.chunkNo); await DB.saveRows(d.id, ch.flatMap(x => x.data)); delete Data.cache[d.id]; }
+    for (const r of j.results || []) await DB.put('results', { ...r, id: (mode === 'new' && pmap[r.projectId] !== r.projectId) ? Util.uid() : r.id, projectId: pmap[r.projectId] || r.projectId });
+    for (const t of j.templates || []) await DB.put('templates', t); for (const t of j.rules || []) await DB.put('rules', t);
+    return { projects: j.projects.length, datasets: dsets.length, withRows: !noRows };
+  }
+};
+Views.projects = async main => {
+  main.append(...pageHead('專案／備份', '管理專案與資料集；用 JSON 備份、搬移或還原。'));
+  const projects = (await DB.all('projects')).sort((a, b) => a.createdAt.localeCompare(b.createdAt)), dsets = await Data.list(S.pid);
+  const cur = projects.find(p => p.id === S.pid);
+  const pbox = h('div', { class: 'card' }, h('div', { class: 'row' }, h('h2', { style: { margin: 0 } }, '專案'), h('span', { class: 'sp' }), h('button', { class: 'btn primary', onclick: async () => { const n = await UI.prompt('新專案名稱'); if (!n) return; const p = { id: Util.uid(), name: n, description: '', createdAt: Util.now(), updatedAt: Util.now() }; await DB.put('projects', p); await Proj.setCur(p.id); await App.projSel(); Router.refresh(); } }, '➕ 新增專案')), h('div', { class: 'pad' }),
+    projects.map(p => h('div', { class: 'list-item' }, h('b', null, (p.id === S.pid ? '▶ ' : '') + p.name), h('span', { class: 'muted sp' }, '建立於 ' + Util.fmtDT(p.createdAt)),
+      p.id !== S.pid ? h('button', { class: 'btn sm', onclick: async () => { await Proj.setCur(p.id); await App.projSel(); Router.refresh(); } }, '切換') : null,
+      h('button', { class: 'btn sm', onclick: async () => { const n = await UI.prompt('專案名稱', p.name); if (!n) return; p.name = n; p.updatedAt = Util.now(); await DB.put('projects', p); await App.projSel(); Router.refresh(); } }, '改名'),
+      h('button', { class: 'btn sm danger', onclick: async () => { if (projects.length < 2) return UI.toast('至少要保留一個專案', 'warn'); if (!await UI.confirm(`刪除專案「${p.name}」及其所有資料集？此動作無法復原。`, true)) return; await Proj.remove(p.id); if (p.id === S.pid) await Proj.setCur(projects.find(x => x.id !== p.id).id); await App.projSel(); Router.refresh(); } }, '刪除'))));
+  const dbox = h('div', { class: 'card' }, h('h2', null, `資料集（專案：${cur ? cur.name : ''}）`), dsets.length ? dsets.map(d => h('div', { class: 'list-item' }, h('b', null, d.name), h('span', { class: 'muted sp' }, `${fmtN(d.rowCount)} 列 × ${d.columns.length} 欄　${Util.fmtDT(d.updatedAt)}${d.parentId ? '　(衍生)' : ''}`),
+    h('button', { class: 'btn sm', onclick: () => location.hash = '#/grid/' + d.id }, '開啟'),
+    h('button', { class: 'btn sm', onclick: async () => { const c = await Data.get(d.id); exportDlg(d.name, c.ds.columns, c.rows); } }, '匯出'),
+    h('button', { class: 'btn sm', onclick: async () => { const n = await UI.prompt('資料集名稱', d.name); if (!n) return; const c = await Data.get(d.id); c.ds.name = n; await DB.put('datasets', c.ds); Router.refresh(); } }, '改名'),
+    h('button', { class: 'btn sm', onclick: async () => { const c = await Data.get(d.id); await UI.busy('複製中…', () => Data.create(S.pid, d.name + '_複本', c.ds.columns, c.rows, { parentId: d.id })); Router.refresh(); } }, '複製'),
+    h('button', { class: 'btn sm danger', onclick: async () => { if (await UI.confirm(`刪除資料集「${d.name}」？`, true)) { await Data.remove(d.id); if (S.dsId === d.id) S.dsId = null; Router.refresh(); } } }, '刪除'))) : h('div', { class: 'muted' }, '此專案尚無資料集。'));
+  const withRows = h('input', { type: 'checkbox', checked: true }), scope = sel([['cur', '目前專案'], ['all', '全部專案']], 'cur'), rf = h('input', { type: 'file', accept: '.json', style: { display: 'none' }, onchange: async e => { const f = e.target.files[0]; if (!f) return; try { const r = await Proj.restore(JSON.parse(await f.text())); if (r) { if (r.withRows) UI.toast(`已還原 ${r.projects} 個專案、${r.datasets} 個資料集`, 'ok'); else UI.toast(`已還原 ${r.projects} 個專案、${r.datasets} 個資料集的結構；此備份未包含資料列，資料集內容為空`, 'warn', 8000); await App.projSel(); Router.refresh(); } } catch (x) { UI.toast('還原失敗：' + x.message, 'err', 6000); } e.target.value = ''; } });
+  const bbox = h('div', { class: 'card' }, h('h2', null, '備份與還原'), h('div', { class: 'row' }, field('範圍', scope), h('label', { class: 'ck', style: { marginTop: '16px' } }, withRows, '包含資料列'),
+    h('button', { class: 'btn primary', style: { marginTop: '16px' }, onclick: async () => { const j = await UI.busy('備份中…', () => Proj.backup(scope.value, withRows.checked)); dl(`LocalDataLab_備份_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(j), 'application/json'); UI.toast('備份已下載', 'ok'); } }, '⬇ 下載備份 JSON'),
+    h('button', { class: 'btn', style: { marginTop: '16px' }, onclick: () => rf.click() }, '⬆ 還原備份'), rf), h('p', { class: 'muted' }, '備份含專案、資料集、結果、清洗配方、解析模板與檢核規則。若取消「包含資料列」，還原後只會有資料集結構。'));
+  const results = (await DB.byIndex('results', 'projectId', S.pid)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const K = { compare: '🔍 比對', validate: '🕵️ 檢核', sample: '📋 抽樣' };
+  const rbox = h('div', { class: 'card' }, h('h2', null, '已儲存的處理結果'), results.length ? results.map(r => h('div', { class: 'list-item' }, h('span', { class: 'tag' }, K[r.kind] || r.kind), h('b', null, r.title), h('span', { class: 'muted sp' }, Util.fmtDT(r.createdAt) + '　' + Object.entries(r.summary || {}).map(([k, v]) => `${k}:${v}`).join(' ')),
+    r.kind === 'sample' && r.detail ? h('button', { class: 'btn sm', onclick: () => UI.modal('抽樣紀錄', h('pre', { class: 'box' }, r.detail.desc + '\n\n原始列號：' + r.detail.rowNos.join(', ')), [{ text: '關閉' }]) }, '檢視') : null,
+    h('button', { class: 'btn sm danger', onclick: async () => { await DB.del('results', r.id); Router.refresh(); } }, '✕'))) : h('div', { class: 'muted' }, '尚無紀錄。'));
+  const hist = [];
+  for (const d of dsets) hist.push(...(await DB.byIndex('history', 'datasetId', d.id)).map(x => ({ ...x, ds: d.name })));
+  hist.sort((a, b) => b.ts.localeCompare(a.ts));
+  const hbox = h('div', { class: 'card' }, h('h2', null, '處理紀錄（最近 30 筆）'), hist.length ? tbl(['時間', '資料集', '操作', '影響筆數', '內容'], hist.slice(0, 30).map(x => [Util.fmtDT(x.ts), x.ds, x.op, fmtN(x.affected || 0), (x.params || []).map(p => OPDEF[p.type] ? OPDEF[p.type].name : p.type).join(' → ')]), { noCol: false }) : h('div', { class: 'muted' }, '尚無紀錄。'));
+  const sinfo = h('div', { class: 'muted' }, '讀取中…');
+  main.append(pbox, dbox, bbox, rbox, hbox, h('div', { class: 'card' }, h('h2', null, '儲存空間'), sinfo));
+  try { if (navigator.storage && navigator.storage.estimate) { const e = await navigator.storage.estimate(), per = navigator.storage.persisted ? await navigator.storage.persisted() : false; sinfo.textContent = `已使用約 ${(e.usage / 1048576).toFixed(1)} MB／配額約 ${(e.quota / 1048576).toFixed(0)} MB　｜　持久化：${per ? '已啟用' : '未啟用（可到「設定」申請）'}`; } else sinfo.textContent = '此瀏覽器不提供用量資訊'; } catch (e) { sinfo.textContent = '無法取得用量'; }
+};
+
+/* ---- Settings ---- */
+Views.settings = async main => {
+  main.append(...pageHead('設定', ''));
+  const th = sel([['auto', '跟隨系統'], ['light', '淺色'], ['dark', '深色']], await Cfg.get('theme', 'auto'), async v => { await Cfg.set('theme', v); App.theme(v); });
+  main.append(h('div', { class: 'card col' }, field('主題', th),
+    h('div', null, h('button', { class: 'btn', onclick: async () => { const ok = navigator.storage && navigator.storage.persist ? await navigator.storage.persist() : false; UI.toast(ok ? '已啟用持久化儲存' : '瀏覽器未同意（資料仍可使用，但請定期備份）', ok ? 'ok' : 'warn'); } }, '🛡 申請持久化儲存'))),
+    h('div', { class: 'card' }, h('h2', null, '危險區'), h('p', { class: 'muted' }, '清除所有資料會刪除此瀏覽器中 Local Data Lab 的全部專案、資料集、範本與規則。'),
+      h('button', { class: 'btn danger', onclick: async () => { if (!await UI.confirm('確定清除全部資料？此動作無法復原，建議先備份。', true)) return; DB.db.close(); const r = indexedDB.deleteDatabase('LocalDataLab'); r.onsuccess = r.onerror = r.onblocked = () => location.reload(); } }, '🗑 清除所有資料')),
+    h('div', { class: 'card' }, h('h2', null, `關於 Local Data Lab v${Util.VERSION}`), h('div', { class: 'muted' }, 'Vanilla JS / 單檔 HTML / IndexedDB。頁面以 CSP 限制所有對外連線（connect-src none），資料不會離開此電腦。快捷鍵：Ctrl+Z 復原、Ctrl+Y 重做（資料表、清洗頁）；Esc 關閉視窗。'),
+      h('h3', { style: { marginTop: '12px' } }, 'v1.1 修正重點'),
+      h('ul', { class: 'muted', style: { margin: 0, paddingLeft: '20px' } },
+        h('li', null, '統一編號檢查碼改為財政部新規則（可被 5 整除），不再誤判新核發的統編'),
+        h('li', null, '清洗「執行並覆蓋」後畫面與資料同步，不再出現舊欄位清單'),
+        h('li', null, '還原「不含資料列」的備份時，資料集筆數不再與實際內容不符'),
+        h('li', null, '編輯儲存格立即儲存且只寫回該區塊；快速切換頁面不再錯亂'),
+        h('li', null, '10 萬列排序加速、檢核「只看有問題的列」加速、欄名重複防呆、拖曳檔案誤開啟防護'))));
+};
+
+/* ------------------------------ App ------------------------------ */
+const App = {
+  theme(v) { const dark = v === 'dark' || (v === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches); document.documentElement.dataset.theme = dark ? 'dark' : 'light'; },
+  async projSel() {
+    const ps = (await DB.all('projects')).sort((a, b) => a.createdAt.localeCompare(b.createdAt)), s = $('#projSel');
+    s.replaceChildren(...ps.map(p => h('option', { value: p.id }, p.name))); s.value = S.pid;
+  },
+  async status() {
+    const ps = await DB.all('projects'), p = ps.find(x => x.id === S.pid), ds = await Data.list(S.pid);
+    $('#stProj').textContent = '專案：' + (p ? p.name : '－'); const cur = ds.find(d => d.id === S.dsId);
+    $('#stDs').textContent = '資料集：' + (cur ? `${cur.name}（${fmtN(cur.rowCount)} 列）` : `${ds.length} 個`);
+  },
+  async init() {
+    try { await DB.open(); } catch (e) { $('#main').append(h('div', { class: 'card err' }, '無法開啟 IndexedDB：' + e.message + '（若使用無痕模式或瀏覽器禁止儲存，請改用一般視窗）')); return; }
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { }
+    this.theme(await Cfg.get('theme', 'auto')); await Proj.ensure();
+    $('#nav').append(...NAV.map(([r, t]) => h('a', { 'data-r': r, onclick: () => location.hash = '#/' + r }, t)));
+    await this.projSel();
+    $('#projSel').addEventListener('change', async e => { await Proj.setCur(e.target.value); Router.refresh(); });
+    $('#btnTheme').addEventListener('click', async () => { const o = ['auto', 'light', 'dark'], cur = await Cfg.get('theme', 'auto'), nx = o[(o.indexOf(cur) + 1) % 3]; await Cfg.set('theme', nx); this.theme(nx); UI.toast('主題：' + { auto: '跟隨系統', light: '淺色', dark: '深色' }[nx]); });
+    $('#btnBackup').addEventListener('click', async () => { const j = await UI.busy('備份中…', () => Proj.backup('all', true)); dl(`LocalDataLab_備份_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(j), 'application/json'); UI.toast('完整備份已下載', 'ok'); });
+    addEventListener('hashchange', () => Router.go());
+    /* 避免檔案被拖到匯入區以外時，瀏覽器直接開啟檔案而離開本工具（會失去未儲存內容） */
+    ['dragover', 'drop'].forEach(ev => addEventListener(ev, e => { if (e.dataTransfer && [...e.dataTransfer.types].includes('Files')) e.preventDefault(); }));
+    addEventListener('keydown', e => {
+      if (!(e.ctrlKey || e.metaKey) || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName) || !S.dsId || !['grid', 'clean'].includes(Router.cur)) return;
+      if (e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); Hist.undo(S.dsId); } else if (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey)) { e.preventDefault(); Hist.redo(S.dsId); }
+    });
+    addEventListener('error', e => UI.toast('錯誤：' + e.message, 'err'));
+    addEventListener('unhandledrejection', e => UI.toast('錯誤：' + (e.reason && e.reason.message || e.reason), 'err', 5000));
+    matchMedia('(prefers-color-scheme: dark)').addEventListener('change', async () => this.theme(await Cfg.get('theme', 'auto')));
+    await Router.go();
+  }
+};
+if (typeof document !== 'undefined' && document.getElementById('main')) App.init();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

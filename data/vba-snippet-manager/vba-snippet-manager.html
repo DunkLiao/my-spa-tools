@@ -1,0 +1,1424 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data: blob:;">
+<title>VBA Snippet Manager</title>
+<style>
+:root{
+  --bg:#f3f4f6;--panel:#fff;--panel2:#f0f2f5;--fg:#1f2328;--muted:#656d76;--bd:#d8dee4;
+  --accent:#0f6cbd;--accent-fg:#fff;--danger:#c4314b;--mark:#ffe58f;--code-bg:#fbfbfc;
+  --tok-k:#0000ff;--tok-s:#a31515;--tok-c:#008000;--tok-n:#098658;--tok-o:#795e26;
+  --add:#d6f5dc;--del:#fbd9de;--shadow:0 8px 28px rgba(0,0,0,.25);--code-fs:14px;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#16181b;--panel:#202328;--panel2:#2a2e35;--fg:#e6e8eb;--muted:#9aa4af;--bd:#3a3f47;
+    --accent:#4da3ff;--accent-fg:#0b1a2b;--danger:#ff6b81;--mark:#6b5a00;--code-bg:#1b1d21;
+    --tok-k:#569cd6;--tok-s:#ce9178;--tok-c:#6a9955;--tok-n:#b5cea8;--tok-o:#dcdcaa;--add:#1f4d2b;--del:#5a2430;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16181b;--panel:#202328;--panel2:#2a2e35;--fg:#e6e8eb;--muted:#9aa4af;--bd:#3a3f47;
+  --accent:#4da3ff;--accent-fg:#0b1a2b;--danger:#ff6b81;--mark:#6b5a00;--code-bg:#1b1d21;
+  --tok-k:#569cd6;--tok-s:#ce9178;--tok-c:#6a9955;--tok-n:#b5cea8;--tok-o:#dcdcaa;--add:#1f4d2b;--del:#5a2430;
+}
+:root{color-scheme:light dark}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.5 "Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;background:var(--bg);color:var(--fg);display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:var(--panel);border:1px solid var(--bd);border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+button:hover{background:var(--panel2)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,.card:focus-visible,.nav:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button.primary:hover{filter:brightness(1.08)}
+button.danger{color:var(--danger);border-color:var(--danger)}
+button.ghost{border-color:transparent;background:transparent}
+button.ghost:hover{background:var(--panel2)}
+input,select,textarea{background:var(--panel);border:1px solid var(--bd);border-radius:6px;padding:5px 8px}
+input.err,textarea.err{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger)}
+mark{background:var(--mark);color:inherit;border-radius:2px}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--panel);border-bottom:1px solid var(--bd);flex:none}
+.top h1{font-size:16px;margin:0;white-space:nowrap}
+.top #q{flex:1;max-width:460px;min-width:80px}
+.top .actions{display:flex;gap:6px;margin-left:auto}
+#banner{background:#fff4ce;color:#4d3b00;padding:6px 14px;display:flex;gap:10px;align-items:center;border-bottom:1px solid #e6d27a;flex:none}
+#banner[hidden]{display:none}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #banner{background:#4a3d0a;color:#ffe9a3;border-color:#7a6513}}
+:root[data-theme="dark"] #banner{background:#4a3d0a;color:#ffe9a3;border-color:#7a6513}
+
+/* layout */
+.app{flex:1;min-height:0;display:grid;grid-template-columns:230px 330px 1fr}
+body.sidebar-collapsed .app{grid-template-columns:330px 1fr}
+body.sidebar-collapsed #side{display:none}
+#side{background:var(--panel);border-right:1px solid var(--bd);overflow:auto;padding:8px}
+#list{background:var(--bg);border-right:1px solid var(--bd);display:flex;flex-direction:column;min-height:0}
+#detail{overflow:auto;padding:16px 20px;background:var(--panel);min-width:0}
+.list-head{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--bd);background:var(--panel);flex-wrap:wrap}
+.list-head #count{color:var(--muted);margin-left:auto;font-size:12px}
+#items{overflow:auto;padding:8px;flex:1}
+
+/* sidebar */
+.sec{font-size:12px;color:var(--muted);margin:12px 6px 4px;display:flex;align-items:center;justify-content:space-between}
+.nav{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;cursor:pointer;user-select:none}
+.nav:hover{background:var(--panel2)}
+.nav.on{background:var(--accent);color:var(--accent-fg)}
+.nav .n{margin-left:auto;font-size:12px;opacity:.75}
+.nav .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.nav .tools{display:none;gap:2px}
+.nav:hover .tools,.nav:focus-within .tools{display:flex}
+.nav .tools button{padding:0 4px;font-size:11px;border:none;background:transparent;color:inherit}
+.nav.dragover{box-shadow:inset 0 2px 0 var(--accent)}
+.nav.dragover-after{box-shadow:inset 0 -2px 0 var(--accent)}
+.tagcloud{display:flex;flex-wrap:wrap;gap:4px;padding:2px 4px}
+.tg{border:1px solid var(--bd);border-radius:999px;padding:0 8px;font-size:12px;cursor:pointer;background:var(--panel2);user-select:none}
+.tg.on{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.tg small{opacity:.7}
+
+/* cards */
+.card{background:var(--panel);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;margin-bottom:8px;cursor:pointer;position:relative}
+.card:hover{border-color:var(--accent)}
+.card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.card .t{font-weight:600;padding-right:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .m{font-size:12px;color:var(--muted);margin-top:2px}
+.card .d{font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .hit{font:12px/1.4 Consolas,"Courier New",monospace;background:var(--code-bg);border:1px solid var(--bd);border-radius:4px;margin-top:4px;padding:2px 6px;overflow:hidden;text-overflow:ellipsis;white-space:pre}
+.card .ca{position:absolute;right:6px;top:6px;display:flex;gap:2px}
+.card .ca button{padding:0 6px;font-size:12px}
+.chip{display:inline-block;border:1px solid var(--bd);background:var(--panel2);border-radius:999px;padding:0 8px;font-size:12px;margin-right:4px}
+.empty{color:var(--muted);text-align:center;padding:40px 16px}
+.empty .big{font-size:36px}
+.empty button{margin:6px 3px}
+
+/* detail */
+.dh{display:flex;align-items:center;gap:8px}
+.dh h2{margin:0;font-size:20px;flex:1;word-break:break-word}
+.dh .back{display:none}
+.meta{color:var(--muted);margin:6px 0}
+.desc{white-space:pre-wrap;margin:8px 0}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.codebox,.editor-wrap{display:flex;border:1px solid var(--bd);border-radius:8px;background:var(--code-bg);overflow:hidden}
+.codebox{max-height:calc(100vh - 330px);min-height:120px;overflow:auto}
+.codebox .gutter{position:sticky;left:0;z-index:1}
+.editor-wrap .gutter{padding-bottom:40px}
+.gutter{flex:none;text-align:right;white-space:pre;color:var(--muted);padding:8px 8px 20px 10px;border-right:1px solid var(--bd);user-select:none;font:var(--code-fs)/1.5 Consolas,"Courier New","Microsoft JhengHei",monospace;overflow:hidden;background:var(--panel2)}
+pre.code{margin:0;padding:8px 12px 20px;flex:1;min-width:0;overflow:visible;font:var(--code-fs)/1.5 Consolas,"Courier New","Microsoft JhengHei",monospace;tab-size:4}
+.codebox pre.code{overflow:visible;width:max-content;min-width:100%}
+.tok-k{color:var(--tok-k);font-weight:600}.tok-s{color:var(--tok-s)}.tok-c{color:var(--tok-c);font-style:italic}.tok-n{color:var(--tok-n)}.tok-o{color:var(--tok-o)}
+.foot{color:var(--muted);font-size:12px;margin-top:10px}
+.ed label{display:block;margin:8px 0 2px;font-size:12px;color:var(--muted)}
+.ed input.full,.ed textarea.full,.ed select{width:100%}
+.ed .row{display:grid;grid-template-columns:1fr 2fr;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:4px;border:1px solid var(--bd);border-radius:6px;padding:3px 6px;background:var(--panel);min-height:32px;align-items:center}
+.chips input{border:none;flex:1;min-width:80px;padding:2px;background:transparent}
+.chips .chip button{border:none;background:transparent;padding:0 0 0 4px;font-size:11px}
+.editor-wrap{height:46vh;min-height:240px}
+.editor-wrap textarea{flex:1;border:none;border-radius:0;resize:none;white-space:pre;overflow:auto;background:transparent;padding:8px 12px 20px;font:var(--code-fs)/1.5 Consolas,"Courier New","Microsoft JhengHei",monospace;tab-size:4;outline:none}
+.status{color:var(--muted);font-size:12px;margin-top:4px}
+
+/* dialog */
+dialog.dlg{border:1px solid var(--bd);border-radius:10px;padding:0;background:var(--panel);color:var(--fg);box-shadow:var(--shadow);width:min(520px,94vw);max-height:90vh}
+dialog.dlg.wide{width:min(960px,96vw)}
+dialog.dlg::backdrop{background:rgba(0,0,0,.45)}
+dialog .dh2{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--bd)}
+dialog .dh2 .x{border:none;background:transparent}
+dialog .db{padding:12px 14px;overflow:auto;max-height:calc(90vh - 120px)}
+dialog .db p{white-space:pre-wrap;margin:0}
+dialog .db label{display:block;margin:8px 0 2px}
+dialog .db input.full,dialog .db select.full,dialog .db textarea.full{width:100%}
+dialog .df{display:flex;justify-content:flex-end;gap:8px;padding:10px 14px;border-top:1px solid var(--bd)}
+.hgrid{display:grid;grid-template-columns:230px 1fr;gap:10px;min-height:300px}
+.hlist{border:1px solid var(--bd);border-radius:6px;overflow:auto;max-height:55vh}
+.hlist div{padding:6px 8px;cursor:pointer;border-bottom:1px solid var(--bd)}
+.hlist div.on{background:var(--accent);color:var(--accent-fg)}
+.hview{border:1px solid var(--bd);border-radius:6px;background:var(--code-bg);overflow:auto;max-height:55vh}
+.diff div{white-space:pre;font:var(--code-fs)/1.5 Consolas,"Courier New","Microsoft JhengHei",monospace;padding:0 8px}
+.diff .a{background:var(--add)}.diff .r{background:var(--del)}
+.sect{border:1px solid var(--bd);border-radius:8px;padding:8px 12px;margin-bottom:10px}
+.sect h4{margin:0 0 6px}
+.row2{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0}
+table.kv{border-collapse:collapse;width:100%}
+table.kv td{border-bottom:1px solid var(--bd);padding:3px 6px}
+.imp-row{display:grid;grid-template-columns:24px 1fr 1fr;gap:6px;align-items:center;margin-bottom:4px}
+.warn{color:var(--danger)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;color:#fff;padding:8px 16px;border-radius:8px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9999;max-width:90vw}
+#toast.show{opacity:.95}
+#fatal{padding:40px;max-width:640px;margin:auto}
+
+/* responsive */
+@media (max-width:1023px){
+  .app,body.sidebar-collapsed .app{grid-template-columns:330px 1fr}
+  #side{position:fixed;left:0;top:0;bottom:0;width:260px;z-index:50;transform:translateX(-100%);transition:transform .2s;box-shadow:none;display:block !important}
+  body.sidebar-open #side{transform:none;box-shadow:var(--shadow)}
+  .top h1{display:none}
+}
+@media (max-width:719px){
+  .app,body.sidebar-collapsed .app{grid-template-columns:1fr}
+  #detail{display:none}
+  body.show-detail #detail{display:block}
+  body.show-detail #list{display:none}
+  .dh .back{display:inline-block}
+  .top .actions button .lbl{display:none}
+  .ed .row{grid-template-columns:1fr}
+  .hgrid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <button id="btnMenu" class="ghost" aria-label="切換側邊欄">☰</button>
+  <h1>🧰 VBA Snippet Manager</h1>
+  <input id="q" type="search" placeholder="搜尋…（Ctrl+K）支援 tag: cat: code: is:fav" aria-label="搜尋">
+  <div class="actions">
+    <button id="btnNew" class="primary" aria-label="新增 Snippet">＋<span class="lbl"> 新增</span></button>
+    <button id="btnImpBas" aria-label="匯入 .bas">📥<span class="lbl"> 匯入 .bas</span></button>
+    <button id="btnBackup" aria-label="備份 JSON">💾<span class="lbl"> 備份</span></button>
+    <button id="btnSettings" aria-label="設定">⚙<span class="lbl"> 設定</span></button>
+    <button id="btnTheme" aria-label="切換主題" title="切換主題">🌓</button>
+  </div>
+</header>
+<div id="banner" hidden></div>
+<div class="app">
+  <aside id="side" aria-label="分類與標籤"></aside>
+  <section id="list" aria-label="Snippet 列表">
+    <div class="list-head">
+      <label for="sortSel" style="font-size:12px;color:var(--muted)">排序</label>
+      <select id="sortSel" aria-label="排序方式">
+        <option value="updatedAt">最後修改</option>
+        <option value="title">名稱</option>
+        <option value="useCount">使用次數</option>
+        <option value="lastUsedAt">最近使用</option>
+        <option value="createdAt">建立時間</option>
+      </select>
+      <button id="btnEmptyTrash" hidden class="danger">清空垃圾桶</button>
+      <span id="count"></span>
+    </div>
+    <div id="items"></div>
+  </section>
+  <main id="detail"></main>
+</div>
+<div id="toast" role="status"></div>
+<input type="file" id="fileBas" multiple accept=".bas,.txt,.cls" hidden>
+<input type="file" id="fileJson" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+/* ============================================================
+ * VBA Snippet Manager — 單檔 SPA（Vanilla JS + IndexedDB）
+ * 無外部依賴、無網路請求、無 API Key
+ * ============================================================ */
+
+/* ---------- Utils ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const SCHEMA = 1, APP = 'VbaSnippetManager';
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10));
+const nowISO = () => new Date().toISOString();
+const norm = s => String(s ?? '').normalize('NFKC').toLowerCase();
+const pad = n => String(n).padStart(2, '0');
+const fmtDate = iso => { if (!iso) return '—'; const d = new Date(iso); return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const stamp = () => { const d = new Date(); return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`; };
+function debounce(fn, ms) { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; }
+function download(name, blob) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+let toastTimer;
+function toast(msg, ms = 1500) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), ms);
+}
+const toCRLF = s => s.replace(/\r\n|\r|\n/g, '\r\n');
+const toLF = s => s.replace(/\r\n|\r/g, '\n');
+function normTags(arr) {
+  const seen = new Set(), out = [];
+  for (let t of arr || []) {
+    t = String(t).trim().slice(0, 30); if (!t) continue;
+    const k = norm(t); if (seen.has(k)) continue; seen.add(k); out.push(t);
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
+/* ---------- DB ---------- */
+const DB = {
+  db: null,
+  open() {
+    return new Promise((res, rej) => {
+      if (!window.indexedDB) return rej(new Error('此瀏覽器不支援 IndexedDB'));
+      const r = indexedDB.open('VbaSnippetDB', 1);
+      r.onupgradeneeded = e => {
+        const db = r.result, old = e.oldVersion;
+        if (old < 1) {
+          const s = db.createObjectStore('snippets', { keyPath: 'id' });
+          s.createIndex('by_category', 'categoryId');
+          s.createIndex('by_tag', 'tags', { multiEntry: true });
+          s.createIndex('by_updated', 'updatedAt');
+          s.createIndex('by_favorite', 'favorite');
+          db.createObjectStore('categories', { keyPath: 'id' });
+          const h = db.createObjectStore('history', { keyPath: 'id' });
+          h.createIndex('by_snippet', 'snippetId');
+          db.createObjectStore('settings', { keyPath: 'key' });
+        }
+      };
+      r.onsuccess = () => { this.db = r.result; res(); };
+      r.onerror = () => rej(r.error);
+      r.onblocked = () => rej(new Error('資料庫被其他分頁佔用，請關閉其他本工具分頁後重試'));
+    });
+  },
+  run(stores, mode, fn) {
+    return new Promise((res, rej) => {
+      let t, out;
+      try { t = this.db.transaction(stores, mode); } catch (e) { return rej(e); }
+      t.oncomplete = () => res(out);
+      t.onerror = () => rej(t.error);
+      t.onabort = () => rej(t.error || new Error('交易中止'));
+      try { out = fn(t); } catch (e) { try { t.abort(); } catch (_) {} rej(e); }
+    });
+  },
+  async getAll(store) {
+    const o = {};
+    await this.run([store], 'readonly', t => { const r = t.objectStore(store).getAll(); r.onsuccess = () => { o.v = r.result; }; });
+    return o.v || [];
+  },
+  put(store, obj) { return this.run([store], 'readwrite', t => { t.objectStore(store).put(obj); }); },
+  putMany(store, arr) { return this.run([store], 'readwrite', t => { const s = t.objectStore(store); arr.forEach(x => s.put(x)); }); },
+  del(store, key) { return this.run([store], 'readwrite', t => { t.objectStore(store).delete(key); }); },
+  clearAll() { const n = ['snippets', 'categories', 'history', 'settings']; return this.run(n, 'readwrite', t => n.forEach(s => t.objectStore(s).clear())); },
+  delSnippets(ids) {
+    return this.run(['snippets', 'history'], 'readwrite', t => {
+      const hs = t.objectStore('history').index('by_snippet');
+      for (const id of ids) {
+        t.objectStore('snippets').delete(id);
+        const rq = hs.openCursor(IDBKeyRange.only(id));
+        rq.onsuccess = () => { const c = rq.result; if (c) { c.delete(); c.continue(); } };
+      }
+    });
+  },
+  async addHistory(snip) {
+    const rec = { id: uuid(), snippetId: snip.id, title: snip.title, code: snip.code, savedAt: nowISO() };
+    await this.run(['history'], 'readwrite', t => {
+      const st = t.objectStore('history'); st.put(rec);
+      const r = st.index('by_snippet').getAll(IDBKeyRange.only(snip.id));
+      r.onsuccess = () => {
+        const all = r.result.sort((a, b) => a.savedAt < b.savedAt ? -1 : a.savedAt > b.savedAt ? 1 : 0);
+        while (all.length > 20) st.delete(all.shift().id);
+      };
+    });
+  },
+  async getHistory(snippetId) {
+    const o = {};
+    await this.run(['history'], 'readonly', t => {
+      const r = t.objectStore('history').index('by_snippet').getAll(IDBKeyRange.only(snippetId));
+      r.onsuccess = () => { o.v = r.result; };
+    });
+    return (o.v || []).sort((a, b) => a.savedAt < b.savedAt ? 1 : -1);
+  }
+};
+
+/* ---------- State ---------- */
+const S = {
+  snippets: [], categories: [], settings: {},
+  filter: { view: 'all', categoryId: null, tags: [], query: '' },
+  selectedId: null, editing: null, dirty: false, bannerDismissed: false, _vis: []
+};
+const st = (k, d) => (S.settings[k] === undefined ? d : S.settings[k]);
+async function setSetting(k, v) { S.settings[k] = v; await DB.put('settings', { key: k, value: v }); }
+async function loadAll() {
+  ncache.clear();
+  S.snippets = await DB.getAll('snippets');
+  S.categories = (await DB.getAll('categories')).sort((a, b) => a.order - b.order);
+  S.settings = {}; (await DB.getAll('settings')).forEach(x => { S.settings[x.key] = x.value; });
+}
+const cur = () => S.snippets.find(s => s.id === S.selectedId) || null;
+const catName = id => (S.categories.find(c => c.id === id) || { name: '未分類' }).name;
+function newSnippet(o) {
+  const t = nowISO();
+  return { id: uuid(), title: '', description: '', code: '', categoryId: 'cat-uncategorized', tags: [], favorite: false, useCount: 0, lastUsedAt: null, createdAt: t, updatedAt: t, deletedAt: null, isSample: false, ...o };
+}
+
+/* ---------- VBA Highlighter ---------- */
+const KW = new Set(('sub function end dim as set let const private public static option explicit if then else elseif select case for each next to step do loop while wend until exit with new nothing true false and or not xor is like mod on error resume goto byval byref optional paramarray call property get string integer long double single boolean variant object date byte currency redim preserve erase open close input output append line print write binary random type enum debug me in input access lock shared').split(' '));
+const OBJ = new Set('application activeworkbook thisworkbook worksheets worksheet workbooks workbook range cells activesheet activecell selection sheets err rows columns msgbox inputbox'.split(' '));
+const sp = (c, t) => `<span class="tok-${c}">${esc(t)}</span>`;
+function hlLine(line) {
+  if (/^\s*Rem(\s|$)/i.test(line)) return sp('c', line);
+  let out = '', buf = '', i = 0; const n = line.length;
+  const flush = () => { if (buf) { out += esc(buf); buf = ''; } };
+  while (i < n) {
+    const c = line[i];
+    if (c === "'") { flush(); out += sp('c', line.slice(i)); i = n; break; }
+    if (c === '"') {
+      flush(); let j = i + 1;
+      while (j < n) { if (line[j] === '"') { if (line[j + 1] === '"') { j += 2; continue; } j++; break; } j++; }
+      out += sp('s', line.slice(i, j)); i = j; continue;
+    }
+    if (/[A-Za-z_]/.test(c)) {
+      let j = i + 1; while (j < n && /\w/.test(line[j])) j++;
+      const w = line.slice(i, j), lw = w.toLowerCase(), prev = i > 0 ? line[i - 1] : '';
+      if (prev === '.') buf += w;
+      else if (KW.has(lw)) { flush(); out += sp('k', w); }
+      else if (OBJ.has(lw)) { flush(); out += sp('o', w); }
+      else buf += w;
+      i = j; continue;
+    }
+    if (/[0-9]/.test(c) || (c === '&' && /^&H[0-9A-Fa-f]+/.test(line.slice(i, i + 12)))) {
+      const m = /^(&H[0-9A-Fa-f]+&?|\d+(\.\d+)?([eE][+-]?\d+)?)/.exec(line.slice(i));
+      if (m) { flush(); out += sp('n', m[0]); i += m[0].length; continue; }
+    }
+    buf += c; i++;
+  }
+  flush(); return out;
+}
+const hlVBA = code => toLF(code).split('\n').map(hlLine).join('\n');
+const gutterText = code => { const n = toLF(code).split('\n').length; let s = ''; for (let i = 1; i <= n; i++) s += i + (i < n ? '\n' : ''); return s; };
+
+/* ---------- Diff (LCS by lines) ---------- */
+function diffLines(a, b) {
+  let s = 0; while (s < a.length && s < b.length && a[s] === b[s]) s++;
+  let ea = a.length, eb = b.length; while (ea > s && eb > s && a[ea - 1] === b[eb - 1]) { ea--; eb--; }
+  const A = a.slice(s, ea), B = b.slice(s, eb), n = A.length, m = B.length;
+  const out = a.slice(0, s).map(t => ['=', t]);
+  if (n * m > 4e6) { A.forEach(t => out.push(['-', t])); B.forEach(t => out.push(['+', t])); }
+  else {
+    const w = m + 1, L = new Uint32Array((n + 1) * w);
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+      L[i * w + j] = A[i] === B[j] ? L[(i + 1) * w + j + 1] + 1 : Math.max(L[(i + 1) * w + j], L[i * w + j + 1]);
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (A[i] === B[j]) { out.push(['=', A[i]]); i++; j++; }
+      else if (L[(i + 1) * w + j] >= L[i * w + j + 1]) out.push(['-', A[i++]]);
+      else out.push(['+', B[j++]]);
+    }
+    while (i < n) out.push(['-', A[i++]]); while (j < m) out.push(['+', B[j++]]);
+  }
+  a.slice(ea).forEach(t => out.push(['=', t]));
+  return out;
+}
+const renderDiff = (oldCode, newCode) => '<div class="diff">' + diffLines(toLF(oldCode).split('\n'), toLF(newCode).split('\n'))
+  .map(([k, t]) => `<div class="${k === '+' ? 'a' : k === '-' ? 'r' : ''}">${k === '+' ? '+ ' : k === '-' ? '- ' : '  '}${esc(t)}</div>`).join('') + '</div>';
+
+/* ---------- Placeholder ---------- */
+const PH_RE = /\{\{\s*([^{}:]+?)\s*(?::([^{}]*))?\}\}/g;
+function extractPH(code) {
+  const map = new Map();
+  for (const m of code.matchAll(PH_RE)) {
+    if (!map.has(m[1])) map.set(m[1], m[2] ?? '');
+    else if (!map.get(m[1]) && m[2]) map.set(m[1], m[2]);
+  }
+  return [...map].map(([name, def]) => ({ name, def }));
+}
+const applyPH = (code, vals) => code.replace(PH_RE, (_, n, d) => (vals[n] !== undefined && vals[n] !== '' ? vals[n] : (vals[n] === '' ? '' : (d ?? ''))));
+
+/* ---------- Search ---------- */
+function parseQuery(q) {
+  const o = { words: [], tags: [], cats: [], codes: [], fav: false };
+  const re = /(?:(tag|cat|code):)?(?:"([^"]*)"|(\S+))/gi; let m;
+  while ((m = re.exec(q || ''))) {
+    const v = m[2] ?? m[3]; if (!v) continue;
+    const p = (m[1] || '').toLowerCase();
+    if (p === 'tag') o.tags.push(norm(v)); else if (p === 'cat') o.cats.push(norm(v)); else if (p === 'code') o.codes.push(norm(v));
+    else if (norm(v) === 'is:fav') o.fav = true; else o.words.push(norm(v));
+  }
+  return o;
+}
+const ncache = new Map();
+function nview(s) {
+  let c = ncache.get(s.id);
+  if (!c || c.u !== s.updatedAt) { c = { u: s.updatedAt, t: norm(s.title), d: norm(s.description), c: norm(s.code), g: (s.tags || []).map(norm) }; ncache.set(s.id, c); }
+  return c;
+}
+function matchSnippet(s, pq) {
+  if (pq.fav && !s.favorite) return false;
+  const n = nview(s), tagStr = n.g.join(' ');
+  for (const w of pq.words) if (!(n.t.includes(w) || n.d.includes(w) || n.c.includes(w) || tagStr.includes(w))) return false;
+  for (const t of pq.tags) if (!n.g.some(x => x.includes(t))) return false;
+  for (const c of pq.cats) if (!norm(catName(s.categoryId)).includes(c)) return false;
+  for (const c of pq.codes) if (!n.c.includes(c)) return false;
+  return true;
+}
+function highlight(text, words) {
+  text = String(text ?? '');
+  if (!words.length) return esc(text);
+  let n = '', map = [], endMap = [];
+  for (let i = 0; i < text.length;) {
+    const ch = String.fromCodePoint(text.codePointAt(i)), nc = ch.normalize('NFKC').toLowerCase();
+    for (let k = 0; k < nc.length; k++) { map.push(i); endMap.push(i + ch.length); }
+    n += nc; i += ch.length;
+  }
+  const rg = [];
+  for (const w of words) { if (!w) continue; let p = 0; while ((p = n.indexOf(w, p)) >= 0) { rg.push([map[p], endMap[p + w.length - 1]]); p += w.length; } }
+  if (!rg.length) return esc(text);
+  rg.sort((a, b) => a[0] - b[0]);
+  const mg = [rg[0].slice()];
+  for (const r of rg.slice(1)) { const l = mg[mg.length - 1]; if (r[0] <= l[1]) l[1] = Math.max(l[1], r[1]); else mg.push(r.slice()); }
+  let out = '', pos = 0;
+  for (const [a, b] of mg) { out += esc(text.slice(pos, a)) + '<mark>' + esc(text.slice(a, b)) + '</mark>'; pos = b; }
+  return out + esc(text.slice(pos));
+}
+function hitLines(code, words) {
+  if (!words.length) return [];
+  const out = [], lines = toLF(code).split('\n');
+  for (let i = 0; i < lines.length && out.length < 2; i++) {
+    const nl = norm(lines[i]);
+    if (words.some(w => nl.includes(w))) out.push([i + 1, lines[i].trim().slice(0, 120)]);
+  }
+  return out;
+}
+function visible() {
+  const f = S.filter, pq = parseQuery(f.query), sort = st('sortBy', 'updatedAt');
+  let list = S.snippets.filter(s => f.view === 'trash' ? !!s.deletedAt : !s.deletedAt);
+  if (f.view === 'fav') list = list.filter(s => s.favorite);
+  if (f.view === 'recent') list = list.filter(s => s.lastUsedAt);
+  if (f.categoryId) list = list.filter(s => s.categoryId === f.categoryId);
+  if (f.tags.length) list = list.filter(s => f.tags.every(t => (s.tags || []).some(x => norm(x) === t)));
+  list = list.filter(s => matchSnippet(s, pq));
+  const cmp = {
+    updatedAt: (a, b) => (a.updatedAt < b.updatedAt ? 1 : -1),
+    title: (a, b) => a.title.localeCompare(b.title, 'zh-Hant'),
+    useCount: (a, b) => b.useCount - a.useCount || a.title.localeCompare(b.title, 'zh-Hant'),
+    lastUsedAt: (a, b) => (b.lastUsedAt || '').localeCompare(a.lastUsedAt || ''),
+    createdAt: (a, b) => (a.createdAt < b.createdAt ? 1 : -1)
+  };
+  if (f.view === 'recent') { list.sort(cmp.lastUsedAt); list = list.slice(0, 20); }
+  else if (f.view === 'trash') list.sort((a, b) => (a.deletedAt < b.deletedAt ? 1 : -1));
+  else list.sort(cmp[sort] || cmp.updatedAt);
+  return list;
+}
+
+/* ---------- Big5 (ANSI/cp950) 編碼：以 TextDecoder 反推對照表 ---------- */
+let _b5 = null;
+function big5Supported() { try { new TextDecoder('big5'); return true; } catch (_) { return false; } }
+function big5Map() {
+  if (_b5) return _b5;
+  _b5 = new Map(); const dec = new TextDecoder('big5');
+  const leads = []; for (let a = 0xA1; a <= 0xFE; a++) leads.push(a); for (let a = 0x81; a <= 0xA0; a++) leads.push(a);
+  for (const a of leads) {
+    for (let b = 0x40; b <= 0xFE; b++) {
+      if (b > 0x7E && b < 0xA1) continue;
+      const s = dec.decode(new Uint8Array([a, b]));
+      if (!s || s.includes('\uFFFD') || [...s].length !== 1) continue;
+      if (!_b5.has(s)) _b5.set(s, [a, b]);
+    }
+  }
+  return _b5;
+}
+function encodeBig5(str) {
+  const map = big5Map(), out = []; let bad = 0;
+  for (const ch of str) {
+    const cp = ch.codePointAt(0);
+    if (cp < 0x80) out.push(cp);
+    else { const v = map.get(ch); if (v) out.push(v[0], v[1]); else { out.push(0x3F); bad++; } }
+  }
+  return { bytes: new Uint8Array(out), bad };
+}
+function decodeBuf(buf, enc) {
+  const u8 = new Uint8Array(buf);
+  const b5 = () => { try { return new TextDecoder('big5').decode(u8); } catch (_) { return new TextDecoder('utf-8').decode(u8); } };
+  if (enc === 'utf8') return new TextDecoder('utf-8').decode(u8);
+  if (enc === 'big5') return b5();
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(u8); } catch (_) { return b5(); }
+}
+
+/* ---------- .bas 匯入／匯出 ---------- */
+function modName(title) {
+  let n = String(title).replace(/[^A-Za-z0-9_]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+  if (!n) n = 'Snippet'; if (!/^[A-Za-z]/.test(n)) n = 'Mod_' + n;
+  return n.slice(0, 31);
+}
+function buildBas(s) {
+  const head = [`Attribute VB_Name = "${modName(s.title)}"`, `' Title: ${s.title}`];
+  if (s.description) head.push(`' Description: ${s.description.replace(/\s*[\r\n]+\s*/g, ' ')}`);
+  if (s.tags && s.tags.length) head.push(`' Tags: ${s.tags.join(', ')}`);
+  return toCRLF(head.join('\n') + '\n' + s.code) + '\r\n';
+}
+function parseBas(text, fileName) {
+  let lines = toLF(text.replace(/^\uFEFF/, '')).split('\n'), name = fileName.replace(/\.[^.]+$/, '');
+  if (/^VERSION\s+\d/i.test(lines[0] || '')) {            // .cls 類別模組標頭
+    let i = 1;
+    if (/^BEGIN\b/i.test(lines[i] || '')) { while (i < lines.length && !/^END\s*$/i.test(lines[i])) i++; i++; }
+    lines = lines.slice(i);
+  }
+  const keep = [];
+  for (const ln of lines) {
+    const m = /^Attribute\s+VB_Name\s*=\s*"([^"]*)"/i.exec(ln);
+    if (m) { name = m[1]; continue; }
+    if (/^Attribute\s+VB_\w+/i.test(ln)) continue;
+    keep.push(ln);
+  }
+  let title = name, description = '', tags = [], k = 0;
+  for (; k < keep.length; k++) {
+    let m;
+    if ((m = /^' Title: (.*)$/.exec(keep[k]))) title = m[1];
+    else if ((m = /^' Description: (.*)$/.exec(keep[k]))) description = m[1];
+    else if ((m = /^' Tags: (.*)$/.exec(keep[k]))) tags = m[1].split(',').map(x => x.trim());
+    else break;
+  }
+  return { title: title.slice(0, 100) || name, description, tags: normTags(tags), code: keep.slice(k).join('\n').replace(/^\n+/, '').replace(/\s+$/, '') };
+}
+
+/* ---------- JSON 備份／還原 ---------- */
+async function buildBackup(includeHistory) {
+  return {
+    app: APP, schemaVersion: SCHEMA, exportedAt: nowISO(),
+    categories: S.categories, snippets: S.snippets,
+    history: includeHistory ? await DB.getAll('history') : [],
+    settings: Object.fromEntries(Object.entries(S.settings).filter(([k]) => ['theme', 'sortBy', 'editorFontSize', 'copyCRLF'].includes(k)))
+  };
+}
+async function exportJSON(includeHistory = true) {
+  const data = await buildBackup(includeHistory);
+  download(`vba-snippets-backup-${stamp()}.json`, new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  await setSetting('lastBackupAt', nowISO()); S.bannerDismissed = false; renderBanner();
+}
+function validateBackup(text) {
+  let d; try { d = JSON.parse(String(text).replace(/^\uFEFF/, '')); } catch (e) { throw new Error('不是有效的 JSON 檔案：' + e.message); }
+  if (!d || d.app !== APP) throw new Error('這不是本工具產生的備份檔（app 欄位不符）');
+  if (typeof d.schemaVersion !== 'number') throw new Error('備份檔缺少 schemaVersion');
+  if (d.schemaVersion > SCHEMA) throw new Error(`備份檔版本 (${d.schemaVersion}) 比本工具 (${SCHEMA}) 新，請更新工具後再匯入`);
+  if (!Array.isArray(d.snippets) || !Array.isArray(d.categories)) throw new Error('備份檔格式錯誤：snippets / categories 必須為陣列');
+  return d;
+}
+function sanitizeSnippet(x, catMap) {
+  const t = nowISO(), str = (v, d = '') => (typeof v === 'string' ? v : d);
+  if (!x || typeof x !== 'object' || typeof x.id !== 'string' || typeof x.code !== 'string') return null;
+  return {
+    id: x.id, title: str(x.title, '(未命名)').slice(0, 100) || '(未命名)', description: str(x.description).slice(0, 1000),
+    code: toLF(x.code).slice(0, 200000), categoryId: catMap.get(x.categoryId) || (S.categories.some(c => c.id === x.categoryId) ? x.categoryId : 'cat-uncategorized'),
+    tags: normTags(Array.isArray(x.tags) ? x.tags : []), favorite: !!x.favorite, useCount: Number.isFinite(x.useCount) ? x.useCount : 0,
+    lastUsedAt: str(x.lastUsedAt, null) || null, createdAt: str(x.createdAt, t), updatedAt: str(x.updatedAt, t), deletedAt: str(x.deletedAt, null) || null, isSample: !!x.isSample
+  };
+}
+async function importJSON(d, mode) {
+  const stat = { added: 0, updated: 0, skipped: 0 }; let keepBk = null;
+  if (mode === 'overwrite') {
+    await exportJSON(true); // 先自動備份目前資料
+    keepBk = st('lastBackupAt', null);
+    await DB.clearAll(); S.categories = []; S.snippets = []; S.settings = {};
+  }
+  const catMap = new Map(), cats = [...S.categories];
+  for (const c of d.categories) {
+    if (!c || typeof c.id !== 'string' || typeof c.name !== 'string') continue;
+    const same = cats.find(x => x.id === c.id) || cats.find(x => norm(x.name) === norm(c.name));
+    if (same) { catMap.set(c.id, same.id); continue; }
+    const nc = { id: c.id, name: c.name, order: cats.length, isDefault: !!c.isDefault, createdAt: c.createdAt || nowISO() };
+    cats.push(nc); catMap.set(c.id, nc.id);
+  }
+  if (!cats.some(c => c.id === 'cat-uncategorized')) cats.unshift({ id: 'cat-uncategorized', name: '未分類', order: -1, isDefault: true, createdAt: nowISO() });
+  cats.forEach((c, i) => { c.order = i; });
+  S.categories = cats;
+  const byId = new Map(S.snippets.map(s => [s.id, s])), writeS = [];
+  for (const raw of d.snippets) {
+    const s = sanitizeSnippet(raw, catMap); if (!s) { stat.skipped++; continue; }
+    const ex = byId.get(s.id);
+    if (!ex) { stat.added++; byId.set(s.id, s); writeS.push(s); }
+    else if (s.updatedAt > ex.updatedAt) { stat.updated++; byId.set(s.id, s); writeS.push(s); }
+    else stat.skipped++;
+  }
+  const hist = [];
+  if (Array.isArray(d.history)) {
+    const have = new Set((await DB.getAll('history')).map(h => h.id));
+    for (const h of d.history) if (h && typeof h.id === 'string' && typeof h.snippetId === 'string' && typeof h.code === 'string' && !have.has(h.id) && byId.has(h.snippetId))
+      hist.push({ id: h.id, snippetId: h.snippetId, title: String(h.title || ''), code: toLF(h.code), savedAt: String(h.savedAt || nowISO()) });
+  }
+  const setPairs = [];
+  if (mode === 'overwrite' && d.settings && typeof d.settings === 'object')
+    for (const k of ['theme', 'sortBy', 'editorFontSize', 'copyCRLF']) if (d.settings[k] !== undefined) setPairs.push({ key: k, value: d.settings[k] });
+  setPairs.push({ key: 'sampleSeeded', value: true });
+  if (keepBk) setPairs.push({ key: 'lastBackupAt', value: keepBk });
+  await DB.run(['snippets', 'categories', 'history', 'settings'], 'readwrite', t => {
+    cats.forEach(c => t.objectStore('categories').put(c));
+    writeS.forEach(s => t.objectStore('snippets').put(s));
+    hist.forEach(h => t.objectStore('history').put(h));
+    setPairs.forEach(p => t.objectStore('settings').put(p));
+  });
+  await loadAll(); applySettings();
+  return stat;
+}
+
+/* ---------- Seed ---------- */
+const DEFAULT_CATS = [['cat-uncategorized', '未分類'], ['cat-file', '檔案與路徑'], ['cat-sheet', '工作表與儲存格'], ['cat-text', '文字檔處理'], ['cat-loop', '迴圈與陣列'], ['cat-error', '錯誤處理'], ['cat-ui', '使用者介面（MsgBox / InputBox / UserForm）']];
+const SAMPLES = [
+  ['cat-file', '開啟檔案選擇對話框取得路徑', '回傳使用者選取的檔案完整路徑，取消則回傳空字串。', ['檔案', 'FileDialog'], String.raw`Function PickFile(Optional ByVal dlgTitle As String = "選擇檔案", _
+                  Optional ByVal filterName As String = "文字檔", _
+                  Optional ByVal filterExt As String = "*.txt") As String
+    With Application.FileDialog(msoFileDialogFilePicker)
+        .Title = dlgTitle
+        .AllowMultiSelect = False
+        .Filters.Clear
+        .Filters.Add filterName, filterExt
+        If .Show = -1 Then PickFile = .SelectedItems(1)
+    End With
+End Function`],
+  ['cat-file', '判斷檔案是否存在', '使用 Dir 判斷；路徑為空字串時回傳 False。', ['檔案', 'Dir'], String.raw`Function FileExists(ByVal filePath As String) As Boolean
+    If Len(filePath) = 0 Then Exit Function
+    FileExists = (Len(Dir(filePath)) > 0)
+End Function`],
+  ['cat-text', '逐行讀取文字檔（Open For Input）', '讀取 ANSI（Big5）文字檔，每行寫入 A 欄。{{ }} 為佔位變數，可用「填入變數後複製」。', ['文字檔', 'Open', 'ANSI'], String.raw`Sub {{SubName:ReadTextFile}}()
+    Dim filePath As String, ff As Integer, textLine As String, r As Long
+    filePath = "{{FilePath:C:\Temp\data.txt}}"
+    ff = FreeFile
+    Open filePath For Input As #ff
+    r = 1
+    Do While Not EOF(ff)
+        Line Input #ff, textLine
+        ActiveSheet.Cells(r, 1).Value = textLine
+        r = r + 1
+    Loop
+    Close #ff
+End Sub`],
+  ['cat-text', '以 ADODB.Stream 讀取 UTF-8 文字檔', '回傳整個檔案內容；中文不會亂碼。', ['文字檔', 'UTF8', 'ADODB'], String.raw`Function ReadUtf8(ByVal filePath As String) As String
+    Dim stm As Object
+    Set stm = CreateObject("ADODB.Stream")
+    With stm
+        .Type = 2              ' adTypeText
+        .Charset = "utf-8"
+        .Open
+        .LoadFromFile filePath
+        ReadUtf8 = .ReadText
+        .Close
+    End With
+End Function`],
+  ['cat-sheet', '找出最後一列／最後一欄', '以第 1 欄找最後一列、第 1 列找最後一欄。', ['Range', '最後一列'], String.raw`Sub FindLast()
+    Dim ws As Worksheet, lastRow As Long, lastCol As Long
+    Set ws = ActiveSheet
+    With ws
+        lastRow = .Cells(.Rows.Count, 1).End(xlUp).Row
+        lastCol = .Cells(1, .Columns.Count).End(xlToLeft).Column
+    End With
+    MsgBox "最後一列：" & lastRow & vbCrLf & "最後一欄：" & lastCol
+End Sub`],
+  ['cat-sheet', '新增工作表並命名（避免重名）', '名稱已存在時自動加上 _2、_3…；名稱上限 31 字元。', ['工作表', 'Worksheet'], String.raw`Function AddSheetSafe(ByVal baseName As String) As Worksheet
+    Dim ws As Worksheet, nm As String, i As Long
+    nm = Left$(baseName, 31)
+    Do
+        Set ws = Nothing
+        On Error Resume Next
+        Set ws = ThisWorkbook.Worksheets(nm)
+        On Error GoTo 0
+        If ws Is Nothing Then Exit Do
+        i = i + 1
+        nm = Left$(baseName, 31 - Len(CStr(i)) - 1) & "_" & i
+    Loop
+    Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Sheets(ThisWorkbook.Sheets.Count))
+    ws.Name = nm
+    Set AddSheetSafe = ws
+End Function`],
+  ['cat-loop', '將 Range 讀入陣列處理後回寫', '陣列比逐格存取快很多。注意：Range 只有單一儲存格時 .Value 不是陣列。', ['陣列', 'Range', '效能'], String.raw`Sub ProcessWithArray()
+    Dim rng As Range, arr As Variant, i As Long, j As Long
+    Set rng = ActiveSheet.Range("A1").CurrentRegion
+    If rng.Cells.Count = 1 Then Exit Sub
+    arr = rng.Value
+    For i = LBound(arr, 1) To UBound(arr, 1)
+        For j = LBound(arr, 2) To UBound(arr, 2)
+            arr(i, j) = Trim$(CStr(arr(i, j)))
+        Next j
+    Next i
+    rng.Value = arr
+End Sub`],
+  ['cat-error', '標準 On Error GoTo 錯誤處理範本', '不論成功或失敗都會執行 CleanUp。', ['錯誤處理', 'On Error'], String.raw`Sub ErrorTemplate()
+    On Error GoTo ErrHandler
+    ' ---- 主要程式 ----
+
+CleanUp:
+    ' ---- 還原設定、關閉檔案 ----
+    Exit Sub
+ErrHandler:
+    MsgBox "錯誤 " & Err.Number & "：" & Err.Description, vbExclamation, "發生錯誤"
+    Resume CleanUp
+End Sub`],
+  ['cat-ui', '關閉畫面更新加速巨集（ScreenUpdating / Calculation）', '執行前保存原本設定，結束或發生錯誤時一定還原。', ['效能', 'ScreenUpdating'], String.raw`Sub FastMacro()
+    Dim calcMode As XlCalculation
+    calcMode = Application.Calculation
+    On Error GoTo Done
+    Application.ScreenUpdating = False
+    Application.EnableEvents = False
+    Application.Calculation = xlCalculationManual
+    ' ---- 主要程式 ----
+
+Done:
+    Application.Calculation = calcMode
+    Application.EnableEvents = True
+    Application.ScreenUpdating = True
+    If Err.Number <> 0 Then MsgBox Err.Description, vbExclamation
+End Sub`]
+];
+async function seedIfNeeded() {
+  if (!S.categories.length) {
+    S.categories = DEFAULT_CATS.map(([id, name], i) => ({ id, name, order: i, isDefault: id === 'cat-uncategorized', createdAt: nowISO() }));
+    await DB.putMany('categories', S.categories);
+  }
+  if (!st('sampleSeeded', false)) {
+    if (!S.snippets.length) {
+      const base = Date.now();
+      S.snippets = SAMPLES.map(([cat, title, description, tags, code], i) => {
+        const t = new Date(base - i * 1000).toISOString();
+        return newSnippet({ title, description, tags, code: toLF(code), categoryId: cat, createdAt: t, updatedAt: t, isSample: true });
+      });
+      await DB.putMany('snippets', S.snippets);
+    }
+    await setSetting('sampleSeeded', true);
+  }
+}
+async function purgeTrash() {
+  const lim = Date.now() - 30 * 86400000;
+  const old = S.snippets.filter(s => s.deletedAt && new Date(s.deletedAt).getTime() < lim).map(s => s.id);
+  if (old.length) { await DB.delSnippets(old); S.snippets = S.snippets.filter(s => !old.includes(s.id)); }
+}
+
+/* ---------- Dialog helpers ---------- */
+function modal({ title, body, buttons = [], wide = false }) {
+  const d = document.createElement('dialog'); d.className = 'dlg' + (wide ? ' wide' : '');
+  const h = document.createElement('div'); h.className = 'dh2'; h.innerHTML = `<strong>${esc(title)}</strong><button class="x" aria-label="關閉">✕</button>`;
+  const b = document.createElement('div'); b.className = 'db'; if (typeof body === 'string') b.innerHTML = body; else b.appendChild(body);
+  const f = document.createElement('div'); f.className = 'df';
+  buttons.forEach(bt => {
+    const x = document.createElement('button'); x.textContent = bt.text; x.className = bt.cls || '';
+    x.addEventListener('click', async () => {
+      if (x.disabled) return; x.disabled = true; let r;
+      try { r = bt.onClick ? await bt.onClick(d) : undefined; } catch (err) { handleErr(err); r = false; }
+      x.disabled = false; if (r !== false) d.close();
+    });
+    f.appendChild(x);
+  });
+  d.append(h, b, f); document.body.appendChild(d);
+  h.querySelector('.x').onclick = () => d.close();
+  d.addEventListener('close', () => d.remove());
+  d.showModal(); return d;
+}
+function confirmDlg(msg, ok = '確定', danger = false) {
+  return new Promise(res => {
+    let v = false;
+    const d = modal({ title: '請確認', body: `<p>${esc(msg)}</p>`, buttons: [{ text: '取消' }, { text: ok, cls: danger ? 'danger' : 'primary', onClick: () => { v = true; } }] });
+    d.addEventListener('close', () => res(v));
+  });
+}
+function promptDlg(title, label, value = '') {
+  return new Promise(res => {
+    let v = null; const body = document.createElement('div');
+    body.innerHTML = `<label>${esc(label)}<input class="full" maxlength="60"></label>`;
+    const inp = body.querySelector('input'); inp.value = value;
+    const d = modal({ title, body, buttons: [{ text: '取消' }, { text: '確定', cls: 'primary', onClick: () => { if (!inp.value.trim()) { inp.focus(); return false; } v = inp.value.trim(); } }] });
+    inp.addEventListener('keydown', e => { if (e.isComposing || e.keyCode === 229) return; if (e.key === 'Enter') { e.preventDefault(); d.querySelector('.df .primary').click(); } });
+    d.addEventListener('close', () => res(v)); inp.focus(); inp.select();
+  });
+}
+async function guard() {
+  if (!S.editing || !S.dirty) return true;
+  return confirmDlg('目前有尚未儲存的變更，確定要離開嗎？', '放棄變更', true);
+}
+
+/* ---------- Clipboard ---------- */
+async function copyText(text) {
+  const out = st('copyCRLF', true) ? toCRLF(text) : toLF(text);
+  try { if (navigator.clipboard && navigator.clipboard.writeText) { await navigator.clipboard.writeText(out); return true; } } catch (_) {}
+  try {
+    const ta = document.createElement('textarea'); ta.value = out; ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
+  } catch (_) { return false; }
+}
+async function registerUse(id) {
+  const s = S.snippets.find(x => x.id === id); if (!s) return;
+  s.useCount = (s.useCount || 0) + 1; s.lastUsedAt = nowISO();
+  try { await DB.put('snippets', s); } catch (e) { return handleErr(e); }
+  renderList(); const u = $('#useInfo'); if (u && S.selectedId === id) u.textContent = useInfo(s);
+}
+async function doCopy(id, text) {
+  const s = S.snippets.find(x => x.id === id); if (!s) return;
+  const ok = await copyText(text ?? s.code);
+  if (ok) { toast('已複製到剪貼簿'); registerUse(id); }
+  else {
+    const c = $('pre.code'); if (c) { const r = document.createRange(); r.selectNodeContents(c); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+    toast('無法自動複製，已選取程式碼，請按 Ctrl+C', 3500);
+  }
+}
+function handleErr(e) {
+  console.error(e);
+  if (e && e.name === 'QuotaExceededError') toast('儲存空間不足：請先匯出備份並清空垃圾桶／歷史', 4000);
+  else toast('發生錯誤：' + (e && e.message ? e.message : e), 4000);
+}
+
+/* ---------- Render: sidebar ---------- */
+function keepFocus(container, fn) {
+  const a = document.activeElement; let sel = null;
+  if (a && a !== container && container.contains(a)) {
+    if (a.classList.contains('card') && a.dataset.id) sel = `.card[data-id="${CSS.escape(a.dataset.id)}"]`;
+    else if (a.dataset.nav) sel = `[data-nav="${CSS.escape(a.dataset.nav)}"]`;
+    else if (a.dataset.cat) sel = `[data-cat="${CSS.escape(a.dataset.cat)}"]`;
+    else if (a.dataset.tag) sel = `[data-tag="${CSS.escape(a.dataset.tag)}"]`;
+  }
+  fn();
+  if (sel) { const n = container.querySelector(sel); if (n) n.focus({ preventScroll: true }); }
+}
+function renderSide() { keepFocus($('#side'), renderSideInner); }
+function renderSideInner() {
+  if (S.filter.categoryId && !S.categories.some(c => c.id === S.filter.categoryId)) S.filter.categoryId = null;
+  { const have = new Set(); S.snippets.forEach(s => { if (!s.deletedAt) (s.tags || []).forEach(t => have.add(norm(t))); }); S.filter.tags = S.filter.tags.filter(t => have.has(t)); }
+  const live = S.snippets.filter(s => !s.deletedAt), f = S.filter;
+  const trash = S.snippets.length - live.length;
+  const nav = (key, icon, label, n, on) => `<div class="nav${on ? ' on' : ''}" tabindex="0" role="button" data-nav="${key}"><span>${icon}</span><span class="nm">${label}</span><span class="n">${n}</span></div>`;
+  let h = nav('all', '📚', '全部', live.length, f.view === 'all' && !f.categoryId)
+    + nav('fav', '★', '我的最愛', live.filter(s => s.favorite).length, f.view === 'fav')
+    + nav('recent', '🕘', '最近使用', Math.min(20, live.filter(s => s.lastUsedAt).length), f.view === 'recent')
+    + nav('trash', '🗑', '垃圾桶', trash, f.view === 'trash');
+  h += `<div class="sec"><span>分類</span><button class="ghost" data-act="addCat" aria-label="新增分類" style="padding:0 6px">＋</button></div>`;
+  for (const c of S.categories) {
+    const on = f.categoryId === c.id && f.view !== 'trash';
+    h += `<div class="nav${on ? ' on' : ''}" tabindex="0" draggable="true" data-cat="${esc(c.id)}"><span>📁</span><span class="nm" title="${esc(c.name)}">${esc(c.name)}</span><span class="tools"><button data-act="renCat" data-id="${esc(c.id)}" aria-label="改名">✎</button>${c.id === 'cat-uncategorized' ? '' : `<button data-act="delCat" data-id="${esc(c.id)}" aria-label="刪除">✕</button>`}</span><span class="n">${live.filter(s => s.categoryId === c.id).length}</span></div>`;
+  }
+  const tm = new Map();
+  live.forEach(s => (s.tags || []).forEach(t => { const k = norm(t), o = tm.get(k); if (o) o.n++; else tm.set(k, { name: t, n: 1, k }); }));
+  const tags = [...tm.values()].sort((a, b) => b.n - a.n || a.name.localeCompare(b.name, 'zh-Hant'));
+  h += `<div class="sec"><span>標籤</span><button class="ghost" data-act="mgTags" style="padding:0 6px;font-size:12px">管理</button></div><div class="tagcloud">`
+    + (tags.length ? tags.map(t => `<span class="tg${f.tags.includes(t.k) ? ' on' : ''}" data-tag="${esc(t.k)}" tabindex="0" role="button">#${esc(t.name)} <small>${t.n}</small></span>`).join('') : '<span style="color:var(--muted);font-size:12px">尚無標籤</span>')
+    + '</div>';
+  $('#side').innerHTML = h;
+}
+
+/* ---------- Render: list ---------- */
+const useInfo = s => `使用 ${s.useCount || 0} 次`;
+function renderList() { keepFocus($('#list'), renderListInner); }
+function renderListInner() {
+  const vis = visible(); S._vis = vis;
+  const pq = parseQuery(S.filter.query), hw = pq.words, cw = pq.words.concat(pq.codes);
+  $('#count').textContent = `共 ${vis.length} 筆`;
+  $('#sortSel').value = st('sortBy', 'updatedAt');
+  $('#sortSel').disabled = S.filter.view === 'recent' || S.filter.view === 'trash';
+  $('#btnEmptyTrash').hidden = !(S.filter.view === 'trash' && vis.length);
+  const box = $('#items');
+  if (!vis.length) {
+    const live = S.snippets.filter(s => !s.deletedAt).length;
+    if (S.filter.query.trim()) box.innerHTML = `<div class="empty"><div class="big">🔍</div><p>找不到符合「${esc(S.filter.query)}」的 Snippet</p><button data-act="clearSearch">清除搜尋</button></div>`;
+    else if (!live && S.filter.view === 'all' && !S.filter.categoryId) box.innerHTML = `<div class="empty"><div class="big">🧰</div><p>還沒有任何 Snippet</p><button class="primary" data-act="newSnip">新增第一個 Snippet</button><button data-act="impBas">匯入 .bas</button></div>`;
+    else box.innerHTML = `<div class="empty"><div class="big">📭</div><p>${S.filter.view === 'trash' ? '垃圾桶是空的（項目 30 天後自動永久刪除）' : '這裡沒有符合的項目'}</p></div>`;
+    return;
+  }
+  box.innerHTML = vis.map(s => {
+    const hits = S.filter.view === 'trash' ? [] : hitLines(s.code, cw);
+    const tags = (s.tags || []).map(t => `<span class="chip">#${esc(t)}</span>`).join('');
+    return `<article class="card${s.id === S.selectedId ? ' sel' : ''}" tabindex="0" data-id="${esc(s.id)}">
+      <div class="t">${s.favorite ? '★ ' : ''}${highlight(s.title, hw)}</div>
+      <div class="m">${esc(catName(s.categoryId))} · ${s.deletedAt ? '刪除於 ' + fmtDate(s.deletedAt) : useInfo(s)}</div>
+      ${s.description ? `<div class="d">${highlight(s.description, hw)}</div>` : ''}
+      ${tags ? `<div class="m">${tags}</div>` : ''}
+      ${hits.map(([n, t]) => `<div class="hit">${n}: ${highlight(t, cw)}</div>`).join('')}
+      ${s.deletedAt ? '' : `<div class="ca"><button data-act="cardCopy" aria-label="複製">複製</button><button data-act="cardFav" aria-label="收藏">${s.favorite ? '★' : '☆'}</button></div>`}
+    </article>`;
+  }).join('');
+}
+
+/* ---------- Render: detail / editor ---------- */
+function renderDetail() {
+  const d = $('#detail');
+  if (S.editing) return renderEditor(d);
+  const s = cur();
+  if (!s) { d.innerHTML = `<div class="empty"><div class="big">👈</div><p>從左側選擇一個 Snippet</p></div>`; return; }
+  const ph = extractPH(s.code), trash = !!s.deletedAt;
+  d.innerHTML = `<div class="dh"><button class="back ghost" data-act="back" aria-label="返回列表">←</button><h2>${esc(s.title)}</h2>${trash ? '' : `<button class="ghost" data-act="fav" aria-label="收藏" style="font-size:18px">${s.favorite ? '★' : '☆'}</button>`}</div>
+  <div class="meta">${esc(catName(s.categoryId))} ${(s.tags || []).map(t => `<span class="chip">#${esc(t)}</span>`).join('')}${s.isSample ? '<span class="chip">範例</span>' : ''}</div>
+  ${s.description ? `<div class="desc">${esc(s.description)}</div>` : ''}
+  <div class="btns">${trash
+    ? `<button class="primary" data-act="restore">還原</button><button class="danger" data-act="purge">永久刪除</button>`
+    : `<button class="primary" id="btnCopy" data-act="copy">複製</button>${ph.length ? '<button data-act="fill">填入變數後複製</button>' : ''}<button data-act="edit">編輯</button><button data-act="dup">建立副本</button><button data-act="exportBas">匯出 .bas</button><button data-act="history">歷史</button><button class="danger" data-act="del">刪除</button>`}</div>
+  <div class="codebox"><div class="gutter" aria-hidden="true">${gutterText(s.code)}</div><pre class="code" tabindex="0"><code>${hlVBA(s.code)}</code></pre></div>
+  <div class="foot"><span id="useInfo">${useInfo(s)}</span> · 建立 ${fmtDate(s.createdAt)} · 修改 ${fmtDate(s.updatedAt)}${s.lastUsedAt ? ' · 最近使用 ' + fmtDate(s.lastUsedAt) : ''}</div>`;
+}
+function renderEditor(d) {
+  const e = S.editing, dr = e.draft;
+  d.innerHTML = `<div class="ed"><div class="dh"><button class="back ghost" data-act="back" aria-label="返回列表">←</button><h2>${e.isNew ? '新增 Snippet' : '編輯 Snippet'}</h2></div>
+  <label for="eTitle">名稱 *</label><input id="eTitle" class="full" maxlength="100">
+  <div class="row"><div><label for="eCat">分類</label><select id="eCat"></select></div>
+  <div><label for="eTagIn">標籤（Enter 或 , 新增）</label><div class="chips" id="eTags"></div></div></div>
+  <label for="eDesc">說明</label><textarea id="eDesc" class="full" rows="2" maxlength="1000"></textarea>
+  <label for="eCode">程式碼 *　<span style="color:var(--muted)">（Tab 縮排、Shift+Tab 反縮排；可使用 {{變數}} 或 {{變數:預設值}}）</span></label>
+  <div class="editor-wrap"><div class="gutter" id="eGut" aria-hidden="true"></div><textarea id="eCode" spellcheck="false" wrap="off" autocomplete="off"></textarea></div>
+  <div class="status" id="eStat"></div>
+  <div class="btns"><button class="primary" data-act="save">儲存（Ctrl+S）</button><button data-act="cancel">取消</button></div>
+  <datalist id="tagList">${allTags().map(t => `<option value="${esc(t)}">`).join('')}</datalist></div>`;
+  $('#eTitle').value = dr.title; $('#eDesc').value = dr.description; $('#eCode').value = dr.code;
+  $('#eCat').innerHTML = S.categories.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('');
+  if (!S.categories.some(c => c.id === dr.categoryId)) dr.categoryId = 'cat-uncategorized';
+  $('#eCat').value = dr.categoryId; renderChips(); syncEditor();
+  const ta = $('#eCode');
+  ta.addEventListener('input', () => { dr.code = ta.value; S.dirty = true; ta.classList.remove('err'); syncEditor(); });
+  ['keyup', 'click'].forEach(ev => ta.addEventListener(ev, syncStat));
+  ta.addEventListener('scroll', () => { $('#eGut').scrollTop = ta.scrollTop; });
+  ta.addEventListener('keydown', ev => { if (ev.key === 'Tab') onTab(ev, ta); });
+  $('#eTitle').addEventListener('input', e => { dr.title = e.target.value; S.dirty = true; e.target.classList.remove('err'); });
+  $('#eDesc').addEventListener('input', e => { dr.description = e.target.value; S.dirty = true; });
+  $('#eCat').addEventListener('change', e => { dr.categoryId = e.target.value; S.dirty = true; });
+  $('#eTitle').focus();
+}
+function allTags() { const m = new Map(); S.snippets.forEach(s => (s.tags || []).forEach(t => { if (!m.has(norm(t))) m.set(norm(t), t); })); return [...m.values()]; }
+function renderChips() {
+  const box = $('#eTags'), tags = S.editing.draft.tags;
+  box.innerHTML = tags.map((t, i) => `<span class="chip">#${esc(t)}<button data-act="rmTag" data-i="${i}" aria-label="移除標籤">✕</button></span>`).join('') + `<input id="eTagIn" list="tagList" maxlength="30" aria-label="新增標籤">`;
+  const inp = $('#eTagIn');
+  const add = () => {
+    const v = inp.value.replace(/[,，]/g, '').trim(); inp.value = ''; if (!v) return;
+    if (tags.length >= 20) { toast('標籤最多 20 個'); return; }
+    S.editing.draft.tags = normTags([...tags, v]); S.dirty = true; renderChips(); $('#eTagIn').focus();
+  };
+  inp.addEventListener('keydown', e => {
+    if (e.isComposing || e.keyCode === 229) return;
+    if (e.key === 'Enter' || e.key === ',' || e.key === '，') { e.preventDefault(); add(); }
+    else if (e.key === 'Backspace' && !inp.value && tags.length) { tags.pop(); S.dirty = true; renderChips(); $('#eTagIn').focus(); }
+  });
+  inp.addEventListener('change', add);
+}
+function syncEditor() { const ta = $('#eCode'); $('#eGut').textContent = gutterText(ta.value); $('#eGut').scrollTop = ta.scrollTop; syncStat(); }
+function syncStat() {
+  const ta = $('#eCode'); if (!ta) return;
+  const v = ta.value, line = v.slice(0, ta.selectionStart).split('\n').length;
+  $('#eStat').textContent = `第 ${line} 行　共 ${v.split('\n').length} 行 · ${v.length.toLocaleString()} 字元`;
+}
+function taReplace(ta, text) {
+  ta.focus();
+  if (!document.execCommand('insertText', false, text)) { ta.setRangeText(text, ta.selectionStart, ta.selectionEnd, 'end'); ta.dispatchEvent(new Event('input')); }
+}
+function onTab(e, ta) {
+  e.preventDefault();
+  const v = ta.value, s = ta.selectionStart, en = ta.selectionEnd, multi = v.slice(s, en).includes('\n');
+  if (!e.shiftKey && !multi) return taReplace(ta, '    ');
+  const ls = v.lastIndexOf('\n', s - 1) + 1, endPos = (en > s && v[en - 1] === '\n') ? en - 1 : en;
+  let le = v.indexOf('\n', endPos); if (le < 0) le = v.length;
+  let first = 0, total = 0;
+  const out = v.slice(ls, le).split('\n').map((ln, i) => {
+    if (!e.shiftKey) { total += 4; if (i === 0) first = 4; return '    ' + ln; }
+    const m = /^( {1,4}|\t)/.exec(ln), r = m ? m[0].length : 0; if (i === 0) first = -r; total -= r; return ln.slice(r);
+  });
+  ta.setSelectionRange(ls, le); taReplace(ta, out.join('\n'));
+  ta.setSelectionRange(Math.max(ls, s + first), Math.max(ls, en + total));
+}
+
+function renderBanner() {
+  const b = $('#banner'), real = S.snippets.filter(s => !s.isSample);
+  if (S.bannerDismissed || !real.length) { b.hidden = true; return; }
+  const base = st('lastBackupAt', null) || real.map(s => s.createdAt).sort()[0];
+  const days = Math.floor((Date.now() - new Date(base).getTime()) / 86400000);
+  if (days < 14) { b.hidden = true; return; }
+  b.hidden = false;
+  b.innerHTML = `<span>⚠️ ${st('lastBackupAt', null) ? '已超過 ' + days + ' 天沒有備份' : '尚未備份過（最早的資料已有 ' + days + ' 天）'}。資料只存在這個瀏覽器中，建議立即匯出 JSON 備份。</span><button data-act="bkNow">立即備份</button><button class="ghost" data-act="bkHide">本次不再提醒</button>`;
+}
+function renderAll() { renderSide(); renderList(); renderDetail(); renderBanner(); }
+
+/* ---------- Actions ---------- */
+async function selectSnippet(id) {
+  if (id !== S.selectedId || S.editing) { if (!(await guard())) return; }
+  S.editing = null; S.dirty = false; S.selectedId = id;
+  document.body.classList.add('show-detail'); renderList(); renderDetail();
+  const el = $(`.card[data-id="${CSS.escape(id)}"]`); if (el) el.scrollIntoView({ block: 'nearest' });
+}
+function setFilter(p) {
+  Object.assign(S.filter, p); document.body.classList.remove('sidebar-open'); document.body.classList.remove('show-detail');
+  if (!S.editing) { const c = cur(); if (c && !!c.deletedAt !== (S.filter.view === 'trash')) { S.selectedId = null; renderDetail(); } }
+  renderSide(); renderList();
+}
+async function startNew() {
+  if (!(await guard())) return;
+  S.editing = { isNew: true, draft: { title: '', description: '', code: '', categoryId: S.filter.categoryId || 'cat-uncategorized', tags: [] } };
+  S.dirty = false; S.selectedId = null; document.body.classList.add('show-detail'); renderList(); renderDetail();
+}
+async function startEdit(id) {
+  const s = S.snippets.find(x => x.id === id); if (!s) return;
+  S.editing = { isNew: false, id, draft: { title: s.title, description: s.description, code: s.code, categoryId: s.categoryId, tags: [...(s.tags || [])] } };
+  S.dirty = false; renderDetail();
+}
+async function saveEdit() {
+  const e = S.editing; if (!e) return;
+  const title = $('#eTitle').value.trim(), code = toLF($('#eCode').value), desc = $('#eDesc').value;
+  let bad = false;
+  if (!title) { $('#eTitle').classList.add('err'); bad = true; }
+  if (!code.trim()) { $('#eCode').classList.add('err'); bad = true; }
+  if (title.length > 100 || code.length > 200000) { toast('名稱上限 100 字、程式碼上限 200,000 字元'); return; }
+  if (bad) { toast('請填寫名稱與程式碼'); return; }
+  const tags = normTags(e.draft.tags), t = nowISO();
+  const categoryId = S.categories.some(c => c.id === $('#eCat').value) ? $('#eCat').value : 'cat-uncategorized';
+  try {
+    let s;
+    if (e.isNew) { s = newSnippet({ title, description: desc, code, categoryId, tags }); S.snippets.push(s); await DB.put('snippets', s); }
+    else {
+      s = S.snippets.find(x => x.id === e.id);
+      if (s.code !== code) await DB.addHistory(s);
+      Object.assign(s, { title, description: desc, code, categoryId, tags, updatedAt: t, isSample: s.isSample && s.code === code && s.title === title });
+      await DB.put('snippets', s);
+    }
+    S.editing = null; S.dirty = false; S.selectedId = s.id; renderAll(); toast('已儲存');
+  } catch (err) { handleErr(err); }
+}
+async function cancelEdit() {
+  if (!(await guard())) return;
+  S.editing = null; S.dirty = false; if (!cur()) document.body.classList.remove('show-detail'); renderDetail();
+}
+async function toggleFav(id) {
+  const s = S.snippets.find(x => x.id === id); if (!s) return;
+  s.favorite = !s.favorite;
+  try { await DB.put('snippets', s); } catch (e) { return handleErr(e); }
+  renderSide(); renderList(); if (S.selectedId === id && !S.editing) renderDetail();
+}
+async function dupSnippet(id) {
+  const s = S.snippets.find(x => x.id === id); if (!s) return;
+  const c = newSnippet({ title: (s.title + ' (複本)').slice(0, 100), description: s.description, code: s.code, categoryId: s.categoryId, tags: [...s.tags] });
+  S.snippets.push(c); try { await DB.put('snippets', c); } catch (e) { return handleErr(e); }
+  S.selectedId = c.id; renderAll(); toast('已建立副本');
+}
+async function trashSnippet(id) {
+  const s = S.snippets.find(x => x.id === id); if (!s) return;
+  if (!(await confirmDlg(`確定要刪除「${s.title}」嗎？\n（會先移到垃圾桶，30 天內可還原）`, '刪除', true))) return;
+  s.deletedAt = nowISO(); try { await DB.put('snippets', s); } catch (e) { return handleErr(e); }
+  S.selectedId = null; document.body.classList.remove('show-detail'); renderAll(); toast('已移到垃圾桶');
+}
+async function restoreSnippet(id) {
+  const s = S.snippets.find(x => x.id === id); if (!s) return;
+  s.deletedAt = null; try { await DB.put('snippets', s); } catch (e) { return handleErr(e); }
+  S.selectedId = null; renderAll(); toast('已還原');
+}
+async function purgeSnippets(ids, msg) {
+  if (!(await confirmDlg(msg, '永久刪除', true))) return;
+  try { await DB.delSnippets(ids); } catch (e) { return handleErr(e); }
+  S.snippets = S.snippets.filter(s => !ids.includes(s.id)); if (ids.includes(S.selectedId)) S.selectedId = null;
+  renderAll(); toast('已永久刪除');
+}
+
+/* categories */
+async function addCat() {
+  const name = await promptDlg('新增分類', '分類名稱'); if (!name) return;
+  if (S.categories.some(c => norm(c.name) === norm(name))) return toast('分類名稱重複');
+  const c = { id: uuid(), name, order: S.categories.length, isDefault: false, createdAt: nowISO() };
+  S.categories.push(c); try { await DB.put('categories', c); } catch (e) { return handleErr(e); } renderSide();
+}
+async function renCat(id) {
+  const c = S.categories.find(x => x.id === id); if (!c) return;
+  const name = await promptDlg('分類改名', '分類名稱', c.name); if (!name || name === c.name) return;
+  if (S.categories.some(x => x.id !== id && norm(x.name) === norm(name))) return toast('分類名稱重複');
+  c.name = name; try { await DB.put('categories', c); } catch (e) { return handleErr(e); } renderSide(); renderList();
+}
+async function delCat(id) {
+  if (id === 'cat-uncategorized') return;
+  const c = S.categories.find(x => x.id === id); if (!c) return;
+  const affected = S.snippets.filter(s => s.categoryId === id);
+  if (!(await confirmDlg(`確定刪除分類「${c.name}」？\n其下 ${affected.length} 筆 Snippet 會移到「未分類」。`, '刪除', true))) return;
+  affected.forEach(s => { s.categoryId = 'cat-uncategorized'; });
+  S.categories = S.categories.filter(x => x.id !== id); S.categories.forEach((x, i) => { x.order = i; });
+  try { await DB.run(['snippets', 'categories'], 'readwrite', t => { affected.forEach(s => t.objectStore('snippets').put(s)); t.objectStore('categories').delete(id); S.categories.forEach(x => t.objectStore('categories').put(x)); }); } catch (e) { return handleErr(e); }
+  if (S.filter.categoryId === id) S.filter.categoryId = null; renderAll();
+}
+async function reorderCat(dragId, targetId, after) {
+  if (dragId === targetId) return;
+  const arr = S.categories.filter(c => c.id !== dragId), i = arr.findIndex(c => c.id === targetId);
+  arr.splice(after ? i + 1 : i, 0, S.categories.find(c => c.id === dragId)); arr.forEach((c, k) => { c.order = k; }); S.categories = arr;
+  try { await DB.putMany('categories', arr); } catch (e) { handleErr(e); } renderSide();
+}
+
+/* tags management */
+function mgTagsDlg() {
+  const body = document.createElement('div');
+  const draw = () => {
+    const m = new Map(); S.snippets.forEach(s => (s.tags || []).forEach(t => { const k = norm(t), o = m.get(k); if (o) o.n++; else m.set(k, { name: t, n: 1 }); }));
+    const rows = [...m.values()].sort((a, b) => b.n - a.n);
+    body.innerHTML = rows.length ? `<p style="color:var(--muted);margin-bottom:8px">改名成已存在的標籤＝合併（全域套用，含垃圾桶內的項目）。</p><table class="kv">${rows.map((r, i) => `<tr><td>#${esc(r.name)}</td><td>${r.n} 筆</td><td style="text-align:right"><button data-r="${i}">改名／合併</button> <button class="danger" data-d="${i}">刪除</button></td></tr>`).join('')}</table>` : '<p>目前沒有任何標籤。</p>';
+    body._rows = rows;
+  };
+  draw();
+  body.addEventListener('click', async e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const apply = async fn => { const ch = []; S.snippets.forEach(s => { const nt = fn(s.tags || []); if (nt.join('\u0001') !== (s.tags || []).join('\u0001')) { s.tags = nt; s.updatedAt = nowISO(); ch.push(s); } }); try { await DB.putMany('snippets', ch); } catch (er) { handleErr(er); } draw(); renderSide(); renderList(); renderDetail(); };
+    if (b.dataset.r !== undefined) {
+      const r = body._rows[+b.dataset.r], nn = await promptDlg('標籤改名／合併', '新名稱', r.name); if (!nn) return;
+      const ok = norm(r.name);
+      await apply(tags => normTags(tags.map(t => norm(t) === ok ? nn : t)));
+    } else if (b.dataset.d !== undefined) {
+      const r = body._rows[+b.dataset.d]; if (!(await confirmDlg(`從所有 Snippet 移除標籤「${r.name}」？`, '移除', true))) return;
+      const ok = norm(r.name); await apply(tags => tags.filter(t => norm(t) !== ok));
+    }
+  });
+  modal({ title: '管理標籤', body, buttons: [{ text: '關閉', cls: 'primary' }] });
+}
+
+/* fill placeholders */
+function fillDlg(id) {
+  const s = S.snippets.find(x => x.id === id); if (!s) return;
+  const ph = extractPH(s.code), body = document.createElement('div');
+  body.innerHTML = ph.map((p, i) => `<label>${esc(p.name)}<input class="full" data-i="${i}"></label>`).join('') + '<label>預覽</label><pre class="code" id="phPrev" style="border:1px solid var(--bd);border-radius:6px;max-height:40vh;overflow:auto;background:var(--code-bg)"></pre>';
+  const inputs = [...body.querySelectorAll('input')]; inputs.forEach((inp, i) => { inp.value = ph[i].def; });
+  const vals = () => { const o = {}; inputs.forEach((inp, i) => { o[ph[i].name] = inp.value; }); return o; };
+  const upd = () => { body.querySelector('#phPrev').innerHTML = hlVBA(applyPH(s.code, vals())); };
+  inputs.forEach(i => i.addEventListener('input', upd)); upd();
+  modal({ title: '填入變數後複製', body, wide: true, buttons: [{ text: '取消' }, { text: '複製', cls: 'primary', onClick: async () => { await doCopy(id, applyPH(s.code, vals())); } }] });
+  inputs[0] && inputs[0].focus();
+}
+
+/* history */
+async function historyDlg(id) {
+  const s = S.snippets.find(x => x.id === id); if (!s) return;
+  const hs = await DB.getHistory(id), body = document.createElement('div');
+  if (!hs.length) return void modal({ title: `版本歷史 — ${s.title}`, body: '<p>尚無歷史版本。程式碼有變更並儲存後，舊版本會保留在這裡（最多 20 版）。</p>', buttons: [{ text: '關閉', cls: 'primary' }] });
+  let sel = 0, mode = 'view';
+  const draw = () => {
+    body.innerHTML = `<div class="hgrid"><div class="hlist">${hs.map((h, i) => `<div class="${i === sel ? 'on' : ''}" data-i="${i}">${fmtDate(h.savedAt)}<br><small>${h.code.split('\n').length} 行</small></div>`).join('')}</div>
+    <div><div class="row2"><button data-m="view" class="${mode === 'view' ? 'primary' : ''}">預覽</button><button data-m="diff" class="${mode === 'diff' ? 'primary' : ''}">與目前版本比較</button><span style="color:var(--muted);font-size:12px">${mode === 'diff' ? '紅 = 此舊版有、目前沒有；綠 = 目前新增' : ''}</span></div>
+    <div class="hview">${mode === 'view' ? `<pre class="code">${hlVBA(hs[sel].code)}</pre>` : renderDiff(hs[sel].code, s.code)}</div></div></div>`;
+  };
+  draw();
+  body.addEventListener('click', e => {
+    const i = e.target.closest('[data-i]'), m = e.target.closest('[data-m]');
+    if (i) { sel = +i.dataset.i; draw(); } else if (m) { mode = m.dataset.m; draw(); }
+  });
+  modal({
+    title: `版本歷史 — ${s.title}`, body, wide: true,
+    buttons: [{ text: '關閉' }, {
+      text: '還原此版本', cls: 'primary', onClick: async () => {
+        if (!(await confirmDlg('還原後，目前版本會先存進歷史。確定還原？', '還原'))) return false;
+        try { await DB.addHistory(s); s.code = hs[sel].code; s.updatedAt = nowISO(); await DB.put('snippets', s); } catch (e) { handleErr(e); return; }
+        renderAll(); toast('已還原此版本');
+      }
+    }]
+  });
+}
+
+/* .bas export */
+function exportBasDlg(id) {
+  const s = S.snippets.find(x => x.id === id); if (!s) return;
+  const b5 = big5Supported(), body = document.createElement('div');
+  body.innerHTML = `<label>編碼<select class="full" id="encSel">${b5 ? '<option value="big5">Big5（ANSI）— 繁體中文版 Excel VBE 建議使用</option>' : ''}<option value="utf8bom">UTF-8 含 BOM</option><option value="utf8">UTF-8 不含 BOM</option></select></label>
+  <p style="color:var(--muted);margin-top:8px;font-size:12px">VBE 匯入檔案時以系統 ANSI 解讀；繁中 Windows 請選 Big5，中文註解才不會亂碼。無法以 Big5 表示的字元會以「?」取代。模組名稱：${esc(modName(s.title))}</p>`;
+  modal({
+    title: '匯出 .bas', body, buttons: [{ text: '取消' }, {
+      text: '下載', cls: 'primary', onClick: () => {
+        const enc = $('#encSel').value, text = buildBas(s); let blob;
+        if (enc === 'big5') { const r = encodeBig5(text); blob = new Blob([r.bytes], { type: 'text/plain' }); if (r.bad) toast(`有 ${r.bad} 個字元無法以 Big5 表示，已以 ? 取代`, 3500); }
+        else blob = new Blob([(enc === 'utf8bom' ? '\uFEFF' : '') + text], { type: 'text/plain;charset=utf-8' });
+        download(modName(s.title) + '.bas', blob);
+      }
+    }]
+  });
+}
+/* .bas import */
+async function importBasFiles(files) {
+  if (!files.length) return;
+  const items = []; for (const f of files) items.push({ name: f.name, buf: await f.arrayBuffer(), on: true });
+  let enc = 'auto', catId = S.filter.categoryId || 'cat-uncategorized';
+  const body = document.createElement('div');
+  const parse = () => items.forEach(it => { const p = parseBas(decodeBuf(it.buf, enc), it.name); if (it.edited) p.title = it.title; Object.assign(it, p); });
+  const draw = () => {
+    body.innerHTML = `<div class="row2"><label style="margin:0">編碼 <select id="impEnc"><option value="auto">自動偵測</option><option value="utf8">UTF-8</option><option value="big5">Big5</option></select></label>
+    <label style="margin:0">匯入到 <select id="impCat">${S.categories.map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select></label></div>
+    <div style="margin-top:8px">${items.map((it, i) => `<div class="imp-row"><input type="checkbox" data-c="${i}" ${it.on ? 'checked' : ''} aria-label="匯入此檔"><input data-t="${i}" value="${esc(it.title)}" maxlength="100" aria-label="名稱"><span style="color:var(--muted);font-size:12px">${esc(it.name)} · ${it.code.split('\n').length} 行</span></div>`).join('')}</div>`;
+    $('#impEnc', body).value = enc; $('#impCat', body).value = catId;
+  };
+  parse(); draw();
+  body.addEventListener('change', e => {
+    const t = e.target;
+    if (t.id === 'impEnc') { enc = t.value; parse(); draw(); }
+    else if (t.id === 'impCat') catId = t.value;
+    else if (t.dataset.c !== undefined) items[+t.dataset.c].on = t.checked;
+  });
+  body.addEventListener('input', e => { const t = e.target; if (t.dataset.t !== undefined) { const it = items[+t.dataset.t]; it.title = t.value; it.edited = true; } });
+  modal({
+    title: `匯入 .bas（${items.length} 個檔案）`, body, wide: true, buttons: [{ text: '取消' }, {
+      text: '匯入', cls: 'primary', onClick: async () => {
+        const sel = items.filter(i => i.on && i.code.trim()), pick = sel.filter(i => i.code.length <= 200000);
+        if (sel.length > pick.length) toast(`有 ${sel.length - pick.length} 個檔案超過 200,000 字元，已略過`, 3500);
+        if (!pick.length) { toast('沒有可匯入的檔案'); return false; }
+        const arr = pick.map(i => newSnippet({ title: (i.title || i.name).trim().slice(0, 100), description: i.description, code: i.code, tags: i.tags, categoryId: catId }));
+        try { await DB.putMany('snippets', arr); } catch (e) { handleErr(e); return; }
+        S.snippets.push(...arr); S.selectedId = arr[0].id; renderAll(); toast(`已匯入 ${arr.length} 筆`);
+      }
+    }]
+  });
+}
+/* JSON import flow */
+async function importJsonFile(file) {
+  let d; try { d = validateBackup(await file.text()); } catch (e) { modal({ title: '無法匯入', body: `<p class="warn">${esc(e.message)}</p>`, buttons: [{ text: '關閉', cls: 'primary' }] }); return; }
+  const body = document.createElement('div');
+  body.innerHTML = `<p>備份檔：${d.snippets.length} 筆 Snippet、${d.categories.length} 個分類、${(d.history || []).length} 筆歷史。<br>匯出時間：${fmtDate(d.exportedAt)}</p>
+  <label><input type="radio" name="mode" value="merge" checked> 合併 — 以 id 比對，同一筆保留 <b>修改時間較新</b> 者</label>
+  <label><input type="radio" name="mode" value="overwrite"> 覆蓋 — 清空目前所有資料後寫入（會先自動下載一份目前備份）</label>`;
+  modal({
+    title: '匯入 JSON 備份', body, buttons: [{ text: '取消' }, {
+      text: '匯入', cls: 'primary', onClick: async () => {
+        const mode = body.querySelector('input[name=mode]:checked').value;
+        if (mode === 'overwrite' && !(await confirmDlg('覆蓋會清空目前所有 Snippet、分類與歷史。\n（會先自動下載目前資料的備份）\n確定繼續？', '覆蓋', true))) return false;
+        try {
+          const r = await importJSON(d, mode); S.selectedId = null; S.editing = null; S.dirty = false; renderAll();
+          modal({ title: '匯入完成', body: `<p>新增 ${r.added} 筆、更新 ${r.updated} 筆、略過 ${r.skipped} 筆。</p>`, buttons: [{ text: '關閉', cls: 'primary' }] });
+        } catch (e) { handleErr(e); }
+      }
+    }]
+  });
+}
+
+/* settings / help */
+function settingsDlg() {
+  const body = document.createElement('div');
+  body.innerHTML = `<div class="sect"><h4>外觀</h4><div class="row2"><label style="margin:0">主題 <select id="stTheme"><option value="system">跟隨系統</option><option value="light">淺色</option><option value="dark">深色</option></select></label>
+  <label style="margin:0">程式碼字型大小 <input id="stFs" type="number" min="11" max="24" style="width:70px"></label></div>
+  <label style="margin:4px 0"><input type="checkbox" id="stCrlf"> 複製時將換行轉為 CRLF（Windows / VBE 建議開啟）</label></div>
+  <div class="sect"><h4>備份與還原</h4><div class="row2"><button id="stExp">匯出 JSON</button><label style="margin:0"><input type="checkbox" id="stHist" checked> 包含版本歷史</label><button id="stImp">匯入 JSON…</button></div>
+  <div style="color:var(--muted);font-size:12px">上次備份：${st('lastBackupAt', null) ? fmtDate(st('lastBackupAt', null)) : '尚未備份'}</div></div>
+  <div class="sect"><h4>資料管理</h4><div class="row2"><button id="stSamp">移除範例 Snippet</button><button id="stClear" class="danger">清除所有資料</button></div></div>
+  <div class="sect"><h4>關於</h4><div style="font-size:12px;color:var(--muted)">VBA Snippet Manager v1.1 · 單檔 SPA · 純本機 · 無網路請求。<br>
+  ⚠️ 資料存在此瀏覽器的 IndexedDB，且與 <b>HTML 檔案的路徑與瀏覽器</b>綁定。搬移／改名 HTML 檔、換瀏覽器或換電腦後會看不到資料，請先用 JSON 備份再還原。<br>
+  清除瀏覽器網站資料也會一併清除本工具資料。<br>請避免同時在多個分頁開啟本工具編輯同一份資料，以免內容互相覆蓋。</div></div>`;
+  $('#stTheme', body).value = st('theme', 'system'); $('#stFs', body).value = st('editorFontSize', 14); $('#stCrlf', body).checked = st('copyCRLF', true);
+  $('#stTheme', body).onchange = async e => { await setSetting('theme', e.target.value); applySettings(); };
+  $('#stFs', body).onchange = async e => { const v = Math.min(24, Math.max(11, +e.target.value || 14)); e.target.value = v; await setSetting('editorFontSize', v); applySettings(); };
+  $('#stCrlf', body).onchange = e => setSetting('copyCRLF', e.target.checked);
+  $('#stExp', body).onclick = () => exportJSON($('#stHist', body).checked);
+  $('#stImp', body).onclick = () => $('#fileJson').click();
+  $('#stSamp', body).onclick = async () => {
+    const ids = S.snippets.filter(s => s.isSample).map(s => s.id); if (!ids.length) return toast('沒有範例可移除');
+    if (!(await confirmDlg(`移除 ${ids.length} 筆範例 Snippet（含其歷史）？`, '移除', true))) return;
+    await DB.delSnippets(ids); S.snippets = S.snippets.filter(s => !s.isSample); if (ids.includes(S.selectedId)) S.selectedId = null; renderAll(); toast('已移除範例');
+  };
+  $('#stClear', body).onclick = async () => {
+    if (!(await confirmDlg('這會永久刪除所有 Snippet、分類、歷史與設定，無法復原。\n建議先匯出 JSON 備份。確定要清除？', '全部清除', true))) return;
+    await DB.clearAll(); S.snippets = []; S.categories = []; S.settings = {}; await setSetting('sampleSeeded', true); await seedIfNeeded();
+    S.selectedId = null; S.editing = null; S.dirty = false; S.filter = { view: 'all', categoryId: null, tags: [], query: '' }; $('#q').value = ''; applySettings(); renderAll(); toast('已清除所有資料');
+  };
+  modal({ title: '設定', body, wide: true, buttons: [{ text: '關閉', cls: 'primary' }] });
+}
+function helpDlg() {
+  const rows = [['Ctrl + K 或 /', '聚焦搜尋'], ['Ctrl + N 或 Alt + N', '新增 Snippet（瀏覽器可能保留 Ctrl+N，可用 Alt+N）'], ['Ctrl + S', '儲存（編輯模式）'], ['Ctrl + Shift + C 或 Alt + C', '複製目前 Snippet'], ['E', '編輯目前 Snippet'], ['↑ / ↓', '列表上下選取'], ['Esc', '關閉對話框／取消編輯'], ['?', '顯示此說明'], ['Tab / Shift+Tab', '編輯器內縮排／反縮排']];
+  modal({ title: '快捷鍵與搜尋語法', body: `<table class="kv">${rows.map(r => `<tr><td><b>${esc(r[0])}</b></td><td>${esc(r[1])}</td></tr>`).join('')}</table><p style="margin-top:10px;font-size:12px;color:var(--muted)">搜尋語法：<code>tag:UTF8</code> 標籤、<code>cat:檔案</code> 分類、<code>code:Stream</code> 只搜程式碼、<code>is:fav</code> 只看收藏、<code>"Open For Input"</code> 完整片語；多個條件以空白分隔（AND）。全形／半形、大小寫視為相同。</p>`, buttons: [{ text: '關閉', cls: 'primary' }] });
+}
+
+/* settings → DOM */
+function applySettings() {
+  const th = st('theme', 'system'), r = document.documentElement;
+  if (th === 'system') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', th);
+  r.style.setProperty('--code-fs', st('editorFontSize', 14) + 'px');
+}
+
+/* ---------- Events ---------- */
+function bind() {
+  $('#q').addEventListener('input', debounce(e => { S.filter.query = e.target.value; renderList(); }, 200));
+  $('#sortSel').addEventListener('change', async e => { await setSetting('sortBy', e.target.value); renderList(); });
+  $('#btnMenu').onclick = () => { if (matchMedia('(max-width:1023px)').matches) document.body.classList.toggle('sidebar-open'); else document.body.classList.toggle('sidebar-collapsed'); };
+  document.addEventListener('click', e => { if (document.body.classList.contains('sidebar-open') && !e.target.closest('#side') && !e.target.closest('#btnMenu')) document.body.classList.remove('sidebar-open'); });
+  $('#btnNew').onclick = startNew;
+  $('#btnImpBas').onclick = () => $('#fileBas').click();
+  $('#btnBackup').onclick = () => exportJSON(true);
+  $('#btnSettings').onclick = settingsDlg;
+  $('#btnTheme').onclick = async () => { const o = ['system', 'light', 'dark'], n = o[(o.indexOf(st('theme', 'system')) + 1) % 3]; await setSetting('theme', n); applySettings(); toast('主題：' + { system: '跟隨系統', light: '淺色', dark: '深色' }[n]); };
+  $('#btnEmptyTrash').onclick = () => { const ids = S.snippets.filter(s => s.deletedAt).map(s => s.id); if (ids.length) purgeSnippets(ids, `清空垃圾桶，永久刪除 ${ids.length} 筆？`); };
+  $('#fileBas').onchange = async e => { const f = [...e.target.files]; e.target.value = ''; await importBasFiles(f); };
+  $('#fileJson').onchange = async e => { const f = e.target.files[0]; e.target.value = ''; if (f) await importJsonFile(f); };
+
+  $('#banner').addEventListener('click', e => { const a = e.target.dataset.act; if (a === 'bkNow') exportJSON(true); else if (a === 'bkHide') { S.bannerDismissed = true; renderBanner(); } });
+
+  $('#side').addEventListener('click', e => {
+    const act = e.target.closest('[data-act]');
+    if (act) { const a = act.dataset.act; if (a === 'addCat') addCat(); else if (a === 'renCat') renCat(act.dataset.id); else if (a === 'delCat') delCat(act.dataset.id); else if (a === 'mgTags') mgTagsDlg(); return; }
+    const tg = e.target.closest('[data-tag]');
+    if (tg) { const k = tg.dataset.tag, t = S.filter.tags.includes(k) ? S.filter.tags.filter(x => x !== k) : [...S.filter.tags, k]; return setFilter({ tags: t }); }
+    const nv = e.target.closest('[data-nav]');
+    if (nv) { const k = nv.dataset.nav; return setFilter({ view: k, categoryId: null }); }
+    const ct = e.target.closest('[data-cat]');
+    if (ct) setFilter({ view: 'all', categoryId: ct.dataset.cat });
+  });
+  $('#side').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { const t = e.target.closest('.nav,.tg'); if (t && e.target === t) { e.preventDefault(); t.click(); } } });
+  let dragId = null;
+  $('#side').addEventListener('dragstart', e => { const c = e.target.closest('[data-cat]'); if (c) { dragId = c.dataset.cat; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', dragId); } });
+  const isAfter = (e, c) => { const r = c.getBoundingClientRect(); return e.clientY > r.top + r.height / 2; };
+  const clearDrag = () => document.querySelectorAll('.dragover,.dragover-after').forEach(x => x.classList.remove('dragover', 'dragover-after'));
+  $('#side').addEventListener('dragover', e => { const c = e.target.closest('[data-cat]'); if (c && dragId) { e.preventDefault(); clearDrag(); c.classList.add(isAfter(e, c) ? 'dragover-after' : 'dragover'); } });
+  $('#side').addEventListener('drop', e => { const c = e.target.closest('[data-cat]'); if (c && dragId) { e.preventDefault(); reorderCat(dragId, c.dataset.cat, isAfter(e, c)); } dragId = null; clearDrag(); });
+  $('#side').addEventListener('dragend', () => { dragId = null; clearDrag(); });
+
+  $('#list').addEventListener('click', e => {
+    const act = e.target.closest('[data-act]'), card = e.target.closest('.card');
+    if (act) {
+      const a = act.dataset.act;
+      if (a === 'cardCopy' && card) { e.stopPropagation(); return doCopy(card.dataset.id); }
+      if (a === 'cardFav' && card) { e.stopPropagation(); return toggleFav(card.dataset.id); }
+      if (a === 'clearSearch') { $('#q').value = ''; S.filter.query = ''; return renderList(); }
+      if (a === 'newSnip') return startNew();
+      if (a === 'impBas') return $('#fileBas').click();
+    }
+    if (card) selectSnippet(card.dataset.id);
+  });
+  $('#list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('card')) { e.preventDefault(); selectSnippet(e.target.dataset.id); } });
+
+  $('#detail').addEventListener('click', e => {
+    const b = e.target.closest('[data-act]'); if (!b) return;
+    const a = b.dataset.act, s = cur();
+    switch (a) {
+      case 'back': (async () => { if (!(await guard())) return; S.editing = null; S.dirty = false; document.body.classList.remove('show-detail'); renderDetail(); })(); break;
+      case 'fav': s && toggleFav(s.id); break;
+      case 'copy': if (s) { const sel = getSelection(), pre = $('pre.code'); doCopy(s.id, (sel && !sel.isCollapsed && pre && pre.contains(sel.anchorNode)) ? sel.toString() : undefined); } break;
+      case 'fill': s && fillDlg(s.id); break;
+      case 'edit': s && startEdit(s.id); break;
+      case 'dup': s && dupSnippet(s.id); break;
+      case 'exportBas': s && exportBasDlg(s.id); break;
+      case 'history': s && historyDlg(s.id); break;
+      case 'del': s && trashSnippet(s.id); break;
+      case 'restore': s && restoreSnippet(s.id); break;
+      case 'purge': s && purgeSnippets([s.id], `永久刪除「${s.title}」？此動作無法復原。`); break;
+      case 'save': saveEdit(); break;
+      case 'cancel': cancelEdit(); break;
+      case 'rmTag': S.editing.draft.tags.splice(+b.dataset.i, 1); S.dirty = true; renderChips(); break;
+    }
+  });
+  document.addEventListener('selectionchange', () => {
+    const btn = $('#btnCopy'); if (!btn) return;
+    const sel = getSelection(), pre = $('pre.code');
+    btn.textContent = (sel && !sel.isCollapsed && pre && pre.contains(sel.anchorNode)) ? '複製選取' : '複製';
+  });
+  window.addEventListener('beforeunload', e => { if (S.editing && S.dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  document.addEventListener('keydown', async e => {
+    if (document.querySelector('dialog[open]')) return;
+    const tag = (e.target.tagName || '').toLowerCase(), typing = tag === 'input' || tag === 'textarea' || tag === 'select' || e.target.isContentEditable;
+    const k = e.key, ctrl = e.ctrlKey || e.metaKey;
+    if (ctrl && k.toLowerCase() === 'k') { e.preventDefault(); $('#q').focus(); $('#q').select(); return; }
+    if (ctrl && !e.shiftKey && k.toLowerCase() === 's') { e.preventDefault(); if (S.editing) saveEdit(); return; }
+    if ((ctrl && !e.shiftKey && k.toLowerCase() === 'n') || (e.altKey && k.toLowerCase() === 'n')) { e.preventDefault(); startNew(); return; }
+    if ((ctrl && e.shiftKey && k.toLowerCase() === 'c') || (e.altKey && k.toLowerCase() === 'c')) { const s = cur(); if (s && !S.editing) { e.preventDefault(); doCopy(s.id); } return; }
+    if (k === 'Escape') { if (e.target.id === 'q') { e.target.value = ''; S.filter.query = ''; renderList(); e.target.blur(); } else if (S.editing) cancelEdit(); return; }
+    if (typing || ctrl || e.altKey) return;
+    if (k === '/') { e.preventDefault(); $('#q').focus(); }
+    else if (k === '?') { e.preventDefault(); helpDlg(); }
+    else if (k === 'e' || k === 'E') { const s = cur(); if (s && !S.editing && !s.deletedAt) { e.preventDefault(); startEdit(s.id); } }
+    else if ((k === 'ArrowDown' || k === 'ArrowUp') && !S.editing) {
+      e.preventDefault(); const v = S._vis; if (!v.length) return;
+      let i = v.findIndex(x => x.id === S.selectedId); i = k === 'ArrowDown' ? Math.min(v.length - 1, i + 1) : Math.max(0, i < 0 ? 0 : i - 1);
+      selectSnippet(v[i].id);
+    }
+  });
+}
+
+/* ---------- Init ---------- */
+function fatal(e) {
+  document.body.innerHTML = `<div id="fatal"><h2>⚠️ 無法啟動</h2><p>IndexedDB 無法使用：${esc(e && e.message || e)}</p><p>可能原因：瀏覽器隱私／無痕模式、已停用網站資料儲存、或瀏覽器版本過舊。請改用一般視窗的 Microsoft Edge 或 Chrome 最新版開啟。</p></div>`;
+}
+(async function init() {
+  try { await DB.open(); } catch (e) { return fatal(e); }
+  try {
+    await loadAll(); await seedIfNeeded(); await purgeTrash(); applySettings(); bind();
+    if (!S.snippets.some(s => !s.deletedAt)) { /* 空狀態由 renderList 處理 */ }
+    renderAll();
+  } catch (e) { fatal(e); }
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

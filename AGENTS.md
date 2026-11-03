@@ -63,6 +63,9 @@ my-spa-tools/
 │  ├─ pq-debugger/               PQ Debugger Power Query M 除錯工具（12 條規則、流程圖與修正）
 │  ├─ file-intake-inspector/     File Intake Inspector 批次檔案進件檢查站（檔名規則、編碼／BOM／換行、SHA-256 漂移比較與報告匯出）
 │  ├─ outlier-hunter/            Outlier Hunter 異常值獵人（資料集匯入、自訂規則、嚴重度評分、複核與白名單）
+│  ├─ local-data-lab/            Local Data Lab 離線資料處理工作台（匯入、清洗配方、比對、異常檢核、稽核抽樣與敏感遮罩）
+│  ├─ recipe-forge/              RecipeForge 資料轉換配方器（轉換步驟、差異預覽、對照字典、執行歷史與多格式匯出）
+│  ├─ vba-snippet-manager/       VBA Snippet Manager（片段分類、標籤搜尋、.bas 匯入、修改歷史與 JSON 備份）
 │  └─ screenshot-ocr-kb/         截圖 OCR 知識庫（Tesseract OCR、集合與操作流程；含 download_ocr_engine.bat）
 ├─ docs/                         文書與簡報
 │  ├─ project-gantt/  card-presenter/  docuformatter/  text-scrubber/
@@ -174,7 +177,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 93 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 96 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。
