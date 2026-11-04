@@ -37,6 +37,7 @@ my-spa-tools/
 │  ├─ default-hotspot-map/       違約熱區地圖（縣市／產業違約熱區、RR／A-E／Gi* 與多格式匯出）
 │  ├─ ecl-movement-analyzer/     預期信用損失變動分析器（ECL 拆解、Stage 矩陣、IFRS 7 與情境權重）
 │  ├─ pd-migration-explainer/    PD Migration 解釋器（評等遷移矩陣、PD 變動拆解與 SICR 篩選）
+│  ├─ pd-rule-visualizer/        PD Rule Visualizer（規則區間覆蓋熱力圖、重疊／缺口健檢、批次比對與程式碼產生）
 │  ├─ codebook-studio/           代碼簿工作台（代碼主檔、系統對照、CSV 驗證與異動紀錄）
 │  ├─ corporate-stress-lab/      企金壓測沙盒（情境設計、執行、比較、反向壓測與抵減）
 │  ├─ credit-sa-sentinel/        信用標準法異常哨兵（暴險匯入、異常中心與規則管理）
@@ -177,7 +178,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 96 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 97 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

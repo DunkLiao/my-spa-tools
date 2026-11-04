@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="zh-Hant" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PD Rule Visualizer</title>
+<style>
+:root{--bg:#f4f6fa;--panel:#fff;--ink:#1f2937;--muted:#6b7280;--line:#e2e6ee;--brand:#2563eb;--brand-ink:#fff;--ok:#16a34a;--warn:#d97706;--err:#dc2626;--code:#0f172a;--code-ink:#e5e7eb;--hover:#eef2ff}
+[data-theme=dark]{--bg:#0f1420;--panel:#171e2e;--ink:#e5e7eb;--muted:#94a3b8;--line:#2a3550;--brand:#60a5fa;--brand-ink:#0b1220;--hover:#1e2a44;--code:#0a0f1a}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:14px/1.5 "Microsoft JhengHei","PingFang TC",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+#app{display:grid;grid-template-columns:230px 1fr;height:100vh}
+aside{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+aside h1{font-size:16px;margin:0;padding:14px 14px 4px}
+aside .sub{padding:0 14px 10px;color:var(--muted);font-size:12px}
+#plist{flex:1;overflow:auto;padding:4px 8px}
+.pitem{padding:8px 10px;border-radius:8px;cursor:pointer;margin-bottom:2px;display:flex;justify-content:space-between;gap:6px}
+.pitem:hover{background:var(--hover)}
+.pitem.on{background:var(--brand);color:var(--brand-ink)}
+.pitem small{opacity:.75}
+.aside-foot{padding:10px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+main{display:flex;flex-direction:column;min-width:0;min-height:0}
+#tabs{display:flex;gap:2px;padding:8px 12px 0;background:var(--panel);border-bottom:1px solid var(--line);overflow:auto}
+#tabs button{border:0;background:none;padding:9px 14px;cursor:pointer;color:var(--muted);border-bottom:3px solid transparent;font-size:14px;white-space:nowrap}
+#tabs button.on{color:var(--brand);border-bottom-color:var(--brand);font-weight:600}
+#view{flex:1;overflow:auto;padding:16px}
+#status{padding:6px 14px;background:var(--panel);border-top:1px solid var(--line);font-size:12px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:15px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.row>label{display:flex;gap:6px;align-items:center}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.muted{color:var(--muted)}
+button{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px;border-radius:7px;cursor:pointer}
+button:hover{background:var(--hover)}
+button.pri{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+button.danger{color:var(--err)}
+button.sm{padding:2px 8px;font-size:12px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:5px 8px}
+input[type=text],input:not([type]),input[type=number]{min-width:0}
+textarea{width:100%;min-height:150px;font-family:Consolas,"Courier New",monospace;font-size:13px}
+.tblwrap{overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+table{border-collapse:collapse;width:100%}
+th,td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap}
+th{background:var(--bg);position:sticky;top:0;font-weight:600;z-index:1}
+th[data-act=sort]{cursor:pointer}
+table.grid td input{width:100%}
+table.grid td input.w-s{width:90px}
+table.grid td input.w-m{width:150px}
+table.grid td input.w-l{width:230px}
+.sub-t{font-size:12px;color:var(--muted);padding-top:2px}
+.sub-t.bad{color:var(--err)}
+tr.off td{opacity:.45}
+.badge{display:inline-block;border-radius:999px;padding:1px 9px;font-size:12px;color:#fff}
+.b-err{background:var(--err)}.b-warn{background:var(--warn)}.b-ok{background:var(--ok)}.b-info{background:#64748b}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 16px;min-width:120px}
+.kpi b{font-size:22px;display:block}
+pre.code{background:var(--code);color:var(--code-ink);padding:12px;border-radius:8px;overflow:auto;max-height:520px;font:12.5px/1.5 Consolas,"Courier New",monospace;white-space:pre}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;margin:6px 0}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:4px}
+svg text{font-family:inherit}
+.svgbox{overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px}
+.warn-box{background:#fff7ed;color:#9a3412;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:13px}
+[data-theme=dark] .warn-box{background:#2a1c10;color:#fdba74;border-color:#5b3a1c}
+#toast{position:fixed;right:18px;bottom:44px;background:#111827;color:#fff;padding:9px 16px;border-radius:8px;opacity:0;transition:.25s;pointer-events:none;max-width:420px;z-index:9}
+#toast.on{opacity:.95}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){#app{grid-template-columns:1fr;grid-template-rows:auto 1fr}aside{max-height:190px}.two{grid-template-columns:1fr}}
+.pass{color:var(--ok);font-weight:600}.fail{color:var(--err);font-weight:600}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside>
+    <h1>📐 PD Rule Visualizer</h1>
+    <div class="sub">離線 · 本機 IndexedDB · 無 API Key · v1.1</div>
+    <div id="plist"></div>
+    <div class="aside-foot">
+      <button class="pri" data-act="newProject">＋ 新增專案</button>
+      <button data-act="themeToggle">🌓 切換主題</button>
+    </div>
+  </aside>
+  <main>
+    <nav id="tabs"></nav>
+    <section id="view"></section>
+    <footer id="status"></footer>
+  </main>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+// ==ENGINE_START==
+/* ============ 核心引擎：純函式，不依賴 DOM ============ */
+const DEFAULT_DEFS = { lowerOp: '>=', upperOp: '<' };
+
+function normText(s) {
+  return String(s == null ? '' : s).normalize('NFKC')
+    .replace(/[≥≧⩾]/g, '>=').replace(/[≤≦⩽]/g, '<=')
+    .replace(/=>/g, '>=').replace(/=</g, '<=')
+    .replace(/[–—−﹣‐]/g, '-').replace(/[〜∼～]/g, '~').replace(/∞/g, 'inf').trim();
+}
+function toNum(x) {
+  if (x == null) return null;
+  const s = String(x).normalize('NFKC').replace(/,/g, '').trim();
+  if (s === '') return null;
+  return Number(s);
+}
+function fnum(v) { return String(parseFloat(Number(v).toPrecision(12))); }
+
+function emptyIv(raw) { return { lower: null, lowerOp: null, upper: null, upperOp: null, raw: raw || '', err: null }; }
+
+function parseInterval(text, defs) {
+  defs = defs || DEFAULT_DEFS;
+  const raw = text == null ? '' : String(text);
+  const iv = emptyIv(raw.trim());
+  let s = normText(raw);
+  if (s === '' || /^(-+|n\/a|na|null|none|無|無限|不限|全部|all|\*)$/i.test(s)) return iv;
+  const fail = (m) => { iv.err = m; return iv; };
+
+  // 括號表示法 [a, b) / (a, b]
+  let m = s.match(/^([\[\(])\s*([^,;]*?)\s*[,;]\s*([^,;]*?)\s*([\]\)])$/);
+  if (m) {
+    const pv = (t) => { t = t.trim(); if (t === '' || /^[+-]?inf(inity)?$/i.test(t)) return null; const n = Number(t); return isNaN(n) ? NaN : n; };
+    const a = pv(m[2]), b = pv(m[3]);
+    if (Number.isNaN(a) || Number.isNaN(b)) return fail('括號區間內有非數字');
+    if (a != null) { iv.lower = a; iv.lowerOp = m[1] === '[' ? '>=' : '>'; }
+    if (b != null) { iv.upper = b; iv.upperOp = m[4] === ']' ? '<=' : '<'; }
+    return validateIv(iv);
+  }
+
+  // 千分位逗號（1,000 → 1000）
+  s = s.replace(/(\d),(?=\d{3}(?!\d))/g, '$1');
+  // 中文敘述
+  s = s.replace(/大於等於|不小於|至少/g, '>=').replace(/小於等於|不大於|至多/g, '<=')
+       .replace(/大於|超過/g, '>').replace(/小於|未滿|低於/g, '<');
+  s = s.replace(/(-?\d+(?:\.\d+)?)\s*以上/g, '>=$1').replace(/(-?\d+(?:\.\d+)?)\s*以下/g, '<=$1');
+  // 分隔符：數字或 inf 後面接 - ~ to 至 到 → 視為「至」
+  s = s.replace(/(\d|inf)\s*(?:-|~|to|至|到)\s*/gi, '$1 ~ ');
+
+  const re = /(>=|<=|>|<|=)?\s*([+-]?\d+(?:\.\d+)?(?:e[+-]?\d+)?|[+-]?inf(?:inity)?)/gi;
+  const toks = []; let mm;
+  while ((mm = re.exec(s))) {
+    const isInf = /inf/i.test(mm[2]);
+    toks.push({ op: mm[1] || null, val: isInf ? null : Number(mm[2]) });
+  }
+  const left = s.replace(re, '').replace(/and|且|及|[~&,;\s]/gi, '');
+  if (left !== '') return fail('無法解析：' + raw.trim());
+  if (toks.length === 0) return fail('找不到數字');
+  if (toks.length > 2) return fail('數值超過 2 個');
+  const isL = (o) => o === '>' || o === '>=';
+  const isU = (o) => o === '<' || o === '<=';
+  let lo = null, up = null;
+  if (toks.length === 1) {
+    const t = toks[0];
+    if (isL(t.op)) lo = { v: t.val, op: t.op };
+    else if (isU(t.op)) up = { v: t.val, op: t.op };
+    else { lo = { v: t.val, op: '>=' }; up = { v: t.val, op: '<=' }; }
+  } else {
+    const [a, b] = toks;
+    if (isL(a.op)) {
+      lo = { v: a.val, op: a.op };
+      if (isL(b.op)) return fail('兩個都是下限');
+      up = { v: b.val, op: b.op || defs.upperOp };
+    } else if (isU(a.op)) {
+      up = { v: a.val, op: a.op };
+      if (isU(b.op)) return fail('兩個都是上限');
+      lo = { v: b.val, op: b.op || defs.lowerOp };
+    } else {
+      if (isL(b.op)) return fail('順序不明確，請改用 下限~上限');
+      lo = { v: a.val, op: defs.lowerOp };
+      up = { v: b.val, op: b.op || defs.upperOp };
+    }
+  }
+  if (lo && lo.v != null) { iv.lower = lo.v; iv.lowerOp = lo.op; }
+  if (up && up.v != null) { iv.upper = up.v; iv.upperOp = up.op; }
+  return validateIv(iv);
+}
+function validateIv(iv) {
+  if (iv.lower != null && iv.upper != null) {
+    if (iv.lower > iv.upper) iv.err = '下限大於上限';
+    else if (iv.lower === iv.upper && (iv.lowerOp === '>' || iv.upperOp === '<')) iv.err = '區間為空（上下限相同且含開區間）';
+  }
+  return iv;
+}
+function ivBounded(iv) { return iv && (iv.lower != null || iv.upper != null); }
+function fmtIv(iv, x) {
+  x = x || 'X';
+  if (!iv) return '不限';
+  if (iv.err) return '⚠ ' + iv.err;
+  const L = iv.lower != null, U = iv.upper != null;
+  if (!L && !U) return '不限';
+  if (L && U && iv.lower === iv.upper) return `${x} = ${fnum(iv.lower)}`;
+  const lo = L ? `${fnum(iv.lower)} ${iv.lowerOp === '>=' ? '≤' : '<'} ${x}` : null;
+  if (L && U) return `${lo} ${iv.upperOp === '<=' ? '≤' : '<'} ${fnum(iv.upper)}`;
+  if (L) return `${x} ${iv.lowerOp === '>=' ? '≥' : '>'} ${fnum(iv.lower)}`;
+  return `${x} ${iv.upperOp === '<=' ? '≤' : '<'} ${fnum(iv.upper)}`;
+}
+function canonIv(iv) {
+  if (!iv || iv.err) return iv ? iv.raw : '';
+  const p = [];
+  if (iv.lower != null) p.push(iv.lowerOp + fnum(iv.lower));
+  if (iv.upper != null) p.push(iv.upperOp + fnum(iv.upper));
+  return p.join(' & ');
+}
+function ivKey(iv) { return `${iv.lowerOp || ''}${iv.lower}|${iv.upperOp || ''}${iv.upper}`; }
+
+function matchIv(v, iv) {
+  if (!iv || iv.err) return false;
+  if (iv.lower == null && iv.upper == null) return true;
+  if (v == null || typeof v !== 'number' || !isFinite(v)) return false;
+  const okL = iv.lower == null || (iv.lowerOp === '>=' ? v >= iv.lower : v > iv.lower);
+  const okU = iv.upper == null || (iv.upperOp === '<=' ? v <= iv.upper : v < iv.upper);
+  return okL && okU;
+}
+function segOk(rule, seg) {
+  const rs = (rule.segment == null ? '' : String(rule.segment)).trim();
+  if (rs === '') return true;
+  return seg != null && String(seg).trim() === rs;
+}
+function findHits(rules, v1, v2, seg) {
+  return rules.filter(r => r.enabled !== false && segOk(r, seg) && matchIv(v1, r.f1) && matchIv(v2, r.f2));
+}
+
+/* ---------- 匯入：文字 → 表格 → 規則 ---------- */
+function parseDelimited(text, delim) {
+  text = String(text).replace(/^\uFEFF/, '');
+  if (!delim) {
+    const first = text.split(/\r?\n/, 1)[0] || '';
+    delim = first.includes('\t') ? '\t' : (first.split(',').length >= first.split(';').length ? ',' : ';');
+  }
+  const rows = []; let row = [], cur = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += c; }
+    else if (c === '"' && cur === '') q = true;
+    else if (c === delim) { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); cur = ''; rows.push(row); row = []; }
+    else cur += c;
+  }
+  if (cur !== '' || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim() !== ''));
+}
+function guessMap(headers) {
+  const low = headers.map(x => normText(x).toLowerCase().replace(/[\s_]/g, ''));
+  const find = (...pats) => low.findIndex(x => pats.some(p => x.includes(p)));
+  const m = { ruleNo: find('規則編號', '規則', 'ruleno', 'rule'), pd: find('pd值', 'pd', '違約'), seg: find('分群', '產業', 'segment'), f1: {}, f2: {} };
+  [[1, ['因子一', '因子1', 'factor1', 'f1']], [2, ['因子二', '因子2', 'factor2', 'f2']]].forEach(([k, tags]) => {
+    const cols = low.map((x, i) => [x, i]).filter(([x]) => tags.some(t => x.includes(t)));
+    const f = { iv: -1, lo: -1, up: -1, ops: -1 };
+    cols.forEach(([x, i]) => {
+      if (/運算|op/.test(x)) { if (f.ops < 0) f.ops = i; }
+      else if (/下限|lower|min|low/.test(x)) { if (f.lo < 0) f.lo = i; }
+      else if (/上限|upper|max/.test(x)) { if (f.up < 0) f.up = i; }
+      else { if (f.iv < 0) f.iv = i; }
+    });
+    m['f' + k] = f;
+  });
+  return m;
+}
+function buildIvFromRow(row, m, defs) {
+  const cell = (i) => (i >= 0 && row[i] != null ? String(row[i]).trim() : '');
+  const ivs = cell(m.iv);
+  if (ivs !== '') return parseInterval(ivs, defs);
+  const lo = cell(m.lo), up = cell(m.up);
+  let lop = defs.lowerOp, uop = defs.upperOp;
+  const ops = normText(cell(m.ops)).match(/>=|<=|>|<|=/g) || [];
+  ops.forEach(o => { if (o === '>' || o === '>=') lop = o; else if (o === '<' || o === '<=') uop = o; else { lop = '>='; uop = '<='; } });
+  const hasOp = (t) => /[<>=]/.test(normText(t));
+  const parts = [];
+  if (lo !== '') parts.push(hasOp(lo) ? normText(lo) : lop + normText(lo));
+  if (up !== '') parts.push(hasOp(up) ? normText(up) : uop + normText(up));
+  if (!parts.length) return emptyIv('');
+  const iv = parseInterval(parts.join(' & '), defs);
+  iv.raw = parts.join(' & ');
+  return iv;
+}
+function buildRules(rows, map, defs) {
+  const out = [];
+  const body = rows.slice(1);
+  body.forEach((row, idx) => {
+    if (!row.some(c => String(c).trim() !== '')) return;
+    const cell = (i) => (i >= 0 && row[i] != null ? String(row[i]).trim() : '');
+    out.push({
+      id: 'r' + Math.random().toString(36).slice(2, 9) + idx,
+      ruleNo: cell(map.ruleNo) || ('R' + String(out.length + 1).padStart(3, '0')),
+      pd: cell(map.pd), segment: cell(map.seg),
+      f1: buildIvFromRow(row, map.f1 || {}, defs), f2: buildIvFromRow(row, map.f2 || {}, defs),
+      enabled: true, note: ''
+    });
+  });
+  return out;
+}
+
+/* ---------- 健檢：座標壓縮 + 2D 差分陣列 ---------- */
+function buildAxis(ivs, d) {
+  d = d || {};
+  const set = new Set();
+  ivs.forEach(iv => { if (iv.lower != null) set.add(iv.lower); if (iv.upper != null) set.add(iv.upper); });
+  const dmin = d.min != null && isFinite(d.min) ? d.min : null;
+  const dmax = d.max != null && isFinite(d.max) ? d.max : null;
+  if (dmin != null) set.add(dmin);
+  if (dmax != null) set.add(dmax);
+  const openLow = ivs.some(iv => iv.lower == null && iv.upper != null), openHigh = ivs.some(iv => iv.upper == null && iv.lower != null);
+  const b = [...set].sort((x, y) => x - y), n = b.length;
+  const reps = [];
+  for (let k = 0; k <= 2 * n; k++) {
+    if (k % 2 === 1) reps.push(b[(k - 1) / 2]);
+    else if (n === 0) reps.push(0);
+    else if (k === 0) reps.push(b[0] - 1);
+    else if (k === 2 * n) reps.push(b[n - 1] + 1);
+    else reps.push((b[k / 2 - 1] + b[k / 2]) / 2);
+  }
+  // 未設定有效範圍時：預設為端點的最小~最大值；若有規則明確延伸到無限遠（只有上限或只有下限），該側也納入檢查
+  const s0 = dmin != null ? 2 * b.indexOf(dmin) + 1 : (n > 0 ? (openLow ? 0 : 1) : 0);
+  const s1 = dmax != null ? 2 * b.indexOf(dmax) + 1 : (n > 0 ? (openHigh ? 2 * n : 2 * n - 1) : 0);
+  return { b, n, reps, s0, s1: Math.max(s0, s1) };
+}
+function segIndex(ax, v) {
+  const b = ax.b; let j = 0;
+  while (j < b.length && b[j] < v) j++;
+  if (j < b.length && b[j] === v) return 2 * j + 1;
+  return 2 * j;
+}
+function rangeDesc(ax, a, z) {
+  const b = ax.b, n = ax.n;
+  if (a === z && a % 2 === 1) return '= ' + fnum(b[(a - 1) / 2]);
+  const lo = a % 2 === 1 ? `[${fnum(b[(a - 1) / 2])}` : (a === 0 ? '(-∞' : `(${fnum(b[a / 2 - 1])}`);
+  const up = z % 2 === 1 ? `${fnum(b[(z - 1) / 2])}]` : (z === 2 * n ? '∞)' : `${fnum(b[z / 2])})`);
+  return `${lo}, ${up}`;
+}
+function mergeCells(cells) { // cells: [c,r]，需依 r、c 排序
+  const runs = [];
+  for (const [c, r] of cells) {
+    const last = runs[runs.length - 1];
+    if (last && last.y === r && last.x1 === c - 1) last.x1 = c; else runs.push({ x0: c, x1: c, y: r });
+  }
+  const out = []; let curY = -9, cur = new Map(), prev = new Map();
+  for (const ru of runs) {
+    if (ru.y !== curY) { prev = (ru.y === curY + 1) ? cur : new Map(); cur = new Map(); curY = ru.y; }
+    const key = ru.x0 + '_' + ru.x1, p = prev.get(key);
+    if (p) { p.y1 = ru.y; cur.set(key, p); }
+    else { const rc = { x0: ru.x0, x1: ru.x1, y0: ru.y, y1: ru.y }; out.push(rc); cur.set(key, rc); }
+  }
+  return out;
+}
+function buildGrid(rules, dom) {
+  dom = dom || {};
+  const ax = buildAxis(rules.map(r => r.f1), dom.f1), ay = buildAxis(rules.map(r => r.f2), dom.f2);
+  const W = ax.s1 - ax.s0 + 1, H = ay.s1 - ay.s0 + 1;
+  if (W * H > 4000000) return { tooBig: true, ax, ay, W, H, rules, rects: [], cnt: new Int32Array(0) };
+  const rangeOf = (axis, iv) => {
+    let a = -1, z = -1;
+    for (let k = axis.s0; k <= axis.s1; k++) if (matchIv(axis.reps[k], iv)) { if (a < 0) a = k; z = k; }
+    return a < 0 ? null : [a, z];
+  };
+  const stride = W + 1, diff = new Int32Array(stride * (H + 1)), rects = [];
+  rules.forEach(r => {
+    const xr = rangeOf(ax, r.f1), yr = rangeOf(ay, r.f2);
+    if (!xr || !yr) return;
+    const x0 = xr[0] - ax.s0, x1 = xr[1] - ax.s0, y0 = yr[0] - ay.s0, y1 = yr[1] - ay.s0;
+    rects.push({ r, x0, x1, y0, y1 });
+    diff[y0 * stride + x0]++; diff[y0 * stride + x1 + 1]--; diff[(y1 + 1) * stride + x0]--; diff[(y1 + 1) * stride + x1 + 1]++;
+  });
+  const P = new Int32Array(stride * (H + 1)), cnt = new Int32Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const v = diff[y * stride + x] + (x > 0 ? P[y * stride + x - 1] : 0) + (y > 0 ? P[(y - 1) * stride + x] : 0) - (x > 0 && y > 0 ? P[(y - 1) * stride + x - 1] : 0);
+    P[y * stride + x] = v; cnt[y * W + x] = v;
+  }
+  return { ax, ay, W, H, cnt, rects, rules };
+}
+function analyze(proj) {
+  const names = proj.factorNames || ['因子一', '因子二'];
+  const issues = [], act = (proj.rules || []).filter(r => r.enabled !== false), ok = [];
+  act.forEach(r => {
+    const e = [];
+    if (r.f1 && r.f1.err) e.push(`${names[0]}：${r.f1.err}`);
+    if (r.f2 && r.f2.err) e.push(`${names[1]}：${r.f2.err}`);
+    if (e.length) issues.push({ type: 'invalid', sev: 'error', group: '', rules: [r.ruleNo], msg: '區間無效 — ' + e.join('；'), region: '' });
+    else ok.push(r);
+  });
+  const dupMap = new Map();
+  ok.forEach(r => { const k = (r.segment || '').trim() + '|' + ivKey(r.f1) + '|' + ivKey(r.f2); (dupMap.get(k) || dupMap.set(k, []).get(k)).push(r); });
+  dupMap.forEach(list => { if (list.length > 1) issues.push({ type: 'duplicate', sev: 'warn', group: (list[0].segment || '').trim(), rules: list.map(r => r.ruleNo), msg: '重複規則：條件完全相同', region: `${names[0]} ${fmtIv(list[0].f1)}；${names[1]} ${fmtIv(list[0].f2)}` }); });
+  const rn = new Map(); ok.forEach(r => rn.set(r.ruleNo, (rn.get(r.ruleNo) || 0) + 1));
+  rn.forEach((c, k) => { if (c > 1) issues.push({ type: 'dupno', sev: 'warn', group: '', rules: [k], msg: `規則編號重複（${c} 筆）`, region: '' }); });
+
+  const segs = [...new Set(ok.map(r => (r.segment || '').trim()).filter(Boolean))];
+  const groups = segs.length ? segs.map(s => ({ name: s, rules: ok.filter(r => !(r.segment || '').trim() || r.segment.trim() === s) })) : [{ name: '', rules: ok }];
+  groups.forEach(g => {
+    if (!g.rules.length) { g.grid = null; return; }
+    const grid = buildGrid(g.rules, proj.domain); g.grid = grid;
+    if (grid.tooBig) { issues.push({ type: 'info', sev: 'info', group: g.name, rules: [], msg: '格點數過大，略過健檢', region: '' }); return; }
+    const { ax, ay, W, H, cnt, rects } = grid;
+    const gaps = [], ovs = [];
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const c = cnt[y * W + x]; if (c === 0) gaps.push([x, y]); else if (c > 1) ovs.push([x, y]); }
+    const desc = (rc) => `${names[0]} ${rangeDesc(ax, rc.x0 + ax.s0, rc.x1 + ax.s0)}；${names[1]} ${rangeDesc(ay, rc.y0 + ay.s0, rc.y1 + ay.s0)}`;
+    mergeCells(gaps).forEach(rc => {
+      const pt = (rc.x0 === rc.x1 && (rc.x0 + ax.s0) % 2 === 1) || (rc.y0 === rc.y1 && (rc.y0 + ay.s0) % 2 === 1);
+      issues.push({ type: pt ? 'pointgap' : 'gap', sev: 'warn', group: g.name, rules: [], msg: pt ? '邊界缺口：剛好落在邊界值上沒有規則涵蓋' : '缺口：此範圍沒有任何規則', region: desc(rc) });
+    });
+    const byKey = new Map(), LIM = 30000;
+    ovs.slice(0, LIM).forEach(([x, y]) => {
+      const hit = rects.filter(t => x >= t.x0 && x <= t.x1 && y >= t.y0 && y <= t.y1);
+      const key = hit.map(t => t.r.id).join('||');
+      (byKey.get(key) || byKey.set(key, { hit, cells: [] }).get(key)).cells.push([x, y]);
+    });
+    byKey.forEach(({ hit, cells }) => {
+      const pds = new Set(hit.map(t => String(t.r.pd).trim()));
+      const same = pds.size === 1, ids = hit.map(t => t.r.ruleNo);
+      mergeCells(cells).forEach(rc => issues.push({ type: 'overlap', sev: same ? 'info' : 'warn', group: g.name, rules: ids, msg: same ? '重疊（PD 值相同，影響較小）' : '重疊：多條規則同時命中且 PD 值不同', region: desc(rc) }));
+    });
+    if (ovs.length > LIM) issues.push({ type: 'info', sev: 'info', group: g.name, rules: [], msg: `重疊格點超過 ${LIM}，僅列出部分`, region: '' });
+  });
+  const stats = { invalid: 0, duplicate: 0, gap: 0, overlap: 0 };
+  issues.forEach(i => { if (i.type === 'invalid') stats.invalid++; else if (i.type === 'duplicate' || i.type === 'dupno') stats.duplicate++; else if (i.type === 'gap' || i.type === 'pointgap') stats.gap++; else if (i.type === 'overlap') stats.overlap++; });
+  return { issues, groups, stats };
+}
+
+/* ---------- 批次比對 ---------- */
+function runBatch(rules, rows, map) {
+  const out = [], cell = (r, i) => (i >= 0 && r[i] != null ? r[i] : '');
+  const act = rules.filter(r => r.enabled !== false && !(r.f1 && r.f1.err) && !(r.f2 && r.f2.err));
+  rows.forEach((r, i) => {
+    const raw1 = cell(r, map.v1), raw2 = cell(r, map.v2), seg = cell(r, map.seg);
+    const v1 = toNum(raw1), v2 = toNum(raw2);
+    let status, hits = [];
+    if (Number.isNaN(v1) || Number.isNaN(v2)) status = '值無效';
+    else { hits = findHits(act, v1, v2, seg); status = hits.length === 0 ? '未命中' : hits.length === 1 ? '唯一' : '多重命中'; }
+    out.push({ idx: i + 2, id: cell(r, map.id), v1: raw1, v2: raw2, seg, status, ruleNo: hits.map(h => h.ruleNo).join(';'), pd: hits.length ? hits[0].pd : '', pds: [...new Set(hits.map(h => h.pd))].join(';') });
+  });
+  return out;
+}
+
+/* ---------- 程式碼產生 ---------- */
+function usable(rules) { return rules.filter(r => r.enabled !== false && !(r.f1 && r.f1.err) && !(r.f2 && r.f2.err)); }
+function cm(s) { return String(s).replace(/[\r\n]+/g, ' '); }
+function isNumStr(v) { return /^-?(\d+(\.\d+)?|\.\d+)$/.test(String(v).trim()); }
+function numLit(v) { return fnum(Number(String(v).trim())); }
+// 規則編號一律輸出為字串（避免 "001" 被當成數字 1）；PD 值若為純數字則輸出為數字
+function sqlStr(v) { return "'" + String(v == null ? '' : v).trim().replace(/'/g, "''") + "'"; }
+function sqlLit(v) { v = String(v == null ? '' : v).trim(); if (v === '') return 'NULL'; return isNumStr(v) ? numLit(v) : sqlStr(v); }
+function vbStr(v) { return '"' + String(v == null ? '' : v).trim().replace(/"/g, '""') + '"'; }
+function vbLit(v) { v = String(v == null ? '' : v).trim(); if (v === '') return '""'; return isNumStr(v) ? numLit(v) : vbStr(v); }
+function xlLit(v) { v = String(v == null ? '' : v).trim(); return isNumStr(v) ? numLit(v) : vbStr(v); }
+function boundParts(iv, x) {
+  const p = [];
+  if (iv.lower != null) p.push(`${x} ${iv.lowerOp} ${fnum(iv.lower)}`);
+  if (iv.upper != null) p.push(`${x} ${iv.upperOp} ${fnum(iv.upper)}`);
+  return p;
+}
+// SQLite：空白字串與 NULL 視為「無值」，與畫面判斷一致（CAST('' AS REAL) 會變成 0，必須避開）
+function sqlNum(col, cast) { return cast ? `CAST(NULLIF(TRIM(${col}),'') AS REAL)` : col; }
+function genSqlCase(rules, o) {
+  const act = usable(rules);
+  const X1 = sqlNum(o.c1, o.cast), X2 = sqlNum(o.c2, o.cast);
+  const cond = (r) => {
+    const p = [];
+    if (o.cs && (r.segment || '').trim() !== '') p.push(`TRIM(${o.cs}) = ${sqlStr(r.segment)}`);
+    p.push(...boundParts(r.f1, X1), ...boundParts(r.f2, X2));
+    return p.length ? p.join(' AND ') : '1 = 1';
+  };
+  const mk = (fn, alias) => ['CASE', ...act.map(r => `  WHEN ${cond(r)} THEN ${fn(r)}  -- ${cm(r.ruleNo)}`), '  ELSE NULL', `END AS ${alias}`].join('\n');
+  return '-- 依規則順序判斷（若有重疊，先命中的規則優先）\n-- ' + (o.cast ? '欄位以 CAST(NULLIF(TRIM(欄位),\'\') AS REAL) 轉為數值：空白視為無值；非數字文字會被轉成 0，請先確認資料\n' : '請確認欄位為數值型別\n')
+    + mk(r => sqlStr(r.ruleNo), 'HIT_RULE') + ',\n' + mk(r => sqlLit(r.pd), 'PD_VALUE');
+}
+function genSqlJoin(rules, o) {
+  const act = usable(rules);
+  const X1 = sqlNum('t.' + o.c1, o.cast), X2 = sqlNum('t.' + o.c2, o.cast);
+  const useSeg = o.cs && act.some(r => (r.segment || '').trim() !== '');
+  const vals = act.map(r => {
+    const l = (iv) => [iv.lower != null ? fnum(iv.lower) : 'NULL', iv.lower != null ? `'${iv.lowerOp}'` : 'NULL', iv.upper != null ? fnum(iv.upper) : 'NULL', iv.upper != null ? `'${iv.upperOp}'` : 'NULL'];
+    return '  (' + [sqlStr(r.ruleNo), sqlLit(r.pd), sqlLit((r.segment || '').trim()), ...l(r.f1), ...l(r.f2)].join(', ') + ')';
+  }).join(',\n');
+  const on = (x, p) => [
+    `(p.${p}_LOWER IS NULL OR (p.${p}_LOWER_OP = '>=' AND ${x} >= p.${p}_LOWER) OR (p.${p}_LOWER_OP = '>' AND ${x} > p.${p}_LOWER))`,
+    `(p.${p}_UPPER IS NULL OR (p.${p}_UPPER_OP = '<=' AND ${x} <= p.${p}_UPPER) OR (p.${p}_UPPER_OP = '<' AND ${x} < p.${p}_UPPER))`];
+  const conds = [...(useSeg ? [`(p.SEGMENT IS NULL OR p.SEGMENT = TRIM(t.${o.cs}))`] : []), ...on(X1, 'F1'), ...on(X2, 'F2')];
+  return `-- 注意：若同一筆資料命中多條規則，會產生多列（可藉此找出重疊）\nWITH PD_PARAM (RULE_NO, PD_VALUE, SEGMENT, F1_LOWER, F1_LOWER_OP, F1_UPPER, F1_UPPER_OP, F2_LOWER, F2_LOWER_OP, F2_UPPER, F2_UPPER_OP) AS (\n  VALUES\n${vals}\n)\nSELECT t.*, p.RULE_NO, p.PD_VALUE\nFROM ${o.table} t\nLEFT JOIN PD_PARAM p\n  ON ${conds.join('\n AND ')};`;
+}
+function genVba(rules) {
+  const act = usable(rules);
+  const L = [];
+  L.push("' ==== 由 PD Rule Visualizer 產生 ====", "' 依規則順序判斷；若有重疊，先命中的規則優先", "' 若模組開頭已有 Option Explicit，請刪除下一行", 'Option Explicit', '');
+  L.push('Private Function PD_Hit(ByVal v1 As Variant, ByVal v2 As Variant, Optional ByVal seg As String = "") As Long');
+  L.push("    ' 回傳命中的規則序號（0 = 未命中）；空白或非數字視為「無值」");
+  L.push('    Dim has1 As Boolean, has2 As Boolean, x1 As Double, x2 As Double');
+  L.push('    has1 = False: has2 = False');
+  L.push('    If Not IsError(v1) Then', '        If Len(Trim$(CStr(v1))) > 0 Then has1 = IsNumeric(v1)', '    End If');
+  L.push('    If Not IsError(v2) Then', '        If Len(Trim$(CStr(v2))) > 0 Then has2 = IsNumeric(v2)', '    End If');
+  L.push('    If has1 Then x1 = CDbl(v1)', '    If has2 Then x2 = CDbl(v2)', '    seg = Trim$(seg)');
+  act.forEach((r, i) => {
+    const p = [];
+    if ((r.segment || '').trim() !== '') p.push(`seg = ${vbStr(r.segment)}`);
+    if (ivBounded(r.f1)) p.push('has1', ...boundParts(r.f1, 'x1'));
+    if (ivBounded(r.f2)) p.push('has2', ...boundParts(r.f2, 'x2'));
+    L.push(`    ' ${cm(r.ruleNo)}`, `    If ${p.length ? p.join(' And ') : 'True'} Then`, `        PD_Hit = ${i + 1}`, '        Exit Function', '    End If');
+  });
+  L.push('End Function', '');
+  L.push('Public Function PD_RuleNo(ByVal v1 As Variant, ByVal v2 As Variant, Optional ByVal seg As String = "") As String', '    Select Case PD_Hit(v1, v2, seg)');
+  act.forEach((r, i) => L.push(`        Case ${i + 1}: PD_RuleNo = ${vbStr(r.ruleNo)}`));
+  L.push('        Case Else: PD_RuleNo = ""', '    End Select', 'End Function', '');
+  L.push('Public Function PD_Value(ByVal v1 As Variant, ByVal v2 As Variant, Optional ByVal seg As String = "") As Variant', '    Select Case PD_Hit(v1, v2, seg)');
+  act.forEach((r, i) => L.push(`        Case ${i + 1}: PD_Value = ${vbLit(r.pd)}`));
+  L.push('        Case Else: PD_Value = CVErr(2042)  \' #N/A', '    End Select', 'End Function');
+  return L.join('\n');
+}
+function genExcel(rules, o) {
+  const act = usable(rules);
+  const cond = (r) => {
+    const p = [];
+    if ((r.segment || '').trim() !== '') p.push(`${o.xs}=${vbStr(r.segment)}`);
+    if (ivBounded(r.f1)) p.push(`ISNUMBER(${o.x1})`, ...boundParts(r.f1, o.x1).map(s => s.replace(/ /g, '')));
+    if (ivBounded(r.f2)) p.push(`ISNUMBER(${o.x2})`, ...boundParts(r.f2, o.x2).map(s => s.replace(/ /g, '')));
+    return p.length ? (p.length === 1 ? p[0] : `AND(${p.join(',')})`) : 'TRUE';
+  };
+  const mk = (fn, none) => '=IFS(\n' + act.map(r => `  ${cond(r)}, ${fn(r)}`).join(',\n') + `,\n  TRUE, ${none}\n)`;
+  const a = mk(r => vbStr(r.ruleNo), '""'), b = mk(r => xlLit(r.pd), 'NA()');
+  const warn = [];
+  if (act.length > 126) warn.push(`規則共 ${act.length} 條，IFS 最多 127 組條件，請改用 VBA 或 SQL 版本。`);
+  if (a.length > 8000 || b.length > 8000) warn.push('公式長度可能超過 Excel 上限 8192 字元，請改用 VBA 或 SQL 版本。');
+  warn.push('IFS 需 Excel 2019 / Microsoft 365 以上；分群比對在 Excel 中不分大小寫。');
+  return { text: `' 規則編號公式\n${a}\n\n' PD 值公式\n${b}`, warn };
+}
+
+/* ---------- 版本差異 ---------- */
+function diffRules(oldR, newR) {
+  const sig = r => [r.enabled !== false, String(r.pd).trim(), (r.segment || '').trim(), canonIv(r.f1), canonIv(r.f2)].join(' | ');
+  const mo = new Map(oldR.map(r => [r.ruleNo, r])), mn = new Map(newR.map(r => [r.ruleNo, r]));
+  const added = [], removed = [], changed = [];
+  mn.forEach((r, k) => { if (!mo.has(k)) added.push(k); else if (sig(mo.get(k)) !== sig(r)) changed.push({ no: k, from: sig(mo.get(k)), to: sig(r) }); });
+  mo.forEach((r, k) => { if (!mn.has(k)) removed.push(k); });
+  return { added, removed, changed };
+}
+function csvEsc(v) { v = String(v == null ? '' : v); return /[",\r\n\t]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+// ==ENGINE_END==
+
+/* ============ 儲存層：IndexedDB（失敗時退回記憶體） ============ */
+const DB = {
+  db: null, useMem: false, mem: { projects: new Map(), versions: new Map(), testSets: new Map(), settings: new Map() },
+  async open() {
+    try {
+      this.db = await new Promise((res, rej) => {
+        const rq = indexedDB.open('pd_rule_visualizer', 1);
+        rq.onupgradeneeded = () => {
+          const d = rq.result;
+          d.createObjectStore('projects', { keyPath: 'id' });
+          d.createObjectStore('versions', { keyPath: 'id' }).createIndex('projectId', 'projectId');
+          d.createObjectStore('testSets', { keyPath: 'id' }).createIndex('projectId', 'projectId');
+          d.createObjectStore('settings', { keyPath: 'key' });
+        };
+        rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); rq.onblocked = () => rej(new Error('blocked'));
+      });
+    } catch (e) { this.useMem = true; }
+  },
+  _do(store, mode, fn) {
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(store, mode), r = fn(t.objectStore(store));
+      t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+    });
+  },
+  all(s) { return this.useMem ? Promise.resolve([...this.mem[s].values()]) : this._do(s, 'readonly', o => o.getAll()); },
+  get(s, k) { return this.useMem ? Promise.resolve(this.mem[s].get(k)) : this._do(s, 'readonly', o => o.get(k)); },
+  put(s, v) { if (this.useMem) { this.mem[s].set(v.id != null ? v.id : v.key, JSON.parse(JSON.stringify(v))); return Promise.resolve(); } return this._do(s, 'readwrite', o => o.put(JSON.parse(JSON.stringify(v)))); },
+  del(s, k) { if (this.useMem) { this.mem[s].delete(k); return Promise.resolve(); } return this._do(s, 'readwrite', o => o.delete(k)); },
+  async byProject(s, pid) { return (await this.all(s)).filter(x => x.projectId === pid); }
+};
+
+/* ============ 狀態與工具 ============ */
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const TABS = [['import', '① 匯入'], ['rules', '② 規則表'], ['viz', '③ 視覺化'], ['health', '④ 規則健檢'], ['test', '⑤ 測試台'], ['batch', '⑥ 批次比對'], ['code', '⑦ 程式碼產生'], ['proj', '⑧ 專案管理']];
+const S = {
+  projects: [], cur: null, tab: 'rules', analysis: null,
+  settings: { theme: 'light', lowerOp: '>=', upperOp: '<' },
+  imp: { text: '', table: null, map: null, mode: 'replace', enc: 'utf-8' },
+  batch: { text: '', table: null, map: { v1: -1, v2: -1, seg: -1, id: -1 }, result: null, filter: '', enc: 'utf-8' },
+  test: { v1: '', v2: '', seg: '', cases: [] },
+  viz: { group: '', mode: 'matrix' }, hgroup: '',
+  sort: { key: '', dir: 1 }, filter: '', hfilter: '',
+  code: { table: 'FINAL_OUTPUT_RESULT', c1: 'FACTOR1', c2: 'FACTOR2', cs: '', x1: 'A2', x2: 'B2', xs: 'C2', cast: true, lang: 'sqlcase' },
+  versions: [], diffId: '', savedAt: null
+};
+const defs = () => ({ lowerOp: S.settings.lowerOp, upperOp: S.settings.upperOp });
+const names = () => S.cur.factorNames;
+const getAnalysis = () => S.analysis || (S.analysis = analyze(S.cur));
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2600); }
+function download(name, text, mime, bom) {
+  const blob = new Blob([bom ? '\uFEFF' + text : text], { type: mime || 'text/plain;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function copyText(t) {
+  try { await navigator.clipboard.writeText(t); } catch (e) { const ta = document.createElement('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+  toast('已複製到剪貼簿');
+}
+async function readFileText(file, enc) { return new TextDecoder(enc || 'utf-8').decode(await file.arrayBuffer()); }
+function applyTheme() { document.documentElement.dataset.theme = S.settings.theme; }
+async function saveSettings() { try { await DB.put('settings', { key: 'app', value: S.settings }); } catch (e) { } }
+
+let saveTimer;
+function touch() {
+  S.cur.updatedAt = Date.now(); S.analysis = null;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => { try { await DB.put('projects', S.cur); S.savedAt = new Date(); } catch (e) { toast('儲存失敗：' + e.message); } renderStatus(); renderSide(); }, 350);
+  renderStatus();
+}
+function ruleById(id) { return S.cur.rules.find(r => r.id === id); }
+function nextRuleNo() {
+  const used = new Set(S.cur.rules.map(r => r.ruleNo)); let i = S.cur.rules.length + 1, no;
+  do { no = 'R' + String(i++).padStart(3, '0'); } while (used.has(no));
+  return no;
+}
+function newRule(o) { return Object.assign({ id: 'r' + uid(), ruleNo: '', pd: '', segment: '', f1: emptyIv(''), f2: emptyIv(''), enabled: true, note: '' }, o || {}); }
+function newProject(name, withSample) {
+  const p = { id: 'p' + uid(), name: name || '新專案', factorNames: ['因子一', '因子二'], domain: { f1: { min: null, max: null }, f2: { min: null, max: null } }, rules: [], updatedAt: Date.now() };
+  if (withSample) {
+    const d = defs(), mk = (no, pd, a, b) => newRule({ ruleNo: no, pd, f1: parseInterval(a, d), f2: parseInterval(b, d) });
+    p.rules = [mk('R001', '0.01', '<0.35', ''), mk('R002', '0.02', '0.35 - <0.9', '<10'), mk('R003', '0.03', '0.35 - <0.9', '≥10 且 ≤50'), mk('R004', '0.05', '>0.9', ''), mk('R005', '0.06', '0.8 - <1.2', '>=20')];
+  }
+  return p;
+}
+function normalizeRule(o) {
+  const ivOf = (v) => (typeof v === 'string') ? parseInterval(v, defs()) : (v && typeof v === 'object' ? validateIv(Object.assign(emptyIv(v.raw), v)) : emptyIv(''));
+  return newRule({ ruleNo: String(o.ruleNo || ''), pd: o.pd == null ? '' : String(o.pd), segment: o.segment || '', f1: ivOf(o.f1), f2: ivOf(o.f2), enabled: o.enabled !== false, note: o.note || '' });
+}
+
+/* ============ 畫面：側欄 / 分頁 / 狀態列 ============ */
+function renderSide() {
+  const L = S.projects.slice().sort((a, b) => b.updatedAt - a.updatedAt);
+  $('#plist').innerHTML = L.map(p => `<div class="pitem ${S.cur && p.id === S.cur.id ? 'on' : ''}" data-act="openProject" data-id="${p.id}"><span>${esc(p.name)}</span><small>${p.rules.length}</small></div>`).join('');
+}
+function renderTabs() { $('#tabs').innerHTML = TABS.map(([k, t]) => `<button class="${S.tab === k ? 'on' : ''}" data-act="tab" data-k="${k}">${t}</button>`).join(''); }
+function renderStatus() {
+  if (!S.cur) return;
+  const a = getAnalysis().stats;
+  $('#status').innerHTML = `<span>📁 ${esc(S.cur.name)}</span><span>規則 ${S.cur.rules.length}（啟用 ${S.cur.rules.filter(r => r.enabled !== false).length}）</span>`
+    + `<span style="color:${a.overlap ? 'var(--warn)' : 'inherit'}">⚠ ${a.overlap} 個重疊</span><span style="color:${a.gap ? 'var(--warn)' : 'inherit'}">${a.gap} 個缺口</span>`
+    + `<span style="color:${a.invalid ? 'var(--err)' : 'inherit'}">${a.invalid} 個無效</span><span>${a.duplicate} 個重複</span>`
+    + `<span>${DB.useMem ? '⚠ IndexedDB 不可用，資料僅存在記憶體（請匯出 JSON 備份）' : (S.savedAt ? '已儲存 ' + S.savedAt.toLocaleTimeString() : '已載入')}</span>`;
+}
+function render() {
+  renderSide(); renderTabs(); renderStatus();
+  const V = { import: viewImport, rules: viewRules, viz: viewViz, health: viewHealth, test: viewTest, batch: viewBatch, code: viewCode, proj: viewProject };
+  $('#view').innerHTML = V[S.tab]();
+  if (S.tab === 'proj') loadVersions();
+}
+
+/* ============ M1 匯入 ============ */
+const FIELD_LABEL = { iv: '區間字串', lo: '下限', up: '上限', ops: '運算(可含兩個符號)' };
+function colSel(path, idx, headers) {
+  return `<select data-chg="impMap" data-p="${path}"><option value="-1">（無）</option>${headers.map((h, i) => `<option value="${i}" ${i === idx ? 'selected' : ''}>${esc(h)}</option>`).join('')}</select>`;
+}
+function viewImport() {
+  const t = S.imp.table, m = S.imp.map;
+  let h = `<div class="card"><h3>貼上 Excel 範圍 / CSV / TSV / JSON</h3>
+  <p class="muted" style="margin-top:0">直接從 Excel 選取範圍複製貼上（含標題列）。支援區間字串（如 <code>0.35 - &lt;0.9</code>、<code>≥10 且 ≤50</code>、<code>[0.35, 0.9)</code>），或「下限／上限／運算」分欄。全形 ＞ ＜ ≥ ≤ 會自動轉半形。</p>
+  <textarea id="impText" data-inp="impText" placeholder="規則編號\tPD值\t因子一區間\t因子二區間">${esc(S.imp.text)}</textarea>
+  <div class="bar" style="margin-top:8px"><input type="file" accept=".csv,.txt,.tsv,.json" data-chg="impFile">
+    <select data-chg="impEnc"><option value="utf-8" ${S.imp.enc === 'utf-8' ? 'selected' : ''}>UTF-8</option><option value="big5" ${S.imp.enc === 'big5' ? 'selected' : ''}>Big5（Excel ANSI）</option></select>
+    <button class="pri" data-act="impParse">解析</button>
+    <button data-act="impSample">載入範例</button></div></div>`;
+  if (t && m) {
+    const hd = t[0];
+    h += `<div class="card"><h3>欄位對應</h3>
+    <div class="row"><label>規則編號 ${colSel('ruleNo', m.ruleNo, hd)}</label><label>PD 值 ${colSel('pd', m.pd, hd)}</label><label>分群（選配） ${colSel('seg', m.seg, hd)}</label></div>
+    ${['f1', 'f2'].map((f, k) => `<div class="row"><b>${esc(names()[k])}</b>${['iv', 'lo', 'up', 'ops'].map(x => `<label>${FIELD_LABEL[x]} ${colSel(f + '.' + x, m[f][x], hd)}</label>`).join('')}</div>`).join('')}
+    <p class="muted">若指定「區間字串」，會優先使用；否則用下限／上限／運算組合（未指定運算時，下限預設 <b>${esc(S.settings.lowerOp)}</b>、上限預設 <b>${esc(S.settings.upperOp)}</b>，可於「專案管理」調整）。</p>
+    <div class="tblwrap" style="max-height:200px"><table><thead><tr>${hd.map(x => `<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>${t.slice(1, 6).map(r => `<tr>${hd.map((_, i) => `<td>${esc(r[i] || '')}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="bar" style="margin-top:10px"><label><input type="radio" name="impMode" value="replace" data-chg="impMode" ${S.imp.mode === 'replace' ? 'checked' : ''}> 取代現有規則</label>
+    <label><input type="radio" name="impMode" value="append" data-chg="impMode" ${S.imp.mode === 'append' ? 'checked' : ''}> 附加到現有規則</label>
+    <button class="pri" data-act="impRun">匯入 ${t.length - 1} 列</button></div></div>`;
+  }
+  return h;
+}
+const ACT = {}, CHG = {}, INP = {};
+INP.impText = el => { S.imp.text = el.value; };
+CHG.impEnc = el => { S.imp.enc = el.value; };
+CHG.impMode = el => { S.imp.mode = el.value; };
+CHG.impFile = async el => { const f = el.files[0]; if (!f) return; S.imp.text = await readFileText(f, S.imp.enc); render(); toast('已讀入 ' + f.name + '，請按「解析」'); };
+ACT.impSample = () => { S.imp.text = '規則編號\tPD值\t因子一區間\t因子二區間\nR001\t0.01\t<0.35\t\nR002\t0.02\t0.35 - <0.9\t<10\nR003\t0.03\t0.35 - <0.9\t≥10 且 ≤50\nR004\t0.05\t>0.9\t\n'; ACT.impParse(); };
+ACT.impParse = () => {
+  const t = S.imp.text.trim();
+  if (!t) return toast('請先貼上資料');
+  if (t[0] === '{' || t[0] === '[') { importJson(t).catch(e => toast('JSON 匯入失敗：' + e.message)); return; }
+  const rows = parseDelimited(S.imp.text);
+  if (rows.length < 2) return toast('至少需要標題列與一列資料');
+  S.imp.table = rows; S.imp.map = guessMap(rows[0]); render();
+};
+CHG.impMap = el => {
+  const [a, b] = el.dataset.p.split('.'), v = Number(el.value);
+  if (b) S.imp.map[a][b] = v; else S.imp.map[a] = v;
+};
+ACT.impRun = () => {
+  const rules = buildRules(S.imp.table, S.imp.map, defs());
+  if (!rules.length) return toast('沒有可匯入的資料列');
+  S.cur.rules = S.imp.mode === 'replace' ? rules : S.cur.rules.concat(rules);
+  const bad = rules.filter(r => r.f1.err || r.f2.err).length;
+  touch(); S.tab = 'rules'; render(); toast(`已匯入 ${rules.length} 條規則` + (bad ? `，其中 ${bad} 條區間無法解析（已標紅）` : ''));
+};
+async function importJson(text) {
+  const j = JSON.parse(text);
+  if (Array.isArray(j)) { S.cur.rules = (S.imp.mode === 'append' ? S.cur.rules : []).concat(j.map(normalizeRule)); touch(); S.tab = 'rules'; render(); return toast('已匯入規則陣列'); }
+  const plist = j.projects || (j.rules ? [j] : null);
+  if (!plist) throw new Error('格式不符');
+  const idMap = {}; let last = null;
+  for (const p of plist) {
+    const np = Object.assign(newProject(p.name || '匯入專案'), { factorNames: p.factorNames || ['因子一', '因子二'], domain: p.domain || { f1: {}, f2: {} } });
+    np.rules = (p.rules || []).map(normalizeRule); idMap[p.id] = np.id; await DB.put('projects', np); S.projects.push(np); last = np;
+  }
+  for (const v of (j.versions || [])) if (idMap[v.projectId]) await DB.put('versions', Object.assign({}, v, { id: 'v' + uid(), projectId: idMap[v.projectId] }));
+  for (const t of (j.testSets || [])) if (idMap[t.projectId]) { const nid = idMap[t.projectId]; await DB.put('testSets', Object.assign({}, t, { id: nid, projectId: nid })); }
+  if (last) await openProject(last.id);
+  toast(`已匯入 ${plist.length} 個專案`);
+}
+
+/* ============ M2 規則表 ============ */
+function ruleRowHtml(r) {
+  const n = names(), e1 = r.f1 && r.f1.err, e2 = r.f2 && r.f2.err;
+  return `<tr data-id="${r.id}" class="${r.enabled === false ? 'off' : ''}">
+  <td><input type="checkbox" data-chg="ruleField" data-f="enabled" ${r.enabled !== false ? 'checked' : ''} title="啟用/停用"></td>
+  <td><input class="w-s" data-chg="ruleField" data-f="ruleNo" value="${esc(r.ruleNo)}"></td>
+  <td><input class="w-s" data-chg="ruleField" data-f="pd" value="${esc(r.pd)}"></td>
+  <td><input class="w-s" data-chg="ruleField" data-f="segment" value="${esc(r.segment)}" placeholder="（全部）"></td>
+  <td><input class="w-l" data-chg="ruleField" data-f="f1" value="${esc(r.f1.raw)}" placeholder="不限"><div class="sub-t ${e1 ? 'bad' : ''}" data-sub="f1">${esc(fmtIv(r.f1, n[0]))}</div></td>
+  <td><input class="w-l" data-chg="ruleField" data-f="f2" value="${esc(r.f2.raw)}" placeholder="不限"><div class="sub-t ${e2 ? 'bad' : ''}" data-sub="f2">${esc(fmtIv(r.f2, n[1]))}</div></td>
+  <td><input class="w-m" data-chg="ruleField" data-f="note" value="${esc(r.note)}"></td>
+  <td><button class="sm" data-act="dupRule" title="複製">⎘</button> <button class="sm danger" data-act="delRule" title="刪除">✕</button></td></tr>`;
+}
+function sortedRules() {
+  let L = S.cur.rules.slice();
+  const f = S.filter.trim().toLowerCase();
+  if (f) L = L.filter(r => [r.ruleNo, r.pd, r.segment, r.f1.raw, r.f2.raw, r.note].join(' ').toLowerCase().includes(f));
+  const k = S.sort.key;
+  if (k) {
+    const val = r => k === 'f1' ? (r.f1.lower == null ? -Infinity : r.f1.lower) : k === 'f2' ? (r.f2.lower == null ? -Infinity : r.f2.lower)
+      : k === 'pd' ? (isNaN(Number(r.pd)) || r.pd === '' ? Infinity : Number(r.pd)) : String(r[k] || '');
+    L.sort((a, b) => { const x = val(a), y = val(b); return (typeof x === 'string' ? x.localeCompare(y, 'zh-Hant', { numeric: true }) : (x < y ? -1 : x > y ? 1 : 0)) * S.sort.dir; });
+  }
+  return L;
+}
+function viewRules() {
+  const n = names(), th = (k, t) => `<th data-act="sort" data-k="${k}">${t}${S.sort.key === k ? (S.sort.dir > 0 ? ' ▲' : ' ▼') : ''}</th>`;
+  return `<div class="bar"><input data-inp="ruleFilter" placeholder="🔍 篩選…" value="${esc(S.filter)}">
+  <button class="pri" data-act="addRule">＋ 新增規則</button><button data-act="exportRules">匯出 CSV</button><button class="danger" data-act="clearRules">清空</button>
+  <span class="muted">${S.cur.rules.length} 條 · 點欄位標題可排序（僅影響顯示，程式碼產生依原始順序）· 區間無效者以紅字標示</span></div>
+  <div class="tblwrap"><table class="grid"><thead><tr><th>啟用</th>${th('ruleNo', '規則編號')}${th('pd', 'PD 值')}${th('segment', '分群')}${th('f1', esc(n[0]) + ' 區間')}${th('f2', esc(n[1]) + ' 區間')}<th>備註</th><th></th></tr></thead>
+  <tbody id="rtbody">${sortedRules().map(ruleRowHtml).join('') || '<tr><td colspan="8" class="muted">尚無規則，請至「匯入」或按「新增規則」</td></tr>'}</tbody></table></div>`;
+}
+INP.ruleFilter = el => { S.filter = el.value; $('#rtbody').innerHTML = sortedRules().map(ruleRowHtml).join(''); };
+ACT.sort = el => { const k = el.dataset.k; if (S.sort.key === k) { if (S.sort.dir === 1) S.sort.dir = -1; else S.sort = { key: '', dir: 1 }; } else S.sort = { key: k, dir: 1 }; render(); };
+CHG.ruleField = el => {
+  const tr = el.closest('tr'), r = ruleById(tr.dataset.id), f = el.dataset.f;
+  if (!r) return;
+  if (f === 'enabled') { r.enabled = el.checked; tr.classList.toggle('off', !el.checked); }
+  else if (f === 'f1' || f === 'f2') {
+    r[f] = parseInterval(el.value, defs());
+    const sub = tr.querySelector(`[data-sub=${f}]`); sub.textContent = fmtIv(r[f], names()[f === 'f1' ? 0 : 1]); sub.classList.toggle('bad', !!r[f].err);
+  } else r[f] = el.value;
+  touch();
+};
+ACT.addRule = () => { S.cur.rules.push(newRule({ ruleNo: nextRuleNo() })); touch(); S.filter = ''; render(); const rows = document.querySelectorAll('#rtbody tr'); if (rows.length) rows[rows.length - 1].scrollIntoView(); };
+ACT.dupRule = el => { const r = ruleById(el.closest('tr').dataset.id), i = S.cur.rules.indexOf(r); const c = JSON.parse(JSON.stringify(r)); c.id = 'r' + uid(); c.ruleNo = nextRuleNo(); S.cur.rules.splice(i + 1, 0, c); touch(); render(); };
+ACT.delRule = el => { const id = el.closest('tr').dataset.id; S.cur.rules = S.cur.rules.filter(r => r.id !== id); touch(); render(); };
+ACT.clearRules = () => { if (confirm('確定清空所有規則？（可先到「專案管理」建立快照）')) { S.cur.rules = []; touch(); render(); } };
+ACT.exportRules = () => {
+  const n = names();
+  const hd = ['規則編號', 'PD值', '分群', n[0] + '區間', n[0] + '下限', n[0] + '下限運算', n[0] + '上限', n[0] + '上限運算', n[1] + '區間', n[1] + '下限', n[1] + '下限運算', n[1] + '上限', n[1] + '上限運算', '啟用', '備註'];
+  const cols = iv => [canonIv(iv), iv.lower == null ? '' : iv.lower, iv.lowerOp || '', iv.upper == null ? '' : iv.upper, iv.upperOp || ''];
+  const lines = [hd, ...S.cur.rules.map(r => [r.ruleNo, r.pd, r.segment, ...cols(r.f1), ...cols(r.f2), r.enabled !== false ? 'Y' : 'N', r.note])];
+  download(`${S.cur.name}_rules.csv`, lines.map(l => l.map(csvEsc).join(',')).join('\r\n'), 'text/csv;charset=utf-8', true);
+};
+
+/* ============ M3 視覺化（SVG） ============ */
+const ruleColor = (r) => { const i = Math.max(0, S.cur.rules.findIndex(x => x.id === r.id)); return `hsl(${Math.round((i * 137.5) % 360)},65%,${S.settings.theme === 'dark' ? 68 : 40}%)`; };
+function renderMatrix(grid, nm, opt) {
+  opt = opt || {};
+  if (!grid) return '<p class="muted">沒有可用的規則。</p>';
+  if (grid.tooBig) return '<p class="muted">格點數過大，無法繪製。</p>';
+  const { ax, ay, W, H, cnt, rects } = grid;
+  const ML = 78, MT = 14, MR = 14, MB = 64, PW = 780, PH = Math.max(230, Math.min(460, H * 16 + 150));
+  const wx = [], wy = []; let sx = 0, sy = 0;
+  for (let c = 0; c < W; c++) { const w = (ax.s0 + c) % 2 === 1 ? 0.35 : 1; wx.push(w); sx += w; }
+  for (let c = 0; c < H; c++) { const w = (ay.s0 + c) % 2 === 1 ? 0.35 : 1; wy.push(w); sy += w; }
+  const xs = [0]; wx.forEach(w => xs.push(xs[xs.length - 1] + w / sx * PW));
+  const yb = [0]; wy.forEach(w => yb.push(yb[yb.length - 1] + w / sy * PH));
+  const X = c => ML + xs[c], Ytop = r => MT + PH - yb[r + 1], Ybot = r => MT + PH - yb[r];
+  let svg = `<svg viewBox="0 0 ${ML + PW + MR} ${MT + PH + MB}" width="100%" style="max-width:${ML + PW + MR}px">`;
+  const col = [['#ef4444', .4], ['#22c55e', .22], ['#f59e0b', .6]];
+  for (let r = 0; r < H; r++) {
+    let c = 0;
+    while (c < W) {
+      const v = cnt[r * W + c]; let e = c; while (e + 1 < W && cnt[r * W + e + 1] === v) e++;
+      const cc = col[Math.min(v, 2)];
+      svg += `<rect x="${X(c).toFixed(1)}" y="${Ytop(r).toFixed(1)}" width="${(X(e + 1) - X(c)).toFixed(1)}" height="${(Ybot(r) - Ytop(r)).toFixed(1)}" fill="${cc[0]}" fill-opacity="${cc[1]}"><title>覆蓋 ${v} 條規則</title></rect>`;
+      c = e + 1;
+    }
+  }
+  const lbl = (axis, k) => fnum(axis.b[(k - 1) / 2]);
+  const stepX = Math.max(1, Math.ceil(axis_pts(ax) / 16)), stepY = Math.max(1, Math.ceil(axis_pts(ay) / 12));
+  let ix = 0;
+  for (let c = 0; c < W; c++) if ((ax.s0 + c) % 2 === 1) {
+    if (ix++ % stepX === 0) { const cx = (X(c) + X(c + 1)) / 2; svg += `<line x1="${cx}" x2="${cx}" y1="${MT}" y2="${MT + PH}" stroke="#94a3b8" stroke-dasharray="2 3" stroke-width=".6"/><text x="${cx}" y="${MT + PH + 12}" font-size="10" fill="currentColor" transform="rotate(35 ${cx} ${MT + PH + 12})">${esc(lbl(ax, ax.s0 + c))}</text>`; }
+  }
+  let iy = 0;
+  for (let r = 0; r < H; r++) if ((ay.s0 + r) % 2 === 1) {
+    if (iy++ % stepY === 0) { const cy = (Ytop(r) + Ybot(r)) / 2; svg += `<line y1="${cy}" y2="${cy}" x1="${ML}" x2="${ML + PW}" stroke="#94a3b8" stroke-dasharray="2 3" stroke-width=".6"/><text x="${ML - 6}" y="${cy + 3}" font-size="10" text-anchor="end" fill="currentColor">${esc(lbl(ay, ay.s0 + r))}</text>`; }
+  }
+  rects.forEach(t => {
+    const x = X(t.x0), w = X(t.x1 + 1) - x, y = Ytop(t.y1), h = Ybot(t.y0) - y, c = ruleColor(t.r);
+    svg += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" fill="none" stroke="${c}" stroke-width="1.6" pointer-events="stroke"><title>${esc(t.r.ruleNo)}  PD=${esc(t.r.pd)}\n${esc(nm[0])}：${esc(fmtIv(t.r.f1))}\n${esc(nm[1])}：${esc(fmtIv(t.r.f2))}</title></rect>`;
+    if (w > 34 && h > 14) svg += `<text x="${(x + 4).toFixed(1)}" y="${(y + 12).toFixed(1)}" font-size="10.5" font-weight="600" fill="${c}" pointer-events="none">${esc(t.r.ruleNo)}</text>`;
+  });
+  svg += `<rect x="${ML}" y="${MT}" width="${PW}" height="${PH}" fill="none" stroke="#64748b"/>`;
+  svg += `<text x="${ML + PW / 2}" y="${MT + PH + 56}" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">${esc(nm[0])} →</text>`;
+  svg += `<text transform="translate(14 ${MT + PH / 2}) rotate(-90)" text-anchor="middle" font-size="12" font-weight="600" fill="currentColor">${esc(nm[1])} →</text>`;
+  if (opt.marker) {
+    const { v1, v2 } = opt.marker;
+    if (v1 != null && !isNaN(v1)) {
+      let c = segIndex(ax, v1) - ax.s0; const outX = c < 0 || c >= W; c = Math.max(0, Math.min(W - 1, c));
+      let r = v2 != null && !isNaN(v2) ? segIndex(ay, v2) - ay.s0 : 0; const outY = r < 0 || r >= H; r = Math.max(0, Math.min(H - 1, r));
+      const cx = (X(c) + X(c + 1)) / 2, cy = (Ytop(r) + Ybot(r)) / 2;
+      svg += `<g pointer-events="none"><circle cx="${cx}" cy="${cy}" r="7" fill="none" stroke="#e11d48" stroke-width="2.5"/><line x1="${cx - 11}" x2="${cx + 11}" y1="${cy}" y2="${cy}" stroke="#e11d48" stroke-width="1.5"/><line y1="${cy - 11}" y2="${cy + 11}" x1="${cx}" x2="${cx}" stroke="#e11d48" stroke-width="1.5"/></g>`;
+      if (outX || outY) svg += `<text x="${ML + 6}" y="${MT + 14}" font-size="11" fill="#e11d48">測試點超出檢視範圍（已貼齊邊緣）</text>`;
+    }
+  }
+  return svg + '</svg>';
+}
+function axis_pts(ax) { return Math.max(1, Math.floor((ax.s1 - ax.s0 + 1) / 2) + 1); }
+const legendHtml = `<div class="legend"><span><i style="background:rgba(239,68,68,.4)"></i>缺口（0 條）</span><span><i style="background:rgba(34,197,94,.3)"></i>正常（1 條）</span><span><i style="background:rgba(245,158,11,.7)"></i>重疊（≥2 條）</span><span>窄條 = 剛好落在邊界值的格；框線 = 規則範圍（滑鼠停留可看詳情）</span></div>`;
+
+function render1D(rules, which, name, dom) {
+  dom = dom || {};
+  const vals = [];
+  rules.forEach(r => { const iv = r[which]; if (iv.lower != null) vals.push(iv.lower); if (iv.upper != null) vals.push(iv.upper); });
+  if (dom.min != null) vals.push(dom.min); if (dom.max != null) vals.push(dom.max);
+  let mn = vals.length ? Math.min(...vals) : 0, mx = vals.length ? Math.max(...vals) : 1;
+  if (mn === mx) { mn -= 1; mx += 1; }
+  const pad = (mx - mn) * 0.12, lo = mn - pad, hi = mx + pad;
+  const ML = 150, MR = 24, MT = 26, RH = 24, PW = 760, Ht = MT + rules.length * RH + 26;
+  const X = v => ML + (v - lo) / (hi - lo) * PW;
+  let s = `<svg viewBox="0 0 ${ML + PW + MR} ${Ht}" width="100%" style="max-width:${ML + PW + MR}px"><text x="${ML}" y="14" font-size="12" font-weight="600" fill="currentColor">${esc(name)}</text>`;
+  for (let i = 0; i <= 6; i++) { const v = mn + (mx - mn) * i / 6, x = X(v); s += `<line x1="${x}" x2="${x}" y1="${MT - 4}" y2="${Ht - 22}" stroke="#94a3b8" stroke-dasharray="2 3" stroke-width=".6"/><text x="${x}" y="${Ht - 8}" font-size="10" text-anchor="middle" fill="currentColor">${parseFloat(v.toPrecision(3))}</text>`; }
+  rules.forEach((r, i) => {
+    const iv = r[which], y = MT + i * RH + RH / 2, c = ruleColor(r);
+    const xl = iv.lower == null ? ML : X(iv.lower), xu = iv.upper == null ? ML + PW : X(iv.upper);
+    const dot = (cx, closed) => `<circle cx="${cx}" cy="${y}" r="5" style="fill:${closed ? c : 'var(--panel)'}" stroke="${c}" stroke-width="1.8"/>`;
+    s += `<text x="${ML - 8}" y="${y + 4}" font-size="11" text-anchor="end" fill="${c}">${esc(r.ruleNo)} · PD ${esc(r.pd)}</text>`;
+    s += `<rect x="${xl}" y="${y - 4}" width="${Math.max(1, xu - xl)}" height="8" rx="3" fill="${c}" opacity=".55"><title>${esc(r.ruleNo)}：${esc(fmtIv(iv, name))}</title></rect>`;
+    s += iv.lower != null ? dot(xl, iv.lowerOp === '>=') : `<path d="M${ML + 8} ${y - 5} L${ML} ${y} L${ML + 8} ${y + 5}" fill="none" stroke="${c}" stroke-width="2"/>`;
+    s += iv.upper != null ? dot(xu, iv.upperOp === '<=') : `<path d="M${ML + PW - 8} ${y - 5} L${ML + PW} ${y} L${ML + PW - 8} ${y + 5}" fill="none" stroke="${c}" stroke-width="2"/>`;
+  });
+  return s + '</svg>';
+}
+function groupSel(cur, key) {
+  const gs = getAnalysis().groups;
+  if (gs.length <= 1 && !gs[0].name) return '';
+  return `<label>分群 <select data-chg="${key}">${gs.map(g => `<option value="${esc(g.name)}" ${g.name === cur ? 'selected' : ''}>${esc(g.name || '（全部）')}</option>`).join('')}</select></label>`;
+}
+function curGroup(name) { const gs = getAnalysis().groups; return gs.find(g => g.name === name) || gs[0]; }
+function viewViz() {
+  const g = curGroup(S.viz.group), n = names();
+  let body;
+  if (S.viz.mode === 'matrix') body = legendHtml + `<div class="svgbox">${renderMatrix(g.grid, n)}</div>`;
+  else body = [0, 1].map(k => `<div class="svgbox" style="margin-bottom:10px">${render1D(g.rules, k ? 'f2' : 'f1', n[k], (S.cur.domain || {})[k ? 'f2' : 'f1'])}</div>`).join('') + '<div class="legend"><span>● 實心 = 含邊界（≥ ≤）　○ 空心 = 不含邊界（&gt; &lt;）　‹ › = 無下限／無上限</span></div>';
+  return `<div class="bar"><label><input type="radio" name="vm" value="matrix" data-chg="vizMode" ${S.viz.mode === 'matrix' ? 'checked' : ''}> 二維矩陣圖</label>
+  <label><input type="radio" name="vm" value="1d" data-chg="vizMode" ${S.viz.mode === '1d' ? 'checked' : ''}> 一維條狀圖</label>${groupSel(g.name, 'vizGroup')}</div>${body}`;
+}
+CHG.vizMode = el => { S.viz.mode = el.value; render(); };
+CHG.vizGroup = el => { S.viz.group = el.value; render(); };
+
+/* ============ M4 規則健檢 ============ */
+const TYPE_LABEL = { invalid: '無效區間', duplicate: '重複規則', dupno: '編號重複', gap: '缺口', pointgap: '邊界缺口', overlap: '重疊', info: '提示' };
+function viewHealth() {
+  const A = getAnalysis(), st = A.stats, g = curGroup(S.hgroup), n = names();
+  const list = A.issues.filter(i => (!S.hfilter || i.type === S.hfilter) && (!g.name || i.group === g.name || i.group === ''));
+  const kp = (t, v, c) => `<div class="kpi"><span class="muted">${t}</span><b style="color:${v ? c : 'var(--ok)'}">${v}</b></div>`;
+  return `<div class="kpis">${kp('重疊', st.overlap, 'var(--warn)')}${kp('缺口（含邊界）', st.gap, 'var(--warn)')}${kp('無效區間', st.invalid, 'var(--err)')}${kp('重複', st.duplicate, 'var(--warn)')}</div>
+  <div class="bar">${groupSel(g.name, 'hGroup')}
+  <label>類型 <select data-chg="hFilter"><option value="">全部</option>${Object.keys(TYPE_LABEL).map(k => `<option value="${k}" ${S.hfilter === k ? 'selected' : ''}>${TYPE_LABEL[k]}</option>`).join('')}</select></label>
+  <button data-act="exportIssues">匯出健檢報告 CSV</button>
+  <span class="muted">缺口判斷範圍：預設為規則端點的最小~最大值（有規則延伸到 ±∞ 的一側也會檢查）；可在「專案管理」設定因子有效範圍。</span></div>
+  <div class="card"><h3>覆蓋熱力圖</h3>${legendHtml}<div class="svgbox">${renderMatrix(g.grid, n)}</div></div>
+  <div class="tblwrap"><table><thead><tr><th>等級</th><th>類型</th><th>分群</th><th>規則</th><th>說明</th><th>範圍</th></tr></thead><tbody>
+  ${list.map(i => `<tr><td><span class="badge ${i.sev === 'error' ? 'b-err' : i.sev === 'warn' ? 'b-warn' : 'b-info'}">${i.sev === 'error' ? '錯誤' : i.sev === 'warn' ? '警告' : '提示'}</span></td><td>${TYPE_LABEL[i.type]}</td><td>${esc(i.group)}</td><td>${esc(i.rules.join('、'))}</td><td style="white-space:normal">${esc(i.msg)}</td><td style="white-space:normal">${esc(i.region)}</td></tr>`).join('') || '<tr><td colspan="6"><span class="badge b-ok">通過</span> 沒有發現問題 🎉</td></tr>'}</tbody></table></div>`;
+}
+CHG.hGroup = el => { S.hgroup = el.value; render(); };
+CHG.hFilter = el => { S.hfilter = el.value; render(); };
+ACT.exportIssues = () => {
+  const L = [['等級', '類型', '分群', '規則', '說明', '範圍'], ...getAnalysis().issues.map(i => [i.sev, TYPE_LABEL[i.type], i.group, i.rules.join(';'), i.msg, i.region])];
+  download(`${S.cur.name}_健檢報告.csv`, L.map(l => l.map(csvEsc).join(',')).join('\r\n'), 'text/csv;charset=utf-8', true);
+};
+
+/* ============ M5 測試台 ============ */
+function evalTest(v1s, v2s, seg) {
+  const v1 = toNum(v1s), v2 = toNum(v2s);
+  if (Number.isNaN(v1) || Number.isNaN(v2)) return { err: '數值格式不正確', hits: [], v1, v2 };
+  return { hits: findHits(S.cur.rules.filter(r => !(r.f1.err || r.f2.err)), v1, v2, seg), v1, v2 };
+}
+function testResultHtml(res) {
+  if (res.err) return `<span class="badge b-err">${res.err}</span>`;
+  if (!res.hits.length) return `<span class="badge b-warn">未命中任何規則</span>`;
+  if (res.hits.length === 1) return `<span class="badge b-ok">唯一命中</span> <b>${esc(res.hits[0].ruleNo)}</b>　PD = <b>${esc(res.hits[0].pd)}</b>`;
+  return `<span class="badge b-warn">命中 ${res.hits.length} 條（重疊）</span> ${res.hits.map(h => `<b>${esc(h.ruleNo)}</b>(PD ${esc(h.pd)})`).join('、')}`;
+}
+function testGroup() { const t = S.test; return curGroup(t.seg && getAnalysis().groups.some(x => x.name === t.seg.trim()) ? t.seg.trim() : ''); }
+function viewTest() {
+  const t = S.test, n = names(), res = evalTest(t.v1, t.v2, t.seg), g = testGroup();
+  const cases = t.cases.map((c, i) => {
+    const r = evalTest(c.v1, c.v2, c.seg), got = r.hits.map(h => h.ruleNo).join(';');
+    const pass = c.expect === '' ? '' : (got === (c.expect === '-' ? '' : c.expect) ? '<span class="pass">PASS</span>' : '<span class="fail">FAIL</span>');
+    return `<tr data-i="${i}"><td>${esc(c.v1)}</td><td>${esc(c.v2)}</td><td>${esc(c.seg)}</td><td><input class="w-s" data-chg="caseExp" value="${esc(c.expect)}" placeholder="預期規則"></td><td>${esc(r.err || got || '（未命中）')}</td><td>${pass}</td><td><button class="sm danger" data-act="delCase">✕</button></td></tr>`;
+  }).join('');
+  return `<div class="two"><div class="card"><h3>單筆測試</h3>
+  <div class="row"><label>${esc(n[0])} <input data-inp="testV1" value="${esc(t.v1)}" style="width:110px"></label><label>${esc(n[1])} <input data-inp="testV2" value="${esc(t.v2)}" style="width:110px"></label><label>分群 <input data-inp="testSeg" value="${esc(t.seg)}" style="width:100px" placeholder="（選填）"></label></div>
+  <div id="testOut" style="font-size:15px;min-height:28px">${testResultHtml(res)}</div>
+  <div class="bar" style="margin-top:10px"><button data-act="addCase">加入測試案例</button></div>
+  <div class="tblwrap"><table><thead><tr><th>${esc(n[0])}</th><th>${esc(n[1])}</th><th>分群</th><th>預期</th><th>實際</th><th></th><th></th></tr></thead><tbody>${cases || '<tr><td colspan="7" class="muted">尚無案例（可輸入邊界值，例如 0.9，再按「加入測試案例」並填預期規則；多條請用 ; 分隔，未命中請留空白並填「-」）</td></tr>'}</tbody></table></div></div>
+  <div class="card"><h3>測試點位置</h3>${legendHtml}<div class="svgbox" id="testViz">${renderMatrix(g.grid, n, { marker: { v1: res.v1, v2: res.v2 } })}</div></div></div>`;
+}
+function refreshTest() {
+  const t = S.test, res = evalTest(t.v1, t.v2, t.seg), g = testGroup();
+  $('#testOut').innerHTML = testResultHtml(res); $('#testViz').innerHTML = renderMatrix(g.grid, names(), { marker: { v1: res.v1, v2: res.v2 } });
+}
+INP.testV1 = el => { S.test.v1 = el.value; refreshTest(); };
+INP.testV2 = el => { S.test.v2 = el.value; refreshTest(); };
+INP.testSeg = el => { S.test.seg = el.value; refreshTest(); };
+ACT.addCase = async () => { S.test.cases.push({ v1: S.test.v1, v2: S.test.v2, seg: S.test.seg, expect: '' }); await saveCases(); render(); };
+ACT.delCase = async el => { S.test.cases.splice(Number(el.closest('tr').dataset.i), 1); await saveCases(); render(); };
+CHG.caseExp = async el => { S.test.cases[Number(el.closest('tr').dataset.i)].expect = el.value.trim(); await saveCases(); render(); };
+async function saveCases() { try { await DB.put('testSets', { id: S.cur.id, projectId: S.cur.id, cases: S.test.cases }); } catch (e) { toast('測試案例儲存失敗'); } }
+
+/* ============ M6 批次比對 ============ */
+function viewBatch() {
+  const b = S.batch, t = b.table, n = names();
+  let h = `<div class="card"><h3>貼上待比對資料（含標題列，例如 FINAL_OUTPUT_RESULT 的欄位）</h3>
+  <textarea id="batText" data-inp="batText" placeholder="CUST_ID\t因子一\t因子二">${esc(b.text)}</textarea>
+  <div class="bar" style="margin-top:8px"><input type="file" accept=".csv,.txt,.tsv" data-chg="batFile"><select data-chg="batEnc"><option value="utf-8" ${b.enc === 'utf-8' ? 'selected' : ''}>UTF-8</option><option value="big5" ${b.enc === 'big5' ? 'selected' : ''}>Big5</option></select><button class="pri" data-act="batParse">解析</button></div></div>`;
+  if (t) {
+    const hd = t[0], sel = (k) => `<select data-chg="batMap" data-k="${k}"><option value="-1">（無）</option>${hd.map((x, i) => `<option value="${i}" ${b.map[k] === i ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`;
+    h += `<div class="card"><h3>欄位對應</h3><div class="row"><label>${esc(n[0])} ${sel('v1')}</label><label>${esc(n[1])} ${sel('v2')}</label><label>分群 ${sel('seg')}</label><label>識別欄（輸出用） ${sel('id')}</label><button class="pri" data-act="batRun">比對 ${t.length - 1} 筆</button></div></div>`;
+  }
+  if (b.result) {
+    const R = b.result, c = { 唯一: 0, 未命中: 0, 多重命中: 0, 值無效: 0 }; R.forEach(r => c[r.status]++);
+    const show = R.filter(r => !b.filter || r.status === b.filter);
+    h += `<div class="kpis"><div class="kpi"><span class="muted">唯一命中</span><b style="color:var(--ok)">${c['唯一']}</b></div><div class="kpi"><span class="muted">未命中</span><b style="color:${c['未命中'] ? 'var(--warn)' : 'var(--ok)'}">${c['未命中']}</b></div><div class="kpi"><span class="muted">多重命中</span><b style="color:${c['多重命中'] ? 'var(--warn)' : 'var(--ok)'}">${c['多重命中']}</b></div><div class="kpi"><span class="muted">值無效</span><b style="color:${c['值無效'] ? 'var(--err)' : 'var(--ok)'}">${c['值無效']}</b></div></div>
+    <div class="bar"><label>顯示 <select data-chg="batFilter"><option value="">全部</option>${['唯一', '未命中', '多重命中', '值無效'].map(x => `<option ${b.filter === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label><button data-act="batCsv">下載結果 CSV</button><button data-act="batCopy">複製結果（貼到 Excel）</button><span class="muted">畫面最多顯示 500 筆（下載與複製包含全部，且不受上方篩選影響）</span></div>
+    <div class="tblwrap" style="max-height:460px"><table><thead><tr><th>列</th><th>識別</th><th>${esc(n[0])}</th><th>${esc(n[1])}</th><th>分群</th><th>狀態</th><th>命中規則</th><th>PD 值</th></tr></thead><tbody>${show.slice(0, 500).map(r => `<tr><td>${r.idx}</td><td>${esc(r.id)}</td><td>${esc(r.v1)}</td><td>${esc(r.v2)}</td><td>${esc(r.seg)}</td><td><span class="badge ${r.status === '唯一' ? 'b-ok' : r.status === '值無效' ? 'b-err' : 'b-warn'}">${r.status}</span></td><td>${esc(r.ruleNo)}</td><td>${esc(r.pds)}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+  return h;
+}
+INP.batText = el => { S.batch.text = el.value; };
+CHG.batEnc = el => { S.batch.enc = el.value; };
+CHG.batFile = async el => { const f = el.files[0]; if (f) { S.batch.text = await readFileText(f, S.batch.enc); render(); toast('已讀入 ' + f.name); } };
+CHG.batMap = el => { S.batch.map[el.dataset.k] = Number(el.value); };
+CHG.batFilter = el => { S.batch.filter = el.value; render(); };
+ACT.batParse = () => {
+  const rows = parseDelimited(S.batch.text);
+  if (rows.length < 2) return toast('至少需要標題列與一列資料');
+  const low = rows[0].map(x => normText(x).toLowerCase().replace(/[\s_]/g, '')), n = names().map(x => x.toLowerCase());
+  const f = (...p) => low.findIndex(x => p.some(q => q && x.includes(q)));
+  S.batch.table = rows; S.batch.result = null; S.batch.filter = '';
+  S.batch.map = { v1: f(n[0], '因子一', 'factor1', 'f1'), v2: f(n[1], '因子二', 'factor2', 'f2'), seg: f('分群', '產業', 'segment'), id: low.findIndex(x => x === 'id' || x.endsWith('id') || x.includes('編號')) };
+  render();
+};
+ACT.batRun = () => {
+  const b = S.batch; if (b.map.v1 < 0) return toast('請指定' + names()[0] + '欄位');
+  b.result = runBatch(S.cur.rules, b.table.slice(1), b.map); render();
+};
+const batRows = () => [['列', '識別', names()[0], names()[1], '分群', '狀態', '命中規則', 'PD值'], ...S.batch.result.map(r => [r.idx, r.id, r.v1, r.v2, r.seg, r.status, r.ruleNo, r.pds])];
+ACT.batCsv = () => download(`${S.cur.name}_批次比對.csv`, batRows().map(l => l.map(csvEsc).join(',')).join('\r\n'), 'text/csv;charset=utf-8', true);
+ACT.batCopy = () => copyText(batRows().map(l => l.join('\t')).join('\n'));
+
+/* ============ M7 程式碼產生 ============ */
+const LANGS = [['sqlcase', 'SQLite CASE WHEN'], ['sqljoin', 'SQLite JOIN 版'], ['vba', 'VBA Function'], ['excel', 'Excel 公式 (IFS)']];
+function codeOut() {
+  const c = S.code, R = S.cur.rules; let text = '', warn = [];
+  const bad = R.filter(r => r.enabled !== false && (r.f1.err || r.f2.err)).length;
+  if (bad) warn.push(`有 ${bad} 條規則區間無效，已排除。`);
+  const U = usable(R);
+  if (!U.length) return { text: '-- 沒有可用的規則', warn };
+  if (c.lang.startsWith('sql') && !c.cs.trim() && U.some(r => (r.segment || '').trim() !== '')) warn.push('規則含「分群」，但未填「分群欄位」，分群條件會被忽略，結果可能不正確。');
+  if (c.lang === 'vba' && U.length > 1500) warn.push('規則數量很多，VBA 單一程序可能超過 64KB 上限，建議改用 SQL 版本。');
+  const o = { table: c.table, c1: c.c1, c2: c.c2, cs: c.cs.trim(), cast: c.cast };
+  if (c.lang === 'sqlcase') text = genSqlCase(R, o);
+  else if (c.lang === 'sqljoin') text = genSqlJoin(R, o);
+  else if (c.lang === 'vba') text = genVba(R);
+  else { const x = genExcel(R, { x1: c.x1, x2: c.x2, xs: c.xs }); text = x.text; warn = warn.concat(x.warn); }
+  return { text, warn };
+}
+function viewCode() {
+  const c = S.code, o = codeOut(), n = names();
+  const inp = (k, lab, w) => `<label>${lab} <input data-inp="code_${k}" value="${esc(c[k])}" style="width:${w || 150}px"></label>`;
+  return `<div class="bar">${LANGS.map(([k, t]) => `<label><input type="radio" name="lang" value="${k}" data-chg="codeLang" ${c.lang === k ? 'checked' : ''}> ${t}</label>`).join('')}</div>
+  <div class="card"><div class="row">${c.lang.startsWith('sql') ? inp('table', '資料表', 190) + inp('c1', n[0] + ' 欄位') + inp('c2', n[1] + ' 欄位') + inp('cs', '分群欄位(選填)') + `<label><input type="checkbox" data-chg="codeCast" ${c.cast ? 'checked' : ''}> 以 CAST AS REAL 轉數值</label>` : ''}
+  ${c.lang === 'excel' ? inp('x1', n[0] + ' 儲存格', 80) + inp('x2', n[1] + ' 儲存格', 80) + inp('xs', '分群儲存格', 80) : ''}
+  ${c.lang === 'vba' ? '<span class="muted">用法：貼到標準模組；儲存格輸入 <code>=PD_RuleNo(A2,B2)</code> 或 <code>=PD_Value(A2,B2,C2)</code>（C2 為分群，可省略）</span>' : ''}</div>
+  <div id="codeWarn">${o.warn.map(w => `<div class="warn-box">⚠ ${esc(w)}</div>`).join('')}</div>
+  <div class="bar"><button class="pri" data-act="copyCode">複製</button><button data-act="dlCode">下載檔案</button><span class="muted">與測試台、批次比對使用同一套判斷邏輯（含邊界與運算子）</span></div>
+  <pre class="code" id="codeOut">${esc(o.text)}</pre></div>`;
+}
+function refreshCode() { const o = codeOut(); $('#codeOut').textContent = o.text; $('#codeWarn').innerHTML = o.warn.map(w => `<div class="warn-box">⚠ ${esc(w)}</div>`).join(''); }
+CHG.codeLang = el => { S.code.lang = el.value; render(); };
+CHG.codeCast = el => { S.code.cast = el.checked; refreshCode(); };
+document.addEventListener('input', e => { const el = e.target.closest('[data-inp^=code_]'); if (el) { S.code[el.dataset.inp.slice(5)] = el.value; refreshCode(); } });
+ACT.copyCode = () => copyText(codeOut().text);
+ACT.dlCode = () => { const l = S.code.lang, ext = { sqlcase: 'sql', sqljoin: 'sql', vba: 'bas', excel: 'txt' }[l]; download(`PD_rules_${l}.${ext}`, codeOut().text); };
+
+/* ============ M8 專案管理 ============ */
+async function loadVersions() { S.versions = (await DB.byProject('versions', S.cur.id)).sort((a, b) => b.createdAt - a.createdAt); const el = $('#verBox'); if (el) el.innerHTML = versionsHtml(); }
+function versionsHtml() {
+  const V = S.versions;
+  const diff = S.diffId ? (() => { const v = V.find(x => x.id === S.diffId); if (!v) return ''; const d = diffRules(v.rules, S.cur.rules);
+    return `<div class="card"><h3>「${esc(v.name)}」 → 目前版本 差異</h3><p>新增 ${d.added.length}（${esc(d.added.join('、') || '—')}）　刪除 ${d.removed.length}（${esc(d.removed.join('、') || '—')}）　修改 ${d.changed.length}</p>
+    ${d.changed.length ? `<div class="tblwrap"><table><thead><tr><th>規則</th><th>原（啟用|PD|分群|因子一|因子二）</th><th>現</th></tr></thead><tbody>${d.changed.map(c => `<tr><td>${esc(c.no)}</td><td>${esc(c.from)}</td><td>${esc(c.to)}</td></tr>`).join('')}</tbody></table></div>` : ''}</div>`; })() : '';
+  return `<div class="tblwrap"><table><thead><tr><th>快照名稱</th><th>時間</th><th>規則數</th><th></th></tr></thead><tbody>${V.map(v => `<tr data-vid="${v.id}"><td>${esc(v.name)}</td><td>${new Date(v.createdAt).toLocaleString()}</td><td>${v.rules.length}</td><td><button class="sm" data-act="verDiff">與目前比較</button> <button class="sm" data-act="verRestore">還原</button> <button class="sm danger" data-act="verDel">刪除</button></td></tr>`).join('') || '<tr><td colspan="4" class="muted">尚無快照</td></tr>'}</tbody></table></div>${diff}`;
+}
+function viewProject() {
+  const p = S.cur, d = p.domain || { f1: {}, f2: {} };
+  const dv = (x) => x == null ? '' : x;
+  return `<div class="two"><div class="card"><h3>專案設定</h3>
+  <div class="row"><label>專案名稱 <input data-chg="projName" value="${esc(p.name)}" style="width:220px"></label></div>
+  <div class="row"><label>因子一名稱 <input data-chg="fname0" value="${esc(p.factorNames[0])}" style="width:140px"></label><label>因子二名稱 <input data-chg="fname1" value="${esc(p.factorNames[1])}" style="width:140px"></label></div>
+  <h3 style="margin-top:14px">因子有效範圍（用於缺口判斷，選填）</h3>
+  <div class="row"><label>${esc(p.factorNames[0])} 最小 <input data-chg="dom" data-k="f1.min" value="${dv(d.f1 && d.f1.min)}" style="width:80px"></label><label>最大 <input data-chg="dom" data-k="f1.max" value="${dv(d.f1 && d.f1.max)}" style="width:80px"></label></div>
+  <div class="row"><label>${esc(p.factorNames[1])} 最小 <input data-chg="dom" data-k="f2.min" value="${dv(d.f2 && d.f2.min)}" style="width:80px"></label><label>最大 <input data-chg="dom" data-k="f2.max" value="${dv(d.f2 && d.f2.max)}" style="width:80px"></label></div>
+  <p class="muted">範圍為閉區間 [最小, 最大]，例如 0 ~ 1。留空則以規則端點的最小~最大值為範圍（若有規則只設上限或只設下限，該側視為延伸到無限遠，也會檢查）。</p>
+  <h3 style="margin-top:14px">區間字串預設運算子</h3>
+  <div class="row"><label>下限 <select data-chg="defL"><option value="&gt;=" ${S.settings.lowerOp === '>=' ? 'selected' : ''}>&gt;=</option><option value="&gt;" ${S.settings.lowerOp === '>' ? 'selected' : ''}>&gt;</option></select></label>
+  <label>上限 <select data-chg="defU"><option value="&lt;" ${S.settings.upperOp === '<' ? 'selected' : ''}>&lt;</option><option value="&lt;=" ${S.settings.upperOp === '<=' ? 'selected' : ''}>&lt;=</option></select></label></div>
+  <p class="muted">套用於「0.35 - 0.9」這類未標明運算子的寫法（下次解析起生效）。「0.35 - &lt;0.9」這類有標明者不受影響。</p>
+  <div class="bar" style="margin-top:12px"><button data-act="dupProject">複製專案</button><button class="danger" data-act="delProject">刪除專案</button></div></div>
+  <div class="card"><h3>備份與還原</h3><div class="bar"><button data-act="expProject">匯出此專案 JSON</button><button data-act="expAll">匯出全部（含快照與測試案例）</button></div>
+  <p class="muted">匯入 JSON 請至「① 匯入」貼上，或：</p><input type="file" accept=".json" data-chg="jsonFile">
+  <h3 style="margin-top:16px">版本快照</h3><div class="bar"><input id="verName" placeholder="快照名稱（選填）" style="width:200px"><button class="pri" data-act="verSave">建立快照</button></div><div id="verBox">${versionsHtml()}</div></div></div>`;
+}
+CHG.projName = el => { S.cur.name = el.value.trim() || '未命名'; touch(); };
+CHG.fname0 = el => { S.cur.factorNames[0] = el.value.trim() || '因子一'; touch(); };
+CHG.fname1 = el => { S.cur.factorNames[1] = el.value.trim() || '因子二'; touch(); };
+CHG.dom = el => { const [f, k] = el.dataset.k.split('.'); const v = toNum(el.value); (S.cur.domain = S.cur.domain || { f1: {}, f2: {} })[f] = S.cur.domain[f] || {}; S.cur.domain[f][k] = (v == null || isNaN(v)) ? null : v; touch(); };
+CHG.defL = el => { S.settings.lowerOp = el.value; saveSettings(); };
+CHG.defU = el => { S.settings.upperOp = el.value; saveSettings(); };
+CHG.jsonFile = async el => { const f = el.files[0]; if (f) { try { await importJson(await readFileText(f)); } catch (e) { toast('JSON 匯入失敗：' + e.message); } } };
+ACT.verSave = async () => {
+  const name = ($('#verName').value || '').trim() || new Date().toLocaleString();
+  await DB.put('versions', { id: 'v' + uid(), projectId: S.cur.id, name, createdAt: Date.now(), rules: JSON.parse(JSON.stringify(S.cur.rules)), factorNames: S.cur.factorNames.slice(), domain: JSON.parse(JSON.stringify(S.cur.domain || {})) });
+  toast('已建立快照'); await loadVersions();
+};
+ACT.verDiff = el => { S.diffId = el.closest('tr').dataset.vid; $('#verBox').innerHTML = versionsHtml(); };
+ACT.verRestore = async el => {
+  const v = S.versions.find(x => x.id === el.closest('tr').dataset.vid); if (!v || !confirm('以此快照覆蓋目前規則？（建議先建立快照）')) return;
+  S.cur.rules = JSON.parse(JSON.stringify(v.rules)); S.cur.factorNames = v.factorNames || S.cur.factorNames; if (v.domain) S.cur.domain = v.domain; touch(); render(); toast('已還原');
+};
+ACT.verDel = async el => { await DB.del('versions', el.closest('tr').dataset.vid); S.diffId = ''; await loadVersions(); };
+ACT.expProject = async () => download(`${S.cur.name}.pdrv.json`, JSON.stringify({ app: 'PDRuleVisualizer', projects: [S.cur], versions: await DB.byProject('versions', S.cur.id), testSets: await DB.byProject('testSets', S.cur.id) }, null, 1), 'application/json');
+ACT.expAll = async () => download(`PDRuleVisualizer_backup_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ app: 'PDRuleVisualizer', projects: S.projects, versions: await DB.all('versions'), testSets: await DB.all('testSets') }, null, 1), 'application/json');
+ACT.dupProject = async () => { const p = JSON.parse(JSON.stringify(S.cur)); p.id = 'p' + uid(); p.name += '（複本）'; p.updatedAt = Date.now(); await DB.put('projects', p); S.projects.push(p); await openProject(p.id); };
+ACT.delProject = async () => {
+  if (!confirm(`確定刪除專案「${S.cur.name}」及其快照？此動作無法復原。`)) return;
+  const id = S.cur.id; await DB.del('projects', id); await DB.del('testSets', id);
+  for (const v of await DB.byProject('versions', id)) await DB.del('versions', v.id);
+  S.projects = S.projects.filter(p => p.id !== id);
+  if (!S.projects.length) { const p = newProject('新專案'); S.projects.push(p); await DB.put('projects', p); }
+  await openProject(S.projects[0].id);
+};
+
+/* ============ 專案切換 / 全域事件 ============ */
+async function openProject(id) {
+  S.cur = S.projects.find(p => p.id === id); S.analysis = null; S.diffId = ''; S.viz.group = ''; S.hgroup = ''; S.filter = ''; S.hfilter = '';
+  S.imp.table = null; S.imp.map = null; S.imp.text = '';
+  S.batch.table = null; S.batch.result = null; S.batch.text = ''; S.batch.filter = '';
+  S.test.v1 = S.test.v2 = S.test.seg = '';
+  if (!S.cur.domain) S.cur.domain = { f1: {}, f2: {} };
+  const ts = await DB.get('testSets', S.cur.id); S.test.cases = ts ? ts.cases : [];
+  S.settings.lastId = id; saveSettings(); render();
+}
+ACT.openProject = el => openProject(el.dataset.id);
+ACT.tab = el => { S.tab = el.dataset.k; render(); };
+ACT.newProject = async () => { const name = prompt('專案名稱', '新專案'); if (!name) return; const p = newProject(name); S.projects.push(p); await DB.put('projects', p); await openProject(p.id); S.tab = 'import'; render(); };
+ACT.themeToggle = () => { S.settings.theme = S.settings.theme === 'dark' ? 'light' : 'dark'; applyTheme(); saveSettings(); render(); };
+document.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && ACT[el.dataset.act]) ACT[el.dataset.act](el, e); });
+document.addEventListener('change', e => { const el = e.target.closest('[data-chg]'); if (el && CHG[el.dataset.chg]) CHG[el.dataset.chg](el, e); });
+document.addEventListener('input', e => { const el = e.target.closest('[data-inp]'); if (el && INP[el.dataset.inp]) INP[el.dataset.inp](el, e); });
+
+async function boot() {
+  await DB.open();
+  try { const st = await DB.get('settings', 'app'); if (st) Object.assign(S.settings, st.value); } catch (e) { }
+  applyTheme();
+  S.projects = await DB.all('projects');
+  if (!S.projects.length) { const p = newProject('示範專案', true); S.projects.push(p); await DB.put('projects', p); }
+  const last = S.projects.find(p => p.id === S.settings.lastId) || S.projects[0];
+  await openProject(last.id);
+}
+if (typeof document !== 'undefined' && typeof window !== 'undefined' && !window.__PD_TEST__) boot();
+</script>
+
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
