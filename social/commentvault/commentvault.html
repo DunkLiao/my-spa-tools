@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CommentVault｜留言情境庫</title>
+<style>
+:root{
+  --bg:#f4f5f8;--panel:#fff;--panel2:#f8f9fb;--text:#1f2430;--muted:#6b7280;--line:#e2e5ec;
+  --accent:#4f46e5;--accent-weak:#eceeff;--ok:#16a34a;--ok-weak:#e6f6ec;--warn:#b45309;--warn-weak:#fff4de;
+  --danger:#dc2626;--danger-weak:#fdeaea;--mark:#fff1a6;--markr:#ffd2d2;--shadow:0 1px 3px rgba(20,24,40,.08),0 4px 14px rgba(20,24,40,.05);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#14161c;--panel:#1d2029;--panel2:#252936;--text:#e8eaf0;--muted:#98a0b3;--line:#303546;
+    --accent:#8b8cff;--accent-weak:#2a2d4d;--ok:#4ade80;--ok-weak:#17301f;--warn:#fbbf24;--warn-weak:#37290c;
+    --danger:#f87171;--danger-weak:#3a1c1e;--mark:#6b5b12;--markr:#6b2323;--shadow:0 1px 3px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#14161c;--panel:#1d2029;--panel2:#252936;--text:#e8eaf0;--muted:#98a0b3;--line:#303546;
+  --accent:#8b8cff;--accent-weak:#2a2d4d;--ok:#4ade80;--ok-weak:#17301f;--warn:#fbbf24;--warn-weak:#37290c;
+  --danger:#f87171;--danger-weak:#3a1c1e;--mark:#6b5b12;--markr:#6b2323;--shadow:0 1px 3px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:224px 1fr;min-height:100vh}
+.side{background:var(--panel);border-right:1px solid var(--line);padding:16px 12px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:4px}
+.brand{font-size:17px;font-weight:700;padding:4px 10px 2px}
+.brand small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:2px;margin-top:12px}
+.nav a{display:flex;gap:8px;align-items:center;padding:9px 10px;border-radius:8px;color:var(--text);text-decoration:none}
+.nav a:hover{background:var(--panel2)}
+.nav a.on{background:var(--accent-weak);color:var(--accent);font-weight:600}
+.side .grow{flex:1}
+.side .foot{font-size:11px;color:var(--muted);padding:6px 10px}
+.main{padding:22px 26px 60px;min-width:0}
+.page{max-width:1180px;margin:0 auto}
+h1{font-size:20px;margin:0 0 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h2{font-size:15px;margin:0 0 10px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow)}
+.card+.card{margin-top:14px}
+.grid2>.card,.grid3>.card,.grid4>.card{margin-top:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.sp{justify-content:space-between}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.btn{border:1px solid var(--line);background:var(--panel);padding:7px 14px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.btn:hover:not(:disabled){background:var(--panel2)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08);background:var(--accent)}
+.btn.danger{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn.danger:hover:not(:disabled){background:var(--danger);filter:brightness(1.08)}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.sm{padding:3px 9px;font-size:12px;border-radius:6px}
+.btn.ico{padding:3px 7px;border-radius:6px}
+.inp,select,textarea{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:7px 10px;width:100%;min-width:0}
+select{width:auto}
+.inp.big{font-size:16px;padding:10px 12px}
+textarea{resize:vertical;line-height:1.6}
+input:focus,select:focus,textarea:focus,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+label.f{display:block;font-weight:600;margin:10px 0 4px}
+label.f .req{color:var(--danger)}
+label.f small{font-weight:400;color:var(--muted)}
+.hint{font-size:12px;color:var(--muted);margin-top:3px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:600;white-space:nowrap}
+.r-normal{background:var(--ok-weak);color:var(--ok)}
+.r-caution{background:var(--warn-weak);color:var(--warn)}
+.r-high{background:var(--danger-weak);color:var(--danger)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;margin:2px 4px 2px 0;border-radius:99px;background:var(--panel2);border:1px solid var(--line);font-size:12px}
+.chip.btnlike{cursor:pointer}
+.chip.btnlike:hover{background:var(--accent-weak)}
+.chip button{border:0;background:none;cursor:pointer;padding:0 2px;color:var(--muted)}
+.chip button:hover{color:var(--danger)}
+.chip button.w{color:var(--accent);font-weight:700}
+.chip.w3{border-color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:6px 14px;cursor:pointer;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#fff}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th,.tbl td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.tbl th{font-size:12px;color:var(--muted);font-weight:600;background:var(--panel2);white-space:nowrap}
+.tbl tr:hover td{background:var(--panel2)}
+.tblwrap{overflow-x:auto}
+.star{cursor:pointer;font-size:17px;background:none;border:0;padding:0;color:var(--muted)}
+.star.on{color:#f59e0b}
+mark{background:var(--mark);color:inherit;border-radius:3px;padding:0 1px}
+mark.risk{background:var(--markr)}
+.hlbox{white-space:pre-wrap;word-break:break-word;background:var(--panel2);border:1px dashed var(--line);border-radius:8px;padding:8px 10px;margin-top:8px;max-height:150px;overflow:auto}
+.recs{display:flex;flex-direction:column;gap:8px}
+.rec{display:grid;grid-template-columns:28px 1fr 56px;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;background:var(--panel)}
+.rec:hover{border-color:var(--accent)}
+.rec.on{border-color:var(--accent);background:var(--accent-weak)}
+.rec .no{font-weight:700;color:var(--accent);text-align:center}
+.rec .pct{text-align:right;font-weight:700}
+.meter{height:5px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:5px}
+.meter i{display:block;height:100%;background:var(--accent)}
+.banner{border-radius:10px;padding:10px 14px;margin-bottom:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.banner.high{background:var(--danger-weak);border:1px solid var(--danger);color:var(--danger)}
+.banner.caution{background:var(--warn-weak);border:1px solid var(--warn);color:var(--warn)}
+.banner div{flex:1;min-width:160px}
+.varsbox{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin:10px 0}
+.varsbox label{font-size:12px;color:var(--muted);display:block}
+.varsbox input.empty{border-color:var(--warn);background:var(--warn-weak)}
+.count.over{color:var(--danger);font-weight:700}
+.warnline{padding:4px 10px;border-radius:6px;margin:3px 6px 3px 0;display:inline-block;font-size:12px}
+.warnline.block{background:var(--danger-weak);color:var(--danger)}
+.warnline.warning{background:var(--warn-weak);color:var(--warn)}
+.warnline.ok{background:var(--ok-weak);color:var(--ok)}
+.bar{display:grid;grid-template-columns:150px 1fr 70px;gap:10px;align-items:center;margin:6px 0}
+.bar .lab{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar .tr{height:14px;background:var(--panel2);border-radius:7px;overflow:hidden}
+.bar .tr i{display:block;height:100%;background:var(--accent);border-radius:7px}
+.bar .v{text-align:right;color:var(--muted);font-size:12px}
+.kpi{padding:14px 16px}
+.kpi b{display:block;font-size:26px;line-height:1.2}
+.kpi span{color:var(--muted);font-size:12px}
+.trend{display:flex;align-items:flex-end;gap:3px;height:140px;border-bottom:1px solid var(--line);padding-top:6px}
+.trend .col{flex:1;display:flex;flex-direction:column-reverse;min-width:4px;height:100%;justify-content:flex-start}
+.trend .col i{display:block;width:100%}
+.trend .n{background:#22c55e}.trend .c{background:#f59e0b}.trend .h{background:#ef4444}
+.overlay{position:fixed;inset:0;background:rgba(10,12,20,.55);display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px;z-index:50;overflow:auto}
+.modal{background:var(--panel);border-radius:14px;width:520px;max-width:100%;box-shadow:0 10px 40px rgba(0,0,0,.35);display:flex;flex-direction:column;max-height:90vh}
+.modal.wide{width:1040px}
+.modal header{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:16px;display:flex;justify-content:space-between;align-items:center}
+.modal .body{padding:6px 18px 14px;overflow:auto}
+.modal footer{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:99}
+.toast{background:#1f2430;color:#fff;padding:10px 16px;border-radius:10px;box-shadow:var(--shadow);max-width:360px;animation:fade .2s}
+.toast.err{background:#b91c1c}.toast.warn{background:#b45309}.toast.ok{background:#15803d}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
+.taginput .chips{min-height:30px;margin-bottom:4px}
+.taginput .ctl{display:flex;gap:6px}
+.edgrid{display:grid;grid-template-columns:1fr 340px;gap:20px}
+.preview{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;position:sticky;top:0;align-self:start}
+.preview .pv{border-left:3px solid var(--accent);padding:2px 8px;margin:8px 0;white-space:pre-wrap;word-break:break-word}
+.sres{max-height:50vh;overflow:auto;margin-top:8px}
+.sitem{padding:8px 10px;border-radius:8px;cursor:pointer}
+.sitem.on,.sitem:hover{background:var(--accent-weak)}
+.empty{text-align:center;color:var(--muted);padding:26px 10px}
+.pillrow button{margin:0 6px 6px 0}
+.scnrow{display:grid;grid-template-columns:26px 40px 1fr 110px 80px 170px;gap:10px;align-items:center;padding:8px 6px;border-bottom:1px solid var(--line);background:var(--panel)}
+.scnrow.drag{opacity:.4}
+.scnrow .grab{cursor:grab;color:var(--muted)}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle}
+.err{color:var(--danger)}
+.errbox{background:var(--danger-weak);color:var(--danger);border:1px solid var(--danger);border-radius:8px;padding:8px 12px;margin:10px 0}
+@media (max-width:1023px){
+  .app{grid-template-columns:1fr}
+  .side{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:8px}
+  .nav{flex-direction:row;overflow-x:auto;margin:0}
+  .nav a{white-space:nowrap;flex:none}
+  .side .grow,.side .foot{display:none}
+  .grid2,.grid3,.grid4,.edgrid{grid-template-columns:1fr}
+  .main{padding:14px}
+  .bar{grid-template-columns:100px 1fr 60px}
+  .scnrow{grid-template-columns:26px 36px 1fr;}
+  .preview{position:static}
+}
+</style>
+</head>
+<body>
+<div id="boot" style="padding:40px;text-align:center;color:#888">載入中…</div>
+<div class="app" id="app" style="display:none">
+  <aside class="side">
+    <div class="brand">🗝️ CommentVault<small>留言情境庫</small></div>
+    <nav class="nav" id="nav" aria-label="主選單"></nav>
+    <div class="grow"></div>
+    <button class="btn" id="btnSearch" aria-label="搜尋模板">🔎 搜尋模板 <span class="muted small">Ctrl+K</span></button>
+    <div class="foot">v1.1 · 資料只存在這台電腦的瀏覽器（IndexedDB），不會上傳。</div>
+  </aside>
+  <main class="main" id="view"></main>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+ * CommentVault｜留言情境庫  v1.1
+ * 單檔 SPA：Vanilla JS + IndexedDB，無外部連線、無 API Key
+ * 結構：Util → DB → Store → Matcher → UI(Components) → Views → Router → Boot
+ * ===================================================================== */
+
+/* ------------------------------ 常數 ------------------------------ */
+const PLATFORMS=[{id:'facebook',name:'Facebook'},{id:'instagram',name:'Instagram'},{id:'threads',name:'Threads'},{id:'youtube',name:'YouTube'},{id:'line',name:'LINE 官方帳號'}];
+const TONES=[{id:'friendly',name:'親切',short:'親',key:'KeyQ'},{id:'formal',name:'正式',short:'正',key:'KeyW'},{id:'playful',name:'活潑',short:'活',key:'KeyE'}];
+const VERSIONS=[{id:'public',name:'公開回覆'},{id:'dm',name:'私訊版'}];
+const RISKS={normal:{name:'一般',icon:'🟢',rank:0},caution:{name:'注意',icon:'🟡',rank:1},high:{name:'高風險',icon:'🔴',rank:2}};
+const DEFAULT_LIMITS={facebook:8000,instagram:2200,threads:500,youtube:10000,line:5000};
+const DEFAULTS={brandName:'',defaultTone:'friendly',defaultPlatform:'instagram',topN:3,matchThreshold:30,saveRawComment:false,saveUnmatched:true,theme:'system',platformLimits:DEFAULT_LIMITS};
+const ROUTES=[
+  {id:'quick',icon:'⚡',name:'快速回覆'},{id:'templates',icon:'📚',name:'模板庫'},{id:'scenarios',icon:'🗂',name:'情境分類'},
+  {id:'variables',icon:'🔤',name:'變數管理'},{id:'guardrails',icon:'🚫',name:'禁用詞與風險'},{id:'insights',icon:'📊',name:'使用統計'},{id:'settings',icon:'⚙',name:'設定'}
+];
+const VAR_G=/\{\{\s*([a-z0-9_]+)\s*\}\}/g;
+const VAR_T=/\{\{\s*[a-z0-9_]+\s*\}\}/;
+const STRIP=/[\s~～!！?？。，,.、]/g;
+const DAY=86400000;
+
+/* ------------------------------ 工具 ------------------------------ */
+function h(tag,props,...kids){
+  const el=document.createElement(tag);
+  for(const k of kids.flat(Infinity)){ if(k==null||k===false) continue; el.append(k instanceof Node?k:String(k)); }
+  if(props) for(const [k,v] of Object.entries(props)){
+    if(v==null||v===false) continue;
+    if(k==='class') el.className=v;
+    else if(k==='style'&&typeof v==='object') Object.assign(el.style,v);
+    else if(k.startsWith('on')&&typeof v==='function') el.addEventListener(k.slice(2).toLowerCase(),v);
+    else if(k==='value'||k==='checked'||k==='disabled'||k==='selected') el[k]=v;
+    else el.setAttribute(k,v===true?'':v);
+  }
+  return el;
+}
+const uid=(p='')=>p+((crypto&&crypto.randomUUID)?crypto.randomUUID():('xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:(r&3|8)).toString(16);})));
+const pad=n=>String(n).padStart(2,'0');
+const todayStr=()=>{const d=new Date();return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())}`;};
+const fmtDT=ts=>{if(!ts)return '—';const d=new Date(ts);return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;};
+const dayKey=ts=>{const d=new Date(ts);return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;};
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const clampW=w=>clamp(parseInt(w,10)||1,1,3);
+const debounce=(fn,ms)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
+function normalize(t){return String(t==null?'':t).normalize('NFKC').toLowerCase().replace(STRIP,'');}
+function extractVars(t){return [...new Set([...String(t).matchAll(VAR_G)].map(m=>m[1]))];}
+function renderVars(t,vals){return String(t).replace(VAR_G,(m,k)=>(vals[k]!=null&&String(vals[k]).trim())?vals[k]:m);}
+function download(name,text,mime='application/json'){
+  const blob=new Blob([text],{type:mime+';charset=utf-8'});const a=h('a',{href:URL.createObjectURL(blob),download:name});
+  document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+const stamp=()=>{const d=new Date();return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;};
+async function copyText(text){
+  try{ if(navigator.clipboard&&window.isSecureContext){await navigator.clipboard.writeText(text);return true;} }catch(e){}
+  try{
+    const ta=h('textarea',{style:{position:'fixed',opacity:'0',left:'-999px'}});ta.value=text;document.body.append(ta);ta.select();
+    const ok=document.execCommand('copy');ta.remove();return ok;
+  }catch(e){return false;}
+}
+function parseCSV(text){
+  if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);
+  const rows=[];let row=[],cur='',q=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){row.push(cur);cur='';}
+    else if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(cur);rows.push(row);row=[];cur=''; }
+    else cur+=c;
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(x=>x!==''));
+}
+const csvCell=v=>{v=String(v==null?'':v);return /[",\n\r]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;};
+
+/* ------------------------------ Toast ------------------------------ */
+function toast(msg,type=''){
+  const t=h('div',{class:'toast '+type},msg);$('toasts').append(t);setTimeout(()=>t.remove(),type==='err'?5000:2400);
+}
+function $(id){return document.getElementById(id);}
+
+/* ------------------------------ DB ------------------------------ */
+const DB={
+  db:null,
+  open(){
+    return new Promise((res,rej)=>{
+      if(!('indexedDB' in window)) return rej(new Error('此瀏覽器不支援 IndexedDB'));
+      let r;
+      try{ r=indexedDB.open('CommentVaultDB',1);}catch(e){return rej(e);}
+      r.onupgradeneeded=()=>{
+        const d=r.result;
+        const mk=(n,kp,idx=[])=>{const s=d.createObjectStore(n,{keyPath:kp});idx.forEach(([a,u])=>s.createIndex(a,a,{unique:!!u}));};
+        mk('templates','id',[['name',1],['scenarioId'],['risk'],['useCount'],['lastUsedAt'],['updatedAt']]);
+        mk('scenarios','id',[['name',1],['order']]);
+        mk('variables','key');
+        mk('bannedWords','id',[['word',1]]);
+        mk('riskKeywords','id',[['level'],['word']]);
+        mk('usageLogs','id',[['templateId'],['createdAt'],['platform'],['risk']]);
+        mk('unmatched','id',[['createdAt']]);
+        mk('settings','key');
+      };
+      r.onsuccess=()=>{this.db=r.result;this.db.onversionchange=()=>this.db.close();res();};
+      r.onerror=()=>rej(r.error||new Error('IndexedDB 開啟失敗（無痕模式或權限受限時可能發生）'));
+      r.onblocked=()=>rej(new Error('資料庫被其他分頁佔用，請關閉其他 CommentVault 分頁後重試'));
+    });
+  },
+  run(stores,mode,fn){
+    return new Promise((res,rej)=>{
+      const tx=this.db.transaction(stores,mode);let out;
+      tx.oncomplete=()=>res(out);
+      tx.onerror=e=>rej((e&&e.target&&e.target.error)||tx.error||new Error('資料庫寫入失敗'));
+      tx.onabort=()=>rej(tx.error||new Error('資料庫寫入失敗（名稱重複或儲存空間不足）'));
+      try{out=fn(tx);}catch(e){try{tx.abort();}catch(_){}rej(e);}
+    });
+  },
+  async all(s){return (await this.run(s,'readonly',tx=>tx.objectStore(s).getAll())).result;},
+  async put(s,v){return this.run(s,'readwrite',tx=>{tx.objectStore(s).put(v);});},
+  async putMany(s,arr){return this.run(s,'readwrite',tx=>{const o=tx.objectStore(s);arr.forEach(v=>o.put(v));});},
+  async del(s,k){return this.run(s,'readwrite',tx=>{tx.objectStore(s).delete(k);});},
+  async delMany(s,keys){return this.run(s,'readwrite',tx=>{const o=tx.objectStore(s);keys.forEach(k=>o.delete(k));});},
+  async clear(s){return this.run(s,'readwrite',tx=>{tx.objectStore(s).clear();});}
+};
+
+/* ------------------------------ Store（記憶體快取） ------------------------------ */
+const S={templates:[],scenarios:[],variables:[],bannedWords:[],riskKeywords:[],settings:{}};
+async function loadStore(n){
+  if(n==='settings'){const rows=await DB.all('settings');S.settings=Object.fromEntries(rows.map(r=>[r.key,r.value]));}
+  else{S[n]=await DB.all(n);if(n==='scenarios')S.scenarios.sort((a,b)=>a.order-b.order);}
+}
+const loadAll=()=>Promise.all(['templates','scenarios','variables','bannedWords','riskKeywords','settings'].map(loadStore));
+const cfg=k=>S.settings[k]!==undefined?S.settings[k]:DEFAULTS[k];
+async function setCfg(k,v){S.settings[k]=v;await DB.put('settings',{key:k,value:v});}
+const limitFor=p=>((cfg('platformLimits')||{})[p])||DEFAULT_LIMITS[p]||5000;
+const platName=id=>(PLATFORMS.find(p=>p.id===id)||{name:id}).name;
+const scnOf=id=>S.scenarios.find(s=>s.id===id)||{id:'',name:'（未分類）',emoji:'❔',color:'#94a3b8',defaultRisk:'normal'};
+
+function normTpl(t){
+  const r=t.replies||{},rep={};
+  for(const v of VERSIONS){rep[v.id]={};for(const tn of TONES)rep[v.id][tn.id]=String((r[v.id]&&r[v.id][tn.id])||'');}
+  return{
+    id:t.id||uid('tpl_'),name:String(t.name||'').trim().slice(0,50),scenarioId:t.scenarioId||'',
+    keywords:(t.keywords||[]).map(k=>typeof k==='string'?{word:k.trim(),weight:1}:{word:String(k.word||'').trim(),weight:clampW(k.weight)}).filter(k=>k.word),
+    excludeKeywords:(t.excludeKeywords||[]).map(x=>String(x).trim()).filter(Boolean),
+    platforms:(t.platforms||[]).filter(p=>PLATFORMS.some(x=>x.id===p)),
+    risk:RISKS[t.risk]?t.risk:'normal',replies:rep,escalation:String(t.escalation||''),
+    tags:(t.tags||[]).map(x=>String(x).trim()).filter(Boolean),note:String(t.note||''),
+    isFavorite:!!t.isFavorite,isArchived:!!t.isArchived,useCount:Number(t.useCount)||0,lastUsedAt:t.lastUsedAt||null,
+    createdAt:t.createdAt||Date.now(),updatedAt:t.updatedAt||Date.now()
+  };
+}
+async function saveTpl(t){await DB.put('templates',t);await loadStore('templates');}
+function uniqueName(n,names){
+  if(!names.has(n))return n;let c=n+' (匯入)',i=2;while(names.has(c))c=`${n} (匯入${i++})`;return c;
+}
+
+/* ------------------------------ 預設資料 ------------------------------ */
+const DEF_SCN=[
+  ['scn_general','💬','一般詢問','normal','#6366f1'],['scn_product','🛒','商品詢問','normal','#0ea5e9'],['scn_logistics','🚚','物流配送','normal','#14b8a6'],
+  ['scn_price','💰','價格優惠','normal','#f59e0b'],['scn_promo','🎁','活動抽獎','normal','#ec4899'],['scn_thanks','🙏','感謝稱讚','normal','#22c55e'],
+  ['scn_return','🔁','退換貨','caution','#f97316'],['scn_complaint','⚠️','客訴抱怨','high','#ef4444'],['scn_negative','🧨','負評／酸民','high','#b91c1c'],
+  ['scn_spam','🤖','廣告／垃圾留言','caution','#64748b']
+];
+const DEF_VARS=[
+  {key:'name',label:'留言者稱呼',defaultValue:'您',type:'text'},{key:'brand',label:'品牌名',defaultValue:'',type:'text'},
+  {key:'product',label:'商品名',defaultValue:'',type:'text'},{key:'date',label:'日期（系統）',defaultValue:'',type:'date',system:true},
+  {key:'link',label:'連結',defaultValue:'',type:'url'},{key:'service_time',label:'客服時間',defaultValue:'週一至週五 09:00–18:00',type:'text'}
+];
+const DEF_HIGH=['爛','騙','詐騙','退錢','投訴','消保官','律師','噁心','再也不買'];
+const DEF_CAUTION=['退貨','換貨','壞掉','瑕疵','還沒收到','等很久','失望'];
+const DEF_BANNED=[
+  {word:'保證',reason:'可能構成不實或過度承諾',suggestion:'致力於',severity:'warning'},
+  {word:'最便宜',reason:'比較廣告風險',suggestion:'價格親民',severity:'warning'},
+  {word:'絕對有效',reason:'療效／功效誇大',suggestion:'許多使用者回饋不錯',severity:'block'},
+  {word:'治療',reason:'醫療效能宣稱',suggestion:'保養／舒緩',severity:'block'},
+  {word:'根治',reason:'醫療效能宣稱',suggestion:'改善',severity:'block'}
+];
+async function seedDefaults(force){
+  if(!force&&S.settings.seeded) return;
+  await DB.run(['scenarios','variables','riskKeywords','bannedWords','settings'],'readwrite',tx=>{
+    DEF_SCN.forEach((s,i)=>tx.objectStore('scenarios').put({id:s[0],emoji:s[1],name:s[2],defaultRisk:s[3],color:s[4],order:i}));
+    DEF_VARS.forEach(v=>tx.objectStore('variables').put(v));
+    DEF_HIGH.forEach(w=>tx.objectStore('riskKeywords').put({id:uid('rk_'),level:'high',word:w}));
+    DEF_CAUTION.forEach(w=>tx.objectStore('riskKeywords').put({id:uid('rk_'),level:'caution',word:w}));
+    DEF_BANNED.forEach(b=>tx.objectStore('bannedWords').put({id:uid('bw_'),...b}));
+    tx.objectStore('settings').put({key:'seeded',value:true});
+  });
+  await loadAll();
+}
+function sampleTemplates(){
+  const T=(name,scn,risk,kw,ex,pub,dm,esc,tags)=>({name,scenarioId:scn,risk,
+    keywords:kw.split('|').map(s=>{const [w,n]=s.split(':');return{word:w,weight:+n||1};}),excludeKeywords:ex?ex.split('|'):[],platforms:[],
+    replies:{public:{friendly:pub[0],formal:pub[1],playful:pub[2]},dm:{friendly:dm?dm[0]:'',formal:dm?dm[1]:'',playful:dm?dm[2]:''}},
+    escalation:esc||'',tags:tags?tags.split('|'):[]});
+  return [
+    T('物流-外島配送','scn_logistics','normal','外島:3|離島:3|澎湖:2|金門:2|馬祖:2|寄:1','退貨',
+      ['感謝{{name}}的詢問～我們有提供外島配送喔！運費與到貨時間會在結帳時自動計算 🚚','感謝{{name}}的詢問。{{brand}}提供外島配送服務，運費及預計到貨時間將於結帳頁面顯示，敬請參考。','有的有的！外島也收得到 🏝️ 運費和到貨時間結帳時會自動算給你～'],
+      ['外島配送的運費和天數會依地區不同，方便私訊告訴我們收件地區嗎？我們幫{{name}}確認 😊','為提供正確資訊，煩請提供收件地區，我們將為{{name}}確認運費及預計到貨時間。','告訴我們你在哪個小島，我們馬上幫你查運費跟天數！'],'', '物流|FAQ'),
+    T('物流-運費說明','scn_logistics','normal','運費:3|免運:3|郵資:2|運送費:2','',
+      ['運費與免運門檻都整理在這裡囉：{{link}} 有問題再跟我們說～','感謝{{name}}的詢問。運費及免運資訊請參考：{{link}}','想知道要不要運費？點這裡一目了然 👉 {{link}}'],null,'','物流|FAQ'),
+    T('物流-出貨時間','scn_logistics','normal','出貨:3|多久:2|幾天:2|什麼時候:2|到貨:2|寄出:2','還沒收到|等很久',
+      ['感謝{{name}}的詢問～一般下單後會依訂單順序安排出貨，實際時間以訂單通知為準喔！','感謝{{name}}的詢問。訂單成立後將依序安排出貨，出貨時會另行通知，煩請留意。','下單之後我們就開始火速備貨啦 📦 出貨時會通知你～'],null,'','物流|FAQ'),
+    T('物流-查詢訂單','scn_logistics','normal','訂單:3|查詢:2|物流編號:3|追蹤:2|單號:3','',
+      ['想查訂單的話，請私訊提供訂單編號，我們馬上幫{{name}}查詢～客服時間：{{service_time}}','若要查詢訂單，請私訊提供訂單編號，客服將於{{service_time}}協助處理，謝謝。','訂單去哪啦？私訊給我們訂單編號，馬上幫你追蹤 🔍'],null,'','物流|訂單'),
+    T('商品-尺寸詢問','scn_product','normal','尺寸:3|size:3|尺碼:3|大小:1|身高:2|體重:2|穿:1','',
+      ['感謝{{name}}的詢問～{{product}}的尺寸表在商品頁面，若方便提供身高體重，我們也可以幫忙參考喔！','感謝{{name}}的詢問。{{product}}之尺寸資訊請參閱商品頁面，亦可提供身高體重，由客服協助建議。','尺寸不確定？告訴我們身高體重，幫你挑最合身的 👕'],null,'','商品|尺寸'),
+    T('商品-庫存補貨','scn_product','normal','缺貨:3|補貨:3|庫存:3|有貨:2|還有嗎:2|售完:2','',
+      ['謝謝{{name}}的關注～{{product}}的庫存與補貨資訊請留意我們的最新貼文，有消息會第一時間公布！','感謝{{name}}的詢問。{{product}}之庫存及補貨時程將於官方頁面公告，敬請留意。','熱門款總是搶手 🔥 補貨消息會第一時間公布，記得追蹤我們～'],null,'','商品|庫存'),
+    T('商品-使用方式','scn_product','normal','怎麼用:3|使用方式:3|使用方法:3|教學:2|如何使用:3','',
+      ['{{product}}的使用方式可以參考這裡：{{link}} 如果還有疑問歡迎再問我們喔！','感謝{{name}}的詢問。{{product}}之使用方式請參閱：{{link}}，如有疑問歡迎私訊客服。','不會用也沒關係，跟著這份教學做就對了 👉 {{link}}'],null,'','商品|教學'),
+    T('商品-成分材質','scn_product','normal','成分:3|材質:3|材料:2|過敏:2|安全:1','',
+      ['感謝{{name}}的詢問～完整的成分與材質標示都在商品頁面。若有過敏疑慮，建議先諮詢醫師再使用喔！','感謝{{name}}的詢問。成分及材質資訊請參閱商品頁面標示；如有過敏疑慮，建議事先諮詢專業醫師。','想知道裡面有什麼？成分表全部攤開在商品頁 🔎 有過敏疑慮先問問醫師更安心～'],null,'','商品|成分'),
+    T('價格-優惠折扣','scn_price','normal','優惠:3|折扣:3|打折:3|折價券:3|coupon:2|促銷:2|特價:2','',
+      ['最新優惠都會公布在我們的貼文與官網喔～{{link}} 記得追蹤不錯過！','感謝{{name}}的詢問。最新優惠資訊請參閱官方公告：{{link}}','優惠來啦 🎉 最新折扣看這裡：{{link}}'],null,'','價格|優惠'),
+    T('價格-價格詢問','scn_price','normal','多少錢:3|價格:3|價錢:3|售價:3|費用:1|幾元:2','',
+      ['{{product}}的價格請參考商品頁面：{{link}} 有活動時價格也會即時更新喔！','感謝{{name}}的詢問。{{product}}之售價請參閱：{{link}}','想知道多少錢？點進來就有答案 💰 {{link}}'],null,'','價格|FAQ'),
+    T('價格-付款方式','scn_price','normal','付款:3|刷卡:3|分期:3|貨到付款:3|超商:2|轉帳:2','',
+      ['可使用的付款方式會在結帳頁面列出，{{name}}可以在下單時選擇最方便的方式～','感謝{{name}}的詢問。可用之付款方式請於結帳頁面查看。','付款方式任你挑 💳 結帳頁面一目了然～'],null,'','價格|付款'),
+    T('活動-抽獎規則','scn_promo','normal','抽獎:3|中獎:3|活動:2|參加:2|規則:2|得獎:3','名單|公布|開獎',
+      ['謝謝{{name}}的參與！抽獎的完整規則都寫在活動貼文裡，記得完成所有步驟才算參加成功喔 🎁','感謝{{name}}參與活動。完整活動辦法請詳閱貼文說明，須完成全部指定步驟方符合資格。','想中獎要先看規則 📝 全部寫在活動貼文裡，照著做就能參加～'],null,'','活動|抽獎'),
+    T('活動-得獎名單','scn_promo','normal','名單:3|公布:3|開獎:3|得獎:2|抽中:2','',
+      ['得獎名單會在活動貼文與官方帳號公布，{{name}}再留意一下喔～','感謝{{name}}的關心。得獎名單將於活動說明之日期公布，並另行通知得獎者。','開獎日我們也很緊張 🥁 名單一公布就會通知大家！'],
+      ['得獎者會收到我們的私訊通知，請留意訊息匣（包含陌生訊息）喔！','得獎者將以私訊方式通知，煩請留意訊息匣。','中獎的話我們會私訊你，記得看看陌生訊息匣 📬'],'','活動|名單'),
+    T('感謝-稱讚好評','scn_thanks','normal','好吃:2|好用:2|讚:2|喜歡:2|超愛:3|愛了:3|讚讚:2','',
+      ['謝謝{{name}}的喜歡！你的支持是我們最大的動力 ❤️','感謝{{name}}的支持與肯定，{{brand}}會持續努力。','哇～被你誇到臉紅了 😳 謝謝{{name}}，我們會繼續加油！'],null,'','感謝'),
+    T('感謝-回購粉絲','scn_thanks','normal','回購:3|又買:3|第二次:2|一直買:3|支持:2','',
+      ['感謝{{name}}一直以來的支持！很高興你再次選擇我們 🙏','感謝{{name}}再度選購，您的支持是{{brand}}前進的動力。','老朋友又回來啦！謝謝{{name}}一路相挺 🥰'],null,'','感謝|回購'),
+    T('退換-退貨流程','scn_return','caution','退貨:3|退款:3|退費:3|換貨:3|退換:3','',
+      ['若需要退換貨，請私訊提供訂單編號，我們會協助{{name}}說明流程，客服時間：{{service_time}}','如需辦理退換貨，請私訊提供訂單編號，客服將於{{service_time}}依規定協助處理。','要退換貨嗎？私訊我們訂單編號，一步一步帶你處理～'],
+      ['請提供訂單編號與需求（退貨或換貨），我們會盡快為{{name}}說明後續流程。','煩請提供訂單編號及需求，客服將盡速回覆處理流程。','把訂單編號丟給我們，剩下的交給我們來處理 💪'],'涉及金額的退款請由客服確認訂單後處理，勿在公開留言承諾退款。','退換貨'),
+    T('退換-商品瑕疵','scn_return','caution','瑕疵:3|壞掉:3|破損:3|缺件:3|少一個:2|漏寄:3|不良:2','',
+      ['很抱歉讓{{name}}遇到這樣的狀況！請私訊提供訂單編號與商品照片，我們會盡快協助處理 🙇','造成不便深感抱歉。請私訊提供訂單編號及商品照片，客服將儘速為您處理。','哎呀，這不是我們想看到的！私訊給我們訂單編號和照片，馬上幫你處理～'],
+      ['非常抱歉造成困擾，請提供訂單編號、問題照片與收件資料，我們會優先為{{name}}處理。','深感抱歉，請提供訂單編號與瑕疵照片，客服將優先處理。','給我們照片和訂單編號，我們立刻幫你搞定！'],'請私訊索取訂單編號與照片，必要時轉客服；公開留言不討論補償方案。','瑕疵|客訴'),
+    T('客訴-延遲出貨','scn_complaint','high','還沒收到:3|等很久:3|兩個禮拜:2|太慢:3|怎麼還沒:3|拖很久:2|遲遲:2','',
+      ['非常抱歉讓{{name}}久等了！請私訊提供訂單編號，我們立刻為您查詢進度 🙇','造成您的不便，我們深感抱歉。請私訊提供訂單編號，客服將立即查詢並回覆處理進度。','讓你等這麼久真的很抱歉！給我們訂單編號，我們馬上追蹤到底～'],
+      ['真的很抱歉讓{{name}}久等了。請提供訂單編號，我們會立即查詢物流狀態並盡快回覆。','深感抱歉。請提供訂單編號，客服將立即查詢，並於{{service_time}}回覆處理進度。','抱歉抱歉！訂單編號給我們，馬上去追貨 🏃'],'先公開致歉並邀請私訊，同步通知客服主管；勿在公開留言說明內部原因。','客訴|物流'),
+    T('負評-情緒性留言','scn_negative','high','爛:3|騙:3|失望:3|差勁:3|不推:2|客服態度:3|再也不買:3','',
+      ['很抱歉讓{{name}}有不愉快的體驗，我們非常重視您的意見，已請專人與您聯繫，也歡迎私訊我們詳情 🙏','對於造成的不愉快，我們深表歉意。已安排專人與您聯繫，亦歡迎私訊告知詳細情況。','聽到你不開心，我們也很難過。私訊告訴我們發生什麼事，我們一定認真面對。'],
+      ['非常抱歉讓您有不好的經驗。請告訴我們事情經過與訂單編號，我們會由專人跟進處理。','深表歉意。煩請提供事情經過及訂單編號，將由專人跟進處理。','對不起讓你失望了，把事情經過告訴我們，我們會好好處理。'],'先公開致歉並邀請私訊，同步通知客服主管，勿與留言者爭辯或刪除留言。','負評|客訴'),
+    T('垃圾-廣告留言','scn_spam','caution','加line:3|賺錢:3|私訊我:2|代購:2|博弈:3|兼職:3|貸款:3','',
+      ['此留言與貼文內容無關，為維護社群品質，我們將予以隱藏，謝謝理解。','本則留言與貼文主題無關，為維護社群環境，將予以隱藏處理，謝謝。','這則跟貼文沒什麼關係喔～為了大家的閱讀品質，我們先把它隱藏囉！'],null,'僅適用於明確的廣告留言，需要時請使用平台的檢舉與封鎖功能。','管理')
+  ];
+}
+
+/* ------------------------------ Matcher ------------------------------ */
+const NK=new WeakMap();
+function nkOf(t){
+  let c=NK.get(t);
+  if(!c){c={kw:t.keywords.map(k=>({w:normalize(k.word),weight:k.weight})).filter(k=>k.w),ex:t.excludeKeywords.map(normalize).filter(Boolean)};NK.set(t,c);}
+  return c;
+}
+function scoreTemplate(text,t,platform){
+  const c=nkOf(t);
+  if(c.ex.some(w=>text.includes(w))) return 0;
+  const total=c.kw.reduce((s,k)=>s+k.weight,0);if(!total) return 0;
+  let hit=0;for(const k of c.kw) if(text.includes(k.w)) hit+=k.weight;
+  if(!hit) return 0;
+  let sc=hit/Math.min(total,5)*100;   // 分母上限 5，避免關鍵字多的模板被稀釋
+  if(t.isFavorite) sc+=5;
+  sc+=Math.min(t.useCount/20,5);
+  if(t.platforms.length&&!t.platforms.includes(platform)) sc-=15;
+  return clamp(Math.round(sc),0,100);
+}
+function recommend(comment,platform){
+  const n=normalize(comment);if(!n) return [];
+  const th=cfg('matchThreshold'),topN=cfg('topN');
+  return S.templates.filter(t=>!t.isArchived).map(t=>({t,score:scoreTemplate(n,t,platform)}))
+    .filter(r=>r.score>0&&r.score>=th)
+    .sort((a,b)=>b.score-a.score||b.t.useCount-a.t.useCount||a.t.name.localeCompare(b.t.name,'zh-Hant'))
+    .slice(0,topN);
+}
+function detectRisk(comment){
+  const text=normalize(comment),hits={high:[],caution:[]};
+  for(const k of S.riskKeywords){const w=normalize(k.word);if(w&&text.includes(w)&&hits[k.level]&&!hits[k.level].includes(k.word))hits[k.level].push(k.word);}
+  const emotional=/[!！?？]{3,}/.test(comment);
+  if(hits.high.length) return{level:'high',hits,emotional};
+  if(hits.caution.length||emotional) return{level:'caution',hits,emotional};
+  return{level:'normal',hits,emotional};
+}
+const maxRisk=(a,b)=>(RISKS[a].rank>=RISKS[b].rank?a:b);
+function checkBanned(text){
+  const n=normalize(text);if(!n) return [];
+  return S.bannedWords.filter(b=>{const w=normalize(b.word);return w&&n.includes(w);});
+}
+function highlight(text,tplWords,riskWords){
+  if(!text) return [];
+  let out='',map=[];
+  for(let i=0;i<text.length;i++){const n=text[i].normalize('NFKC').toLowerCase().replace(STRIP,'');for(const c of n){out+=c;map.push(i);}}
+  const ranges=[];
+  const add=(words,cls)=>{for(const w of words){const nw=normalize(w);if(!nw)continue;let p=0;while((p=out.indexOf(nw,p))>=0){ranges.push([map[p],map[p+nw.length-1]+1,cls]);p+=nw.length;}}};
+  add(riskWords,'risk');add(tplWords,'');
+  ranges.sort((a,b)=>a[0]-b[0]||b[1]-a[1]);
+  const nodes=[];let cur=0;
+  for(const [s,e,cls] of ranges){if(s<cur)continue;if(s>cur)nodes.push(text.slice(cur,s));nodes.push(h('mark',{class:cls},text.slice(s,e)));cur=e;}
+  if(cur<text.length)nodes.push(text.slice(cur));
+  return nodes;
+}
+function varDefault(key){
+  if(key==='date') return todayStr();
+  const v=S.variables.find(x=>x.key===key);let d=(v&&v.defaultValue)||'';
+  if(key==='brand'&&!d) d=cfg('brandName')||'';
+  if(v&&v.type==='date'&&!d) d=todayStr();
+  return d;
+}
+const hasReply=(t,v,tn)=>!!(t&&t.replies[v]&&t.replies[v][tn]&&t.replies[v][tn].trim());
+const hayOf=t=>normalize([t.name,t.tags.join(' '),t.keywords.map(k=>k.word).join(' '),...VERSIONS.flatMap(v=>TONES.map(tn=>t.replies[v.id][tn.id])),t.note].join(' '));
+
+/* ------------------------------ Modal / Dialog ------------------------------ */
+const modalStack=[];
+function openModal({title,body,actions=[],wide=false,sticky=false,onClose,isSearch=false,beforeClose}){
+  const prevFocus=document.activeElement;
+  const overlay=h('div',{class:'overlay',onmousedown:e=>{if(e.target===overlay&&!sticky)m.requestClose();}});
+  const m={isSearch,async requestClose(){if(beforeClose&&!(await beforeClose()))return;m.close();},close(){
+    const i=modalStack.indexOf(m);if(i<0)return;modalStack.splice(i,1);overlay.remove();
+    if(onClose)onClose();if(prevFocus&&prevFocus.focus)try{prevFocus.focus();}catch(_){}
+  }};
+  const foot=actions.length?h('footer',null,actions.map(a=>h('button',{type:'button',class:'btn '+(a.cls||''),onclick:async e=>{
+    let r;if(a.onClick)r=await a.onClick(m,e);if(r!==false)m.close();}},a.text))):null;
+  const box=h('div',{class:'modal'+(wide?' wide':''),role:'dialog','aria-modal':'true','aria-label':title},
+    h('header',null,h('span',null,title),h('button',{class:'btn ghost sm','aria-label':'關閉',onclick:()=>m.requestClose()},'✕')),
+    h('div',{class:'body'},body),foot);
+  overlay.addEventListener('keydown',e=>{
+    if(e.key!=='Tab')return;
+    const f=[...box.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')].filter(x=>x.offsetParent!==null);
+    if(!f.length)return;const first=f[0],last=f[f.length-1];
+    if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+    else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+  });
+  overlay.append(box);document.body.append(overlay);modalStack.push(m);
+  const f=box.querySelector('input:not([type=checkbox]),textarea,select');if(f)f.focus();
+  return m;
+}
+function confirmDlg(msg,{ok='確定',danger=false,title='請確認'}={}){
+  return new Promise(res=>{let r=false;
+    openModal({title,body:h('p',{style:{whiteSpace:'pre-wrap'}},msg),actions:[{text:'取消'},{text:ok,cls:danger?'danger':'primary',onClick:()=>{r=true;}}],onClose:()=>res(r)});});
+}
+function choiceDlg(title,msg,choices){
+  return new Promise(res=>{let r=null;
+    openModal({title,body:h('p',{style:{whiteSpace:'pre-wrap'}},msg),actions:[{text:'取消'},...choices.map(c=>({text:c.text,cls:c.cls||'primary',onClick:()=>{r=c.value;}}))],onClose:()=>res(r)});});
+}
+
+/* ------------------------------ TagInput ------------------------------ */
+function TagInput({items=[],weighted=false,placeholder=''}){
+  const list=items.map(x=>weighted?{word:x.word,weight:x.weight||1}:{word:String(x)});
+  const chips=h('div',{class:'chips'});
+  const inp=h('input',{type:'text',class:'inp',placeholder,'aria-label':placeholder});
+  const wsel=weighted?h('select',{title:'權重','aria-label':'權重'},[1,2,3].map(n=>h('option',{value:n},'權重 '+n))):null;
+  function draw(){
+    chips.replaceChildren(...list.map((it,i)=>h('span',{class:'chip'+(weighted?' w'+it.weight:'')},it.word,
+      weighted?h('button',{type:'button',class:'w',title:'點擊切換權重（1→2→3）',onclick:()=>{it.weight=it.weight%3+1;draw();}},'·'+it.weight):null,
+      h('button',{type:'button','aria-label':'移除 '+it.word,onclick:()=>{list.splice(i,1);draw();}},'✕'))));
+  }
+  function commit(){
+    for(const p of inp.value.split(/[,，、\n]/).map(s=>s.replace(/\|/g,'').trim()).filter(Boolean)){
+      if(!list.some(x=>normalize(x.word)===normalize(p)))list.push(weighted?{word:p,weight:+wsel.value}:{word:p});
+    }
+    inp.value='';draw();
+  }
+  inp.addEventListener('keydown',e=>{if(e.isComposing||e.keyCode===229)return;if(e.key==='Enter'||e.key===','){e.preventDefault();commit();}});
+  const el=h('div',{class:'taginput'},chips,h('div',{class:'ctl'},inp,wsel,h('button',{type:'button',class:'btn sm',onclick:commit},'加入')));
+  draw();
+  return{el,commit,peek:()=>JSON.stringify([list,inp.value]),get:()=>{commit();return weighted?list.map(x=>({...x})):list.map(x=>x.word);}};
+}
+const riskBadge=lv=>h('span',{class:'badge r-'+lv},RISKS[lv].icon+' '+RISKS[lv].name);
+
+/* ------------------------------ Router ------------------------------ */
+let routeTok=0,QRCtl=null,lastRoute=null;
+const go=r=>{if(location.hash==='#/'+r)route();else location.hash='#/'+r;};
+async function route(){
+  const id=(location.hash.replace(/^#\//,'')||'quick');
+  const r=ROUTES.find(x=>x.id===id)||ROUTES[0];
+  $('nav').querySelectorAll('a').forEach(a=>a.classList.toggle('on',a.dataset.r===r.id));
+  const root=h('div',{class:'page'});const tok=++routeTok;
+  const keepY=(lastRoute===r.id)?window.scrollY:0;lastRoute=r.id;
+  $('view').replaceChildren(root);QRCtl=null;
+  try{await VIEWS[r.id](root);}catch(e){console.error(e);if(tok===routeTok)root.append(h('div',{class:'errbox'},'畫面載入失敗：'+e.message));}
+  window.scrollTo(0,keepY);
+}
+
+/* =====================================================================
+ * 模板編輯器
+ * ===================================================================== */
+function openTemplateEditor(existing,opts={}){
+  const isNew=!existing||!!opts.asNew;
+  const base=normTpl(existing||{});
+  if(opts.prefill)Object.assign(base,opts.prefill);
+  let riskTouched=!isNew||!!(opts.prefill&&opts.prefill.risk);
+  const name=h('input',{class:'inp',maxlength:50,value:base.name,placeholder:'例：物流-外島配送','aria-label':'模板名稱'});
+  const scn=h('select',{class:'inp','aria-label':'情境分類',onchange:()=>{if(!riskTouched){const s=scnOf(scn.value);risk.value=s.defaultRisk||'normal';}drawPreview();}},
+    h('option',{value:''},'— 請選擇 —'),S.scenarios.map(s=>h('option',{value:s.id},`${s.emoji} ${s.name}`)));
+  scn.value=base.scenarioId;
+  const risk=h('select',{class:'inp','aria-label':'風險等級',onchange:()=>{riskTouched=true;}},Object.entries(RISKS).map(([k,v])=>h('option',{value:k},`${v.icon} ${v.name}`)));
+  risk.value=base.risk;
+  const kw=TagInput({items:base.keywords,weighted:true,placeholder:'輸入關鍵字後按 Enter（可用逗號一次輸入多個）'});
+  const ex=TagInput({items:base.excludeKeywords,placeholder:'命中這些詞就不推薦此模板'});
+  const tags=TagInput({items:base.tags,placeholder:'自訂標籤'});
+  const plats=PLATFORMS.map(p=>({p,cb:h('input',{type:'checkbox',checked:base.platforms.includes(p.id)})}));
+  const ta={};let lastTA=null;
+  const mkTA=(v,tn)=>{const el=h('textarea',{class:'inp',rows:3,placeholder:`${tn.name}語氣`,'aria-label':`${VERSIONS.find(x=>x.id===v).name}・${tn.name}`,oninput:drawPreview,onfocus:()=>{lastTA=el;}});el.value=base.replies[v][tn.id];ta[v+'.'+tn.id]=el;return el;};
+  const replyBlocks=VERSIONS.map(v=>h('div',null,h('label',{class:'f'},v.name,v.id==='public'?h('span',{class:'req'},' *'):h('small',null,'（選填）')),
+    TONES.map(tn=>h('div',{style:{marginBottom:'6px'}},h('div',{class:'small muted'},tn.name),mkTA(v.id,tn)))));
+  const varSel=h('select',{onchange:()=>{
+    const k=varSel.value;if(!k)return;const t=lastTA||ta['public.friendly'];const s=t.selectionStart??t.value.length;
+    t.setRangeText(`{{${k}}}`,s,t.selectionEnd??s,'end');t.focus();varSel.value='';drawPreview();}},
+    h('option',{value:''},'＋ 插入變數…'),S.variables.map(v=>h('option',{value:v.key},`{{${v.key}}} ${v.label}`)));
+  const esc=h('textarea',{class:'inp',rows:2,placeholder:'例：先公開致歉並邀請私訊，同步通知客服主管'});esc.value=base.escalation;
+  const note=h('textarea',{class:'inp',rows:2,placeholder:'內部備註（不會被複製）'});note.value=base.note;
+  const errBox=h('div'),pv=h('div');
+  function readReplies(){const r={};for(const v of VERSIONS){r[v.id]={};for(const tn of TONES)r[v.id][tn.id]=ta[v.id+'.'+tn.id].value;}return r;}
+  function drawPreview(){
+    const reps=readReplies(),all=VERSIONS.flatMap(v=>TONES.map(tn=>reps[v.id][tn.id])).join('\n');
+    const sample=Object.fromEntries(extractVars(all).map(k=>[k,varDefault(k)||`〔${k}〕`]));
+    const items=[];
+    for(const v of VERSIONS)for(const tn of TONES){const t=reps[v.id][tn.id];if(t.trim())items.push(h('div',null,h('div',{class:'small muted'},`${v.name}・${tn.name}`),h('div',{class:'pv'},renderVars(t,sample))));}
+    const warns=tplWarnings(reps).map(w=>h('div',{class:'warnline warning'},'⚠ '+w));
+    pv.replaceChildren(...(items.length?items:[h('div',{class:'muted small'},'輸入回覆內容後，這裡會即時預覽。')]),...warns);
+  }
+  function tplWarnings(reps){
+    const w=[],all=VERSIONS.flatMap(v=>TONES.map(tn=>reps[v.id][tn.id])).join('\n');
+    const bans=new Map();for(const v of VERSIONS)for(const tn of TONES)for(const b of checkBanned(reps[v.id][tn.id]))bans.set(b.id,b);
+    for(const b of bans.values())w.push(`含禁用詞「${b.word}」${b.suggestion?`（建議：${b.suggestion}）`:''}${b.severity==='block'?'［嚴重］':''}`);
+    const unk=extractVars(all).filter(k=>!S.variables.some(v=>v.key===k));
+    if(unk.length)w.push('使用了尚未定義的變數：'+unk.map(k=>`{{${k}}}`).join('、'));
+    return w;
+  }
+  let saving=false;
+  async function save(){if(saving)return false;saving=true;try{return await doSave();}finally{saving=false;}}
+  async function doSave(){
+    const errs=[],reps=readReplies();
+    const nm=name.value.trim();
+    if(!nm)errs.push('請填寫模板名稱');
+    else if(S.templates.some(t=>t.name===nm&&(isNew||t.id!==existing.id)))errs.push('模板名稱已存在，請換一個');
+    if(!scn.value)errs.push('請選擇情境分類');
+    const kws=kw.get();if(!kws.length)errs.push('至少需要 1 個觸發關鍵字');
+    if(!VERSIONS.some(v=>TONES.some(tn=>reps[v.id][tn.id].trim())))errs.push('至少需要填寫 1 則回覆內容');
+    for(const v of VERSIONS)for(const tn of TONES){
+      if(reps[v.id][tn.id].replace(VAR_G,'').match(/[{}]/))errs.push(`「${v.name}・${tn.name}」變數格式錯誤：需為 {{小寫英數或底線}}，且大括號必須成對`);
+    }
+    if(!reps.public.friendly.trim()&&!reps.public.formal.trim()&&!reps.public.playful.trim()&&VERSIONS.some(v=>TONES.some(tn=>reps[v.id][tn.id].trim())))errs.push('請至少填寫 1 則「公開回覆」');
+    errBox.replaceChildren(...errs.map(e=>h('div',{class:'errbox'},e)));
+    if(errs.length){errBox.scrollIntoView({block:'nearest'});return false;}
+    const warns=tplWarnings(reps);
+    if(warns.length&&!await confirmDlg('存檔前請留意：\n• '+warns.join('\n• ')+'\n\n仍要存檔嗎？',{ok:'仍要存檔',title:'檢查結果'}))return false;
+    const now=Date.now();
+    const t=normTpl({...(isNew?{}:existing),id:isNew?undefined:existing.id,name:nm,scenarioId:scn.value,keywords:kws,excludeKeywords:ex.get(),
+      platforms:plats.filter(x=>x.cb.checked).map(x=>x.p.id),risk:risk.value,replies:reps,escalation:esc.value.trim(),tags:tags.get(),note:note.value.trim(),
+      useCount:isNew?0:existing.useCount,lastUsedAt:isNew?null:existing.lastUsedAt,isFavorite:isNew?false:existing.isFavorite,isArchived:isNew?false:existing.isArchived,
+      createdAt:isNew?now:existing.createdAt,updatedAt:now});
+    try{await saveTpl(t);}catch(e){toast('儲存失敗：'+e.message,'err');return false;}
+    toast('已儲存模板 ✔','ok');
+    if(opts.onSaved)await opts.onSaved(t);
+    route();
+    return true;
+  }
+  const form=h('div',null,
+    h('div',{class:'edgrid'},
+      h('div',null,
+        h('div',{class:'grid3'},
+          h('div',null,h('label',{class:'f'},'模板名稱',h('span',{class:'req'},' *')),name),
+          h('div',null,h('label',{class:'f'},'情境分類',h('span',{class:'req'},' *')),scn),
+          h('div',null,h('label',{class:'f'},'風險等級'),risk)),
+        h('label',{class:'f'},'觸發關鍵字',h('span',{class:'req'},' *'),h('small',null,'　點「·數字」可切換權重 1–3，權重越高越重要')),kw.el,
+        h('label',{class:'f'},'排除關鍵字',h('small',null,'　命中則不推薦')),ex.el,
+        h('label',{class:'f'},'適用平台',h('small',null,'　不勾選＝全部平台')),
+        h('div',{class:'row'},plats.map(x=>h('label',{class:'row',style:{gap:'4px'}},x.cb,x.p.name))),
+        h('div',{class:'row sp'},h('label',{class:'f',style:{margin:'14px 0 4px'}},'回覆內容'),varSel),
+        h('div',{class:'grid2'},replyBlocks),
+        h('label',{class:'f'},'Escalation 提示',h('small',null,'　高風險情境建議填寫')),esc,
+        h('label',{class:'f'},'標籤'),tags.el,
+        h('label',{class:'f'},'備註'),note),
+      h('div',null,h('div',{class:'preview'},h('strong',null,'即時預覽與檢查'),pv))),
+    errBox);
+  drawPreview();
+  const sig=()=>JSON.stringify([name.value,scn.value,risk.value,kw.peek(),ex.peek(),tags.peek(),plats.map(x=>x.cb.checked),readReplies(),esc.value,note.value]);
+  const initSig=sig();
+  const leave=async()=>sig()===initSig||await confirmDlg('有尚未儲存的變更，確定要放棄嗎？',{ok:'放棄變更',danger:true});
+  openModal({title:isNew?'新增模板':'編輯模板',body:form,wide:true,sticky:true,beforeClose:leave,actions:[{text:'取消',onClick:leave},{text:'儲存',cls:'primary',onClick:save}]});
+}
+
+/* =====================================================================
+ * 快速回覆（首頁）
+ * ===================================================================== */
+const qr={comment:'',platform:null,tone:null,version:'public',tplId:null,pinned:false,vars:{},touched:new Set(),done:false,dirty:false,outText:'',results:[],risk:{level:'normal',hits:{high:[],caution:[]}},lastKey:null};
+/* 一次「回覆工作階段」：稱呼等變數、手動修改狀態。複製完成後，下一則留言會自動重設，避免把上一位的名字帶給下一位 */
+function resetReplySession(){qr.vars={};qr.touched=new Set();qr.done=false;qr.dirty=false;qr.outText='';qr.lastKey=null;}
+function viewQuick(root){
+  qr.platform=qr.platform||cfg('defaultPlatform');qr.tone=qr.tone||cfg('defaultTone');
+  const keepDirty=qr.dirty,keepText=qr.outText;
+  qr.lastKey=null;   // 重新進入頁面時，DOM 是全新的，必須重新產生回覆內容
+  const $q={};let aT,uT,copying=false;
+  const curTpl=()=>S.templates.find(t=>t.id===qr.tplId)||null;
+  const effRisk=()=>{const t=curTpl();return t?maxRisk(qr.risk.level,t.risk):qr.risk.level;};
+  /* qr.tone / qr.version 是「使用者想要的」；實際使用的語氣與版本依目前模板有無該內容而定，不會覆蓋使用者偏好 */
+  const effVersion=()=>{
+    const t=curTpl();if(!t)return qr.version;
+    if(TONES.some(x=>hasReply(t,qr.version,x.id)))return qr.version;
+    return (VERSIONS.find(v=>TONES.some(x=>hasReply(t,v.id,x.id)))||{id:qr.version}).id;
+  };
+  const effTone=()=>{
+    const t=curTpl();if(!t)return qr.tone;const v=effVersion();
+    if(hasReply(t,v,qr.tone))return qr.tone;
+    const pref=cfg('defaultTone');if(hasReply(t,v,pref))return pref;
+    return (TONES.find(x=>hasReply(t,v,x.id))||{id:qr.tone}).id;
+  };
+  const rawReply=()=>{const t=curTpl();return t?(t.replies[effVersion()][effTone()]||''):'';};
+
+  function analyze(){
+    qr.risk=qr.comment.trim()?detectRisk(qr.comment):{level:'normal',hits:{high:[],caution:[]}};
+    qr.results=recommend(qr.comment,qr.platform);
+    if(!qr.pinned)qr.tplId=qr.results[0]?qr.results[0].t.id:null;
+    drawLeft();drawRecs();drawEditor(false);
+  }
+  function drawLeft(){
+    const lv=effRisk(),hits=[...qr.risk.hits.high,...qr.risk.hits.caution],t=curTpl();
+    const nc=normalize(qr.comment),tHits=t?t.keywords.filter(k=>nc.includes(normalize(k.word))).map(k=>k.word):[];
+    $q.risk.replaceChildren(riskBadge(lv),
+      h('span',{class:'muted small'},!qr.comment.trim()?'尚未輸入留言':[hits.length?`風險字：${hits.join('、')}`:(qr.risk.emotional?'情緒強烈（連續標點）':'未偵測到風險字'),tHits.length?`\u3000命中關鍵字：${tHits.join('、')}`:''].join('')));
+    $q.hl.replaceChildren(...highlight(qr.comment,tHits,hits));
+    $q.hl.style.display=qr.comment.trim()?'':'none';
+  }
+  function drawRecs(){
+    const active=S.templates.filter(t=>!t.isArchived);
+    if(!active.length){$q.recs.replaceChildren(h('div',{class:'empty'},h('div',null,'還沒有任何模板'),h('div',{class:'row',style:{justifyContent:'center',marginTop:'10px'}},
+      h('button',{class:'btn primary',onclick:loadSamples},'載入 20 筆示範模板'),h('button',{class:'btn',onclick:()=>openTemplateEditor(null)},'＋ 新增模板'))));return;}
+    if(!qr.comment.trim()){$q.recs.replaceChildren(h('div',{class:'empty'},'貼上留言後，這裡會推薦最適合的模板'));return;}
+    if(!qr.results.length){$q.recs.replaceChildren(h('div',{class:'empty'},h('div',null,'找不到符合的模板'),
+      h('button',{class:'btn',style:{marginTop:'10px'},onclick:()=>openTemplateEditor(null,{prefill:{note:'來源留言：'+qr.comment.trim().slice(0,200),risk:qr.risk.level}})},'＋ 以此留言建立新模板')));return;}
+    $q.recs.replaceChildren(...qr.results.map((r,i)=>{const sc=scnOf(r.t.scenarioId);
+      return h('div',{class:'rec'+(r.t.id===qr.tplId?' on':''),tabindex:0,role:'button',onclick:()=>pick(i),onkeydown:e=>{if(e.key==='Enter')pick(i);}},
+        h('div',{class:'no'},i+1),
+        h('div',null,h('div',null,r.t.isFavorite?'★ ':'',h('strong',null,r.t.name)),h('div',{class:'small muted'},`${sc.emoji} ${sc.name}\u3000`,riskBadge(r.t.risk)),h('div',{class:'meter'},h('i',{style:{width:r.score+'%'}}))),
+        h('div',{class:'pct'},r.score+'%'));}));
+  }
+  function pick(i){const r=qr.results[i];if(!r)return;qr.tplId=r.t.id;qr.pinned=true;drawLeft();drawRecs();drawEditor(false);}
+  function drawSel(){
+    const t=curTpl(),ev=effVersion(),et=effTone();
+    $q.tone.replaceChildren(...TONES.map(x=>h('button',{type:'button',class:et===x.id?'on':'',disabled:!hasReply(t,ev,x.id),title:'Alt+'+x.key.slice(-1),onclick:()=>setTone(x.id)},x.name)));
+    $q.ver.replaceChildren(...VERSIONS.map(v=>h('button',{type:'button',class:ev===v.id?'on':'',disabled:!t||!TONES.some(x=>hasReply(t,v.id,x.id)),onclick:()=>{qr.version=v.id;drawEditor(false);}},v.name)));
+  }
+  function setTone(id){const t=curTpl();if(!t||!hasReply(t,effVersion(),id))return;qr.tone=id;drawEditor(false);}
+  function drawBanner(){
+    const t=curTpl(),lv=effRisk();$q.banner.replaceChildren();if(lv==='normal')return;
+    const hasDm=t&&TONES.some(x=>hasReply(t,'dm',x.id));
+    $q.banner.append(h('div',{class:'banner '+lv},h('strong',null,lv==='high'?'🔴 高風險留言':'🟡 請留意這則留言'),
+      h('div',null,t&&t.escalation?'Escalation：'+t.escalation:(lv==='high'?'建議改以私訊處理，並通知客服主管。':'建議確認留言內容後再回覆。')),
+      lv==='high'&&hasDm&&effVersion()!=='dm'?h('button',{class:'btn sm',onclick:()=>{qr.version='dm';drawEditor(false);}},'切換私訊版'):null));
+  }
+  function drawVars(raw){
+    const keys=extractVars(raw);
+    /* 使用者沒有親自改過的變數，每次都重新取預設值（例如剛在設定填了品牌名稱）；改過的才保留 */
+    keys.forEach(k=>{if(!qr.touched.has(k))qr.vars[k]=varDefault(k);});
+    $q.vars.replaceChildren(...keys.map(k=>{const v=S.variables.find(x=>x.key===k);
+      const inp=h('input',{class:'inp'+(String(qr.vars[k]).trim()?'':' empty'),value:qr.vars[k],'aria-label':k,oninput:e=>{
+        qr.vars[k]=e.target.value;qr.touched.add(k);inp.classList.toggle('empty',!e.target.value.trim());
+        if(!qr.dirty)$q.out.value=renderVars(raw,qr.vars);   // 已手動修改內文時，不再自動覆蓋
+        drawMeta();}});
+      return h('div',null,h('label',null,`{{${k}}} ${v?v.label:'（未定義變數）'}`),inp);}));
+  }
+  function drawEditor(force){
+    const ev=effVersion(),et=effTone();
+    const key=[qr.tplId,ev,et].join('|'),raw=rawReply();
+    drawSel();drawBanner();
+    if(force||key!==qr.lastKey){qr.lastKey=key;qr.dirty=false;drawVars(raw);$q.out.value=renderVars(raw,qr.vars);}
+    const t=curTpl();$q.fav.textContent=t&&t.isFavorite?'★ 已收藏':'☆ 收藏';$q.fav.disabled=!t;
+    $q.tname.textContent=t?`目前模板：${t.name}`:'尚未選擇模板（也可直接在下方手寫回覆）';
+    $q.dirtyRow.style.display=qr.dirty?'':'none';
+    drawMeta();
+  }
+  function drawMeta(){
+    const text=$q.out.value,len=[...text].length,lim=limitFor(qr.platform);
+    $q.count.textContent=`字數 ${len} / ${lim}（${platName(qr.platform)}）`;$q.count.classList.toggle('over',len>lim);
+    const b=checkBanned(text);
+    $q.banned.replaceChildren(...(b.length?b.map(x=>h('span',{class:'warnline '+x.severity,title:x.reason||''},`${x.severity==='block'?'⛔':'⚠'} 禁用詞：${x.word}${x.suggestion?'（建議：'+x.suggestion+'）':''}`)):[h('span',{class:'warnline ok'},'✔ 未發現禁用詞')]));
+    $q.copy.disabled=!text.trim()||b.some(x=>x.severity==='block');
+    $q.copy.title=b.some(x=>x.severity==='block')?'含有禁止使用的詞彙，請先修改':'Ctrl+Enter';
+  }
+  function useTpl(t){qr.tplId=t.id;qr.pinned=true;drawLeft();drawRecs();drawEditor(false);}
+  function drawChips(){
+    const rec=[...S.templates].filter(t=>t.lastUsedAt&&!t.isArchived).sort((a,b)=>b.lastUsedAt-a.lastUsedAt).slice(0,5);
+    $q.chips.replaceChildren(...(rec.length?rec.map(t=>h('span',{class:'chip btnlike',tabindex:0,role:'button',onclick:()=>useTpl(t),onkeydown:e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();useTpl(t);}}},t.name)):[h('span',{class:'muted small'},'複製過的模板會出現在這裡')]));
+  }
+  async function copy(){
+    if(copying)return;copying=true;
+    try{
+      const text=$q.out.value;
+      if(!text.trim()){toast('沒有可複製的內容','warn');return;}
+      if(checkBanned(text).some(b=>b.severity==='block')){toast('含有禁止使用的詞彙，無法複製','err');return;}
+      if(VAR_T.test(text)){const left=extractVars(text).map(k=>`{{${k}}}`).join('、');if(!await confirmDlg(`回覆中還有未填寫的變數：${left}\n確定仍要複製嗎？`,{ok:'仍要複製'}))return;}
+      if(!await copyText(text)){toast('複製失敗，請手動選取文字複製','err');return;}
+      toast('已複製 ✔','ok');
+      qr.done=true;   // 這一則已回覆完畢；下一則留言進來時會重設稱呼等變數
+      const t=curTpl();
+      if(t){
+        const now=Date.now();
+        try{
+          await DB.put('templates',{...t,useCount:t.useCount+1,lastUsedAt:now});
+          await DB.put('usageLogs',{id:uid('log_'),templateId:t.id,templateName:t.name,scenarioId:t.scenarioId,platform:qr.platform,tone:effTone(),version:effVersion(),
+            risk:effRisk(),matchScore:(qr.results.find(r=>r.t.id===t.id)||{}).score||0,comment:cfg('saveRawComment')?qr.comment:null,createdAt:now});
+          await loadStore('templates');
+        }catch(e){toast('使用紀錄寫入失敗：'+(e&&e.message||e),'err');}
+        if($q.out.isConnected){drawChips();drawEditor(false);}
+      }
+    }finally{copying=false;}
+  }
+  async function recordUnmatched(){
+    const c=qr.comment.trim();
+    if(!cfg('saveUnmatched')||c.length<2||qr.results.length||!S.templates.some(t=>!t.isArchived))return;
+    const n=normalize(c),now=Date.now(),all=await DB.all('unmatched');
+    if(all.some(u=>u.hash===n&&now-u.createdAt<600000))return;
+    await DB.put('unmatched',{id:uid('um_'),comment:c.slice(0,500),hash:n,platform:qr.platform,risk:qr.risk.level,createdAt:now});
+    if(all.length>=200){const old=all.sort((a,b)=>a.createdAt-b.createdAt).slice(0,all.length-199).map(u=>u.id);await DB.delMany('unmatched',old);}
+  }
+  async function loadSamples(){
+    const names=new Set(S.templates.map(t=>t.name));const add=sampleTemplates().filter(t=>!names.has(t.name)).map(t=>normTpl(t));
+    await DB.putMany('templates',add);await loadStore('templates');toast(`已載入 ${add.length} 筆示範模板`,'ok');route();
+  }
+  function clear(){qr.comment='';qr.pinned=false;qr.tplId=null;resetReplySession();$q.comment.value='';analyze();$q.comment.focus();}
+
+  $q.comment=h('textarea',{class:'inp',rows:6,placeholder:'把網友留言貼在這裡…（貼上後自動分析）','aria-label':'網友留言',oninput:e=>{
+    if(qr.done)resetReplySession();   // 上一則已複製完，這是新的留言
+    qr.comment=e.target.value;qr.pinned=false;clearTimeout(aT);aT=setTimeout(analyze,300);clearTimeout(uT);uT=setTimeout(recordUnmatched,1500);}});
+  $q.comment.value=qr.comment;
+  $q.plat=h('select',{'aria-label':'平台',onchange:e=>{qr.platform=e.target.value;analyze();}},PLATFORMS.map(p=>h('option',{value:p.id},p.name)));$q.plat.value=qr.platform;
+  $q.risk=h('div',{class:'row',style:{marginTop:'8px'}});$q.hl=h('div',{class:'hlbox'});$q.recs=h('div',{class:'recs'});
+  $q.tone=h('div',{class:'seg'});$q.ver=h('div',{class:'seg'});$q.banner=h('div');$q.vars=h('div',{class:'varsbox'});
+  $q.tname=h('div',{class:'muted small',style:{marginBottom:'6px'}});
+  $q.out=h('textarea',{class:'inp',rows:6,'aria-label':'回覆內容',oninput:()=>{qr.dirty=true;qr.outText=$q.out.value;$q.dirtyRow.style.display='';drawMeta();}});
+  $q.dirtyRow=h('div',{class:'warnline warning',style:{display:'none',marginTop:'6px'}},'✎ 內文已手動修改，變數欄位不會再覆蓋它。 ',
+    h('button',{class:'btn sm',type:'button',onclick:()=>drawEditor(true)},'↺ 重新套用模板'));
+  $q.count=h('span',{class:'count small muted'});$q.banned=h('div',{style:{marginTop:'6px'}});
+  $q.fav=h('button',{class:'btn',onclick:async()=>{const t=curTpl();if(!t)return;await saveTpl({...t,isFavorite:!t.isFavorite});drawEditor(false);drawRecs();}});
+  $q.copy=h('button',{class:'btn primary',onclick:copy},'📋 複製回覆');
+  $q.chips=h('div');
+
+  root.append(h('h1',null,'⚡ 快速回覆'),
+    h('div',{class:'grid2'},
+      h('div',{class:'card'},h('div',{class:'row sp'},h('h2',null,'📥 貼上留言'),h('div',{class:'row'},h('span',{class:'muted small'},'平台'),$q.plat)),$q.comment,$q.risk,$q.hl),
+      h('div',{class:'card'},h('h2',null,'💡 推薦模板'),$q.recs)),
+    h('div',{class:'card'},
+      h('h2',null,'✍ 回覆編輯區'),$q.banner,$q.tname,
+      h('div',{class:'row'},h('span',{class:'muted small'},'語氣'),$q.tone,h('span',{class:'muted small',style:{marginLeft:'10px'}},'版本'),$q.ver),
+      $q.vars,$q.out,$q.dirtyRow,
+      h('div',{class:'row sp',style:{marginTop:'8px'}},$q.count,h('div',{class:'row'},$q.fav,h('button',{class:'btn',onclick:clear,title:'Ctrl+Shift+V'},'清除'),$q.copy)),
+      $q.banned),
+    h('div',{class:'card'},h('h2',null,'🕘 最近使用'),$q.chips));
+  QRCtl={copy,clear,pick,tone:setTone};
+  drawChips();analyze();
+  if(keepDirty){qr.dirty=true;qr.outText=keepText;$q.out.value=keepText;$q.dirtyRow.style.display='';drawMeta();}   // 離開再回來，保留手動修改過的內文
+  if(!qr.comment)$q.comment.focus();
+}
+
+
+/* ------------------------------ 全域搜尋（Ctrl+K） ------------------------------ */
+function openSearch(){
+  const ex=modalStack.find(m=>m.isSearch);if(ex){ex.close();return;}
+  if(modalStack.length)return;
+  let sel=0,list=[];
+  const inp=h('input',{class:'inp big',placeholder:'搜尋模板名稱、內容、關鍵字、標籤…','aria-label':'搜尋模板'});
+  const box=h('div',{class:'sres'});
+  const m=openModal({title:'🔎 搜尋模板',body:h('div',null,inp,box),isSearch:true});
+  function choose(t){m.close();qr.tplId=t.id;qr.pinned=true;qr.lastKey=null;go('quick');}
+  function draw(){
+    const q=normalize(inp.value);
+    list=S.templates.filter(t=>!t.isArchived&&(!q||hayOf(t).includes(q))).sort((a,b)=>b.useCount-a.useCount).slice(0,30);
+    sel=clamp(sel,0,Math.max(0,list.length-1));
+    box.replaceChildren(...(list.length?list.map((t,i)=>{const sc=scnOf(t.scenarioId);
+      return h('div',{class:'sitem'+(i===sel?' on':''),onclick:()=>choose(t)},h('strong',null,t.name),' ',riskBadge(t.risk),h('div',{class:'small muted'},`${sc.emoji} ${sc.name}　${t.keywords.slice(0,5).map(k=>k.word).join('、')}`));
+    }):[h('div',{class:'empty'},'找不到符合的模板')]));
+    const on=box.querySelector('.on');if(on)on.scrollIntoView({block:'nearest'});
+  }
+  inp.addEventListener('input',()=>{sel=0;draw();});
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='ArrowDown'){e.preventDefault();sel=Math.min(sel+1,list.length-1);draw();}
+    else if(e.key==='ArrowUp'){e.preventDefault();sel=Math.max(sel-1,0);draw();}
+    else if(e.key==='Enter'&&!e.isComposing&&list[sel]){e.preventDefault();choose(list[sel]);}
+  });
+  draw();
+}
+
+/* =====================================================================
+ * 模板庫
+ * ===================================================================== */
+const TF={q:'',scn:'',platform:'',risk:'',status:'active',sort:'use',limit:100};
+const TSel=new Set();
+function viewTemplates(root){
+  const listBox=h('div'),batchBox=h('div');
+  [...TSel].forEach(id=>{if(!S.templates.some(t=>t.id===id))TSel.delete(id);});
+  const filtered=()=>{
+    const q=normalize(TF.q);
+    let a=S.templates.filter(t=>(!q||hayOf(t).includes(q))&&(!TF.scn||t.scenarioId===TF.scn)&&(!TF.platform||!t.platforms.length||t.platforms.includes(TF.platform))
+      &&(!TF.risk||t.risk===TF.risk)&&(TF.status==='all'||(TF.status==='active'?!t.isArchived:t.isArchived)));
+    const s={use:(x,y)=>y.useCount-x.useCount,recent:(x,y)=>(y.lastUsedAt||0)-(x.lastUsedAt||0),new:(x,y)=>y.createdAt-x.createdAt,name:(x,y)=>x.name.localeCompare(y.name,'zh-Hant')}[TF.sort];
+    return a.sort(s);
+  };
+  const sel=(k,opts,label)=>h('select',{'aria-label':label,onchange:e=>{TF[k]=e.target.value;TF.limit=100;TSel.clear();draw();},value:TF[k]},opts.map(o=>h('option',{value:o[0],selected:TF[k]===o[0]},o[1])));
+  async function toggleFav(t){await saveTpl({...t,isFavorite:!t.isFavorite,updatedAt:Date.now()});draw();}
+  async function dup(t){
+    const names=new Set(S.templates.map(x=>x.name));let n=t.name+'-副本',i=2;while(names.has(n))n=`${t.name}-副本${i++}`;
+    await saveTpl({...t,id:uid('tpl_'),name:n.slice(0,60),useCount:0,lastUsedAt:null,isFavorite:false,createdAt:Date.now(),updatedAt:Date.now()});toast('已複製模板','ok');draw();
+  }
+  async function archive(t){await saveTpl({...t,isArchived:!t.isArchived,updatedAt:Date.now()});toast(t.isArchived?'已取消封存':'已封存','ok');draw();}
+  async function remove(t){if(!await confirmDlg(`確定刪除「${t.name}」？此動作無法復原。`,{ok:'刪除',danger:true}))return;await DB.del('templates',t.id);TSel.delete(t.id);await loadStore('templates');toast('已刪除','ok');draw();}
+  function drawBatch(){
+    batchBox.replaceChildren();if(!TSel.size)return;
+    const ids=[...TSel],sels=S.templates.filter(t=>TSel.has(t.id));
+    batchBox.append(h('div',{class:'card row',style:{marginBottom:'10px',background:'var(--accent-weak)'}},h('strong',null,`已選 ${ids.length} 筆`),
+      h('button',{class:'btn sm',onclick:async()=>{
+        const s=h('select',{class:'inp'},S.scenarios.map(x=>h('option',{value:x.id},`${x.emoji} ${x.name}`)));
+        openModal({title:'批次修改情境',body:s,actions:[{text:'取消'},{text:'套用',cls:'primary',onClick:async()=>{await DB.putMany('templates',sels.map(t=>({...t,scenarioId:s.value,updatedAt:Date.now()})));await loadStore('templates');toast('已更新情境','ok');draw();}}]});}},'改情境'),
+      h('button',{class:'btn sm',onclick:()=>{
+        const i=h('input',{class:'inp',placeholder:'輸入標籤'});
+        openModal({title:'批次加標籤',body:i,actions:[{text:'取消'},{text:'套用',cls:'primary',onClick:async()=>{const tg=i.value.trim();if(!tg)return false;
+          await DB.putMany('templates',sels.map(t=>({...t,tags:[...new Set([...t.tags,tg])],updatedAt:Date.now()})));await loadStore('templates');toast('已加上標籤','ok');draw();}}]});}},'加標籤'),
+      h('button',{class:'btn sm',onclick:async()=>{await DB.putMany('templates',sels.map(t=>({...t,isArchived:true,updatedAt:Date.now()})));await loadStore('templates');TSel.clear();toast('已封存','ok');draw();}},'封存'),
+      h('button',{class:'btn sm',onclick:()=>exportTemplatesJSON(sels)},'匯出 JSON'),
+      h('button',{class:'btn sm',onclick:()=>exportTemplatesCSV(sels)},'匯出 CSV'),
+      h('button',{class:'btn sm danger',onclick:async()=>{if(!await confirmDlg(`確定刪除選取的 ${ids.length} 筆模板？此動作無法復原。`,{ok:'刪除',danger:true}))return;
+        await DB.delMany('templates',ids);TSel.clear();await loadStore('templates');toast('已刪除','ok');draw();}},'刪除'),
+      h('button',{class:'btn sm ghost',onclick:()=>{TSel.clear();draw();}},'取消選取')));
+  }
+  function draw(){
+    const a=filtered(),shown=a.slice(0,TF.limit);
+    drawBatch();
+    if(!a.length){listBox.replaceChildren(h('div',{class:'card empty'},S.templates.length?'沒有符合條件的模板':h('div',null,'還沒有任何模板',h('div',{style:{marginTop:'10px'}},h('button',{class:'btn primary',onclick:async()=>{
+      const add=sampleTemplates().map(t=>normTpl(t));await DB.putMany('templates',add);await loadStore('templates');toast('已載入示範模板','ok');draw();}},'載入 20 筆示範模板')))));return;}
+    const allOn=a.every(t=>TSel.has(t.id));
+    const tbl=h('table',{class:'tbl'},h('thead',null,h('tr',null,
+      h('th',null,h('input',{type:'checkbox','aria-label':'全選',checked:allOn,onchange:e=>{a.forEach(t=>e.target.checked?TSel.add(t.id):TSel.delete(t.id));draw();}})),
+      ['','模板名稱','情境','語氣','平台','風險','使用','操作'].map(x=>h('th',null,x)))),
+      h('tbody',null,shown.map(t=>{const sc=scnOf(t.scenarioId);
+        return h('tr',null,
+          h('td',null,h('input',{type:'checkbox','aria-label':'選取 '+t.name,checked:TSel.has(t.id),onchange:e=>{e.target.checked?TSel.add(t.id):TSel.delete(t.id);drawBatch();}})),
+          h('td',null,h('button',{class:'star'+(t.isFavorite?' on':''),'aria-label':'收藏',onclick:()=>toggleFav(t)},t.isFavorite?'★':'☆')),
+          h('td',null,h('strong',null,t.name,t.isArchived?h('span',{class:'chip'},'已封存'):null),h('div',null,t.tags.map(g=>h('span',{class:'chip'},'#'+g)))),
+          h('td',null,h('span',{class:'chip',style:{borderColor:sc.color}},`${sc.emoji} ${sc.name}`)),
+          h('td',null,TONES.filter(x=>VERSIONS.some(v=>hasReply(t,v.id,x.id))).map(x=>x.short).join('/')),
+          h('td',{class:'small'},t.platforms.length?t.platforms.map(platName).join('、'):'全部'),
+          h('td',null,riskBadge(t.risk)),
+          h('td',null,t.useCount),
+          h('td',{style:{whiteSpace:'nowrap'}},
+            h('button',{class:'btn ico',title:'編輯','aria-label':'編輯',onclick:()=>openTemplateEditor(t)},'✎'),
+            h('button',{class:'btn ico',title:'複製','aria-label':'複製',onclick:()=>dup(t)},'⧉'),
+            h('button',{class:'btn ico',title:t.isArchived?'取消封存':'封存','aria-label':'封存',onclick:()=>archive(t)},'📦'),
+            h('button',{class:'btn ico',title:'刪除','aria-label':'刪除',onclick:()=>remove(t)},'🗑')));}))
+    );
+    listBox.replaceChildren(h('div',{class:'card tblwrap',style:{padding:'4px'}},tbl),
+      h('div',{class:'row sp muted small',style:{marginTop:'8px'}},h('span',null,`共 ${a.length} 筆，顯示 ${shown.length} 筆`),
+        a.length>shown.length?h('button',{class:'btn sm',onclick:()=>{TF.limit+=100;draw();}},'顯示更多'):null));
+  }
+  root.append(h('h1',null,'📚 模板庫',h('button',{class:'btn primary',onclick:()=>openTemplateEditor(null)},'＋ 新增模板')),
+    h('div',{class:'card row',style:{marginBottom:'12px'}},
+      h('input',{class:'inp',style:{maxWidth:'260px'},placeholder:'🔍 搜尋名稱、內容、關鍵字、標籤','aria-label':'搜尋',value:TF.q,oninput:debounce(e=>{TF.q=e.target.value;TF.limit=100;TSel.clear();draw();},200)}),
+      sel('scn',[['','情境：全部'],...S.scenarios.map(s=>[s.id,`${s.emoji} ${s.name}`])],'情境'),
+      sel('platform',[['','平台：全部'],...PLATFORMS.map(p=>[p.id,p.name])],'平台'),
+      sel('risk',[['','風險：全部'],...Object.entries(RISKS).map(([k,v])=>[k,`${v.icon} ${v.name}`])],'風險'),
+      sel('status',[['active','使用中'],['archived','已封存'],['all','全部狀態']],'狀態'),
+      sel('sort',[['use','排序：最常用'],['recent','最近使用'],['new','最新建立'],['name','名稱']],'排序')),
+    batchBox,listBox);
+  draw();
+}
+
+/* ------------------------------ 匯出 / 匯入 ------------------------------ */
+function envelope(data){return JSON.stringify({app:'CommentVault',schemaVersion:1,exportedAt:new Date().toISOString(),data},null,2);}
+function exportTemplatesJSON(tpls){
+  const sids=new Set(tpls.map(t=>t.scenarioId));
+  download(`CommentVault_templates_${stamp()}.json`,envelope({templates:tpls,scenarios:S.scenarios.filter(s=>sids.has(s.id))}));
+}
+const CSV_HEAD=['name','scenario','keywords','exclude_keywords','platforms','risk','public_friendly','public_formal','public_playful','dm_friendly','dm_formal','dm_playful','escalation','tags'];
+function exportTemplatesCSV(tpls){
+  const rows=[CSV_HEAD,...tpls.map(t=>[t.name,scnOf(t.scenarioId).name,t.keywords.map(k=>`${k.word}:${k.weight}`).join('|'),t.excludeKeywords.join('|'),t.platforms.join('|'),t.risk,
+    t.replies.public.friendly,t.replies.public.formal,t.replies.public.playful,t.replies.dm.friendly,t.replies.dm.formal,t.replies.dm.playful,t.escalation,t.tags.join('|')])];
+  download(`CommentVault_templates_${stamp()}.csv`,'\uFEFF'+rows.map(r=>r.map(csvCell).join(',')).join('\r\n'),'text/csv');
+}
+async function exportAll(withLogs){
+  const data={templates:S.templates,scenarios:S.scenarios,variables:S.variables,bannedWords:S.bannedWords,riskKeywords:S.riskKeywords,
+    settings:Object.entries(S.settings).map(([key,value])=>({key,value}))};
+  if(withLogs){data.usageLogs=await DB.all('usageLogs');data.unmatched=await DB.all('unmatched');}
+  download(`CommentVault_backup_${stamp()}.json`,envelope(data));toast('已匯出備份','ok');
+}
+async function importJSON(file){
+  let obj;
+  try{obj=JSON.parse(await file.text());}catch(e){toast('檔案不是有效的 JSON','err');return;}
+  if(!obj||obj.app!=='CommentVault'){toast('匯入失敗：這不是 CommentVault 匯出的檔案','err');return;}
+  if(typeof obj.schemaVersion!=='number'||obj.schemaVersion>1){toast('匯入失敗：檔案版本（schemaVersion）不支援','err');return;}
+  if(!obj.data||typeof obj.data!=='object'){toast('匯入失敗：缺少 data 內容','err');return;}
+  const d=obj.data,A=k=>Array.isArray(d[k])?d[k].filter(x=>x&&typeof x==='object'):[];
+  const mode=await choiceDlg('匯入模式',`檔案包含 ${A('templates').length} 筆模板、${A('scenarios').length} 個情境。\n\n• 合併：保留現有資料，加入新的；同 ID 以較新者為準\n• 覆蓋：清空現有資料後以檔案為準（無法復原）`,
+    [{text:'合併',value:'merge'},{text:'覆蓋',value:'overwrite',cls:'danger'}]);
+  if(!mode)return;
+  if(mode==='overwrite'&&!await confirmDlg('覆蓋會刪除目前所有模板、情境、變數與規則，確定嗎？',{ok:'確定覆蓋',danger:true}))return;
+  try{
+    const stores=['templates','scenarios','variables','bannedWords','riskKeywords','settings','usageLogs','unmatched'];
+    const normScn=(s,i)=>({id:s.id||uid('scn_'),name:String(s.name||'').trim(),emoji:s.emoji||'💬',color:s.color||'#4f46e5',defaultRisk:RISKS[s.defaultRisk]?s.defaultRisk:'normal',order:Number.isFinite(s.order)?s.order:i});
+    const normVar=v=>({key:String(v.key||'').trim(),label:String(v.label||v.key||''),defaultValue:String(v.defaultValue||''),type:v.type||'text',system:!!v.system});
+    const normBw=b=>({id:b.id||uid('bw_'),word:String(b.word||'').trim(),reason:String(b.reason||''),suggestion:String(b.suggestion||''),severity:b.severity==='block'?'block':'warning'});
+    const normRk=k=>({id:k.id||uid('rk_'),level:k.level==='high'?'high':'caution',word:String(k.word||'').trim()});
+    let cnt={t:0,s:0};
+    if(mode==='overwrite'){
+      const scns=[],seenS=new Set();A('scenarios').forEach((s,i)=>{const n=normScn(s,i);if(n.name&&!seenS.has(n.name)){seenS.add(n.name);scns.push(n);}});
+      const names=new Set(),tpls=[];
+      for(const r of A('templates')){const t=normTpl(r);if(!t.name)continue;t.name=uniqueName(t.name,names);names.add(t.name);tpls.push(t);}
+      const seenW=new Set(),bws=A('bannedWords').map(normBw).filter(b=>b.word&&!seenW.has(b.word)&&seenW.add(b.word));
+      await DB.run(stores,'readwrite',tx=>{
+        ['templates','scenarios','variables','bannedWords','riskKeywords','settings'].forEach(s=>tx.objectStore(s).clear());
+        if(d.usageLogs)tx.objectStore('usageLogs').clear();if(d.unmatched)tx.objectStore('unmatched').clear();
+        scns.forEach(x=>tx.objectStore('scenarios').put(x));tpls.forEach(x=>tx.objectStore('templates').put(x));
+        A('variables').map(normVar).filter(v=>v.key).forEach(x=>tx.objectStore('variables').put(x));
+        bws.forEach(x=>tx.objectStore('bannedWords').put(x));
+        A('riskKeywords').map(normRk).filter(k=>k.word).forEach(x=>tx.objectStore('riskKeywords').put(x));
+        A('settings').filter(s=>s.key).forEach(x=>tx.objectStore('settings').put({key:x.key,value:x.value}));
+        tx.objectStore('settings').put({key:'seeded',value:true});
+        A('usageLogs').forEach(x=>tx.objectStore('usageLogs').put(x));A('unmatched').forEach(x=>tx.objectStore('unmatched').put(x));
+      });
+      cnt={t:tpls.length,s:scns.length};
+    }else{
+      const scnMap={},byName=new Map(S.scenarios.map(s=>[s.name,s])),newScn=[];
+      A('scenarios').forEach((s,i)=>{
+        const n=normScn(s,i);if(!n.name)return;
+        const ex=S.scenarios.find(x=>x.id===n.id)||byName.get(n.name);
+        if(ex){scnMap[n.id]=ex.id;}else{n.order=S.scenarios.length+newScn.length;newScn.push(n);scnMap[n.id]=n.id;byName.set(n.name,n);}
+      });
+      const byId=new Map(S.templates.map(t=>[t.id,t])),names=new Set(S.templates.map(t=>t.name)),tplPut=[];
+      for(const r of A('templates')){
+        const t=normTpl(r);if(!t.name)continue;t.scenarioId=scnMap[t.scenarioId]||t.scenarioId;
+        const ex=byId.get(t.id);
+        if(ex){
+          if((r.updatedAt||0)>(ex.updatedAt||0)){if(t.name!==ex.name&&names.has(t.name))t.name=uniqueName(t.name,names);names.delete(ex.name);names.add(t.name);tplPut.push(t);}
+        }else{t.name=uniqueName(t.name,names);names.add(t.name);tplPut.push(t);}
+      }
+      const hasV=new Set(S.variables.map(v=>v.key)),hasW=new Set(S.bannedWords.map(b=>normalize(b.word))),hasR=new Set(S.riskKeywords.map(k=>k.level+'|'+normalize(k.word)));
+      await DB.run(['templates','scenarios','variables','bannedWords','riskKeywords'],'readwrite',tx=>{
+        newScn.forEach(x=>tx.objectStore('scenarios').put(x));tplPut.forEach(x=>tx.objectStore('templates').put(x));
+        A('variables').map(normVar).filter(v=>v.key&&!hasV.has(v.key)).forEach(x=>tx.objectStore('variables').put(x));
+        A('bannedWords').map(normBw).filter(b=>b.word&&!hasW.has(normalize(b.word))&&hasW.add(normalize(b.word))).forEach(x=>tx.objectStore('bannedWords').put(x));
+        A('riskKeywords').map(normRk).filter(k=>k.word&&!hasR.has(k.level+'|'+normalize(k.word))&&hasR.add(k.level+'|'+normalize(k.word))).forEach(x=>tx.objectStore('riskKeywords').put(x));
+      });
+      cnt={t:tplPut.length,s:newScn.length};
+    }
+    await loadAll();applyTheme();qr.tplId=null;qr.pinned=false;resetReplySession();toast(`匯入完成：模板 ${cnt.t} 筆、新增情境 ${cnt.s} 個`,'ok');route();
+  }catch(e){console.error(e);toast('匯入失敗：'+e.message,'err');}
+}
+async function importCSV(file){
+  try{
+    const rows=parseCSV(await file.text());
+    if(rows.length<2){toast('CSV 沒有資料列','err');return;}
+    const head=rows[0].map(x=>x.trim().toLowerCase()),col=n=>head.indexOf(n);
+    if(col('name')<0){toast('CSV 缺少 name 欄位（第一列需為標題列）','err');return;}
+    const get=(r,n)=>{const i=col(n);return i<0?'':(r[i]||'').trim();};
+    const names=new Set(S.templates.map(t=>t.name)),scnByName=new Map(S.scenarios.map(s=>[s.name,s])),newScn=[],tpls=[];
+    const riskMap={normal:'normal',caution:'caution',high:'high','一般':'normal','注意':'caution','高風險':'high'};
+    const palette=['#6366f1','#0ea5e9','#14b8a6','#f59e0b','#ec4899','#22c55e'];
+    for(const r of rows.slice(1)){
+      const nm=get(r,'name');if(!nm)continue;
+      let sname=get(r,'scenario')||'一般詢問',sc=scnByName.get(sname);
+      if(!sc){sc={id:uid('scn_'),name:sname,emoji:'💬',color:palette[(S.scenarios.length+newScn.length)%palette.length],defaultRisk:'normal',order:S.scenarios.length+newScn.length};newScn.push(sc);scnByName.set(sname,sc);}
+      const plist=get(r,'platforms').split('|').map(x=>x.trim().toLowerCase()).filter(Boolean).map(x=>(PLATFORMS.find(p=>p.id===x||p.name.toLowerCase()===x)||{}).id).filter(Boolean);
+      const t=normTpl({name:nm,scenarioId:sc.id,risk:riskMap[get(r,'risk').toLowerCase()]||'normal',
+        keywords:get(r,'keywords').split('|').filter(Boolean).map(s=>{const i=s.lastIndexOf(':');const hasW=i>0&&/^[1-3]$/.test(s.slice(i+1).trim());return{word:hasW?s.slice(0,i):s,weight:hasW?+s.slice(i+1):1};}),
+        excludeKeywords:get(r,'exclude_keywords').split('|').filter(Boolean),platforms:plist,
+        replies:{public:{friendly:r[col('public_friendly')]||'',formal:r[col('public_formal')]||'',playful:r[col('public_playful')]||''},dm:{friendly:r[col('dm_friendly')]||'',formal:r[col('dm_formal')]||'',playful:r[col('dm_playful')]||''}},
+        escalation:get(r,'escalation'),tags:get(r,'tags').split('|').filter(Boolean)});
+      t.name=uniqueName(t.name,names);names.add(t.name);tpls.push(t);
+    }
+    if(!tpls.length){toast('CSV 沒有可匯入的資料列','err');return;}
+    await DB.run(['templates','scenarios'],'readwrite',tx=>{newScn.forEach(x=>tx.objectStore('scenarios').put(x));tpls.forEach(x=>tx.objectStore('templates').put(x));});
+    await loadAll();toast(`CSV 匯入完成：${tpls.length} 筆模板（名稱重複者已加上「(匯入)」）`,'ok');route();
+  }catch(e){console.error(e);toast('CSV 匯入失敗：'+e.message,'err');}
+}
+function pickFile(accept,fn){const i=h('input',{type:'file',accept,style:{display:'none'},onchange:()=>{const f=i.files[0];i.remove();if(f)fn(f);}});document.body.append(i);i.click();}
+
+/* =====================================================================
+ * 情境分類
+ * ===================================================================== */
+function viewScenarios(root){
+  const box=h('div',{class:'card',style:{padding:'4px 10px'}});let dragId=null;
+  const count=id=>S.templates.filter(t=>t.scenarioId===id).length;
+  async function reorder(ids){
+    const m=new Map(S.scenarios.map(s=>[s.id,s]));
+    await DB.putMany('scenarios',ids.map((id,i)=>({...m.get(id),order:i})));await loadStore('scenarios');draw();
+  }
+  function edit(s){
+    const isNew=!s;const b=s||{emoji:'💬',name:'',color:'#6366f1',defaultRisk:'normal'};
+    const emo=h('input',{class:'inp',maxlength:4,value:b.emoji}),nm=h('input',{class:'inp',maxlength:20,value:b.name}),col=h('input',{type:'color',value:b.color}),
+      rk=h('select',{class:'inp'},Object.entries(RISKS).map(([k,v])=>h('option',{value:k},`${v.icon} ${v.name}`)));rk.value=b.defaultRisk;
+    const err=h('div');
+    openModal({title:isNew?'新增情境':'編輯情境',body:h('div',null,h('label',{class:'f'},'圖示（emoji）'),emo,h('label',{class:'f'},'名稱',h('span',{class:'req'},' *')),nm,h('label',{class:'f'},'顏色'),col,h('label',{class:'f'},'預設風險'),rk,err),
+      actions:[{text:'取消'},{text:'儲存',cls:'primary',onClick:async()=>{
+        const n=nm.value.trim();
+        if(!n){err.replaceChildren(h('div',{class:'errbox'},'請輸入名稱'));return false;}
+        if(S.scenarios.some(x=>x.name===n&&(isNew||x.id!==s.id))){err.replaceChildren(h('div',{class:'errbox'},'名稱已存在'));return false;}
+        await DB.put('scenarios',{id:isNew?uid('scn_'):s.id,name:n,emoji:emo.value.trim()||'💬',color:col.value,defaultRisk:rk.value,order:isNew?S.scenarios.length:s.order});
+        await loadStore('scenarios');toast('已儲存','ok');draw();}}]});
+  }
+  async function remove(s){
+    const c=count(s.id);if(c>0){toast(`無法刪除：仍有 ${c} 筆模板使用此情境`,'err');return;}
+    if(!await confirmDlg(`確定刪除情境「${s.name}」？`,{ok:'刪除',danger:true}))return;
+    await DB.del('scenarios',s.id);await loadStore('scenarios');toast('已刪除','ok');draw();
+  }
+  function draw(){
+    box.replaceChildren(...S.scenarios.map((s,i)=>{
+      const row=h('div',{class:'scnrow',draggable:'true',
+        ondragstart:e=>{dragId=s.id;row.classList.add('drag');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',s.id);}catch(_){}},
+        ondragend:()=>{row.classList.remove('drag');},
+        ondragover:e=>{e.preventDefault();},
+        ondrop:e=>{e.preventDefault();if(!dragId||dragId===s.id)return;const ids=S.scenarios.map(x=>x.id).filter(x=>x!==dragId);ids.splice(ids.indexOf(s.id),0,dragId);dragId=null;reorder(ids);}},
+        h('span',{class:'grab',title:'拖曳排序'},'⠿'),h('span',{style:{fontSize:'22px'}},s.emoji),
+        h('div',null,h('strong',null,s.name),' ',h('span',{class:'dot',style:{background:s.color}})),
+        h('div',null,riskBadge(s.defaultRisk)),h('div',{class:'muted small'},count(s.id)+' 筆模板'),
+        h('div',{style:{whiteSpace:'nowrap'}},
+          h('button',{class:'btn ico','aria-label':'上移',disabled:i===0,onclick:()=>{const ids=S.scenarios.map(x=>x.id);[ids[i-1],ids[i]]=[ids[i],ids[i-1]];reorder(ids);}},'↑'),
+          h('button',{class:'btn ico','aria-label':'下移',disabled:i===S.scenarios.length-1,onclick:()=>{const ids=S.scenarios.map(x=>x.id);[ids[i+1],ids[i]]=[ids[i],ids[i+1]];reorder(ids);}},'↓'),
+          h('button',{class:'btn ico','aria-label':'編輯',onclick:()=>edit(s)},'✎'),h('button',{class:'btn ico','aria-label':'刪除',onclick:()=>remove(s)},'🗑')));
+      return row;}));
+    if(!S.scenarios.length)box.replaceChildren(h('div',{class:'empty'},'尚無情境'));
+  }
+  root.append(h('h1',null,'🗂 情境分類',h('button',{class:'btn primary',onclick:()=>edit(null)},'＋ 新增情境')),h('p',{class:'muted'},'可拖曳列調整順序；仍有模板使用的情境無法刪除。'),box);
+  draw();
+}
+
+/* =====================================================================
+ * 變數管理
+ * ===================================================================== */
+function viewVariables(root){
+  const box=h('div',{class:'card tblwrap',style:{padding:'4px'}});
+  const usage=k=>S.templates.filter(t=>VERSIONS.some(v=>TONES.some(tn=>extractVars(t.replies[v.id][tn.id]).includes(k)))).length;
+  function edit(v){
+    const isNew=!v;
+    const key=h('input',{class:'inp',value:isNew?'':v.key,disabled:!isNew,placeholder:'小寫英數與底線，例：order_no'}),lab=h('input',{class:'inp',value:isNew?'':v.label}),
+      def=h('input',{class:'inp',value:isNew?'':v.defaultValue,disabled:!!(v&&v.system)}),ty=h('select',{class:'inp',disabled:!!(v&&v.system)},['text','url','date'].map(x=>h('option',{value:x},x)));ty.value=isNew?'text':v.type;
+    const err=h('div');
+    openModal({title:isNew?'新增變數':`編輯變數 {{${v.key}}}`,body:h('div',null,h('label',{class:'f'},'key',h('span',{class:'req'},' *'),h('small',null,'　建立後不可修改')),key,
+      h('label',{class:'f'},'顯示名稱'),lab,h('label',{class:'f'},'預設值',h('small',null,v&&v.system?'　系統變數，自動帶入今日':'')),def,h('label',{class:'f'},'類型'),ty,err),
+      actions:[{text:'取消'},{text:'儲存',cls:'primary',onClick:async()=>{
+        const k=key.value.trim();
+        if(!/^[a-z0-9_]+$/.test(k)){err.replaceChildren(h('div',{class:'errbox'},'key 只能使用小寫英文、數字與底線'));return false;}
+        if(isNew&&S.variables.some(x=>x.key===k)){err.replaceChildren(h('div',{class:'errbox'},'key 已存在'));return false;}
+        await DB.put('variables',{key:k,label:lab.value.trim()||k,defaultValue:def.value,type:ty.value,system:!!(v&&v.system)});
+        if(k==='brand'&&!(v&&v.system))await setCfg('brandName',def.value);
+        await loadStore('variables');toast('已儲存','ok');draw();}}]});
+  }
+  async function remove(v){
+    const c=usage(v.key);
+    if(!await confirmDlg(c?`有 ${c} 筆模板使用 {{${v.key}}}，刪除後這些模板會出現「未定義變數」警告。\n仍要刪除嗎？`:`確定刪除 {{${v.key}}}？`,{ok:'刪除',danger:true}))return;
+    await DB.del('variables',v.key);await loadStore('variables');toast('已刪除','ok');draw();
+  }
+  function draw(){
+    box.replaceChildren(h('table',{class:'tbl'},h('thead',null,h('tr',null,['變數','顯示名稱','預設值','類型','使用中模板','操作'].map(x=>h('th',null,x)))),
+      h('tbody',null,S.variables.map(v=>h('tr',null,h('td',null,h('code',null,`{{${v.key}}}`)),h('td',null,v.label),h('td',null,v.system?'（自動：今日）':(v.key==='brand'&&!v.defaultValue?`（品牌名稱設定：${cfg('brandName')||'未設定'}）`:v.defaultValue||'—')),
+        h('td',null,v.type),h('td',null,usage(v.key)),
+        h('td',null,h('button',{class:'btn ico','aria-label':'編輯',onclick:()=>edit(v)},'✎'),v.system?null:h('button',{class:'btn ico','aria-label':'刪除',onclick:()=>remove(v)},'🗑')))))));
+  }
+  root.append(h('h1',null,'🔤 變數管理',h('button',{class:'btn primary',onclick:()=>edit(null)},'＋ 新增變數')),
+    h('p',{class:'muted'},'在模板中以 {{key}} 使用變數；快速回覆時會自動產生輸入框，並帶入這裡的預設值。'),box);
+  draw();
+}
+
+/* =====================================================================
+ * 禁用詞與風險關鍵字
+ * ===================================================================== */
+let GTab='banned';
+function viewGuardrails(root){
+  const body=h('div');
+  const tabs=h('div',{class:'seg',style:{marginBottom:'12px'}});
+  function drawTabs(){tabs.replaceChildren(...[['banned','🚫 禁用詞（回覆端）'],['risk','⚠ 風險關鍵字（留言端）']].map(([k,n])=>h('button',{class:GTab===k?'on':'',onclick:()=>{GTab=k;drawTabs();draw();}},n)));}
+  function ioButtons(kind){
+    return h('div',{class:'row'},h('button',{class:'btn sm',onclick:()=>download(`CommentVault_${kind}_${stamp()}.json`,JSON.stringify({app:'CommentVault',type:kind,items:S[kind]},null,2))},'匯出'),
+      h('button',{class:'btn sm',onclick:()=>pickFile('.json',async f=>{
+        try{const o=JSON.parse(await f.text());if(!o||o.app!=='CommentVault'||o.type!==kind||!Array.isArray(o.items))throw new Error('檔案格式不符');
+          if(kind==='bannedWords'){const has=new Set(S.bannedWords.map(b=>normalize(b.word)));const add=o.items.filter(b=>b&&b.word&&!has.has(normalize(b.word))&&has.add(normalize(b.word))).map(b=>({id:uid('bw_'),word:String(b.word).trim(),reason:String(b.reason||''),suggestion:String(b.suggestion||''),severity:b.severity==='block'?'block':'warning'}));
+            await DB.putMany('bannedWords',add);await loadStore('bannedWords');toast(`已匯入 ${add.length} 筆`,'ok');}
+          else{const has=new Set(S.riskKeywords.map(k=>k.level+'|'+normalize(k.word)));const add=o.items.filter(k=>k&&k.word&&!has.has((k.level==='high'?'high':'caution')+'|'+normalize(k.word))&&has.add((k.level==='high'?'high':'caution')+'|'+normalize(k.word))).map(k=>({id:uid('rk_'),level:k.level==='high'?'high':'caution',word:String(k.word).trim()}));
+            await DB.putMany('riskKeywords',add);await loadStore('riskKeywords');toast(`已匯入 ${add.length} 筆`,'ok');}
+          draw();}catch(e){toast('匯入失敗：'+e.message,'err');}})},'匯入'));
+  }
+  function drawBanned(){
+    const w=h('input',{class:'inp',placeholder:'詞彙'}),r=h('input',{class:'inp',placeholder:'原因'}),sg=h('input',{class:'inp',placeholder:'建議替代詞'}),
+      sv=h('select',null,h('option',{value:'warning'},'warning（警告）'),h('option',{value:'block'},'block（禁止複製）'));
+    async function add(){
+      const x=w.value.trim();if(!x)return;
+      if(S.bannedWords.some(b=>normalize(b.word)===normalize(x))){toast('此詞彙已存在','warn');return;}
+      await DB.put('bannedWords',{id:uid('bw_'),word:x,reason:r.value.trim(),suggestion:sg.value.trim(),severity:sv.value});await loadStore('bannedWords');draw();
+      const f=body.querySelector('input.inp');if(f)f.focus();
+    }
+    [w,r,sg].forEach(i=>i.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();add();}}));
+    body.replaceChildren(h('div',{class:'card row',style:{marginBottom:'12px'}},h('div',{style:{flex:'1 1 120px'}},w),h('div',{style:{flex:'2 1 160px'}},r),h('div',{style:{flex:'1 1 120px'}},sg),sv,h('button',{class:'btn primary',onclick:add},'＋ 新增'),ioButtons('bannedWords')),
+      h('div',{class:'card tblwrap',style:{padding:'4px'}},S.bannedWords.length?h('table',{class:'tbl'},h('thead',null,h('tr',null,['詞彙','原因','建議替代詞','嚴重度','操作'].map(x=>h('th',null,x)))),
+        h('tbody',null,S.bannedWords.map(b=>h('tr',null,h('td',null,h('strong',null,b.word)),h('td',null,b.reason||'—'),h('td',null,b.suggestion||'—'),
+          h('td',null,h('select',{'aria-label':'嚴重度',onchange:async e=>{await DB.put('bannedWords',{...b,severity:e.target.value});await loadStore('bannedWords');draw();},value:b.severity},
+            h('option',{value:'warning',selected:b.severity==='warning'},'warning'),h('option',{value:'block',selected:b.severity==='block'},'block'))),
+          h('td',null,h('button',{class:'btn ico','aria-label':'刪除',onclick:async()=>{await DB.del('bannedWords',b.id);await loadStore('bannedWords');draw();}},'🗑')))))):h('div',{class:'empty'},'尚無禁用詞')));
+  }
+  function drawRisk(){
+    const w=h('input',{class:'inp',placeholder:'關鍵字（可一次輸入多個，用逗號或換行分隔）'}),lv=h('select',null,h('option',{value:'high'},'🔴 高風險'),h('option',{value:'caution'},'🟡 注意'));
+    async function add(){
+      const items=w.value.split(/[,，、\n]/).map(s=>s.trim()).filter(Boolean);if(!items.length)return;
+      const has=new Set(S.riskKeywords.map(k=>k.level+'|'+normalize(k.word)));
+      const add=items.filter(x=>!has.has(lv.value+'|'+normalize(x))&&has.add(lv.value+'|'+normalize(x))).map(x=>({id:uid('rk_'),level:lv.value,word:x}));
+      await DB.putMany('riskKeywords',add);await loadStore('riskKeywords');draw();
+      const f=body.querySelector('input.inp');if(f)f.focus();
+    }
+    w.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.isComposing){e.preventDefault();add();}});
+    const col=level=>h('div',{class:'card'},h('h2',null,RISKS[level].icon+' '+RISKS[level].name+`（${S.riskKeywords.filter(k=>k.level===level).length}）`),
+      S.riskKeywords.filter(k=>k.level===level).map(k=>h('span',{class:'chip'},k.word,h('button',{'aria-label':'刪除 '+k.word,onclick:async()=>{await DB.del('riskKeywords',k.id);await loadStore('riskKeywords');draw();}},'✕'))));
+    body.replaceChildren(h('div',{class:'card row',style:{marginBottom:'12px'}},h('div',{style:{flex:'1 1 260px'}},w),lv,h('button',{class:'btn primary',onclick:add},'＋ 新增'),ioButtons('riskKeywords')),
+      h('div',{class:'grid2'},col('high'),col('caution')),h('p',{class:'muted small'},'留言中出現連續 3 個以上的 ! 或 ? 時，也會自動視為「注意」。'));
+  }
+  function draw(){GTab==='banned'?drawBanned():drawRisk();}
+  root.append(h('h1',null,'🚫 禁用詞與風險'),tabs,body);drawTabs();draw();
+}
+
+/* =====================================================================
+ * 使用統計
+ * ===================================================================== */
+let IRange=30;
+async function viewInsights(root){
+  const [logsAll,unm]=await Promise.all([DB.all('usageLogs'),DB.all('unmatched')]);
+  const body=h('div');
+  function bars(rows,fmt=v=>v){
+    const max=Math.max(1,...rows.map(r=>r.v));
+    return rows.length?rows.map(r=>h('div',{class:'bar'},h('div',{class:'lab',title:r.label},r.label),h('div',{class:'tr'},h('i',{style:{width:(r.v/max*100)+'%'}})),h('div',{class:'v'},fmt(r.v,r)))):[h('div',{class:'empty'},'尚無資料')];
+  }
+  function draw(){
+    const now=Date.now(),logs=IRange?logsAll.filter(l=>l.createdAt>=now-IRange*DAY):logsAll;
+    const wk=logsAll.filter(l=>l.createdAt>=now-7*DAY).length,ms=new Date();ms.setDate(1);ms.setHours(0,0,0,0);
+    const mo=logsAll.filter(l=>l.createdAt>=ms.getTime()).length,hi=logs.filter(l=>l.risk==='high').length;
+    const group=(arr,keyFn)=>{const m=new Map();arr.forEach(x=>{const k=keyFn(x);m.set(k,(m.get(k)||0)+1);});return[...m.entries()];};
+    const total=logs.length||1;
+    const top=group(logs,l=>l.templateId).map(([id,v])=>{const t=S.templates.find(x=>x.id===id);const nm=t?t.name:((logs.find(l=>l.templateId===id)||{}).templateName||'（已刪除）');return{label:nm,v};}).sort((a,b)=>b.v-a.v).slice(0,10);
+    const scnD=group(logs,l=>l.scenarioId).map(([id,v])=>{const s=S.scenarios.find(x=>x.id===id);return{label:s?`${s.emoji} ${s.name}`:'（已刪除的情境）',v};}).sort((a,b)=>b.v-a.v);
+    const platD=group(logs,l=>l.platform).map(([id,v])=>({label:platName(id),v})).sort((a,b)=>b.v-a.v);
+    const days=Math.min(IRange||30,30),cols=[];
+    for(let i=days-1;i>=0;i--){const k=dayKey(now-i*DAY);cols.push({k,n:0,c:0,h:0});}
+    const idx=new Map(cols.map((c,i)=>[c.k,i]));
+    logsAll.forEach(l=>{const i=idx.get(dayKey(l.createdAt));if(i!==undefined)cols[i][l.risk==='high'?'h':l.risk==='caution'?'c':'n']++;});
+    const mx=Math.max(1,...cols.map(c=>c.n+c.c+c.h));
+    const cold=S.templates.filter(t=>!t.isArchived&&(t.lastUsedAt||t.createdAt)<now-90*DAY);
+    const kpi=(v,l)=>h('div',{class:'card kpi'},h('b',null,v),h('span',null,l));
+    body.replaceChildren(
+      h('div',{class:'grid4'},kpi(wk,'近 7 天複製次數'),kpi(mo,'本月複製次數'),kpi(S.templates.length,'模板總數'),kpi(hi,'高風險回覆數（所選期間）')),
+      h('div',{class:'grid2',style:{marginTop:'14px'}},h('div',{class:'card'},h('h2',null,'🏆 Top 10 模板'),...bars(top)),
+        h('div',{class:'card'},h('h2',null,'🗂 情境分布'),...bars(scnD,(v)=>`${v}（${Math.round(v/total*100)}%）`))),
+      h('div',{class:'grid2',style:{marginTop:'14px'}},
+        h('div',{class:'card'},h('h2',null,`📈 風險趨勢（近 ${days} 天）`),h('div',{class:'trend'},cols.map(c=>h('div',{class:'col',title:`${c.k}　一般 ${c.n}／注意 ${c.c}／高風險 ${c.h}`},
+          h('i',{class:'n',style:{height:(c.n/mx*100)+'%'}}),h('i',{class:'c',style:{height:(c.c/mx*100)+'%'}}),h('i',{class:'h',style:{height:(c.h/mx*100)+'%'}})))),
+          h('div',{class:'small muted',style:{marginTop:'6px'}},'🟩 一般　🟨 注意　🟥 高風險（以複製回覆時的風險等級計算）')),
+        h('div',{class:'card'},h('h2',null,'📡 平台分布'),...bars(platD))),
+      h('div',{class:'grid2',style:{marginTop:'14px'}},
+        h('div',{class:'card'},h('h2',null,`💤 冷門模板（90 天未使用：${cold.length}）`),
+          cold.length?cold.slice(0,30).map(t=>h('div',{class:'row sp',style:{padding:'4px 0',borderBottom:'1px solid var(--line)'}},h('span',null,t.name,h('span',{class:'muted small'},`　最後使用：${t.lastUsedAt?fmtDT(t.lastUsedAt):'從未'}`)),
+            h('button',{class:'btn sm',onclick:async()=>{await saveTpl({...t,isArchived:true,updatedAt:Date.now()});toast('已封存','ok');draw();}},'封存'))):h('div',{class:'empty'},'沒有冷門模板 👍')),
+        h('div',{class:'card'},h('h2',null,`🧩 無命中留言（${unm.length}）`),h('div',{class:'small muted',style:{marginBottom:'6px'}},'推薦結果低於門檻的留言，可直接補成新模板。'),
+          unm.length?[...unm].sort((a,b)=>b.createdAt-a.createdAt).slice(0,30).map(u=>h('div',{style:{padding:'6px 0',borderBottom:'1px solid var(--line)'}},
+            h('div',{style:{whiteSpace:'pre-wrap',wordBreak:'break-word'}},u.comment),
+            h('div',{class:'row sp'},h('span',{class:'muted small'},`${fmtDT(u.createdAt)}　${platName(u.platform)}　`,riskBadge(u.risk||'normal')),
+              h('span',null,h('button',{class:'btn sm',onclick:()=>openTemplateEditor(null,{prefill:{note:'來源留言：'+u.comment.slice(0,200),risk:u.risk||'normal'},onSaved:async()=>{await DB.del('unmatched',u.id);const i=unm.findIndex(x=>x.id===u.id);if(i>=0)unm.splice(i,1);}})},'建立模板'),
+                h('button',{class:'btn sm ghost',onclick:async()=>{await DB.del('unmatched',u.id);const i=unm.findIndex(x=>x.id===u.id);if(i>=0)unm.splice(i,1);draw();}},'忽略'))))):h('div',{class:'empty'},'目前沒有無命中留言')))
+    );
+  }
+  root.append(h('h1',null,'📊 使用統計',h('select',{'aria-label':'期間',onchange:e=>{IRange=+e.target.value;draw();}},
+    [[7,'近 7 天'],[30,'近 30 天'],[90,'近 90 天'],[0,'全部']].map(([v,n])=>h('option',{value:v,selected:IRange===v},n)))),body);
+  draw();
+}
+
+/* =====================================================================
+ * 設定
+ * ===================================================================== */
+function viewSettings(root){
+  const sec=(t,...c)=>h('div',{class:'card'},h('h2',null,t),...c);
+  const fld=(l,el,hint)=>h('div',null,h('label',{class:'f'},l),el,hint?h('div',{class:'hint'},hint):null);
+  const brand=h('input',{class:'inp',value:cfg('brandName'),placeholder:'例：OO品牌',onchange:async e=>{
+    const v=e.target.value.trim();await setCfg('brandName',v);const bv=S.variables.find(x=>x.key==='brand');if(bv){await DB.put('variables',{...bv,defaultValue:v});await loadStore('variables');}toast('已儲存','ok');}});
+  const tone=h('select',{class:'inp',onchange:async e=>{await setCfg('defaultTone',e.target.value);qr.tone=e.target.value;toast('已儲存','ok');}},TONES.map(t=>h('option',{value:t.id,selected:cfg('defaultTone')===t.id},t.name)));
+  const plat=h('select',{class:'inp',onchange:async e=>{await setCfg('defaultPlatform',e.target.value);qr.platform=e.target.value;toast('已儲存','ok');}},PLATFORMS.map(p=>h('option',{value:p.id,selected:cfg('defaultPlatform')===p.id},p.name)));
+  const topN=h('input',{class:'inp',type:'number',min:1,max:5,value:cfg('topN'),onchange:async e=>{const v=clamp(parseInt(e.target.value,10)||3,1,5);e.target.value=v;await setCfg('topN',v);toast('已儲存','ok');}});
+  const th=h('input',{class:'inp',type:'number',min:0,max:100,value:cfg('matchThreshold'),onchange:async e=>{const v=clamp(parseInt(e.target.value,10)||0,0,100);e.target.value=v;await setCfg('matchThreshold',v);toast('已儲存','ok');}});
+  const theme=h('select',{class:'inp',onchange:async e=>{await setCfg('theme',e.target.value);applyTheme();}},[['system','跟隨系統'],['light','淺色'],['dark','深色']].map(([v,n])=>h('option',{value:v,selected:cfg('theme')===v},n)));
+  const lims=PLATFORMS.map(p=>fld(p.name+' 字數上限',h('input',{class:'inp',type:'number',min:1,value:limitFor(p.id),onchange:async e=>{
+    const v=Math.max(1,parseInt(e.target.value,10)||DEFAULT_LIMITS[p.id]);e.target.value=v;await setCfg('platformLimits',{...(cfg('platformLimits')||{}),[p.id]:v});toast('已儲存','ok');}})));
+  const raw=h('input',{type:'checkbox',checked:cfg('saveRawComment'),onchange:async e=>{await setCfg('saveRawComment',e.target.checked);toast('已儲存','ok');}});
+  const unm=h('input',{type:'checkbox',checked:cfg('saveUnmatched'),onchange:async e=>{await setCfg('saveUnmatched',e.target.checked);toast('已儲存','ok');}});
+  const withLogs=h('input',{type:'checkbox'});
+  async function clearAll(){
+    const i=h('input',{class:'inp',placeholder:'輸入 DELETE 以確認'});
+    openModal({title:'清除所有資料',body:h('div',null,h('p',null,'這會刪除所有模板、使用紀錄與設定（內建情境、變數與預設規則會重新建立）。此動作無法復原，建議先匯出備份。'),i),
+      actions:[{text:'取消'},{text:'永久刪除',cls:'danger',onClick:async()=>{
+        if(i.value!=='DELETE'){toast('請輸入大寫 DELETE','warn');return false;}
+        for(const s of ['templates','scenarios','variables','bannedWords','riskKeywords','usageLogs','unmatched','settings'])await DB.clear(s);
+        await loadAll();await seedDefaults(true);Object.assign(qr,{comment:'',tplId:null,pinned:false,tone:null,platform:null,version:'public'});resetReplySession();applyTheme();toast('已清除所有資料','ok');route();}}]});
+  }
+  root.append(h('h1',null,'⚙ 設定'),
+    h('div',{class:'grid2'},
+      sec('一般',fld('品牌名稱',brand,'會成為 {{brand}} 的預設值'),fld('預設語氣',tone),fld('預設平台',plat),fld('主題',theme)),
+      sec('推薦與隱私',fld('推薦數量（1–5）',topN),fld('符合度門檻（%）',th,'低於此值不推薦；預設 30'),
+        h('label',{class:'row',style:{marginTop:'12px'}},raw,'複製時一併記錄原始留言（預設關閉）'),
+        h('label',{class:'row',style:{marginTop:'8px'}},unm,'保存「無命中留言」供補模板（預設開啟，只存在本機）'))),
+    sec('平台字數上限（可自行調整）',h('div',{class:'grid3'},lims)),
+    h('div',{class:'grid2'},
+      sec('匯出',h('div',{class:'row'},h('button',{class:'btn primary',onclick:()=>exportAll(withLogs.checked)},'匯出完整備份（JSON）'),h('button',{class:'btn',onclick:()=>exportTemplatesCSV(S.templates)},'匯出模板（CSV）')),
+        h('label',{class:'row',style:{marginTop:'8px'}},withLogs,'備份時包含使用紀錄與無命中留言')),
+      sec('匯入',h('div',{class:'row'},h('button',{class:'btn',onclick:()=>pickFile('.json,application/json',importJSON)},'匯入備份（JSON）'),h('button',{class:'btn',onclick:()=>pickFile('.csv,text/csv',importCSV)},'匯入模板（CSV）')),
+        h('div',{class:'hint'},'CSV 欄位：'+CSV_HEAD.join(', ')+'；多值以 | 分隔，關鍵字權重用 :（例：外島:3|離島:3）'))),
+    sec('資料管理',h('div',{class:'row'},h('button',{class:'btn',onclick:async()=>{
+      const names=new Set(S.templates.map(t=>t.name)),add=sampleTemplates().filter(t=>!names.has(t.name)).map(normTpl);
+      await DB.putMany('templates',add);await loadStore('templates');toast(`已載入 ${add.length} 筆示範模板`,'ok');}},'載入示範模板'),h('button',{class:'btn danger',onclick:clearAll},'清除所有資料'))),
+    sec('快捷鍵',h('table',{class:'tbl'},h('tbody',null,[['Ctrl + K','開啟模板搜尋'],['Ctrl + Enter','複製目前回覆'],['Alt + 1 / 2 / 3','選擇推薦第 1 / 2 / 3 名'],['Alt + Q / W / E','切換語氣：親切 / 正式 / 活潑'],['Ctrl + Shift + V','清空並聚焦留言框'],['Esc','關閉對話框']].map(([k,v])=>h('tr',null,h('td',null,h('code',null,k)),h('td',null,v)))))));
+}
+
+const VIEWS={quick:viewQuick,templates:viewTemplates,scenarios:viewScenarios,variables:viewVariables,guardrails:viewGuardrails,insights:viewInsights,settings:viewSettings};
+
+/* ------------------------------ 主題 / 快捷鍵 / 啟動 ------------------------------ */
+function applyTheme(){const t=cfg('theme');if(t==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t);}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&modalStack.length){modalStack[modalStack.length-1].requestClose();return;}
+  const mod=e.ctrlKey||e.metaKey;
+  if(mod&&!e.shiftKey&&!e.altKey&&e.code==='KeyK'){e.preventDefault();openSearch();return;}
+  if(modalStack.length||!QRCtl)return;
+  if(mod&&!e.shiftKey&&e.key==='Enter'){e.preventDefault();QRCtl.copy();}
+  else if(mod&&e.shiftKey&&e.code==='KeyV'){e.preventDefault();QRCtl.clear();}
+  else if(e.altKey&&!mod&&/^Digit[1-3]$/.test(e.code)){e.preventDefault();QRCtl.pick(+e.code.slice(-1)-1);}
+  else if(e.altKey&&!mod){const t=TONES.find(x=>x.key===e.code);if(t){e.preventDefault();QRCtl.tone(t.id);}}
+});
+window.addEventListener('unhandledrejection',e=>{console.error(e.reason);toast('發生錯誤：'+(e.reason&&e.reason.message||e.reason),'err');});
+
+(async function boot(){
+  try{
+    await DB.open();await loadAll();await seedDefaults(false);
+  }catch(e){
+    $('boot').replaceChildren(h('div',{style:{maxWidth:'520px',margin:'60px auto',textAlign:'left',color:'#b91c1c'}},h('h2',null,'無法啟動 CommentVault'),h('p',null,e.message),
+      h('p',{style:{color:'#666'}},'請確認瀏覽器允許使用 IndexedDB（部分無痕／隱私模式會停用），或改用 Chrome／Edge 開啟。')));
+    return;
+  }
+  applyTheme();
+  $('nav').append(...ROUTES.map(r=>h('a',{href:'#/'+r.id,'data-r':r.id},h('span',null,r.icon),r.name)));
+  $('btnSearch').addEventListener('click',openSearch);
+  window.addEventListener('hashchange',()=>{modalStack.slice().forEach(m=>m.close());route();});
+  $('boot').remove();$('app').style.display='';
+  route();
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

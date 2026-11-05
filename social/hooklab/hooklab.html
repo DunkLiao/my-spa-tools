@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HookLab － 社群鉤子實驗室</title>
+<style>
+:root{--bg:#f5f6fa;--panel:#fff;--panel2:#f0f2f8;--text:#1f2430;--muted:#6b7385;--line:#e1e5ef;--pri:#5b5bf0;--pri2:#4646d6;--priBg:#ececff;--ok:#16a34a;--warn:#d97706;--bad:#dc2626;--shadow:0 1px 3px rgba(20,25,50,.08),0 4px 14px rgba(20,25,50,.05);--radius:12px}
+[data-theme=dark]{--bg:#12141c;--panel:#1b1e29;--panel2:#242838;--text:#e8eaf2;--muted:#9aa1b5;--line:#2e3347;--pri:#8b8bff;--pri2:#a3a3ff;--priBg:#2a2c4d;--ok:#34d399;--warn:#fbbf24;--bad:#f87171;--shadow:0 1px 3px rgba(0,0,0,.4)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:"Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55}
+a{color:var(--pri);text-decoration:none}a:hover{text-decoration:underline}
+.shell{display:flex;min-height:100vh}
+#nav{width:216px;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;padding:14px 10px;position:sticky;top:0;height:100vh;flex-shrink:0;transition:width .15s}
+#nav.collapsed{width:64px}
+#nav.collapsed .nl,#nav.collapsed .brand small{display:none}
+.brand{font-size:20px;font-weight:800;padding:6px 10px 14px;color:var(--pri)}
+.brand small{display:block;font-size:11px;font-weight:400;color:var(--muted)}
+.nav-item{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:9px;color:var(--text);cursor:pointer;margin-bottom:2px;text-decoration:none!important}
+.nav-item:hover{background:var(--panel2)}
+.nav-item.active{background:var(--priBg);color:var(--pri);font-weight:700}
+.nav-item .ni{width:20px;text-align:center}
+.nav-foot{margin-top:auto;display:flex;flex-direction:column;gap:6px}
+#main{flex:1;min-width:0;padding:22px 28px 60px}
+.page{max-width:1180px;margin:0 auto}
+.page-h{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+h1{font-size:22px;margin:2px 0 4px}h2{font-size:16px;margin:0 0 10px}h3{margin:0;font-size:16px}
+.muted{color:var(--muted)}.small{font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.grid{display:grid;gap:14px}.g2{grid-template-columns:repeat(2,1fr)}.g3{grid-template-columns:repeat(3,1fr)}.g5{grid-template-columns:repeat(5,1fr)}
+.kpi{text-align:left}.kpi .v{font-size:26px;font-weight:800;color:var(--pri)}.kpi .l{color:var(--muted);font-size:12px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.spacer{flex:1}
+button,.btn{font:inherit;border:1px solid var(--line);background:var(--panel);color:var(--text);padding:7px 14px;border-radius:9px;cursor:pointer;transition:.12s}
+button:hover,.btn:hover{background:var(--panel2)}
+button.primary,.btn.primary{background:var(--pri);border-color:var(--pri);color:#fff}
+button.primary:hover,.btn.primary:hover{background:var(--pri2)}
+button.danger,.btn.danger{color:var(--bad);border-color:var(--bad)}
+button.danger.solid{background:var(--bad);color:#fff}
+button.sm{padding:3px 9px;font-size:12px}
+.icon-btn{border:none;background:transparent;padding:3px 7px;font-size:15px;border-radius:6px}
+button:disabled{opacity:.5;cursor:not-allowed}
+input,select,textarea{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;width:100%;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--priBg)}
+input[type=checkbox],input[type=radio]{width:auto;accent-color:var(--pri)}
+input.invalid{border-color:var(--bad);background:rgba(220,38,38,.08)}
+textarea{resize:vertical;min-height:70px}
+label.f{display:block;margin-bottom:10px}label.f>span{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+.filters{display:grid;grid-template-columns:2fr repeat(5,1fr);gap:8px;margin-bottom:10px}.filters.f3{grid-template-columns:2fr 1fr 1fr}.filters.f4{grid-template-columns:2fr 1fr 1fr auto}.g7{grid-template-columns:repeat(7,1fr)}
+.badge{display:inline-block;padding:1px 9px;border-radius:99px;font-size:12px;background:var(--priBg);color:var(--pri);white-space:nowrap}
+.badge.ok{background:rgba(22,163,74,.14);color:var(--ok)}.badge.warn{background:rgba(217,119,6,.15);color:var(--warn)}.badge.bad{background:rgba(220,38,38,.13);color:var(--bad)}.badge.gray{background:var(--panel2);color:var(--muted)}
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600;white-space:nowrap}
+tr:hover td{background:rgba(120,120,160,.04)}
+.tw{overflow-x:auto}
+.mt-input{width:84px;padding:4px 6px}
+.mt-input.date{width:132px}
+td.calc{font-variant-numeric:tabular-nums;white-space:nowrap}
+.empty{text-align:center;color:var(--muted);padding:34px 10px}
+.hooktext{font-weight:600}
+.star{cursor:pointer;font-size:17px;color:var(--muted);user-select:none}.star.on{color:#f59e0b}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:2px 10px;border:1px solid var(--line);border-radius:99px;font-size:12px;cursor:pointer;background:var(--panel2)}
+.chip.on{background:var(--priBg);border-color:var(--pri);color:var(--pri)}
+.pager{display:flex;gap:6px;justify-content:center;margin-top:12px;align-items:center}
+.swipes{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.swipe-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px}
+.quote{font-size:16px;font-weight:700;line-height:1.5}
+.insp{background:linear-gradient(135deg,var(--priBg),var(--panel));}
+.insp .quote{font-size:20px}
+.scorebar{height:8px;background:var(--panel2);border-radius:6px;overflow:hidden}.scorebar>i{display:block;height:100%;background:var(--pri)}
+.bigscore{font-size:44px;font-weight:800;line-height:1}
+.bigscore.good{color:var(--ok)}.bigscore.mid{color:var(--warn)}.bigscore.low{color:var(--bad)}
+.hm td{text-align:center;font-size:12px;border:1px solid var(--bg)}
+.hm td.n{color:var(--muted);font-style:italic}
+.modal-back{position:fixed;inset:0;background:rgba(10,12,24,.5);display:flex;align-items:flex-start;justify-content:center;padding:6vh 14px;z-index:100;overflow:auto}
+.modal{background:var(--panel);border-radius:14px;width:560px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+.modal.wide{width:820px}
+.modal-h{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+.modal-b{padding:16px 18px;max-height:68vh;overflow:auto}
+.modal-f{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px}
+#toast-root{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:8px;z-index:200}
+.toast{background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;box-shadow:var(--shadow);max-width:340px;animation:fi .2s}
+.toast.err{background:var(--bad);color:#fff}.toast.ok{background:var(--ok);color:#fff}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
+.banner{background:var(--priBg);border:1px solid var(--pri);color:var(--text);padding:12px 14px;border-radius:10px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.banner.warn{background:rgba(217,119,6,.12);border-color:var(--warn)}
+.batch{position:sticky;bottom:10px;background:var(--text);color:var(--bg);padding:8px 14px;border-radius:10px;display:flex;gap:8px;align-items:center;margin-top:10px}
+.batch button{background:transparent;color:var(--bg);border-color:rgba(255,255,255,.35)}
+.insight{padding:8px 12px;border-left:3px solid var(--pri);background:var(--panel2);border-radius:0 8px 8px 0;margin-bottom:6px}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}
+.sel-list{max-height:180px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.sel-list div{padding:6px 10px;cursor:pointer;border-bottom:1px solid var(--line)}
+.sel-list div:hover,.sel-list div.on{background:var(--priBg)}
+@media(max-width:900px){.g5{grid-template-columns:repeat(2,1fr)}.g3,.g2{grid-template-columns:1fr}.g7{grid-template-columns:repeat(2,1fr)}.filters,.filters.f3,.filters.f4{grid-template-columns:1fr 1fr}}
+@media(max-width:768px){.shell{flex-direction:column}#nav{position:fixed;bottom:0;left:0;right:0;top:auto;width:100%!important;height:auto;flex-direction:row;padding:4px;z-index:50;border-right:none;border-top:1px solid var(--line);overflow-x:auto}.brand,.nav-foot,.nl{display:none!important}.nav-item{flex:1;justify-content:center;margin:0;padding:8px 4px}#main{padding:14px 12px 80px}#toast-root{bottom:76px;right:10px}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav id="nav"></nav>
+  <main id="main"><section id="view"></section></main>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+<noscript>HookLab 需要啟用 JavaScript。</noscript>
+
+<script>
+'use strict';
+const APP_VERSION = '1.0.1';
+/* =====================================================================
+   HookLab – Social Hook Intelligence Workspace (single-file SPA)
+   Vanilla JS + IndexedDB · 無外部資源 · 無 API Key · 可離線使用
+   ===================================================================== */
+
+/* ---------- 基礎工具 ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const on = (root, ev, sel, fn) => root.addEventListener(ev, e => { const t = e.target.closest(sel); if (t && root.contains(t)) fn(e, t); });
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'id-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+const nowISO = () => new Date().toISOString();
+const pad = n => String(n).padStart(2, '0');
+const dstr = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const todayStr = () => dstr(new Date());
+const daysAgo = n => { const d = new Date(); d.setDate(d.getDate() - n); return dstr(d); };
+const debounce = (fn, ms = 200) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+const pct = v => (v == null || !isFinite(v)) ? '—' : (v * 100).toFixed(2) + '%';
+const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+const splitList = s => String(s || '').split(/[,，、\n]+/).map(x => x.trim()).filter(Boolean);
+const uniq = a => [...new Set(a)];
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const clone = o => JSON.parse(JSON.stringify(o));
+
+function toast(msg, kind = '') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind; el.textContent = msg;
+  $('#toast-root').appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); toast('已複製', 'ok'); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('已複製', 'ok'); } catch (_) { toast('複製失敗，請手動複製', 'err'); }
+    ta.remove();
+  }
+}
+function download(filename, text, mime = 'text/plain') {
+  const blob = new Blob([text], { type: mime + ';charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+function toCSV(headers, rows) {
+  const q = v => { let s = v == null ? '' : String(v); if (typeof v === 'string' && /^[=+\-@\t\r]/.test(s)) s = "'" + s; return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  return '\uFEFF' + [headers.map(q).join(','), ...rows.map(r => r.map(q).join(','))].join('\r\n');
+}
+
+/* ---------- Modal ---------- */
+const Modal = {
+  stack: [],
+  open({ title, html, buttons = [], wide = false, onMount, onClose }) {
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-back';
+    wrap.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true"><div class="modal-h"><h3>${esc(title)}</h3><button class="icon-btn" data-x aria-label="關閉">✕</button></div><div class="modal-b">${html}</div><div class="modal-f"></div></div>`;
+    const close = () => { if (!wrap.isConnected) return; wrap.remove(); Modal.stack = Modal.stack.filter(w => w !== wrap); onClose && onClose(); };
+    wrap.close = close;
+    const f = $('.modal-f', wrap);
+    buttons.forEach(b => {
+      const el = document.createElement('button');
+      el.className = 'btn ' + (b.cls || ''); el.textContent = b.text;
+      el.onclick = async () => {
+        if (el.disabled) return; el.disabled = true;
+        try { if (b.fn) { const r = await b.fn(wrap, close); if (r === false) { el.disabled = false; return; } } close(); }
+        catch (err) { console.error(err); el.disabled = false; toast('發生錯誤：' + ((err && err.message) || err), 'err'); }
+      };
+      f.appendChild(el);
+    });
+    if (!buttons.length) f.remove();
+    $('[data-x]', wrap).onclick = close;
+    $('#modal-root').appendChild(wrap); Modal.stack.push(wrap);
+    onMount && onMount(wrap, close);
+    const fi = $('.modal-b input:not([type=checkbox]):not([type=radio]),.modal-b textarea,.modal-b select', wrap);
+    fi && fi.focus();
+    return wrap;
+  },
+  closeTop() { const w = Modal.stack[Modal.stack.length - 1]; if (w) w.close(); }
+};
+function confirmBox(msg, { okText = '確定', danger = false, title = '請確認' } = {}) {
+  return new Promise(res => {
+    let done = false; const fin = v => { if (!done) { done = true; res(v); } };
+    Modal.open({
+      title, html: `<div style="white-space:pre-wrap">${esc(msg)}</div>`,
+      buttons: [{ text: '取消', fn: () => fin(false) }, { text: okText, cls: danger ? 'danger solid' : 'primary', fn: () => fin(true) }],
+      onClose: () => fin(false)
+    });
+  });
+}
+function promptBox(title, label, def = '') {
+  return new Promise(res => {
+    let done = false; const fin = v => { if (!done) { done = true; res(v); } };
+    Modal.open({
+      title, html: `<label class="f"><span>${esc(label)}</span><input id="pb-in" value="${esc(def)}"></label>`,
+      buttons: [{ text: '取消', fn: () => fin(null) }, { text: '確定', cls: 'primary', fn: w => { fin($('#pb-in', w).value.trim()); } }],
+      onMount: w => { $('#pb-in', w).addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); $('.btn.primary', w).click(); } }); },
+      onClose: () => fin(null)
+    });
+  });
+}
+
+/* ---------- IndexedDB ---------- */
+const COLL = ['hooks', 'templates', 'posts', 'variants', 'metrics', 'swipes', 'vocab'];
+const DB = {
+  db: null, NAME: 'HookLabDB', VER: 1,
+  SCHEMA: {
+    hooks: { idx: [['type', 'type'], ['topic', 'topic'], ['favorite', 'favorite'], ['createdAt', 'createdAt'], ['tags', 'tags', true], ['platforms', 'platforms', true]] },
+    templates: { idx: [['type', 'type'], ['builtIn', 'builtIn']] },
+    posts: { idx: [['platform', 'platform'], ['publishedAt', 'publishedAt'], ['campaign', 'campaign'], ['status', 'status']] },
+    variants: { idx: [['postId', 'postId'], ['hookId', 'hookId']] },
+    metrics: { idx: [['variantId', 'variantId'], ['recordedAt', 'recordedAt']] },
+    swipes: { idx: [['platform', 'platform'], ['type', 'type']] },
+    vocab: { idx: [['variable', 'variable']] },
+    settings: { keyPath: 'key', idx: [] }
+  },
+  open() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open(this.NAME, this.VER);
+      r.onupgradeneeded = () => {
+        const d = r.result;
+        for (const [name, def] of Object.entries(this.SCHEMA)) {
+          if (d.objectStoreNames.contains(name)) continue;
+          const st = d.createObjectStore(name, { keyPath: def.keyPath || 'id' });
+          def.idx.forEach(([n, kp, multi]) => st.createIndex(n, kp, { multiEntry: !!multi }));
+        }
+      };
+      r.onsuccess = () => { this.db = r.result; this.db.onversionchange = () => { this.db.close(); toast('資料庫已在其他分頁更新，請重新整理頁面', 'err'); }; res(); };
+      r.onerror = () => rej(r.error);
+      r.onblocked = () => rej(new Error('資料庫被其他分頁佔用，請關閉其他 HookLab 分頁後重試'));
+    });
+  },
+  _tx(stores, mode) { return this.db.transaction(stores, mode); },
+  all(s) { return new Promise((res, rej) => { const r = this._tx(s, 'readonly').objectStore(s).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+  put(s, v) { return this.bulkPut(s, [v]); },
+  bulkPut(s, arr) { return new Promise((res, rej) => { const tx = this._tx(s, 'readwrite'); const st = tx.objectStore(s); arr.forEach(v => st.put(v)); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); tx.onabort = () => rej(tx.error); }); },
+  del(s, k) { return this.bulkDel(s, [k]); },
+  bulkDel(s, keys) { return new Promise((res, rej) => { const tx = this._tx(s, 'readwrite'); const st = tx.objectStore(s); keys.forEach(k => st.delete(k)); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); },
+  clear(s) { return new Promise((res, rej) => { const tx = this._tx(s, 'readwrite'); tx.objectStore(s).clear(); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
+};
+
+/* ---------- 預設設定 ---------- */
+const DEFAULTS = {
+  hookTypes: ['好奇', '痛點', '數字', '問題', '警告', '利益', '故事', '反常識', '時效', '挑戰', '情境', '懸念'],
+  platforms: ['Facebook', 'Instagram', 'Threads', 'LINE', 'YouTube', '其他'],
+  emotions: ['好奇', '焦慮', '期待', '共鳴', '驚訝', '其他'],
+  ctaTypes: ['留言', '分享', '收藏', '點擊', '無'],
+  scoreWeights: { length: 15, core: 20, number: 10, question: 10, benefit: 15, concrete: 15, urgency: 15 },
+  scoreKeywords: {
+    benefit: ['省', '賺', '免費', '優惠', '折扣', '回饋', '秘訣', '技巧', '懶人', '輕鬆', '快速', '必學', '必看', '福利', '好康', '升級', '零成本', '提升', '加碼', '搞定'],
+    urgency: ['限時', '最後', '今天', '今日', '現在', '立即', '馬上', '倒數', '只到', '僅限', '快搶', '即將', '截止', '別錯過', '錯過', '趁'],
+    abstract: ['很多', '非常', '一些', '各種', '不少', '相當', '某些', '大家', '很棒', '超讚', '真的很', '滿滿', '等等', '之類', '有點'],
+    question: ['？', '?', '嗎', '為什麼', '為何', '怎麼', '如何', '竟然', '原來', '居然', '知道', '難道', '到底', '…', '...', '秘密', '其實']
+  },
+  theme: 'light', lastBackupAt: null, seeded: false, minImpressions: 100
+};
+const SCORE_NAMES = { length: '長度', core: '前段核心', number: '數字', question: '疑問／懸念', benefit: '利益點', concrete: '具體性', urgency: '急迫／CTA' };
+const METRICS = { er: '互動率', cr: '留言率', sr: '分享率', svr: '收藏率', ctr: 'CTR' };
+const minImp = () => { const n = Number(S.settings.minImpressions); return Number.isFinite(n) && n >= 0 ? n : 100; };
+
+/* ---------- 記憶體 Store ---------- */
+const S = { hooks: [], templates: [], posts: [], variants: [], metrics: [], swipes: [], vocab: [], settings: clone(DEFAULTS) };
+async function loadAll() {
+  for (const k of COLL) S[k] = await DB.all(k);
+  const st = await DB.all('settings');
+  S.settings = clone(DEFAULTS);
+  st.forEach(x => { S.settings[x.key] = x.value; });
+}
+async function save(coll, obj) {
+  const t = nowISO(); obj.updatedAt = t; if (!obj.createdAt) obj.createdAt = t;
+  await DB.put(coll, obj);
+  const i = S[coll].findIndex(x => x.id === obj.id);
+  if (i >= 0) S[coll][i] = obj; else S[coll].push(obj);
+  return obj;
+}
+async function removeMany(coll, ids) {
+  if (!ids.length) return;
+  await DB.bulkDel(coll, ids);
+  const set = new Set(ids); S[coll] = S[coll].filter(x => !set.has(x.id));
+}
+async function setSetting(k, v) { S.settings[k] = v; await DB.put('settings', { key: k, value: v, updatedAt: nowISO() }); }
+
+/* ---------- 指標計算 ---------- */
+function calc(m) {
+  const imp = Number(m.impressions) || 0, l = +m.likes || 0, c = +m.comments || 0, s = +m.shares || 0, v = +m.saves || 0, k = +m.clicks || 0;
+  const eng = l + c + s + v; const r = x => imp > 0 ? x / imp : null;
+  return { imp, eng, er: r(eng), cr: r(c), sr: r(s), svr: r(v), ctr: r(k) };
+}
+function latestMap() {
+  const map = new Map();
+  for (const m of S.metrics) {
+    if (!(Number(m.impressions) > 0)) continue; // 尚未填曝光的空白列不算「最新成效」
+    const cur = map.get(m.variantId);
+    const key = (m.recordedAt || '') + '|' + (m.createdAt || '');
+    if (!cur || key >= ((cur.recordedAt || '') + '|' + (cur.createdAt || ''))) map.set(m.variantId, m);
+  }
+  return map;
+}
+function perfRows() {
+  const lm = latestMap(); const hm = new Map(S.hooks.map(h => [h.id, h])); const pm = new Map(S.posts.map(p => [p.id, p]));
+  const out = [];
+  for (const v of S.variants) {
+    const m = lm.get(v.id), h = hm.get(v.hookId), p = pm.get(v.postId);
+    if (!m || !h || !p) continue;
+    const c = calc(m); if (c.imp <= 0 || c.imp < minImp()) continue;
+    out.push({ v, h, p, m, c });
+  }
+  return out;
+}
+function hookStats() {
+  const lm = latestMap(); const pm = new Map(S.posts.map(p => [p.id, p])); const st = new Map();
+  for (const v of S.variants) {
+    const p = pm.get(v.postId); const o = st.get(v.hookId) || { uses: 0, bestER: null, lastUsed: null, hasMetric: false };
+    o.uses++;
+    const d = p && (p.publishedAt || (p.createdAt ? dstr(new Date(p.createdAt)) : ''));
+    if (d && (!o.lastUsed || d > o.lastUsed)) o.lastUsed = d;
+    const m = lm.get(v.id);
+    if (m) { const c = calc(m); if (c.er != null && c.imp >= minImp()) { o.hasMetric = true; if (o.bestER == null || c.er > o.bestER) o.bestER = c.er; } }
+    st.set(v.hookId, o);
+  }
+  return st;
+}
+function winnerInfo(variants, metric) {
+  const lm = latestMap(), mi = minImp();
+  const items = variants.map(v => { const m = lm.get(v.id); const c = m ? calc(m) : null; return { v, m, c, val: c ? c[metric] : null, ok: !!(c && c.imp >= mi && c[metric] != null) }; });
+  const el = items.filter(i => i.ok).sort((a, b) => b.val - a.val);
+  let winner = null, note = '', close = false;
+  if (el.length >= 2) {
+    winner = el[0]; const second = el[1].val;
+    close = second > 0 ? (el[0].val - second) / second < 0.10 : el[0].val === 0;
+    if (close) note = '差異不明顯（領先幅度 < 10%），建議累積更多曝光再判斷';
+  } else if (el.length === 1) note = `只有 1 個版本曝光 ≥ ${mi}，尚無法判定勝負`;
+  else note = `尚無版本曝光達 ${mi}，不納入勝負判定`;
+  return { items, winner, note, close };
+}
+async function refreshWinner(postId) {
+  const post = S.posts.find(p => p.id === postId); if (!post) return;
+  const vars = S.variants.filter(v => v.postId === postId);
+  const info = winnerInfo(vars, post.primaryMetric || 'er');
+  for (const v of vars) {
+    const should = !!(info.winner && info.winner.v.id === v.id && !info.close);
+    if (!!v.isWinner !== should) { v.isWinner = should; await save('variants', v); }
+  }
+}
+
+/* ---------- 相似度（重複偵測） ---------- */
+function norm(s) { return String(s || '').normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}\p{Extended_Pictographic}]/gu, ''); }
+function bigrams(s) {
+  const t = [...norm(s)]; const set = new Set();
+  if (t.length < 2) { if (t.length) set.add(t[0]); return set; }
+  for (let i = 0; i < t.length - 1; i++) set.add(t[i] + t[i + 1]);
+  return set;
+}
+function jaccard(a, b) {
+  if (!a.size && !b.size) return 0; let inter = 0; for (const x of a) if (b.has(x)) inter++;
+  return inter / (a.size + b.size - inter);
+}
+function findSimilar(text, excludeId, th = 0.7) {
+  const A = bigrams(text);
+  return S.hooks.filter(h => h.id !== excludeId).map(h => ({ h, s: jaccard(A, bigrams(h.text)) })).filter(x => x.s >= th).sort((a, b) => b.s - a.s).slice(0, 3);
+}
+
+/* ---------- Hook Score（規則式） ---------- */
+function scoreHook(text, topic) {
+  const W = S.settings.scoreWeights, K = S.settings.scoreKeywords;
+  const t = String(text || '').trim(); const chars = [...t]; const len = chars.length; const head = chars.slice(0, 20).join('');
+  const hit = (list, str) => (list || []).filter(k => k && str.includes(k));
+  const items = [];
+  const push = (k, f, msg) => items.push({ k, name: SCORE_NAMES[k], f: Math.max(0, Math.min(1, f)), w: Number(W[k]) || 0, msg, ok: f >= 0.8 });
+  // 長度
+  let f = len === 0 ? 0 : len < 12 ? len / 12 : len <= 30 ? 1 : 1 - (len - 30) / 30;
+  push('length', f, len < 12 ? `僅 ${len} 字，偏短，建議 12~30 字` : len > 30 ? `${len} 字偏長，建議精簡到 30 字內` : `${len} 字，長度剛好`);
+  // 前段核心
+  const tp = (topic || '').trim();
+  if (tp) {
+    if (head.includes(tp)) push('core', 1, `核心主題「${tp}」出現在前 20 字`);
+    else if (t.includes(tp)) push('core', 0.5, `核心主題「${tp}」出現得太晚，建議移到前 20 字`);
+    else push('core', 0, `開頭未出現核心主題「${tp}」`);
+  } else {
+    const hh = hit([...K.benefit, ...K.urgency], head).length + (/\d/.test(head) ? 1 : 0);
+    push('core', hh ? 1 : (len >= 8 ? 0.5 : 0), hh ? '前 20 字已有明確資訊（未指定主題，以關鍵詞推估）' : '前 20 字缺少明確資訊（可在上方輸入核心主題以精準評分）');
+  }
+  // 數字
+  const hasNum = /[0-9０-９]+|[一二三四五六七八九十兩]+(?=個|招|種|步|件|大|項|秒|分鐘|天|次|張|%|％|成)/.test(t);
+  push('number', hasNum ? 1 : 0, hasNum ? '有明確數字' : '沒有數字，加入具體數字更有說服力');
+  // 疑問/懸念
+  const qh = hit(K.question, t);
+  push('question', qh.length ? 1 : 0, qh.length ? `有疑問／懸念元素（${qh.slice(0, 2).join('、')}）` : '缺少疑問或懸念，可用提問、「原來」「竟然」引發好奇');
+  // 利益
+  const bh = hit(K.benefit, t);
+  push('benefit', bh.length >= 2 ? 1 : bh.length === 1 ? 0.65 : 0, bh.length ? `命中利益詞：${bh.slice(0, 3).join('、')}` : '沒有明確利益點，讓讀者知道「看了能得到什麼」');
+  // 具體性
+  const ah = hit(K.abstract, t);
+  push('concrete', len === 0 ? 0 : 1 - ah.length / 3, ah.length ? `內容較抽象（${ah.slice(0, 3).join('、')}），建議換成具體名詞或數字` : '用字具體');
+  // 急迫
+  const uh = hit(K.urgency, t);
+  push('urgency', uh.length >= 2 ? 1 : uh.length === 1 ? 0.7 : 0, uh.length ? `有急迫感用詞：${uh.slice(0, 3).join('、')}` : '沒有急迫或行動呼籲用詞（適用於活動／限時內容）');
+  const sumW = items.reduce((a, i) => a + i.w, 0) || 1;
+  items.forEach(i => { i.score = Math.round(i.f * i.w * 10) / 10; });
+  const total = Math.round(items.reduce((a, i) => a + i.f * i.w, 0) / sumW * 100);
+  return { total, items, len };
+}
+const scoreCls = n => n >= 80 ? 'good' : n >= 60 ? 'mid' : 'low';
+const scoreBadge = n => `<span class="badge ${n >= 80 ? 'ok' : n >= 60 ? 'warn' : 'bad'}">${n} 分</span>`;
+
+/* ---------- 圖表（SVG / HTML） ---------- */
+function barChart(items, fmt = pct) {
+  if (!items.length) return '<div class="empty">沒有資料</div>';
+  const max = Math.max(...items.map(i => i.value || 0), 1e-9), rowH = 30, lw = 120, w = 640, bw = w - lw - 150;
+  const rows = items.map((it, i) => {
+    const y = i * rowH, len = Math.max(2, (it.value || 0) / max * bw);
+    return `<g transform="translate(0,${y})"><text x="${lw - 8}" y="19" text-anchor="end" style="fill:var(--text);font-size:12px">${esc(it.label)}</text>
+      <rect x="${lw}" y="5" width="${len.toFixed(1)}" height="18" rx="4" style="fill:${it.gray ? 'var(--line)' : it.hl ? 'var(--ok)' : 'var(--pri)'}"/>
+      <text x="${lw + len + 6}" y="19" style="fill:var(--muted);font-size:12px">${esc(fmt(it.value))}${it.n != null ? ' (n=' + it.n + ')' : ''}${it.hl ? ' 🏆' : ''}</text></g>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${w} ${items.length * rowH + 4}" width="100%" role="img">${rows}</svg>`;
+}
+function lineChart(points, fmt = pct) {
+  if (points.length < 1) return '<div class="empty">沒有資料</div>';
+  const w = 640, h = 220, pl = 54, pr = 16, pt = 16, pb = 34;
+  const vals = points.map(p => p.value), max = Math.max(...vals, 1e-9), min = 0;
+  const x = i => pl + (points.length === 1 ? (w - pl - pr) / 2 : i * (w - pl - pr) / (points.length - 1));
+  const y = v => pt + (h - pt - pb) * (1 - (v - min) / (max - min));
+  const path = points.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(' ');
+  const grid = [0, .5, 1].map(r => `<line x1="${pl}" x2="${w - pr}" y1="${y(max * r)}" y2="${y(max * r)}" style="stroke:var(--line)"/><text x="${pl - 6}" y="${y(max * r) + 4}" text-anchor="end" style="fill:var(--muted);font-size:11px">${esc(fmt(max * r))}</text>`).join('');
+  const dots = points.map((p, i) => `<circle cx="${x(i)}" cy="${y(p.value)}" r="4" style="fill:var(--pri)"/><text x="${x(i)}" y="${h - 12}" text-anchor="middle" style="fill:var(--muted);font-size:11px">${esc(p.label)}</text><text x="${x(i)}" y="${y(p.value) - 8}" text-anchor="middle" style="fill:var(--text);font-size:11px">${esc(fmt(p.value))}</text>`).join('');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%">${grid}<path d="${path}" fill="none" stroke-width="2.5" style="stroke:var(--pri)"/>${dots}</svg>`;
+}
+
+/* ---------- 內建資料 ---------- */
+const BUILTIN_TEMPLATES = [
+  ['數字', '數字型 ①', '{數字}個{受眾}一定要知道的{主題}'], ['數字', '數字型 ②', '{數字}分鐘搞懂{主題}，{受眾}必看'], ['數字', '數字型 ③', '我用了{數字}天，終於搞懂{主題}'],
+  ['問題', '問題型 ①', '你的{主題}真的做對了嗎？'], ['問題', '問題型 ②', '{受眾}為什麼總是在{主題}上吃虧？'], ['問題', '問題型 ③', '你還在用舊方法處理{主題}嗎？'],
+  ['痛點', '痛點型 ①', '每次{情境}就頭痛？{主題}其實可以這樣做'], ['痛點', '痛點型 ②', '明明很努力，{主題}還是沒起色？'],
+  ['警告', '警告型 ①', '別再{行為}了！{受眾}最常踩的{主題}地雷'], ['警告', '警告型 ②', '小心！{主題}這件事，很多{受眾}都做錯了'],
+  ['利益', '利益型 ①', '學會這招，{受眾}也能輕鬆搞定{主題}'], ['利益', '利益型 ②', '一次看懂{主題}，幫你省下{重點}'],
+  ['故事', '故事型 ①', '上個月我因為{情境}，才發現{主題}的重要'], ['故事', '故事型 ②', '一位{受眾}的真實經驗：{主題}改變了我的{重點}'],
+  ['反常識', '反常識 ①', '{主題}越多不代表越好，真正關鍵是{重點}'], ['反常識', '反常識 ②', '其實{受眾}不需要{行為}，也能做好{主題}'],
+  ['時效', '時效型 ①', '只到{日期}！{主題}最後機會'], ['時效', '時效型 ②', '{日期}前，{受眾}千萬別錯過{主題}'],
+  ['挑戰', '挑戰型 ①', '連續{數字}天挑戰{主題}，結果出乎意料'], ['挑戰', '挑戰型 ②', '敢不敢試試？{數字}天改善你的{主題}'],
+  ['情境', '情境型 ①', '如果你正在{情境}，這件事一定要先知道'], ['情境', '情境型 ②', '{情境}的時候，{受眾}最需要的是{主題}'],
+  ['好奇', '好奇型 ①', '你知道嗎？{受眾}其實最容易忽略{主題}'],
+  ['懸念', '懸念型 ①', '關於{主題}，最後一點才是重點…'], ['懸念', '懸念型 ②', '{受眾}都在偷偷用的{主題}方法，答案是第{數字}個']
+];
+const SEED_VOCAB = { 受眾: ['小資族', '上班族', '新手爸媽', '學生族'], 數字: ['3', '5', '7', '10'], 主題: ['理財', '時間管理', '居家收納'], 情境: ['月底看帳單', '出門前找東西', '預算不夠用'], 行為: ['亂花錢', '臨時抱佛腳', '盲目跟風'], 重點: ['長期習慣', 'CP 值', '時間成本'], 日期: ['本週日', '月底', '12/31'] };
+async function seedBuiltins() {
+  if (S.settings.seeded) return;
+  let ti = 0; for (const [type, name, pattern] of BUILTIN_TEMPLATES) await save('templates', { id: 'tpl-builtin-' + String(++ti).padStart(2, '0'), name, pattern, type, variables: parseVars(pattern), builtIn: true, useCount: 0 });
+  let vi = 0; for (const [variable, values] of Object.entries(SEED_VOCAB)) await save('vocab', { id: 'vocab-seed-' + String(++vi).padStart(2, '0'), variable, values });
+  await setSetting('seeded', true);
+}
+function parseVars(p) { return uniq([...String(p).matchAll(/\{([^{}]+)\}/g)].map(m => m[1].trim())); }
+
+async function loadSampleData() {
+  let seed = 20240607; const rnd = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  const H = [
+    ['5 個小資族一定要知道的理財小撇步', '數字', '理財', '小資族', '期待', '收藏'], ['你的預算真的做對了嗎？', '問題', '理財', '上班族', '好奇', '留言'],
+    ['每次月底看帳單就頭痛？這樣做就對了', '痛點', '理財', '小資族', '共鳴', '留言'], ['別再亂花錢了！新手最常踩的記帳地雷', '警告', '理財', '學生族', '焦慮', '分享'],
+    ['學會這招，上班族也能輕鬆搞定時間管理', '利益', '時間管理', '上班族', '期待', '收藏'], ['上個月我因為加班太累，才發現休息的重要', '故事', '時間管理', '上班族', '共鳴', '留言'],
+    ['行事曆越滿不代表越有效率，關鍵是優先順序', '反常識', '時間管理', '上班族', '驚訝', '分享'], ['只到本週日！居家收納組合最後機會', '時效', '居家收納', '新手爸媽', '期待', '點擊'],
+    ['你知道嗎？新手爸媽最容易忽略收納動線', '好奇', '居家收納', '新手爸媽', '好奇', '留言'], ['連續 7 天挑戰斷捨離，結果出乎意料', '挑戰', '居家收納', '小資族', '好奇', '收藏'],
+    ['如果你正在搬家，這件事一定要先知道', '情境', '居家收納', '上班族', '焦慮', '收藏'], ['關於存錢，最後一點才是重點…', '懸念', '理財', '小資族', '好奇', '留言']
+  ];
+  const hooks = [];
+  for (const [text, type, topic, audience, emotion, ctaType] of H) {
+    hooks.push(await save('hooks', { id: uid(), text, type, platforms: ['Facebook', 'Instagram'], topic, audience, emotion, ctaType, tags: ['範例'], source: 'manual', favorite: false, note: '' }));
+  }
+  const base = { 問題: .07, 數字: .065, 痛點: .055, 警告: .05, 反常識: .06, 好奇: .045, 故事: .04, 利益: .05, 時效: .035, 挑戰: .055, 情境: .045, 懸念: .04 };
+  const plats = ['Facebook', 'Instagram', 'Threads', 'Facebook', 'Instagram', 'Threads', 'Facebook', 'Instagram', 'Threads', 'Facebook'];
+  const bonus = { Instagram: { 數字: 1.4, 挑戰: 1.3 }, Threads: { 反常識: 1.5, 問題: 1.3 }, Facebook: { 問題: 1.2, 痛點: 1.25 } };
+  for (let i = 0; i < 10; i++) {
+    const platform = plats[i], days = 4 + i * 6;
+    const post = await save('posts', { id: uid(), title: `範例貼文 ${i + 1}`, platform, publishedAt: daysAgo(i === 0 ? 5 : days), body: '（範例內容）', cta: '歡迎留言分享你的想法', hashtags: ['#範例'], campaign: i % 2 ? '春季活動' : '', status: 'published', primaryMetric: 'er' });
+    const n = i % 3 === 0 ? 3 : 2;
+    for (let j = 0; j < n; j++) {
+      const hk = hooks[(i * 2 + j * 4 + (i > 5 ? 1 : 0)) % hooks.length];
+      if (S.variants.some(v => v.postId === post.id && v.hookId === hk.id)) continue;
+      const v = await save('variants', { id: uid(), postId: post.id, hookId: hk.id, label: 'ABCDE'[j], isWinner: false });
+      if (i === 0) continue; // 最近一篇尚未填成效 → 提醒
+      const imp = Math.round(2500 + rnd() * 7000), er = (base[hk.type] || .04) * ((bonus[platform] || {})[hk.type] || 1) * (0.8 + rnd() * .4);
+      const eng = imp * er, likes = Math.round(eng * .62), comments = Math.round(eng * .13), shares = Math.round(eng * .1), saves = Math.round(eng * .15);
+      await save('metrics', { id: uid(), variantId: v.id, recordedAt: daysAgo(Math.max(0, days - 3)), impressions: imp, reach: Math.round(imp * .8), likes, comments, shares, saves, clicks: Math.round(imp * (0.01 + rnd() * .02)) });
+    }
+    await refreshWinner(post.id);
+  }
+  const sw = [['3 秒看懂：為什麼你的薪水總是不夠用？', '某理財帳號', '數字+問題雙重鉤子，直接點出痛點', '改寫成自家產品情境'], ['你不是不努力，只是方法錯了', '某生活品牌', '先否定再給解法，降低防備', '套用到收納主題'], ['最後 24 小時：這次真的不再加開', '某電商', '時效 + 稀缺', '用在活動倒數貼文']];
+  for (const [text, sourceName, whyItWorks, rewriteIdea] of sw) await save('swipes', { id: uid(), text, sourceName, url: '', platform: 'Facebook', type: '數字', whyItWorks, rewriteIdea, tags: ['範例'] });
+}
+
+/* =====================================================================
+   共用表單：Hook 編輯
+   ===================================================================== */
+function opts(list, sel, blank) { return (blank != null ? `<option value="">${esc(blank)}</option>` : '') + list.map(x => `<option ${x === sel ? 'selected' : ''}>${esc(x)}</option>`).join(''); }
+
+function editHook(hook, { onSaved, title } = {}) {
+  const h = Object.assign({ id: null, text: '', type: S.settings.hookTypes[0], platforms: [], topic: '', audience: '', emotion: '', ctaType: '', tags: [], source: 'manual', favorite: false, note: '' }, hook || {});
+  const isNew = !h.id; const origText = h.text;
+  Modal.open({
+    title: title || (isNew ? '新增 Hook' : '編輯 Hook'), wide: true,
+    html: `
+      <label class="f"><span>Hook 內容 *</span><textarea id="hf-text" rows="3">${esc(h.text)}</textarea></label>
+      <div class="row" style="margin:-4px 0 10px"><span class="small muted">即時評分：</span><span id="hf-score"></span><span class="small muted" id="hf-score-msg"></span></div>
+      <div class="grid g3">
+        <label class="f"><span>類型 *</span><select id="hf-type">${opts(S.settings.hookTypes, h.type)}</select></label>
+        <label class="f"><span>內容主題</span><input id="hf-topic" value="${esc(h.topic)}"></label>
+        <label class="f"><span>目標受眾</span><input id="hf-aud" value="${esc(h.audience)}"></label>
+        <label class="f"><span>情緒</span><select id="hf-emo">${opts(S.settings.emotions, h.emotion, '（未指定）')}</select></label>
+        <label class="f"><span>CTA 類型</span><select id="hf-cta">${opts(S.settings.ctaTypes, h.ctaType, '（未指定）')}</select></label>
+        <label class="f"><span>標籤（逗號分隔）</span><input id="hf-tags" value="${esc((h.tags || []).join(', '))}"></label>
+      </div>
+      <div class="f"><span class="small muted">適用平台</span><div class="chips" id="hf-plat">${S.settings.platforms.map(p => `<span class="chip ${(h.platforms || []).includes(p) ? 'on' : ''}" data-p="${esc(p)}">${esc(p)}</span>`).join('')}</div></div>
+      <label class="f"><span>備註</span><textarea id="hf-note" rows="2">${esc(h.note || '')}</textarea></label>
+      <label><input type="checkbox" id="hf-fav" ${h.favorite ? 'checked' : ''}> ⭐ 加入收藏</label>`,
+    buttons: [{ text: '取消' }, {
+      text: '儲存', cls: 'primary', fn: async w => {
+        const text = $('#hf-text', w).value.trim();
+        if (!text) { toast('請輸入 Hook 內容', 'err'); return false; }
+        if (isNew || text !== origText) {
+          const sim = findSimilar(text, h.id);
+          if (sim.length) {
+            const ok = await confirmBox('偵測到相似的既有 Hook：\n\n' + sim.map(x => `• ${x.h.text}（相似度 ${(x.s * 100).toFixed(0)}%）`).join('\n') + '\n\n仍要儲存嗎？', { okText: '仍要儲存', title: '可能重複' });
+            if (!ok) return false;
+          }
+        }
+        const obj = Object.assign({}, h, {
+          text, type: $('#hf-type', w).value, topic: $('#hf-topic', w).value.trim(), audience: $('#hf-aud', w).value.trim(), emotion: $('#hf-emo', w).value, ctaType: $('#hf-cta', w).value,
+          tags: splitList($('#hf-tags', w).value), platforms: $$('#hf-plat .chip.on', w).map(c => c.dataset.p), note: $('#hf-note', w).value.trim(), favorite: $('#hf-fav', w).checked
+        });
+        if (!obj.id) obj.id = uid();
+        await save('hooks', obj); toast('已儲存', 'ok'); onSaved && onSaved(obj);
+      }
+    }],
+    onMount: w => {
+      on(w, 'click', '#hf-plat .chip', (e, c) => c.classList.toggle('on'));
+      const upd = () => { const sc = scoreHook($('#hf-text', w).value, $('#hf-topic', w).value); $('#hf-score', w).innerHTML = scoreBadge(sc.total); const bad = sc.items.filter(i => !i.ok)[0]; $('#hf-score-msg', w).textContent = bad ? '⚠ ' + bad.msg : '✓ 各項表現良好'; };
+      $('#hf-text', w).addEventListener('input', debounce(upd, 120)); $('#hf-topic', w).addEventListener('input', debounce(upd, 120)); upd();
+    }
+  });
+}
+async function deleteHooks(ids) {
+  const vs = S.variants.filter(v => ids.includes(v.hookId));
+  const posts = uniq(vs.map(v => v.postId)).length;
+  const msg = vs.length ? `所選 Hook 已用於 ${posts} 篇貼文（${vs.length} 個版本）。\n刪除將連同這些版本與成效紀錄一併刪除，確定嗎？` : `確定刪除 ${ids.length} 筆 Hook？此動作無法復原。`;
+  if (!(await confirmBox(msg, { okText: '刪除', danger: true }))) return false;
+  await cascadeDeleteVariants(vs.map(v => v.id));
+  await removeMany('hooks', ids);
+  const affected = uniq(vs.map(v => v.postId)); for (const p of affected) await refreshWinner(p);
+  toast('已刪除', 'ok'); return true;
+}
+async function cascadeDeleteVariants(variantIds) {
+  const set = new Set(variantIds);
+  await removeMany('metrics', S.metrics.filter(m => set.has(m.variantId)).map(m => m.id));
+  await removeMany('variants', variantIds);
+}
+
+/* =====================================================================
+   Views
+   ===================================================================== */
+const Views = {};
+const NAV = [['dashboard', '🏠', '總覽'], ['library', '📚', 'Hook 資料庫'], ['generator', '🧩', '模板組合器'], ['lab', '🧪', 'A/B 實驗'], ['dna', '🧬', 'Hook DNA'], ['swipe', '📁', '收藏文案'], ['score', '🎯', 'Hook 評分'], ['settings', '⚙️', '設定']];
+const pager = (total, page, per) => { const pages = Math.max(1, Math.ceil(total / per)); return pages <= 1 ? '' : `<div class="pager"><button class="sm" data-pg="${page - 1}" ${page <= 1 ? 'disabled' : ''}>‹ 上一頁</button><span class="muted">${page} / ${pages}（共 ${total} 筆）</span><button class="sm" data-pg="${page + 1}" ${page >= pages ? 'disabled' : ''}>下一頁 ›</button></div>`; };
+const typeBadge = t => t ? `<span class="badge">${esc(t)}</span>` : '';
+
+/* ---------- Dashboard ---------- */
+Views.dashboard = function (root) {
+  const rows = perfRows(), pm = new Map(S.posts.map(p => [p.id, p]));
+  const avgER = mean(rows.map(r => r.c.er).filter(x => x != null));
+  const ym = todayStr().slice(0, 7);
+  const monthNew = S.hooks.filter(h => h.createdAt && dstr(new Date(h.createdAt)).slice(0, 7) === ym).length;
+  const cutoff = daysAgo(30);
+  const topMap = new Map();
+  rows.filter(r => (r.p.publishedAt || '') >= cutoff).forEach(r => { const cur = topMap.get(r.h.id); if (!cur || r.c.er > cur.c.er) topMap.set(r.h.id, r); });
+  const top5 = [...topMap.values()].sort((a, b) => b.c.er - a.c.er).slice(0, 5);
+  const lm = latestMap(); const d3 = daysAgo(3);
+  const pending = S.variants.filter(v => { const p = pm.get(v.postId); return p && p.status === 'published' && p.publishedAt && p.publishedAt <= d3 && !lm.has(v.id); });
+  const pendingPosts = uniq(pending.map(v => v.postId)).map(id => pm.get(id));
+  const lb = S.settings.lastBackupAt; const hasData = S.hooks.length || S.posts.length || S.swipes.length;
+  const backupDays = lb ? Math.floor((Date.now() - new Date(lb)) / 864e5) : null;
+  const empty = !S.hooks.length && !S.posts.length;
+  root.innerHTML = `
+    <div class="page-h"><div><h1>🏠 總覽</h1><div class="muted">HookLab － 不是替你寫文案，而是讓你知道「自己寫過什麼最有效」</div></div></div>
+    ${empty ? `<div class="banner"><span>👋 歡迎使用 HookLab！資料庫目前是空的。</span><span class="spacer"></span><button class="primary" id="d-sample">載入範例資料</button><a href="#/library">自己新增第一筆 Hook →</a></div>` : ''}
+    ${hasData && (backupDays == null || backupDays > 7) ? `<div class="banner warn"><span>💾 ${backupDays == null ? '尚未備份過資料' : `距離上次備份已 ${backupDays} 天`}，建議匯出 JSON 備份。</span><span class="spacer"></span><button id="d-backup">立即備份</button></div>` : ''}
+    <div class="grid g5" style="margin-bottom:14px">
+      <div class="card kpi"><div class="v">${S.hooks.length}</div><div class="l">Hook 總數</div></div>
+      <div class="card kpi"><div class="v">${S.posts.length}</div><div class="l">貼文數</div></div>
+      <div class="card kpi"><div class="v">${S.variants.length}</div><div class="l">實驗版本數</div></div>
+      <div class="card kpi"><div class="v">${pct(avgER)}</div><div class="l">平均互動率</div></div>
+      <div class="card kpi"><div class="v">${monthNew}</div><div class="l">本月新增 Hook</div></div>
+    </div>
+    <div class="grid g2">
+      <div class="card"><h2>🏆 近 30 天 Top 5 Hook（互動率）</h2>${top5.length ? `<table><tbody>${top5.map((r, i) => `<tr><td>${i + 1}</td><td class="hooktext">${esc(r.h.text)}<div class="small muted">${esc(r.p.platform || '')} · ${esc(r.p.publishedAt || '')}</div></td><td>${typeBadge(r.h.type)}</td><td><b>${pct(r.c.er)}</b></td></tr>`).join('')}</tbody></table>` : '<div class="empty">近 30 天沒有成效資料<br>到「A/B 實驗」建立貼文並輸入成效</div>'}</div>
+      <div class="card insp"><h2>🎲 給我一個靈感</h2><div id="d-insp"></div><div class="row" style="margin-top:12px"><button id="d-roll" class="primary">再抽一次（R）</button><button id="d-copy">複製</button></div></div>
+    </div>
+    <div class="card"><h2>⚠ 待補成效提醒</h2>${pendingPosts.length ? `<div class="muted small" style="margin-bottom:6px">以下貼文已發布超過 3 天，但有版本尚未填入成效：</div>${pendingPosts.map(p => `<div><a href="#/lab/${p.id}">${esc(p.title)}</a> <span class="muted small">${esc(p.platform || '')} · ${esc(p.publishedAt)}</span></div>`).join('')}` : '<div class="muted">目前沒有待補成效的貼文 👍</div>'}</div>`;
+  let cur = '';
+  const roll = () => {
+    const pool = [...S.hooks.map(h => ({ t: h.text, s: 'Hook 資料庫', ty: h.type })), ...S.swipes.map(s => ({ t: s.text, s: '收藏文案：' + (s.sourceName || ''), ty: s.type }))];
+    const el = $('#d-insp', root); if (!pool.length) { cur = ''; el.innerHTML = '<div class="muted">資料庫還沒有內容，先新增幾筆 Hook 或收藏文案吧</div>'; return; }
+    const p = pool[Math.floor(Math.random() * pool.length)]; cur = p.t;
+    el.innerHTML = `<div class="quote">「${esc(p.t)}」</div><div class="small muted" style="margin-top:6px">${esc(p.s)} ${typeBadge(p.ty)}</div>`;
+  };
+  roll(); window.__roll = roll; window.__onNew = () => editHook(null, { onSaved: () => render() });
+  $('#d-roll', root).onclick = roll; $('#d-copy', root).onclick = () => cur && copyText(cur);
+  const sb = $('#d-sample', root); if (sb) sb.onclick = async () => { await loadSampleData(); toast('已載入範例資料', 'ok'); render(); };
+  const bb = $('#d-backup', root); if (bb) bb.onclick = exportJSON;
+};
+
+/* ---------- Hook Library ---------- */
+Views.library = function (root, params) {
+  const st = { q: params.q || '', type: '', platform: '', topic: '', tag: '', fav: false, perf: '', sort: 'new', page: 1, sel: new Set() };
+  const topics = uniq(S.hooks.map(h => h.topic).filter(Boolean)), tags = uniq(S.hooks.flatMap(h => h.tags || []));
+  root.innerHTML = `
+    <div class="page-h"><div><h1>📚 Hook 資料庫</h1><div class="muted">累積你的開頭句，並追蹤每一句的實戰成效</div></div><div class="row"><button id="l-csv">匯出目前清單 CSV</button><button class="primary" id="l-new">＋ 新增 Hook（N）</button></div></div>
+    <div class="card"><div class="row"><input id="q-text" placeholder="快速新增：輸入 Hook 後按 Enter" style="flex:1;min-width:240px"><select id="q-type" style="width:120px">${opts(S.settings.hookTypes)}</select><button id="q-add" class="primary">加入</button></div></div>
+    <div class="filters">
+      <input id="f-q" placeholder="🔍 搜尋文字、備註、標籤…" value="${esc(st.q)}">
+      <select id="f-type">${opts(S.settings.hookTypes, '', '全部類型')}</select>
+      <select id="f-plat">${opts(S.settings.platforms, '', '全部平台')}</select>
+      <select id="f-topic">${opts(topics, '', '全部主題')}</select>
+      <select id="f-tag">${opts(tags, '', '全部標籤')}</select>
+      <select id="f-perf"><option value="">成效：全部</option><option value="has">有成效</option><option value="none">無成效</option></select>
+    </div>
+    <div class="row" style="margin-bottom:10px"><label><input type="checkbox" id="f-fav"> 只看 ⭐ 收藏</label><span class="spacer"></span><span class="small muted">排序</span><select id="f-sort" style="width:150px"><option value="new">最新建立</option><option value="uses">使用次數</option><option value="er">最佳互動率</option></select></div>
+    <div class="card" style="padding:6px 10px"><div id="lib-list"></div></div><div id="lib-batch"></div>`;
+  const per = 50;
+  function filtered() {
+    const stats = hookStats(); const q = st.q.toLowerCase();
+    let a = S.hooks.filter(h => {
+      if (q && !([h.text, h.note, h.topic, h.audience, ...(h.tags || [])].join(' ').toLowerCase().includes(q))) return false;
+      if (st.type && h.type !== st.type) return false;
+      if (st.platform && !(h.platforms || []).includes(st.platform)) return false;
+      if (st.topic && h.topic !== st.topic) return false;
+      if (st.tag && !(h.tags || []).includes(st.tag)) return false;
+      if (st.fav && !h.favorite) return false;
+      const s = stats.get(h.id);
+      if (st.perf === 'has' && !(s && s.hasMetric)) return false;
+      if (st.perf === 'none' && s && s.hasMetric) return false;
+      return true;
+    });
+    const sv = h => stats.get(h.id) || { uses: 0, bestER: null };
+    if (st.sort === 'new') a.sort((x, y) => (y.createdAt || '').localeCompare(x.createdAt || ''));
+    else if (st.sort === 'uses') a.sort((x, y) => sv(y).uses - sv(x).uses);
+    else a.sort((x, y) => (sv(y).bestER ?? -1) - (sv(x).bestER ?? -1));
+    return { a, stats };
+  }
+  function refreshFilterOpts() {
+    const t = uniq(S.hooks.map(h => h.topic).filter(Boolean)), g = uniq(S.hooks.flatMap(h => h.tags || []));
+    if (st.topic && !t.includes(st.topic)) st.topic = ''; if (st.tag && !g.includes(st.tag)) st.tag = '';
+    $('#f-topic', root).innerHTML = opts(t, st.topic, '全部主題'); $('#f-tag', root).innerHTML = opts(g, st.tag, '全部標籤');
+  }
+  function renderList() {
+    refreshFilterOpts();
+    const { a, stats } = filtered();
+    const pages = Math.max(1, Math.ceil(a.length / per)); if (st.page > pages) st.page = pages;
+    const slice = a.slice((st.page - 1) * per, st.page * per);
+    $('#lib-list', root).innerHTML = a.length ? `<div class="tw"><table><thead><tr><th><input type="checkbox" id="l-all" ${slice.length && slice.every(h => st.sel.has(h.id)) ? 'checked' : ''}></th><th></th><th>Hook</th><th>類型</th><th>平台／主題</th><th>使用</th><th>最佳互動率</th><th>最近使用</th><th></th></tr></thead><tbody>${slice.map(h => {
+      const s = stats.get(h.id) || {};
+      return `<tr data-id="${h.id}"><td><input type="checkbox" class="l-sel" ${st.sel.has(h.id) ? 'checked' : ''}></td><td><span class="star ${h.favorite ? 'on' : ''}" data-a="fav">${h.favorite ? '★' : '☆'}</span></td>
+      <td><div class="hooktext">${esc(h.text)}</div><div class="small muted">${(h.tags || []).map(t => '#' + esc(t)).join(' ')}</div></td><td>${typeBadge(h.type)}</td>
+      <td class="small">${esc((h.platforms || []).join('、'))}<div class="muted">${esc(h.topic || '')}</div></td><td>${s.uses || 0}</td><td>${s.bestER != null ? '<b>' + pct(s.bestER) + '</b>' : '<span class="muted">—</span>'}</td><td class="small muted">${esc(s.lastUsed || '—')}</td>
+      <td style="white-space:nowrap"><button class="icon-btn" data-a="copy" title="複製">📋</button><button class="icon-btn" data-a="dup" title="複製為新 Hook">⧉</button><button class="icon-btn" data-a="edit" title="編輯">✏️</button><button class="icon-btn" data-a="del" title="刪除">🗑</button></td></tr>`;
+    }).join('')}</tbody></table></div>${pager(a.length, st.page, per)}` : `<div class="empty">${S.hooks.length ? '沒有符合條件的 Hook' : '還沒有任何 Hook<br><br><button class="primary" id="l-first">＋ 新增第一筆 Hook</button>'}</div>`;
+    const f = $('#l-first', root); if (f) f.onclick = () => editHook(null, { onSaved: refresh });
+    renderBatch();
+  }
+  function renderBatch() {
+    const n = st.sel.size;
+    $('#lib-batch', root).innerHTML = n ? `<div class="batch"><b>已選 ${n} 筆</b><span class="spacer"></span><button data-b="tag">加標籤</button><button data-b="csv">匯出所選</button><button data-b="del">刪除</button><button data-b="clr">取消選取</button></div>` : '';
+  }
+  const refresh = () => { st.sel = new Set([...st.sel].filter(id => S.hooks.some(h => h.id === id))); renderList(); };
+  const bind = (id, k, ev = 'change') => $(id, root).addEventListener(ev, e => { st[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; st.page = 1; st.sel.clear(); renderList(); });
+  bind('#f-type', 'type'); bind('#f-plat', 'platform'); bind('#f-topic', 'topic'); bind('#f-tag', 'tag'); bind('#f-perf', 'perf'); bind('#f-fav', 'fav'); bind('#f-sort', 'sort');
+  $('#f-q', root).addEventListener('input', debounce(e => { st.q = e.target.value; st.page = 1; st.sel.clear(); renderList(); }, 200));
+  const quick = async () => {
+    const inp = $('#q-text', root), text = inp.value.trim(); if (!text) return;
+    const sim = findSimilar(text);
+    if (sim.length && !(await confirmBox('偵測到相似的既有 Hook：\n\n' + sim.map(x => `• ${x.h.text}（相似度 ${(x.s * 100).toFixed(0)}%）`).join('\n') + '\n\n仍要新增嗎？', { okText: '仍要新增', title: '可能重複' }))) return;
+    await save('hooks', { id: uid(), text, type: $('#q-type', root).value, platforms: [], topic: '', audience: '', emotion: '', ctaType: '', tags: [], source: 'manual', favorite: false, note: '' });
+    inp.value = ''; inp.focus(); toast('已新增', 'ok'); renderList();
+  };
+  $('#q-add', root).onclick = quick; $('#q-text', root).addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) { e.preventDefault(); quick(); } });
+  $('#l-new', root).onclick = window.__onNew = () => editHook(null, { onSaved: refresh });
+  $('#l-csv', root).onclick = () => exportHooksCSV(filtered().a);
+  on(root, 'click', '#lib-list [data-pg]', (e, b) => { st.page = +b.dataset.pg; renderList(); });
+  on(root, 'change', '#l-all', (e, c) => { const { a } = filtered(); a.slice((st.page - 1) * per, st.page * per).forEach(h => c.checked ? st.sel.add(h.id) : st.sel.delete(h.id)); renderList(); });
+  on(root, 'change', '.l-sel', (e, c) => { const id = c.closest('tr').dataset.id; c.checked ? st.sel.add(id) : st.sel.delete(id); renderBatch(); });
+  on(root, 'click', '#lib-list [data-a]', async (e, b) => {
+    const id = b.closest('tr').dataset.id, h = S.hooks.find(x => x.id === id); if (!h) return;
+    const a = b.dataset.a;
+    if (a === 'fav') { h.favorite = !h.favorite; await save('hooks', h); renderList(); }
+    else if (a === 'copy') copyText(h.text);
+    else if (a === 'dup') editHook(Object.assign({}, h, { id: null, createdAt: null, favorite: false, source: 'manual' }), { onSaved: refresh, title: '複製為新 Hook' });
+    else if (a === 'edit') editHook(h, { onSaved: refresh });
+    else if (a === 'del') { if (await deleteHooks([id])) refresh(); }
+  });
+  on(root, 'click', '#lib-batch [data-b]', async (e, b) => {
+    const ids = [...st.sel], k = b.dataset.b;
+    if (k === 'clr') { st.sel.clear(); renderList(); }
+    else if (k === 'csv') exportHooksCSV(S.hooks.filter(h => st.sel.has(h.id)));
+    else if (k === 'tag') { const t = await promptBox('批次加標籤', '標籤（可用逗號分隔多個）'); if (t) { const add = splitList(t); for (const id of ids) { const h = S.hooks.find(x => x.id === id); h.tags = uniq([...(h.tags || []), ...add]); await save('hooks', h); } toast('已加入標籤', 'ok'); renderList(); } }
+    else if (k === 'del') { if (await deleteHooks(ids)) { st.sel.clear(); renderList(); } }
+  });
+  renderList();
+};
+function exportHooksCSV(list) {
+  const stats = hookStats();
+  const rows = list.map(h => { const s = stats.get(h.id) || {}; return [h.text, h.type, (h.platforms || []).join('|'), h.topic, h.audience, h.emotion, h.ctaType, (h.tags || []).join('|'), s.uses || 0, s.bestER != null ? (s.bestER * 100).toFixed(2) + '%' : '', s.lastUsed || '', h.favorite ? 'Y' : '', h.note, h.createdAt]; });
+  download(`HookLab_hooks_${todayStr()}.csv`, toCSV(['Hook', '類型', '平台', '主題', '受眾', '情緒', 'CTA類型', '標籤', '使用次數', '最佳互動率', '最近使用', '收藏', '備註', '建立時間'], rows), 'text/csv');
+}
+
+/* ---------- Generator ---------- */
+Views.generator = function (root) {
+  const st = { sel: new Set(), vals: {}, results: [], picked: new Set(), capped: false };
+  root.innerHTML = `
+    <div class="page-h"><div><h1>🧩 模板組合器</h1><div class="muted">規則式組合（非 AI）：選模板 → 填變數 → 一次產生多個開頭</div></div><div class="row"><button class="primary" id="g-new">＋ 新增模板（N）</button></div></div>
+    <div class="grid g2" style="align-items:start">
+      <div class="card"><h2>① 選擇模板</h2><div class="row" style="margin-bottom:8px"><input id="g-q" placeholder="搜尋模板" style="flex:1"><select id="g-type" style="width:110px">${opts(S.settings.hookTypes, '', '全部類型')}</select></div><div id="g-tpls" style="max-height:420px;overflow:auto"></div></div>
+      <div class="card"><h2>② 填入變數</h2><div id="g-vars"></div><div class="row" style="margin-top:10px"><button class="primary" id="g-run">⚡ 產生</button><span class="small muted" id="g-cnt"></span></div></div>
+    </div>
+    <div class="card"><div class="row"><h2 style="margin:0">③ 結果</h2><span class="spacer"></span><button id="g-all">全選／取消</button><button id="g-copy">複製所選</button><button class="primary" id="g-save">存入 Hook 資料庫</button></div><div id="g-res" style="margin-top:10px"></div></div>`;
+  function tplList() {
+    const q = $('#g-q', root).value.trim().toLowerCase(), ty = $('#g-type', root).value;
+    const a = S.templates.filter(t => (!ty || t.type === ty) && (!q || (t.name + t.pattern).toLowerCase().includes(q))).sort((x, y) => (y.builtIn === x.builtIn ? 0 : x.builtIn ? 1 : -1) || x.type.localeCompare(y.type));
+    $('#g-tpls', root).innerHTML = a.length ? a.map(t => `<div class="row" style="padding:5px 0;border-bottom:1px solid var(--line)" data-id="${t.id}"><input type="checkbox" class="t-sel" ${st.sel.has(t.id) ? 'checked' : ''}><div style="flex:1"><div>${esc(t.pattern)}</div><div class="small muted">${typeBadge(t.type)} ${esc(t.name)} ${t.builtIn ? '' : '<span class="badge gray">自訂</span>'} · 用過 ${t.useCount || 0} 次</div></div><button class="icon-btn" data-a="edit" title="${t.builtIn ? '複製為自訂' : '編輯'}">${t.builtIn ? '⧉' : '✏️'}</button>${t.builtIn ? '' : '<button class="icon-btn" data-a="del">🗑</button>'}</div>`).join('') : '<div class="empty">沒有符合的模板</div>';
+  }
+  function vars() { return uniq(S.templates.filter(t => st.sel.has(t.id)).flatMap(t => parseVars(t.pattern))); }
+  function varsPanel() {
+    const vs = vars();
+    $('#g-vars', root).innerHTML = vs.length ? vs.map(v => {
+      const vocab = S.vocab.find(x => x.variable === v);
+      return `<div class="f" data-v="${esc(v)}"><span><b>{${esc(v)}}</b> <span class="muted">每行或用逗號分隔一個值</span></span><textarea rows="2" class="v-in">${esc(st.vals[v] || '')}</textarea><div class="row" style="margin-top:4px">${vocab ? `<button class="sm" data-a="load">載入詞庫（${vocab.values.length}）</button>` : ''}<button class="sm" data-a="saveVocab">存入詞庫</button></div></div>`;
+    }).join('') : '<div class="empty">先在左側勾選模板</div>';
+    count();
+  }
+  function valuesOf(v) { return uniq(splitList(st.vals[v] || '')); }
+  function count() {
+    let total = 0; const miss = [];
+    S.templates.filter(t => st.sel.has(t.id)).forEach(t => { const vs = parseVars(t.pattern); if (vs.some(v => !valuesOf(v).length)) { miss.push(t.name); return; } total += vs.reduce((a, v) => a * valuesOf(v).length, 1); });
+    $('#g-cnt', root).textContent = st.sel.size ? `預計 ${total} 筆${total > 200 ? '（上限 200 筆）' : ''}${miss.length ? `；${miss.length} 個模板缺變數值將略過` : ''}` : '';
+  }
+  function expand(pattern, vs, cap) {
+    let combos = [{}];
+    for (const v of vs) { const next = []; outer: for (const c of combos) for (const val of valuesOf(v)) { next.push(Object.assign({}, c, { [v]: val })); if (next.length >= cap) break outer; } combos = next; }
+    return combos.map(c => pattern.replace(/\{([^{}]+)\}/g, (m, k) => (c[k.trim()] !== undefined ? c[k.trim()] : m)));
+  }
+  function renderRes() {
+    const a = st.results;
+    $('#g-res', root).innerHTML = a.length ? (st.capped ? '<div class="banner warn">已達 200 筆上限，部分組合未列出。請減少變數值。</div>' : '') + `<table><tbody>${a.map((r, i) => `<tr data-i="${i}"><td style="width:30px"><input type="checkbox" class="r-sel" ${st.picked.has(i) ? 'checked' : ''}></td><td class="hooktext">${esc(r.text)}</td><td>${typeBadge(r.type)}</td><td>${scoreBadge(r.score)}</td><td><button class="icon-btn" data-a="copy">📋</button></td></tr>`).join('')}</tbody></table>` : '<div class="empty">按下「產生」後結果會顯示在這裡</div>';
+  }
+  $('#g-q', root).addEventListener('input', debounce(tplList, 150)); $('#g-type', root).addEventListener('change', tplList);
+  on(root, 'change', '.t-sel', (e, c) => { const id = c.closest('[data-id]').dataset.id; c.checked ? st.sel.add(id) : st.sel.delete(id); $$('.v-in', root).forEach(t => st.vals[t.closest('[data-v]').dataset.v] = t.value); varsPanel(); });
+  on(root, 'input', '.v-in', (e, t) => { st.vals[t.closest('[data-v]').dataset.v] = t.value; count(); });
+  on(root, 'click', '#g-vars [data-a]', async (e, b) => {
+    const v = b.closest('[data-v]').dataset.v, ta = $('.v-in', b.closest('[data-v]'));
+    if (b.dataset.a === 'load') { const vo = S.vocab.find(x => x.variable === v); ta.value = vo.values.join('\n'); st.vals[v] = ta.value; count(); }
+    else { const vals = valuesOf(v); if (!vals.length) return toast('請先輸入至少一個值', 'err'); let vo = S.vocab.find(x => x.variable === v); if (!vo) vo = { id: uid(), variable: v, values: [] }; vo.values = uniq([...vo.values, ...vals]); await save('vocab', vo); toast(`已存入詞庫「${v}」`, 'ok'); varsPanel(); }
+  });
+  const editTpl = t => {
+    const isNew = !t || t.builtIn; const base = t || { name: '', pattern: '', type: S.settings.hookTypes[0] };
+    Modal.open({
+      title: t && t.builtIn ? '複製為自訂模板' : isNew ? '新增模板' : '編輯模板', html: `<label class="f"><span>模板名稱</span><input id="tp-name" value="${esc(t && t.builtIn ? base.name + '（自訂）' : base.name)}"></label><label class="f"><span>類型</span><select id="tp-type">${opts(S.settings.hookTypes, base.type)}</select></label><label class="f"><span>Pattern（用 {變數} 標示，例如 {受眾}、{主題}）</span><textarea id="tp-pat" rows="3">${esc(base.pattern)}</textarea></label><div class="small muted" id="tp-vars"></div>`,
+      buttons: [{ text: '取消' }, {
+        text: '儲存', cls: 'primary', fn: async w => {
+          const name = $('#tp-name', w).value.trim(), pattern = $('#tp-pat', w).value.trim();
+          if (!name || !pattern) { toast('請填寫名稱與 Pattern', 'err'); return false; }
+          const err = patternError(pattern); if (err) { toast(err, 'err'); return false; }
+          const obj = isNew ? { id: uid(), builtIn: false, useCount: 0 } : t;
+          Object.assign(obj, { name, pattern, type: $('#tp-type', w).value, variables: parseVars(pattern) });
+          await save('templates', obj); toast('已儲存', 'ok'); tplList();
+        }
+      }],
+      onMount: w => { const u = () => { const p = $('#tp-pat', w).value; const e = patternError(p); $('#tp-vars', w).innerHTML = e ? `<span style="color:var(--bad)">⚠ ${esc(e)}</span>` : `偵測到變數：${parseVars(p).map(v => `<span class="badge">${esc(v)}</span>`).join(' ') || '（無）'}`; }; $('#tp-pat', w).addEventListener('input', u); u(); }
+    });
+  };
+  function patternError(p) { let d = 0; for (const c of p) { if (c === '{') d++; else if (c === '}') d--; if (d < 0 || d > 1) return '括號不成對或巢狀，請檢查 { }'; } if (d !== 0) return '括號不成對，請檢查 { }'; if (/\{\s*\}/.test(p)) return '偵測到空白變數 {}'; return ''; }
+  on(root, 'click', '#g-tpls [data-a]', async (e, b) => {
+    const t = S.templates.find(x => x.id === b.closest('[data-id]').dataset.id);
+    if (b.dataset.a === 'edit') editTpl(t);
+    else if (await confirmBox(`刪除模板「${t.name}」？`, { okText: '刪除', danger: true })) { await removeMany('templates', [t.id]); st.sel.delete(t.id); tplList(); varsPanel(); }
+  });
+  $('#g-new', root).onclick = window.__onNew = () => editTpl(null);
+  $('#g-run', root).onclick = async () => {
+    const tpls = S.templates.filter(t => st.sel.has(t.id)); if (!tpls.length) return toast('請先選擇模板', 'err');
+    const out = []; const seen = new Set(); st.capped = false; const skipped = [];
+    for (const t of tpls) {
+      const vs = parseVars(t.pattern);
+      if (vs.some(v => !valuesOf(v).length)) { skipped.push(t.name); continue; }
+      const list = expand(t.pattern, vs, 201);
+      for (const text of list) { if (seen.has(text)) continue; seen.add(text); if (out.length >= 200) { st.capped = true; break; } out.push({ text, type: t.type, tplId: t.id, score: scoreHook(text, '').total }); }
+      t.useCount = (t.useCount || 0) + 1; await save('templates', t);
+      if (st.capped) break;
+    }
+    st.ctx = { topic: valuesOf('主題').length === 1 ? valuesOf('主題')[0] : '', aud: valuesOf('受眾').length === 1 ? valuesOf('受眾')[0] : '' }; st.results = out; st.picked = new Set(); renderRes(); tplList();
+    if (skipped.length) toast(`已略過缺變數值的模板：${skipped.join('、')}`, 'err'); else toast(`已產生 ${out.length} 筆`, 'ok');
+  };
+  on(root, 'change', '.r-sel', (e, c) => { const i = +c.closest('tr').dataset.i; c.checked ? st.picked.add(i) : st.picked.delete(i); });
+  on(root, 'click', '#g-res [data-a=copy]', (e, b) => copyText(st.results[+b.closest('tr').dataset.i].text));
+  $('#g-all', root).onclick = () => { if (st.picked.size === st.results.length) st.picked.clear(); else st.results.forEach((_, i) => st.picked.add(i)); renderRes(); };
+  $('#g-copy', root).onclick = () => { const a = [...st.picked].sort((x, y) => x - y).map(i => st.results[i].text); if (!a.length) return toast('請先勾選結果', 'err'); copyText(a.join('\n')); };
+  $('#g-save', root).onclick = async () => {
+    const a = [...st.picked].sort((x, y) => x - y).map(i => st.results[i]); if (!a.length) return toast('請先勾選結果', 'err');
+    const { topic, aud } = st.ctx || { topic: '', aud: '' };
+    let n = 0, dup = 0;
+    for (const r of a) { if (S.hooks.some(h => h.text === r.text)) { dup++; continue; } await save('hooks', { id: uid(), text: r.text, type: r.type, platforms: [], topic, audience: aud, emotion: '', ctaType: '', tags: [], source: 'generator', templateId: r.tplId, favorite: false, note: '' }); n++; }
+    toast(`已存入 ${n} 筆${dup ? `，略過 ${dup} 筆重複` : ''}`, 'ok'); st.picked.clear(); renderRes();
+  };
+  tplList(); varsPanel(); renderRes();
+};
+
+/* ---------- A/B Lab ---------- */
+Views.lab = function (root, params, arg) { return arg ? labDetail(root, arg) : labList(root); };
+
+function editPost(post, onSaved) {
+  const p = Object.assign({ id: null, title: '', platform: S.settings.platforms[0], publishedAt: todayStr(), body: '', cta: '', hashtags: [], campaign: '', status: 'published', primaryMetric: 'er' }, post || {});
+  Modal.open({
+    title: p.id ? '編輯貼文' : '新增貼文', wide: true,
+    html: `<div class="grid g2"><label class="f"><span>內部識別名稱 *</span><input id="pf-title" value="${esc(p.title)}"></label><label class="f"><span>所屬活動</span><input id="pf-camp" value="${esc(p.campaign)}"></label>
+      <label class="f"><span>發布平台</span><select id="pf-plat">${opts(S.settings.platforms, p.platform)}</select></label><label class="f"><span>發布日期</span><input type="date" id="pf-date" value="${esc(p.publishedAt)}"></label>
+      <label class="f"><span>狀態</span><select id="pf-status"><option value="draft" ${p.status === 'draft' ? 'selected' : ''}>草稿</option><option value="published" ${p.status === 'published' ? 'selected' : ''}>已發布</option><option value="archived" ${p.status === 'archived' ? 'selected' : ''}>已封存</option></select></label>
+      <label class="f"><span>CTA</span><input id="pf-cta" value="${esc(p.cta)}"></label></div>
+      <label class="f"><span>正文</span><textarea id="pf-body" rows="4">${esc(p.body)}</textarea></label><label class="f"><span>Hashtag（空白或逗號分隔）</span><input id="pf-tags" value="${esc((p.hashtags || []).join(' '))}"></label>`,
+    buttons: [{ text: '取消' }, {
+      text: '儲存', cls: 'primary', fn: async w => {
+        const title = $('#pf-title', w).value.trim(); if (!title) { toast('請輸入名稱', 'err'); return false; }
+        const obj = Object.assign({}, p, { title, campaign: $('#pf-camp', w).value.trim(), platform: $('#pf-plat', w).value, publishedAt: $('#pf-date', w).value, status: $('#pf-status', w).value, cta: $('#pf-cta', w).value.trim(), body: $('#pf-body', w).value, hashtags: $('#pf-tags', w).value.split(/[\s,，]+/).filter(Boolean) });
+        if (!obj.id) obj.id = uid(); await save('posts', obj); toast('已儲存', 'ok'); onSaved && onSaved(obj);
+      }
+    }]
+  });
+}
+function labList(root) {
+  const st = { status: '', platform: '', q: '' };
+  root.innerHTML = `<div class="page-h"><div><h1>🧪 A/B 實驗</h1><div class="muted">同一篇貼文測試多種開頭，記錄成效，找出贏家</div></div><div class="row"><button class="primary" id="b-new">＋ 新增貼文（N）</button></div></div>
+    <div class="filters f3"><input id="b-q" placeholder="🔍 搜尋名稱／活動"><select id="b-status"><option value="">全部狀態</option><option value="draft">草稿</option><option value="published">已發布</option><option value="archived">已封存</option></select><select id="b-plat">${opts(S.settings.platforms, '', '全部平台')}</select></div>
+    <div class="card" style="padding:6px 10px"><div id="b-list"></div></div>`;
+  const stLabel = { draft: ['草稿', 'gray'], published: ['已發布', 'ok'], archived: ['已封存', 'gray'] };
+  function draw() {
+    const q = st.q.toLowerCase(); const lm = latestMap(); const hm = new Map(S.hooks.map(h => [h.id, h]));
+    const a = S.posts.filter(p => (!st.status || p.status === st.status) && (!st.platform || p.platform === st.platform) && (!q || (p.title + (p.campaign || '')).toLowerCase().includes(q))).sort((x, y) => (y.publishedAt || '').localeCompare(x.publishedAt || ''));
+    $('#b-list', root).innerHTML = a.length ? `<div class="tw"><table><thead><tr><th>貼文</th><th>平台</th><th>發布日</th><th>狀態</th><th>版本</th><th>勝出 Hook</th><th></th></tr></thead><tbody>${a.map(p => {
+      const vs = S.variants.filter(v => v.postId === p.id), w = vs.find(v => v.isWinner), wh = w && hm.get(w.hookId), wc = w && lm.get(w.id) ? calc(lm.get(w.id)) : null, s = stLabel[p.status] || ['', 'gray'];
+      return `<tr data-id="${p.id}"><td><a href="#/lab/${p.id}" class="hooktext">${esc(p.title)}</a><div class="small muted">${esc(p.campaign || '')}</div></td><td>${esc(p.platform)}</td><td>${esc(p.publishedAt || '')}</td><td><span class="badge ${s[1]}">${s[0]}</span></td><td>${vs.length}</td><td class="small">${wh ? `🏆 ${esc(w.label)}：${esc(wh.text)} <b>${wc ? pct(wc[p.primaryMetric || 'er']) : ''}</b>` : '<span class="muted">—</span>'}</td><td style="white-space:nowrap"><button class="icon-btn" data-a="edit">✏️</button><button class="icon-btn" data-a="del">🗑</button></td></tr>`;
+    }).join('')}</tbody></table></div>` : `<div class="empty">${S.posts.length ? '沒有符合條件的貼文' : '還沒有任何貼文實驗<br><br><button class="primary" id="b-first">＋ 建立第一篇貼文</button>'}</div>`;
+    const f = $('#b-first', root); if (f) f.onclick = () => editPost(null, p => { location.hash = '#/lab/' + p.id; });
+  }
+  $('#b-q', root).addEventListener('input', debounce(e => { st.q = e.target.value; draw(); })); $('#b-status', root).onchange = e => { st.status = e.target.value; draw(); }; $('#b-plat', root).onchange = e => { st.platform = e.target.value; draw(); };
+  $('#b-new', root).onclick = window.__onNew = () => editPost(null, p => { location.hash = '#/lab/' + p.id; });
+  on(root, 'click', '#b-list [data-a]', async (e, b) => {
+    const p = S.posts.find(x => x.id === b.closest('tr').dataset.id);
+    if (b.dataset.a === 'edit') editPost(p, draw);
+    else if (await confirmBox(`刪除貼文「${p.title}」？\n其 Hook 版本與成效紀錄也會一併刪除（Hook 資料庫中的 Hook 會保留）。`, { okText: '刪除', danger: true })) { await cascadeDeleteVariants(S.variants.filter(v => v.postId === p.id).map(v => v.id)); await removeMany('posts', [p.id]); toast('已刪除', 'ok'); draw(); }
+  });
+  draw();
+}
+const MF = ['impressions', 'reach', 'likes', 'comments', 'shares', 'saves', 'clicks'];
+const MFN = { impressions: '曝光', reach: '觸及', likes: '按讚', comments: '留言', shares: '分享', saves: '收藏', clicks: '點擊' };
+function labDetail(root, postId) {
+  const post = S.posts.find(p => p.id === postId);
+  if (!post) { root.innerHTML = '<div class="empty">找不到這篇貼文 <a href="#/lab">← 返回實驗列表</a></div>'; return; }
+  const getVars = () => S.variants.filter(v => v.postId === postId).sort((a, b) => a.label.localeCompare(b.label));
+  const mrow = m => { const c = calc(m); return `<tr data-mid="${m.id}"><td><input type="date" class="mt-input date" data-f="recordedAt" value="${esc(m.recordedAt || '')}"></td>${MF.map(f => `<td><input type="number" min="0" step="1" class="mt-input" data-f="${f}" value="${m[f] ?? ''}"></td>`).join('')}<td class="calc" data-c="er">${pct(c.er)}</td><td class="calc" data-c="cr">${pct(c.cr)}</td><td class="calc" data-c="sr">${pct(c.sr)}</td><td class="calc" data-c="svr">${pct(c.svr)}</td><td class="calc" data-c="ctr">${pct(c.ctr)}</td><td><button class="icon-btn" data-a="delm" title="刪除此筆紀錄">✕</button></td></tr>`; };
+  function draw() {
+    const vars = getVars(); const hm = new Map(S.hooks.map(h => [h.id, h]));
+    root.innerHTML = `
+      <div class="page-h"><div><a href="#/lab" class="muted small">← 返回實驗列表</a><h1>${esc(post.title)}</h1><div class="muted">${esc(post.platform)} · ${esc(post.publishedAt || '')} ${post.campaign ? '· 活動：' + esc(post.campaign) : ''}</div></div>
+        <div class="row"><button data-a="edit">編輯貼文</button><button data-a="paste">📋 貼上成效</button><button class="primary" data-a="addv">＋ 新增 Hook 版本</button></div></div>
+      ${post.body || post.cta || (post.hashtags || []).length ? `<div class="card"><div style="white-space:pre-wrap">${esc(post.body || '')}</div>${post.cta ? `<div class="small muted" style="margin-top:6px">CTA：${esc(post.cta)}</div>` : ''}<div class="small muted">${(post.hashtags || []).map(esc).join(' ')}</div></div>` : ''}
+      <div class="card"><div class="row"><h2 style="margin:0">版本比較</h2><span class="spacer"></span><span class="small muted">比較指標</span><select id="cmp-metric" style="width:120px">${Object.entries(METRICS).map(([k, v]) => `<option value="${k}" ${k === (post.primaryMetric || 'er') ? 'selected' : ''}>${v}</option>`).join('')}</select></div><div id="cmp" style="margin-top:8px"></div></div>
+      ${vars.length ? vars.map(v => { const h = hm.get(v.hookId); const ms = S.metrics.filter(m => m.variantId === v.id).sort((a, b) => (a.recordedAt || '').localeCompare(b.recordedAt || '') || (a.createdAt || '').localeCompare(b.createdAt || '')); return `<div class="card" data-vid="${v.id}"><div class="row"><span class="badge" style="font-size:14px">版本 ${esc(v.label)}</span><span class="hooktext" style="flex:1">${esc(h ? h.text : '（Hook 已刪除）')}</span><span id="wb-${v.id}"></span>${h ? typeBadge(h.type) : ''}<button class="sm" data-a="addm">＋ 新增紀錄</button><button class="sm danger" data-a="delv">移除版本</button></div>
+        <div class="tw" style="margin-top:8px"><table><thead><tr><th>紀錄日期</th>${MF.map(f => `<th>${MFN[f]}</th>`).join('')}<th>互動率</th><th>留言率</th><th>分享率</th><th>收藏率</th><th>CTR</th><th></th></tr></thead><tbody>${ms.length ? ms.map(mrow).join('') : `<tr><td colspan="14" class="muted">尚無成效紀錄，按「＋ 新增紀錄」開始輸入</td></tr>`}</tbody></table></div></div>`; }).join('') : '<div class="card empty">這篇貼文還沒有 Hook 版本<br><br><button class="primary" data-a="addv">＋ 新增第一個版本</button></div>'}`;
+    renderCompare();
+  }
+  function renderCompare() {
+    const vars = getVars(); const metric = post.primaryMetric || 'er'; const hm = new Map(S.hooks.map(h => [h.id, h]));
+    const info = winnerInfo(vars, metric); const el = $('#cmp', root); if (!el) return;
+    if (!vars.length) { el.innerHTML = '<div class="muted">新增版本後會在這裡比較</div>'; return; }
+    const items = info.items.map(i => ({ label: '版本 ' + i.v.label, value: i.val, gray: !i.ok, hl: !!(info.winner && info.winner.v.id === i.v.id && !info.close), n: null }));
+    el.innerHTML = barChart(items) + `<div class="small muted" style="margin-top:4px">灰色＝曝光不足 ${minImp()} 或無資料，不參與勝負判定。</div>` + (info.winner ? `<div class="insight" style="margin-top:8px">🏆 目前領先：<b>版本 ${esc(info.winner.v.label)}</b>「${esc((hm.get(info.winner.v.hookId) || {}).text || '')}」，${METRICS[metric]} ${pct(info.winner.val)}</div>` : '') + (info.note ? `<div class="insight" style="border-color:var(--warn)">ℹ ${esc(info.note)}</div>` : '');
+    const clear = info.close;
+    vars.forEach(v => { const wb = $('#wb-' + v.id, root); if (wb) wb.innerHTML = info.winner && info.winner.v.id === v.id ? (clear ? '<span class="badge warn">領先（差異不明顯）</span>' : '<span class="badge ok">🏆 Winner</span>') : ''; });
+    refreshWinner(postId).catch(console.error);
+  }
+  function updateCalc(tr, m) { const c = calc(m); $$('[data-c]', tr).forEach(td => td.textContent = pct(c[td.dataset.c])); }
+  async function addMetric(variantId, data) { return save('metrics', Object.assign({ id: uid(), variantId, recordedAt: todayStr(), impressions: null, reach: null, likes: null, comments: null, shares: null, saves: null, clicks: null }, data || {})); }
+  on(root, 'change', '#cmp-metric', async (e, s) => { post.primaryMetric = s.value; await save('posts', post); renderCompare(); });
+  on(root, 'change', 'tr[data-mid] input', async (e, inp) => {
+    const tr = inp.closest('tr'), m = S.metrics.find(x => x.id === tr.dataset.mid), f = inp.dataset.f; if (!m) return;
+    if (f === 'recordedAt') m.recordedAt = inp.value;
+    else { const val = inp.value.trim(); if (val === '') m[f] = null; else { const n = Number(val); if (!Number.isInteger(n) || n < 0) { inp.classList.add('invalid'); toast('請輸入大於等於 0 的整數', 'err'); return; } m[f] = n; } }
+    inp.classList.remove('invalid'); await save('metrics', m); updateCalc(tr, m); renderCompare();
+  });
+  on(root, 'click', '[data-a]', async (e, b) => {
+    const a = b.dataset.a;
+    if (a === 'edit') editPost(post, p => { Object.assign(post, p); draw(); });
+    else if (a === 'addv') addVariant();
+    else if (a === 'paste') pasteMetrics();
+    else if (a === 'addm') { const vid = b.closest('[data-vid]').dataset.vid; await addMetric(vid); draw(); }
+    else if (a === 'delm') { const tr = b.closest('tr'); await removeMany('metrics', [tr.dataset.mid]); draw(); }
+    else if (a === 'delv') { const vid = b.closest('[data-vid]').dataset.vid; if (await confirmBox('移除此版本與它的成效紀錄？（Hook 本身會保留在資料庫）', { okText: '移除', danger: true })) { await cascadeDeleteVariants([vid]); draw(); } }
+  });
+  function addVariant() {
+    const vars = getVars(); if (vars.length >= 5) return toast('每篇貼文最多 5 個版本', 'err');
+    const used = new Set(vars.map(v => v.hookId)); let pick = null;
+    Modal.open({
+      title: '新增 Hook 版本', wide: true,
+      html: `<label class="f"><span>從資料庫選擇（可搜尋）</span><input id="av-q" placeholder="🔍 搜尋 Hook"></label><div class="sel-list" id="av-list"></div><div class="hint">或直接輸入新的 Hook（會同時存入 Hook 資料庫）：</div>
+        <div class="row"><input id="av-new" placeholder="輸入新的 Hook 文字" style="flex:1"><select id="av-type" style="width:120px">${opts(S.settings.hookTypes)}</select></div>`,
+      buttons: [{ text: '取消' }, {
+        text: '加入', cls: 'primary', fn: async w => {
+          const txt = $('#av-new', w).value.trim(); let hookId = pick;
+          if (txt) {
+            const ex = S.hooks.find(h => h.text === txt);
+            if (ex) hookId = ex.id; else {
+              const sim = findSimilar(txt); if (sim.length && !(await confirmBox('偵測到相似的既有 Hook：\n\n' + sim.map(x => `• ${x.h.text}（${(x.s * 100).toFixed(0)}%）`).join('\n') + '\n\n仍要新增嗎？', { okText: '仍要新增' }))) return false;
+              const h = await save('hooks', { id: uid(), text: txt, type: $('#av-type', w).value, platforms: post.platform ? [post.platform] : [], topic: '', audience: '', emotion: '', ctaType: '', tags: [], source: 'manual', favorite: false, note: '' }); hookId = h.id;
+            }
+          }
+          if (!hookId) { toast('請選擇或輸入一個 Hook', 'err'); return false; }
+          if (used.has(hookId)) { toast('這個 Hook 已在此貼文中', 'err'); return false; }
+          const label = [...'ABCDE'].find(l => !vars.some(v => v.label === l));
+          const v = await save('variants', { id: uid(), postId, hookId, label, isWinner: false }); await addMetric(v.id); draw();
+        }
+      }],
+      onMount: w => {
+        const list = $('#av-list', w);
+        const fill = () => { const q = $('#av-q', w).value.trim().toLowerCase(); const a = S.hooks.filter(h => !used.has(h.id) && (!q || h.text.toLowerCase().includes(q))).slice(0, 60); list.innerHTML = a.length ? a.map(h => `<div data-id="${h.id}" class="${pick === h.id ? 'on' : ''}">${esc(h.text)} ${typeBadge(h.type)}</div>`).join('') : '<div class="muted">沒有可選的 Hook</div>'; };
+        $('#av-q', w).addEventListener('input', debounce(fill, 120)); on(list, 'click', '[data-id]', (e, d) => { pick = d.dataset.id; $('#av-new', w).value = ''; fill(); }); fill();
+      }
+    });
+  }
+  function pasteMetrics() {
+    const vars = getVars(); if (!vars.length) return toast('請先新增 Hook 版本', 'err');
+    Modal.open({
+      title: '從 Excel 貼上成效', wide: true,
+      html: `<div class="muted small">每一列對應一個版本（${vars.map(v => v.label).join('、')} 依序），欄位順序（Tab 分隔，可直接從 Excel 複製）：<br><b>${MF.map(f => MFN[f]).join(' → ')}</b></div><label class="f" style="margin-top:8px"><span>紀錄日期</span><input type="date" id="pm-date" value="${todayStr()}"></label><textarea id="pm-text" rows="6" placeholder="例：&#10;5200&#9;4300&#9;210&#9;18&#9;9&#9;22&#9;60"></textarea>`,
+      buttons: [{ text: '取消' }, {
+        text: '匯入', cls: 'primary', fn: async w => {
+          const lines = $('#pm-text', w).value.split(/\r?\n/).filter(l => l.trim()); if (!lines.length) { toast('請貼上資料', 'err'); return false; }
+          if (lines.length > vars.length) { toast(`資料有 ${lines.length} 列，但只有 ${vars.length} 個版本`, 'err'); return false; }
+          const parsed = [];
+          for (let i = 0; i < lines.length; i++) {
+            const cells = (lines[i].includes('\t') ? lines[i].split('\t') : lines[i].trim().split(/[\s,]+/)).map(c => c.replace(/,/g, '').trim());
+            const o = {}; for (let j = 0; j < MF.length; j++) { const c = cells[j]; if (c === undefined || c === '' || c === '-') { o[MF[j]] = null; continue; } const n = Number(c); if (!Number.isInteger(n) || n < 0) { toast(`第 ${i + 1} 列「${MFN[MF[j]]}」不是有效的整數：${c}`, 'err'); return false; } o[MF[j]] = n; }
+            parsed.push(o);
+          }
+          const date = $('#pm-date', w).value || todayStr();
+          for (let i = 0; i < parsed.length; i++) await addMetric(vars[i].id, Object.assign({ recordedAt: date }, parsed[i]));
+          toast(`已匯入 ${parsed.length} 個版本的成效`, 'ok'); draw();
+        }
+      }]
+    });
+  }
+  window.__onNew = addVariant;
+  draw();
+}
+
+/* ---------- Hook DNA ---------- */
+Views.dna = function (root) {
+  const st = { period: 'all', platform: '', topic: '', campaign: '', metric: 'er' };
+  const used = uniq(S.posts.map(p => p.platform).filter(Boolean));
+  root.innerHTML = `<div class="page-h"><div><h1>🧬 Hook DNA</h1><div class="muted">用你的歷史成效，找出自己的「高成效開頭基因」</div></div></div>
+    <div class="card"><div class="row"><span class="small muted">期間</span><select id="n-per" style="width:130px"><option value="all">全部</option><option value="30">近 30 天</option><option value="90">近 90 天</option><option value="180">近 180 天</option></select>
+    <span class="small muted">平台</span><select id="n-plat" style="width:140px">${opts(used, '', '全部平台')}</select><span class="small muted">主題</span><select id="n-topic" style="width:130px">${opts(uniq(S.hooks.map(h => h.topic).filter(Boolean)), '', '全部主題')}</select><span class="small muted">活動</span><select id="n-camp" style="width:130px">${opts(uniq(S.posts.map(p => p.campaign).filter(Boolean)), '', '全部活動')}</select><span class="small muted">指標</span><select id="n-met" style="width:120px">${Object.entries(METRICS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div></div><div id="n-body"></div>`;
+  const grp = (rows, keyFn) => { const m = new Map(); rows.forEach(r => { const k = keyFn(r); if (k == null) return; const o = m.get(k) || { s: 0, n: 0 }; o.s += r.val; o.n++; m.set(k, o); }); return m; };
+  const avgOf = o => o.s / o.n;
+  function draw() {
+    const cutoff = st.period === 'all' ? null : daysAgo(+st.period);
+    const rows = perfRows().map(r => Object.assign(r, { val: r.c[st.metric] })).filter(r => r.val != null && (!cutoff || (r.p.publishedAt || '') >= cutoff) && (!st.platform || r.p.platform === st.platform) && (!st.topic || r.h.topic === st.topic) && (!st.campaign || r.p.campaign === st.campaign));
+    const body = $('#n-body', root), M = METRICS[st.metric];
+    if (!rows.length) { body.innerHTML = '<div class="card empty">目前條件下沒有成效資料<br>到「A/B 實驗」建立貼文並填入曝光與互動數據，或到總覽載入範例資料</div>'; return; }
+    const overall = mean(rows.map(r => r.val));
+    const byType = [...grp(rows, r => r.h.type)].map(([k, o]) => ({ k, avg: avgOf(o), n: o.n })).sort((a, b) => b.avg - a.avg);
+    const platforms = uniq(rows.map(r => r.p.platform)).filter(Boolean), types = byType.map(x => x.k);
+    const cell = grp(rows, r => r.p.platform + '||' + r.h.type); let hmMax = 1e-9; cell.forEach(o => { hmMax = Math.max(hmMax, avgOf(o)); });
+    const bucket = len => len <= 15 ? '0-15 字' : len <= 25 ? '16-25 字' : len <= 40 ? '26-40 字' : '40+ 字';
+    const byLen = grp(rows, r => bucket([...r.h.text].length)); const lenOrder = ['0-15 字', '16-25 字', '26-40 字', '40+ 字'];
+    const feats = [['數字', r => /[0-9０-９]/.test(r.h.text)], ['問號', r => /[？?]/.test(r.h.text)], ['Emoji', r => /\p{Extended_Pictographic}/u.test(r.h.text)]].map(([n, fn]) => { const a = rows.filter(fn), b = rows.filter(r => !fn(r)); return { n, a: a.length ? mean(a.map(r => r.val)) : null, an: a.length, b: b.length ? mean(b.map(r => r.val)) : null, bn: b.length }; });
+    const byMonth = [...grp(rows, r => (r.p.publishedAt || '').slice(0, 7) || null)].sort((a, b) => a[0].localeCompare(b[0])).map(([k, o]) => ({ label: k, value: avgOf(o) }));
+    const best = new Map(); rows.forEach(r => { const c = best.get(r.h.id); if (!c || r.val > c.val) best.set(r.h.id, r); });
+    const topAll = [...best.values()].sort((a, b) => b.val - a.val); const topN = Math.max(1, Math.ceil(topAll.length * 0.1)); const top = topAll.slice(0, topN);
+    const insights = [];
+    const goodTypes = byType.filter(x => x.n >= 3);
+    if (goodTypes.length) insights.push(`整體來看，「${goodTypes[0].k}」型 Hook 的平均${M}最高（${pct(goodTypes[0].avg)}，n=${goodTypes[0].n}），為整體平均 ${(goodTypes[0].avg / overall).toFixed(1)} 倍。`);
+    platforms.forEach(p => { const rp = rows.filter(r => r.p.platform === p); const ov = mean(rp.map(r => r.val)); const g = [...grp(rp, r => r.h.type)].map(([k, o]) => ({ k, avg: avgOf(o), n: o.n })).filter(x => x.n >= 3).sort((a, b) => b.avg - a.avg)[0]; if (g && ov > 0 && g.avg / ov >= 1.1) insights.push(`${p} 上「${g.k}」型平均${M} ${pct(g.avg)}，高於該平台平均的 ${(g.avg / ov).toFixed(1)} 倍（n=${g.n}）。`); });
+    feats.forEach(f => { if (f.an >= 3 && f.bn >= 3 && f.b > 0) { const r = f.a / f.b; if (r >= 1.15) insights.push(`開頭含「${f.n}」的 Hook ${M}較高（${pct(f.a)} vs ${pct(f.b)}，約 ${r.toFixed(1)} 倍）。`); else if (r <= 0.87) insights.push(`開頭含「${f.n}」的 Hook ${M}反而較低（${pct(f.a)} vs ${pct(f.b)}）。`); } });
+    const ln = [...byLen].filter(([, o]) => o.n >= 3).sort((a, b) => avgOf(b[1]) - avgOf(a[1]))[0]; if (ln) insights.push(`長度落在「${ln[0]}」的 Hook ${M}最高（${pct(avgOf(ln[1]))}，n=${ln[1].n}）。`);
+    if (!insights.length) insights.push('樣本數仍不足（各分類需 n ≥ 3），持續累積資料後洞察會更準確。');
+    body.innerHTML = `
+      <div class="card"><h2>💡 自動洞察</h2>${insights.map(i => `<div class="insight">${esc(i)}</div>`).join('')}<div class="small muted">共 ${rows.length} 筆有效資料（曝光 ≥ ${minImp()}），整體平均${M}：${pct(overall)}</div></div>
+      <div class="grid g2" style="align-items:start"><div class="card"><h2>各 Hook 類型平均${M}</h2>${barChart(byType.map(x => ({ label: x.k + (x.n < 3 ? '＊' : ''), value: x.avg, n: x.n, gray: x.n < 3 })))}<div class="small muted">＊ 樣本不足（n &lt; 3）</div></div>
+      <div class="card"><h2>Hook 長度 vs ${M}</h2>${barChart(lenOrder.filter(k => byLen.has(k)).map(k => ({ label: k, value: avgOf(byLen.get(k)), n: byLen.get(k).n, gray: byLen.get(k).n < 3 })))}
+      <h2 style="margin-top:14px">字面特徵對照</h2><table><thead><tr><th>特徵</th><th>有</th><th>無</th></tr></thead><tbody>${feats.map(f => `<tr><td>${f.n}</td><td>${pct(f.a)} <span class="muted small">(n=${f.an})</span></td><td>${pct(f.b)} <span class="muted small">(n=${f.bn})</span></td></tr>`).join('')}</tbody></table></div></div>
+      <div class="card"><h2>平台 × 類型 熱力圖（平均${M}）</h2><div class="tw"><table class="hm"><thead><tr><th></th>${types.map(t => `<th style="text-align:center">${esc(t)}</th>`).join('')}</tr></thead><tbody>${platforms.map(p => `<tr><th>${esc(p)}</th>${types.map(t => { const o = cell.get(p + '||' + t); if (!o) return '<td class="n">—</td>'; const v = avgOf(o); return `<td class="${o.n < 3 ? 'n' : ''}" style="background:rgba(91,91,240,${(0.1 + 0.8 * v / hmMax).toFixed(2)});${v / hmMax > .55 ? 'color:#fff' : ''}" title="n=${o.n}">${pct(v)}<br><span style="opacity:.7">n=${o.n}</span></td>`; }).join('')}</tr>`).join('')}</tbody></table></div><div class="small muted">斜體淡字＝樣本不足（n &lt; 3）</div></div>
+      <div class="card"><h2>月趨勢（平均${M}）</h2>${lineChart(byMonth)}</div>
+      <div class="card"><h2>🏆 Winning Hooks（前 10%，共 ${top.length} 筆）</h2><table><tbody>${top.map((r, i) => `<tr><td>${i + 1}</td><td class="hooktext">${esc(r.h.text)}</td><td>${typeBadge(r.h.type)}</td><td class="small muted">${esc(r.p.platform || '')}</td><td><b>${pct(r.val)}</b></td></tr>`).join('')}</tbody></table></div>`;
+  }
+  $('#n-per', root).onchange = e => { st.period = e.target.value; draw(); }; $('#n-plat', root).onchange = e => { st.platform = e.target.value; draw(); }; $('#n-met', root).onchange = e => { st.metric = e.target.value; draw(); }; $('#n-topic', root).onchange = e => { st.topic = e.target.value; draw(); }; $('#n-camp', root).onchange = e => { st.campaign = e.target.value; draw(); };
+  draw();
+};
+
+/* ---------- Swipe File ---------- */
+Views.swipe = function (root) {
+  const st = { view: 'card', platform: '', type: '', q: '' };
+  root.innerHTML = `<div class="page-h"><div><h1>📁 收藏文案（Swipe File）</h1><div class="muted">收下看到的好開頭，記下「為什麼有效」與「怎麼改寫」</div></div><div class="row"><button id="s-rand">🎲 隨機抽卡（R）</button><button class="primary" id="s-new">＋ 新增收藏（N）</button></div></div>
+    <div class="filters f4"><input id="s-q" placeholder="🔍 搜尋"><select id="s-plat">${opts(S.settings.platforms, '', '全部平台')}</select><select id="s-type">${opts(S.settings.hookTypes, '', '全部類型')}</select><select id="s-view" style="width:100px"><option value="card">卡片</option><option value="list">列表</option></select></div><div id="s-body"></div>`;
+  function edit(s, prefill) {
+    const o = Object.assign({ id: null, text: '', sourceName: '', url: '', platform: S.settings.platforms[0], type: S.settings.hookTypes[0], whyItWorks: '', rewriteIdea: '', tags: [] }, s || prefill);
+    Modal.open({
+      title: o.id ? '編輯收藏' : '新增收藏', wide: true,
+      html: `<label class="f"><span>原文開頭 *</span><textarea id="sw-text" rows="3">${esc(o.text)}</textarea></label><div class="grid g2"><label class="f"><span>來源帳號／品牌</span><input id="sw-src" value="${esc(o.sourceName)}"></label><label class="f"><span>網址</span><input id="sw-url" value="${esc(o.url)}"></label><label class="f"><span>平台</span><select id="sw-plat">${opts(S.settings.platforms, o.platform)}</select></label><label class="f"><span>Hook 類型</span><select id="sw-type">${opts(S.settings.hookTypes, o.type)}</select></label></div>
+        <label class="f"><span>為什麼有效</span><textarea id="sw-why" rows="2">${esc(o.whyItWorks)}</textarea></label><label class="f"><span>可以怎麼改寫</span><textarea id="sw-re" rows="2">${esc(o.rewriteIdea)}</textarea></label><label class="f"><span>標籤（逗號分隔）</span><input id="sw-tags" value="${esc((o.tags || []).join(', '))}"></label>`,
+      buttons: [{ text: '取消' }, {
+        text: '儲存', cls: 'primary', fn: async w => {
+          const text = $('#sw-text', w).value.trim(); if (!text) { toast('請輸入原文', 'err'); return false; }
+          const obj = Object.assign({}, o, { text, sourceName: $('#sw-src', w).value.trim(), url: $('#sw-url', w).value.trim(), platform: $('#sw-plat', w).value, type: $('#sw-type', w).value, whyItWorks: $('#sw-why', w).value.trim(), rewriteIdea: $('#sw-re', w).value.trim(), tags: splitList($('#sw-tags', w).value) });
+          if (!obj.id) obj.id = uid(); await save('swipes', obj); toast('已儲存', 'ok'); draw();
+        }
+      }]
+    });
+  }
+  const safeUrl = u => /^https?:\/\//i.test(u) ? u : '';
+  function draw() {
+    const q = st.q.toLowerCase();
+    const a = S.swipes.filter(s => (!st.platform || s.platform === st.platform) && (!st.type || s.type === st.type) && (!q || [s.text, s.sourceName, s.whyItWorks, s.rewriteIdea, ...(s.tags || [])].join(' ').toLowerCase().includes(q))).sort((x, y) => (y.createdAt || '').localeCompare(x.createdAt || ''));
+    const acts = '<div class="row"><button class="sm" data-a="hook">轉成我的 Hook</button><button class="sm" data-a="copy">複製</button><button class="sm" data-a="edit">編輯</button><button class="sm danger" data-a="del">刪除</button></div>';
+    $('#s-body', root).innerHTML = !a.length ? `<div class="card empty">${S.swipes.length ? '沒有符合條件的收藏' : '還沒有收藏任何文案<br><br><button class="primary" id="s-first">＋ 新增第一筆收藏</button>'}</div>` : st.view === 'card' ? `<div class="swipes">${a.map(s => `<div class="swipe-card" data-id="${s.id}"><div class="quote">${esc(s.text)}</div><div>${typeBadge(s.type)} <span class="badge gray">${esc(s.platform || '')}</span></div>${s.sourceName ? `<div class="small muted">來源：${esc(s.sourceName)} ${safeUrl(s.url) ? `· <a href="${esc(s.url)}" target="_blank" rel="noopener noreferrer">連結</a>` : ''}</div>` : ''}${s.whyItWorks ? `<div class="small">💡 ${esc(s.whyItWorks)}</div>` : ''}${s.rewriteIdea ? `<div class="small">✍️ ${esc(s.rewriteIdea)}</div>` : ''}<div class="small muted">${(s.tags || []).map(t => '#' + esc(t)).join(' ')}</div><div class="spacer"></div>${acts}</div>`).join('')}</div>` :
+      `<div class="card"><table><tbody>${a.map(s => `<tr data-id="${s.id}"><td><div class="hooktext">${esc(s.text)}</div><div class="small muted">${esc(s.whyItWorks || '')}</div></td><td>${typeBadge(s.type)}</td><td class="small">${esc(s.platform || '')}<br>${esc(s.sourceName || '')}</td><td>${acts}</td></tr>`).join('')}</tbody></table></div>`;
+    const f = $('#s-first', root); if (f) f.onclick = () => edit(null);
+  }
+  $('#s-q', root).addEventListener('input', debounce(e => { st.q = e.target.value; draw(); })); $('#s-plat', root).onchange = e => { st.platform = e.target.value; draw(); }; $('#s-type', root).onchange = e => { st.type = e.target.value; draw(); }; $('#s-view', root).onchange = e => { st.view = e.target.value; draw(); };
+  $('#s-new', root).onclick = window.__onNew = () => edit(null);
+  const rand = () => { if (!S.swipes.length) return toast('還沒有收藏文案', 'err'); const s = S.swipes[Math.floor(Math.random() * S.swipes.length)]; Modal.open({ title: '🎲 今日靈感', html: `<div class="quote" style="font-size:20px">「${esc(s.text)}」</div><div class="small muted" style="margin:8px 0">${esc(s.sourceName || '')} ${typeBadge(s.type)}</div>${s.whyItWorks ? `<div>💡 ${esc(s.whyItWorks)}</div>` : ''}${s.rewriteIdea ? `<div>✍️ ${esc(s.rewriteIdea)}</div>` : ''}`, buttons: [{ text: '關閉' }, { text: '再抽一次', fn: () => { setTimeout(rand, 0); } }, { text: '轉成我的 Hook', cls: 'primary', fn: () => { editHook({ text: s.text, type: s.type, source: 'swipe', platforms: s.platform ? [s.platform] : [] }); } }] }); };
+  window.__roll = rand; $('#s-rand', root).onclick = rand;
+  on(root, 'click', '[data-a]', async (e, b) => {
+    const s = S.swipes.find(x => x.id === b.closest('[data-id]').dataset.id); if (!s) return; const a = b.dataset.a;
+    if (a === 'copy') copyText(s.text); else if (a === 'edit') edit(s);
+    else if (a === 'hook') editHook({ text: s.text, type: s.type, source: 'swipe', platforms: s.platform ? [s.platform] : [], note: s.whyItWorks ? '來自收藏：' + s.whyItWorks : '' }, { title: '轉成我的 Hook' });
+    else if (a === 'del' && await confirmBox('刪除這筆收藏？', { okText: '刪除', danger: true })) { await removeMany('swipes', [s.id]); draw(); }
+  });
+  draw();
+};
+
+/* ---------- Hook Score ---------- */
+Views.score = function (root) {
+  const st = { sel: 0 };
+  root.innerHTML = `<div class="page-h"><div><h1>🎯 Hook 評分</h1><div class="muted">規則式評分（0–100），發文前快速檢查。可一次貼多行批次評分。</div></div></div>
+    <div class="grid g2" style="align-items:start"><div class="card"><label class="f"><span>核心主題（選填，用來判斷前 20 字是否切題）</span><input id="sc-topic" placeholder="例如：信用卡回饋"></label><label class="f"><span>Hook（每行一個）</span><textarea id="sc-text" rows="8" placeholder="貼上一個或多個開頭句…"></textarea></label><div class="row"><button id="sc-sort">依分數排序</button><button id="sc-save">把所選存入資料庫</button></div></div><div class="card" id="sc-detail"></div></div><div class="card" id="sc-list" style="padding:6px 10px"></div>`;
+  let results = [];
+  function draw() {
+    const topic = $('#sc-topic', root).value, lines = $('#sc-text', root).value.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    results = lines.map(t => Object.assign({ text: t }, scoreHook(t, topic)));
+    if (st.sel >= results.length) st.sel = 0;
+    $('#sc-list', root).innerHTML = results.length > 1 ? `<table><tbody>${results.map((r, i) => `<tr data-i="${i}" style="cursor:pointer;${i === st.sel ? 'background:var(--priBg)' : ''}"><td style="width:70px">${scoreBadge(r.total)}</td><td>${esc(r.text)}</td><td class="muted small">${r.len} 字</td></tr>`).join('')}</tbody></table>` : '';
+    const r = results[st.sel];
+    $('#sc-detail', root).innerHTML = r ? `<div class="row"><div class="bigscore ${scoreCls(r.total)}">${r.total}</div><div><div class="muted small">總分 / 100</div><div class="hooktext">${esc(r.text)}</div></div></div><div style="margin-top:12px">${r.items.map(i => `<div style="margin-bottom:9px"><div class="row"><b style="width:100px">${esc(i.name)}</b><div class="scorebar" style="flex:1"><i style="width:${i.f * 100}%;background:${i.ok ? 'var(--ok)' : i.f > .4 ? 'var(--warn)' : 'var(--bad)'}"></i></div><span class="small muted" style="width:70px;text-align:right">${i.score} / ${i.w}</span></div><div class="small ${i.ok ? '' : 'muted'}">${i.ok ? '✓' : '⚠'} ${esc(i.msg)}</div></div>`).join('')}</div>` : '<div class="empty">在左側輸入 Hook 後，評分結果會即時顯示</div>';
+  }
+  $('#sc-text', root).addEventListener('input', debounce(draw, 120)); $('#sc-topic', root).addEventListener('input', debounce(draw, 120));
+  on(root, 'click', '#sc-list tr[data-i]', (e, tr) => { st.sel = +tr.dataset.i; draw(); });
+  $('#sc-sort', root).onclick = () => { if (results.length < 2) return; $('#sc-text', root).value = [...results].sort((a, b) => b.total - a.total).map(r => r.text).join('\n'); st.sel = 0; draw(); };
+  $('#sc-save', root).onclick = () => { const r = results[st.sel]; if (!r) return toast('請先輸入 Hook', 'err'); editHook({ text: r.text, topic: $('#sc-topic', root).value.trim() }); };
+  window.__onNew = () => $('#sc-text', root).focus();
+  draw();
+};
+
+/* ---------- Settings ---------- */
+function exportJSON() {
+  return DB.all('settings').then(settings => {
+    const data = {}; COLL.forEach(k => data[k] = S[k]); data.settings = settings;
+    download(`HookLab_backup_${todayStr()}.json`, JSON.stringify({ app: 'HookLab', schemaVersion: 1, exportedAt: nowISO(), data }, null, 2), 'application/json');
+    return setSetting('lastBackupAt', nowISO()).then(() => toast('備份已匯出', 'ok'));
+  });
+}
+function exportMetricsCSV() {
+  const hm = new Map(S.hooks.map(h => [h.id, h])), pm = new Map(S.posts.map(p => [p.id, p])), vm = new Map(S.variants.map(v => [v.id, v]));
+  const rows = S.metrics.map(m => { const v = vm.get(m.variantId); if (!v) return null; const h = hm.get(v.hookId) || {}, p = pm.get(v.postId) || {}, c = calc(m); return [p.title, p.platform, p.publishedAt, v.label, h.text, h.type, m.recordedAt, ...MF.map(f => m[f] ?? ''), ...['er', 'cr', 'sr', 'svr', 'ctr'].map(k => c[k] != null ? (c[k] * 100).toFixed(2) + '%' : '')]; }).filter(Boolean);
+  download(`HookLab_metrics_${todayStr()}.csv`, toCSV(['貼文', '平台', '發布日', '版本', 'Hook', '類型', '紀錄日期', ...MF.map(f => MFN[f]), '互動率', '留言率', '分享率', '收藏率', 'CTR'], rows), 'text/csv');
+}
+const ID_RE = /^[A-Za-z0-9_-]{1,80}$/;
+const isStr = v => typeof v === 'string';
+const arrS = a => Array.isArray(a) ? a.map(String) : (isStr(a) ? splitList(a) : []);
+const numOrNull = v => (v === null || v === undefined || v === '') ? null : (Number.isFinite(Number(v)) && Number(v) >= 0 ? Number(v) : null);
+const STR_FIELDS = ['createdAt', 'updatedAt', 'recordedAt', 'publishedAt', 'type', 'topic', 'platform', 'campaign', 'status', 'label', 'name', 'audience', 'note', 'emotion', 'ctaType', 'sourceName', 'url', 'whyItWorks', 'rewriteIdea', 'body', 'cta', 'source', 'primaryMetric'];
+const REC_CHECK = {
+  hooks: r => isStr(r.text) && (r.tags = arrS(r.tags), r.platforms = arrS(r.platforms), true),
+  templates: r => isStr(r.pattern) && (r.variables = parseVars(r.pattern), true),
+  posts: r => isStr(r.title) && (r.hashtags = arrS(r.hashtags), true),
+  variants: r => isStr(r.postId) && isStr(r.hookId) && ID_RE.test(r.postId) && ID_RE.test(r.hookId) && isStr(r.label),
+  metrics: r => { if (!isStr(r.variantId) || !ID_RE.test(r.variantId)) return false; MF.forEach(f => { r[f] = numOrNull(r[f]); }); return true; },
+  swipes: r => isStr(r.text) && (r.tags = arrS(r.tags), true),
+  vocab: r => isStr(r.variable) && Array.isArray(r.values) && (r.values = r.values.map(String), true)
+};
+const arrOk = a => Array.isArray(a) && a.length > 0 && a.every(isStr);
+const SETTING_OK = {
+  hookTypes: arrOk, platforms: arrOk, emotions: arrOk, ctaTypes: arrOk,
+  scoreWeights: o => o && typeof o === 'object' && Object.keys(SCORE_NAMES).every(k => Number.isFinite(Number(o[k]))),
+  scoreKeywords: o => o && typeof o === 'object' && ['benefit', 'urgency', 'abstract', 'question'].every(k => Array.isArray(o[k]) && o[k].every(isStr)),
+  theme: v => v === 'light' || v === 'dark',
+  minImpressions: v => Number.isFinite(Number(v)) && Number(v) >= 0
+};
+async function importJSON(file, mode) {
+  let obj; try { obj = JSON.parse(await file.text()); } catch (e) { return toast('檔案不是有效的 JSON', 'err'); }
+  if (!obj || obj.app !== 'HookLab' || !obj.data) return toast('這不是 HookLab 備份檔', 'err');
+  if (obj.schemaVersion !== 1) return toast(`不相容的備份版本：${obj.schemaVersion}`, 'err');
+  for (const k of [...COLL, 'settings']) if (obj.data[k] !== undefined && !Array.isArray(obj.data[k])) return toast(`備份檔資料表「${k}」格式錯誤`, 'err');
+  for (const k of COLL) {
+    for (const r of (obj.data[k] || [])) {
+      if (!r || typeof r !== 'object' || !isStr(r.id) || !ID_RE.test(r.id)) return toast(`備份檔資料表「${k}」含無效的 ID，已取消匯入`, 'err');
+      STR_FIELDS.forEach(f => { if (r[f] === null) r[f] = ''; else if (r[f] !== undefined && !isStr(r[f])) r[f] = String(r[f]); });
+      if (k === 'templates' && !isStr(r.type)) r.type = '';
+      if (!REC_CHECK[k](r)) return toast(`備份檔資料表「${k}」含無效資料，已取消匯入`, 'err');
+    }
+  }
+  if ((obj.data.settings || []).some(x => !x || typeof x.key !== 'string')) return toast('備份檔設定資料格式錯誤，已取消匯入', 'err');
+  obj.data.settings = (obj.data.settings || []).filter(x => !SETTING_OK[x.key] || SETTING_OK[x.key](x.value));
+  if (mode === 'replace') { for (const k of [...COLL, 'settings']) await DB.clear(k); }
+  for (const k of COLL) await DB.bulkPut(k, obj.data[k] || []);
+  await DB.bulkPut('settings', obj.data.settings || []);
+  await loadAll(); applyTheme(); toast('匯入完成', 'ok'); renderNav(); render();
+}
+Views.settings = function (root) {
+  const listFields = [['hookTypes', 'Hook 類型'], ['platforms', '平台'], ['emotions', '情緒'], ['ctaTypes', 'CTA 類型']];
+  const W = S.settings.scoreWeights, K = S.settings.scoreKeywords;
+  root.innerHTML = `<div class="page-h"><div><h1>⚙️ 設定</h1><div class="muted">所有資料都存在這台電腦的瀏覽器（IndexedDB），不會上傳任何地方　·　HookLab v${APP_VERSION}</div></div></div>
+    <div class="card"><h2>💾 備份與還原</h2><div class="row"><button class="primary" id="st-exp">匯出 JSON 備份</button><button id="st-hcsv">匯出 Hook CSV</button><button id="st-mcsv">匯出成效明細 CSV</button><span class="spacer"></span><select id="st-mode" style="width:200px"><option value="merge">匯入：合併（同 ID 覆蓋）</option><option value="replace">匯入：全部取代</option></select><button id="st-imp">匯入 JSON…</button><input type="file" id="st-file" accept=".json,application/json" hidden></div><div class="small muted" style="margin-top:6px">上次備份：${S.settings.lastBackupAt ? new Date(S.settings.lastBackupAt).toLocaleString() : '尚未備份'}　｜　瀏覽器清除網站資料會一併清除 HookLab 資料，請定期備份。</div></div>
+    <div class="card"><h2>🎨 外觀</h2><label><input type="checkbox" id="st-dark" ${S.settings.theme === 'dark' ? 'checked' : ''}> 深色模式</label></div>
+    <div class="card"><h2>🏷 清單管理</h2><div class="grid g2">${listFields.map(([k, n]) => `<label class="f"><span>${n}（逗號或換行分隔）</span><textarea data-list="${k}" rows="3">${esc(S.settings[k].join(', '))}</textarea></label>`).join('')}</div><button class="primary" id="st-lists">儲存清單</button><span class="small muted"> 修改名稱不會自動更新既有資料。</span></div>
+    <div class="card"><h2>📖 變數詞庫（模板組合器用）</h2><div id="st-vocab"></div><div class="row" style="margin-top:8px"><button id="st-vadd">＋ 新增變數</button><button class="primary" id="st-vsave">儲存詞庫</button></div></div>
+    <div class="card"><h2>📊 分析設定</h2><div class="row"><label class="f" style="margin:0"><span>最低曝光數（低於此值的版本不參與勝負判定，也不納入 DNA／Top 統計）</span><input type="number" min="0" step="1" id="st-minimp-v" value="${minImp()}" style="width:160px"></label><button class="primary" id="st-minimp" style="align-self:flex-end">儲存</button></div></div>
+    <div class="card"><h2>🎯 Hook 評分設定</h2><div class="grid g7">${Object.keys(SCORE_NAMES).map(k => `<label class="f"><span>${SCORE_NAMES[k]}權重</span><input type="number" min="0" data-w="${k}" value="${W[k]}"></label>`).join('')}</div>
+      <div class="grid g2">${[['benefit', '利益詞'], ['urgency', '急迫詞'], ['abstract', '抽象詞（扣分）'], ['question', '疑問／懸念詞']].map(([k, n]) => `<label class="f"><span>${n}（逗號分隔）</span><textarea data-k="${k}" rows="3">${esc(K[k].join(', '))}</textarea></label>`).join('')}</div><div class="row"><button class="primary" id="st-score">儲存評分設定</button><button id="st-score-reset">還原預設</button></div></div>
+    <div class="card"><h2>🧰 資料管理</h2><div class="row"><button id="st-sample">載入範例資料</button><button class="danger" id="st-clear">清空所有資料</button></div><div class="small muted" style="margin-top:6px">目前：Hook ${S.hooks.length}、貼文 ${S.posts.length}、版本 ${S.variants.length}、成效紀錄 ${S.metrics.length}、收藏 ${S.swipes.length}、模板 ${S.templates.length}</div></div>`;
+  $('#st-exp', root).onclick = exportJSON; $('#st-hcsv', root).onclick = () => exportHooksCSV(S.hooks); $('#st-mcsv', root).onclick = exportMetricsCSV;
+  $('#st-imp', root).onclick = () => $('#st-file', root).click();
+  $('#st-file', root).onchange = async e => {
+    const f = e.target.files[0]; if (!f) return; const mode = $('#st-mode', root).value;
+    if (mode === 'replace' && !(await confirmBox('「全部取代」會先清空目前所有資料再匯入，確定嗎？\n（建議先匯出一份備份）', { okText: '清空並匯入', danger: true }))) { e.target.value = ''; return; }
+    await importJSON(f, mode); e.target.value = '';
+  };
+  $('#st-dark', root).onchange = async e => { await setSetting('theme', e.target.checked ? 'dark' : 'light'); applyTheme(); };
+  $('#st-lists', root).onclick = async () => { for (const [k] of listFields) { const v = uniq(splitList($(`[data-list=${k}]`, root).value)); if (!v.length) return toast('清單不能是空的', 'err'); await setSetting(k, v); } toast('已儲存', 'ok'); };
+  $('#st-minimp', root).onclick = async () => { const n = Number($('#st-minimp-v', root).value); if (!Number.isInteger(n) || n < 0) return toast('請輸入大於等於 0 的整數', 'err'); await setSetting('minImpressions', n); toast('已儲存', 'ok'); };
+  const vocabRow = v => `<div class="row" style="align-items:flex-start;margin-bottom:6px" data-id="${esc(v.id)}"><input class="vv-name" style="width:140px" placeholder="變數名稱" value="${esc(v.variable)}"><textarea class="vv-vals" rows="2" style="flex:1" placeholder="值（逗號或換行分隔）">${esc(v.values.join(', '))}</textarea><button class="icon-btn" data-a="vdel">🗑</button></div>`;
+  const vbox = $('#st-vocab', root); const drawVocab = () => { vbox.innerHTML = S.vocab.length ? S.vocab.map(vocabRow).join('') : '<div class="muted">尚無詞庫</div>'; }; drawVocab();
+  $('#st-vadd', root).onclick = () => { if (!S.vocab.length) vbox.innerHTML = ''; vbox.insertAdjacentHTML('beforeend', vocabRow({ id: 'new-' + uid(), variable: '', values: [] })); };
+  on(vbox, 'click', '[data-a=vdel]', async (e, b) => { const row = b.closest('[data-id]'), id = row.dataset.id; if (!id.startsWith('new-')) await removeMany('vocab', [id]); row.remove(); });
+  $('#st-vsave', root).onclick = async () => {
+    const names = new Set();
+    for (const row of $$('[data-id]', vbox)) {
+      const name = $('.vv-name', row).value.trim().replace(/[{}]/g, ''), vals = uniq(splitList($('.vv-vals', row).value)); if (!name && !vals.length) continue;
+      if (!name) return toast('有詞庫缺少變數名稱', 'err'); if (names.has(name)) return toast(`變數「${name}」重複`, 'err'); names.add(name);
+      const isNew = row.dataset.id.startsWith('new-'); const obj = isNew ? { id: uid() } : S.vocab.find(x => x.id === row.dataset.id); Object.assign(obj, { variable: name, values: vals }); await save('vocab', obj);
+    }
+    toast('已儲存詞庫', 'ok'); drawVocab();
+  };
+  $('#st-score', root).onclick = async () => {
+    const w = {}; for (const k of Object.keys(SCORE_NAMES)) { const n = Number($(`[data-w=${k}]`, root).value); if (!Number.isFinite(n) || n < 0) return toast('權重需為大於等於 0 的數字', 'err'); w[k] = n; }
+    if (Object.values(w).reduce((a, b) => a + b, 0) <= 0) return toast('權重總和需大於 0', 'err');
+    const kw = {}; for (const k of ['benefit', 'urgency', 'abstract', 'question']) kw[k] = uniq(splitList($(`[data-k=${k}]`, root).value));
+    await setSetting('scoreWeights', w); await setSetting('scoreKeywords', kw); toast('已儲存評分設定', 'ok');
+  };
+  $('#st-score-reset', root).onclick = async () => { await setSetting('scoreWeights', clone(DEFAULTS.scoreWeights)); await setSetting('scoreKeywords', clone(DEFAULTS.scoreKeywords)); toast('已還原預設', 'ok'); render(); };
+  $('#st-sample', root).onclick = async () => { if (await confirmBox('將新增範例 Hook、貼文與成效資料（不會刪除現有資料）。繼續？', { okText: '載入' })) { await loadSampleData(); toast('已載入範例資料', 'ok'); render(); } };
+  $('#st-clear', root).onclick = () => {
+    Modal.open({
+      title: '⚠ 清空所有資料', html: '<div>此動作會刪除所有 Hook、貼文、成效、收藏與自訂模板，且無法復原。<br>請輸入 <b>DELETE</b> 確認：</div><input id="cl-in" style="margin-top:8px" autocomplete="off">',
+      buttons: [{ text: '取消' }, { text: '清空', cls: 'danger solid', fn: async w => { if ($('#cl-in', w).value !== 'DELETE') { toast('請輸入 DELETE', 'err'); return false; } for (const k of [...COLL, 'settings']) await DB.clear(k); await loadAll(); await seedBuiltins(); applyTheme(); toast('已清空', 'ok'); render(); } }]
+    });
+  };
+};
+
+/* ---------- 全域搜尋 ---------- */
+function globalSearch() {
+  Modal.open({
+    title: '🔍 全域搜尋', wide: true, html: '<input id="gs-q" placeholder="搜尋 Hook、收藏文案、貼文…"><div id="gs-res" style="margin-top:10px"></div>',
+    onMount: (w, close) => {
+      const res = $('#gs-res', w);
+      const run = () => {
+        const q = $('#gs-q', w).value.trim().toLowerCase(); if (!q) { res.innerHTML = '<div class="muted">輸入關鍵字開始搜尋</div>'; return; }
+        const hs = S.hooks.filter(h => [h.text, h.topic, h.note, ...(h.tags || [])].join(' ').toLowerCase().includes(q)).slice(0, 8);
+        const sw = S.swipes.filter(s => [s.text, s.sourceName, s.whyItWorks].join(' ').toLowerCase().includes(q)).slice(0, 5);
+        const ps = S.posts.filter(p => (p.title + (p.campaign || '') + (p.body || '')).toLowerCase().includes(q)).slice(0, 5);
+        res.innerHTML = (hs.length ? `<h3 class="small muted">Hook</h3>${hs.map(h => `<div class="sel-list" style="border:none"><div data-go="#/library?q=${encodeURIComponent(h.text.slice(0, 12))}">${esc(h.text)} ${typeBadge(h.type)}</div></div>`).join('')}` : '') + (sw.length ? `<h3 class="small muted">收藏文案</h3>${sw.map(s => `<div class="sel-list" style="border:none"><div data-go="#/swipe">${esc(s.text)}</div></div>`).join('')}` : '') + (ps.length ? `<h3 class="small muted">貼文</h3>${ps.map(p => `<div class="sel-list" style="border:none"><div data-go="#/lab/${p.id}">${esc(p.title)} <span class="muted small">${esc(p.platform || '')}</span></div></div>`).join('')}` : '') || '<div class="muted">沒有符合的結果</div>';
+      };
+      $('#gs-q', w).addEventListener('input', debounce(run, 150)); on(res, 'click', '[data-go]', (e, d) => { location.hash = d.dataset.go; close(); }); run();
+    }
+  });
+}
+
+/* ---------- Router / Nav ---------- */
+function parseHash() { const h = location.hash.replace(/^#\/?/, ''); const [path, qs = ''] = h.split('?'); const parts = path.split('/').filter(Boolean); return { name: parts[0] || 'dashboard', arg: parts[1], params: Object.fromEntries(new URLSearchParams(qs)) }; }
+function renderNav() {
+  const cur = parseHash().name; const nav = $('#nav');
+  nav.innerHTML = `<div class="brand">🧪 HookLab<small>Social Hook Intelligence</small></div>${NAV.map(([id, ic, l]) => `<a class="nav-item ${cur === id ? 'active' : ''}" href="#/${id}" title="${l}"><span class="ni">${ic}</span><span class="nl">${l}</span></a>`).join('')}<div class="nav-foot"><button class="sm" id="nv-search">🔍 <span class="nl">搜尋 Ctrl+K</span></button><button class="sm" id="nv-col">⇔ <span class="nl">收合</span></button></div>`;
+  $('#nv-search').onclick = globalSearch; $('#nv-col').onclick = () => nav.classList.toggle('collapsed');
+}
+async function render() {
+  const r = parseHash(); window.__onNew = null; window.__roll = null;
+  renderNav(); const view = $('#view'); view.innerHTML = ''; const page = document.createElement('div'); page.className = 'page'; view.appendChild(page);
+  const fn = Views[r.name] || Views.dashboard;
+  try { fn(page, r.params, r.arg); } catch (e) { console.error(e); page.innerHTML = `<div class="card empty">畫面發生錯誤：${esc(e.message)}<br><br><a href="#/dashboard">回總覽</a></div>`; }
+  window.scrollTo(0, 0);
+}
+function applyTheme() { document.documentElement.setAttribute('data-theme', S.settings.theme === 'dark' ? 'dark' : 'light'); }
+
+document.addEventListener('keydown', e => {
+  const tag = (e.target.tagName || '').toLowerCase(), typing = ['input', 'textarea', 'select'].includes(tag) || e.target.isContentEditable;
+  if (e.key === 'Escape') { if (Modal.stack.length) { Modal.closeTop(); e.preventDefault(); } return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); globalSearch(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { const w = Modal.stack[Modal.stack.length - 1]; if (w) { e.preventDefault(); const b = $('.modal-f .btn.primary', w); if (b) b.click(); } return; }
+  if (typing || e.ctrlKey || e.metaKey || e.altKey || Modal.stack.length) return;
+  if (e.key.toLowerCase() === 'n' && window.__onNew) { e.preventDefault(); window.__onNew(); }
+  else if (e.key.toLowerCase() === 'r' && window.__roll) { e.preventDefault(); window.__roll(); }
+});
+window.addEventListener('unhandledrejection', e => { console.error(e.reason); toast('發生錯誤：' + ((e.reason && e.reason.message) || e.reason), 'err'); });
+window.addEventListener('hashchange', () => { Modal.stack.slice().forEach(w => w.close()); render(); });
+
+(async function init() {
+  try {
+    if (!window.indexedDB) throw new Error('此瀏覽器不支援 IndexedDB，請改用最新版 Chrome 或 Edge。');
+    await DB.open(); await loadAll(); await seedBuiltins(); applyTheme();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => { });
+    await render();
+  } catch (e) {
+    console.error(e);
+    document.body.innerHTML = `<div style="max-width:560px;margin:15vh auto;padding:24px;font-family:sans-serif"><h2>⚠ HookLab 無法啟動</h2><p>${esc(e.message || e)}</p><p style="color:#666">若使用無痕／InPrivate 視窗或瀏覽器封鎖網站資料，IndexedDB 可能無法使用。</p></div>`;
+  }
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>

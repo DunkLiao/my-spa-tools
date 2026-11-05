@@ -104,17 +104,21 @@ my-spa-tools/
 │  ├─ stateflow/                 StateFlow 動態狀態機與業務流程拓撲模擬器
 │  ├─ why-how-map/               Why-How Map 探索畫布（階梯式 Why／How 節點、大綱與 Markdown／PNG 匯出）
 │  └─ vba-dependency-explorer/   VBA Dependency Explorer 依賴關係分析與視覺化
-└─ music/                        音樂創作
-   ├─ musebox-studio/            MuseBox Studio 單頁音樂創作工作台（和弦進行、音序器、虛擬鋼琴與詞曲筆記）
-   ├─ chord-studio/              和聲工房 Chord Studio 和弦進行工坊（順階／自由和弦、拍數與 BPM、WAV／JSON 匯出）
-   ├─ groovebox/                 Groovebox 單檔鼓機（8 軌合成鼓、8／16／32 步、Swing、節奏庫與 MIDI／JSON 匯出）
-   ├─ soundcraft/                SoundCraft 音樂創作與靈感工作台（和弦進行、歌詞和弦稿紙、16 步鼓機、靈感錄音與 JSON 備份）
-   ├─ violin-practice/           琴日常小提琴練習夥伴（每日練習計時、調音器、節拍與點按測試、初學課程與練習紀錄）
-   ├─ ukulele-lab/               烏克麗麗練習室 Uke Lab（74 個和弦指法、節拍與刷弦、調音器、進行與抽考、歌本與日誌）
-   └─ wavecut-mini/              WaveCut Mini 離線音訊剪輯與波形標註（波形剪輯、裁切起訖、標記與區段、WAV／CSV／JSON 匯出）
+├─ music/                        音樂創作
+│  ├─ musebox-studio/            MuseBox Studio 單頁音樂創作工作台（和弦進行、音序器、虛擬鋼琴與詞曲筆記）
+│  ├─ chord-studio/              和聲工房 Chord Studio 和弦進行工坊（順階／自由和弦、拍數與 BPM、WAV／JSON 匯出）
+│  ├─ groovebox/                 Groovebox 單檔鼓機（8 軌合成鼓、8／16／32 步、Swing、節奏庫與 MIDI／JSON 匯出）
+│  ├─ soundcraft/                SoundCraft 音樂創作與靈感工作台（和弦進行、歌詞和弦稿紙、16 步鼓機、靈感錄音與 JSON 備份）
+│  ├─ violin-practice/           琴日常小提琴練習夥伴（每日練習計時、調音器、節拍與點按測試、初學課程與練習紀錄）
+│  ├─ ukulele-lab/               烏克麗麗練習室 Uke Lab（74 個和弦指法、節拍與刷弦、調音器、進行與抽考、歌本與日誌）
+│  └─ wavecut-mini/              WaveCut Mini 離線音訊剪輯與波形標註（波形剪輯、裁切起訖、標記與區段、WAV／CSV／JSON 匯出）
+└─ social/                       社群內容
+   ├─ commentflow/               CommentFlow 留言處理工作台（收件匣、分類規則、推薦回覆、積木、統計與 JSON 備份）
+   ├─ commentvault/              CommentVault 留言情境庫（情境化回覆範本、變數、語氣／版本、字數與禁用詞檢查）
+   └─ hooklab/                   HookLab 社群鉤子實驗室（Hook 資料庫、模板組合器、A/B 實驗、Hook DNA、收藏文案與評分）
 ```
 
-分類層固定為八類：`agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`、`music/`。每個工具自成一層子資料夾，HTML 檔名沿用工具原名。**所有工具頁面都位於根目錄下兩層**（`<類別>/<工具>/<檔名>.html`）。
+分類層固定為九類：`agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`、`music/`、`social/`。每個工具自成一層子資料夾，HTML 檔名沿用工具原名。**所有工具頁面都位於根目錄下兩層**（`<類別>/<工具>/<檔名>.html`）。
 
 ## 強制規則
 
@@ -162,7 +166,7 @@ my-spa-tools/
 ## 命名與分類慣例
 
 - 資料夾名稱一律使用小寫 kebab-case，並對齊工具語意（例如 `oracle-sql-formatter`）。
-- 工具放在 `agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`、`music/` 八類之一。
+- 工具放在 `agent/`、`finance/`、`sql/`、`data/`、`docs/`、`design/`、`diagram/`、`music/`、`social/` 九類之一。
 - HTML 入口檔名沿用工具既有名稱，不隨資料夾改名。
 - 單一工具的說明請併入根目錄 `README.md`，**不要**在各工具子資料夾內另建 README。
 
@@ -178,7 +182,7 @@ my-spa-tools/
 
 修改後請至少確認：
 
-1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 97 個工具卡片，連結皆可達。
+1. 以 `python -m http.server 8080` 於專案根目錄啟動，從入口大廳逐一點開 100 個工具卡片，連結皆可達。
 2. 每個工具頁面左下角都顯示「← 回入口」按鈕，且點擊後回到入口大廳。
 3. `README.md` 與 `index.html` 的所有相對連結皆指向存在的檔案。
 4. 檔案編碼為 UTF-8（無 BOM）、換行為 LF。

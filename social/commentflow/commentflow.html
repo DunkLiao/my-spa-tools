@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CommentFlow — 留言處理工作台</title>
+<style>
+:root{--bg:#f4f5f8;--panel:#fff;--panel2:#eef0f5;--text:#1f2430;--muted:#6b7280;--border:#e0e4ea;--primary:#4f6ef7;--primary-ink:#fff;--danger:#e5484d;--warn:#d97706;--warnbg:#fff4d6;--ok:#1f9d63;--sel:#e8edff;--shadow:0 6px 24px rgba(20,30,60,.14)}
+[data-theme=dark]{--bg:#13151a;--panel:#1b1e25;--panel2:#252931;--text:#e6e8ee;--muted:#9aa1b0;--border:#2f3440;--primary:#7b93ff;--primary-ink:#0e1220;--danger:#ff6b70;--warn:#fbbf24;--warnbg:#3b3012;--ok:#4ade80;--sel:#262d4a;--shadow:0 6px 24px rgba(0,0,0,.55)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",sans-serif;background:var(--bg);color:var(--text);font-size:14px;display:flex;flex-direction:column;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--primary)}
+.hidden{display:none!important}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+/* top bar */
+.topbar{display:flex;align-items:center;gap:14px;padding:0 16px;height:52px;background:var(--panel);border-bottom:1px solid var(--border);flex:none}
+.logo{font-weight:800;font-size:17px;letter-spacing:.3px;white-space:nowrap}
+.logo span{color:var(--primary)}
+.nav{display:flex;gap:2px;flex:1;overflow-x:auto}
+.nav a{padding:7px 12px;border-radius:8px;text-decoration:none;color:var(--muted);white-space:nowrap;font-weight:600}
+.nav a:hover{background:var(--panel2)}
+.nav a.active{background:var(--sel);color:var(--primary)}
+.banner{background:var(--warnbg);color:var(--warn);padding:8px 16px;display:flex;gap:12px;align-items:center;font-weight:600;flex:none}
+.banner button{margin-left:auto}
+/* buttons / form */
+.btn{border:1px solid var(--border);background:var(--panel);padding:6px 12px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--panel2)}
+.btn.primary{background:var(--primary);color:var(--primary-ink);border-color:var(--primary);font-weight:700}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{color:var(--danger);border-color:var(--danger)}
+.btn.sm{padding:3px 8px;font-size:12px}
+.btn[disabled],.btn.disabled{opacity:.45;pointer-events:none}
+.icon{border:0;background:transparent;cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px}
+.icon:hover{background:var(--panel2)}
+.icon[disabled]{opacity:.3;pointer-events:none}
+input[type=text],input[type=number],input[type=date],input[type=search],select,textarea{width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:8px;background:var(--panel);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 2px color-mix(in srgb,var(--primary) 25%,transparent)}
+textarea{resize:vertical;min-height:70px}
+label.f{display:block;font-weight:600;font-size:12px;color:var(--muted);margin-bottom:10px}
+label.f>span{display:block}
+label.f>*:not(span){margin-top:4px;font-weight:400;color:var(--text)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}
+.row-inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chk{display:inline-flex;gap:5px;align-items:center;font-weight:400;color:var(--text);margin-right:10px;font-size:13px}
+.chk input{width:auto}
+kbd{background:var(--panel2);border:1px solid var(--border);border-bottom-width:2px;border-radius:5px;padding:0 6px;font-family:inherit;font-size:12px}
+/* view containers */
+#view{flex:1;min-height:0;overflow:auto;position:relative}
+#view.view-inbox{overflow:hidden}
+#view.view-inbox>.inbox{position:absolute;inset:0;height:auto}
+.page{max-width:1100px;margin:0 auto;padding:18px 16px 60px}
+.pagehead{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.pagehead h2{margin:0;font-size:20px}
+.pagehead .sp{flex:1}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:15px}
+table.t{width:100%;border-collapse:collapse}
+table.t th,table.t td{padding:7px 8px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+table.t th{font-size:12px;color:var(--muted);font-weight:600}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.empty h3{color:var(--text);margin:0 0 8px}
+/* chips */
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-size:12px;border:1px solid var(--c,#888);color:var(--c,#888);background:color-mix(in srgb,var(--c,#888) 12%,transparent);margin:2px 4px 2px 0;white-space:nowrap}
+.chip.sug{border-style:dashed;background:transparent;cursor:pointer}
+.chip b{cursor:pointer;font-weight:400;opacity:.7}
+.chip b:hover{opacity:1}
+.chip.mini{padding:0 6px;font-size:11px}
+.badge{display:inline-block;padding:0 7px;border-radius:6px;background:var(--panel2);font-size:11px;color:var(--muted)}
+/* inbox */
+.inbox{display:grid;grid-template-columns:220px 370px 1fr;grid-template-rows:minmax(0,1fr);height:100%;min-height:0}
+.filters{overflow:auto;padding:12px;border-right:1px solid var(--border);background:var(--panel)}
+.filters h4{margin:14px 0 6px;font-size:12px;color:var(--muted);text-transform:none}
+.filters h4:first-child{margin-top:0}
+.fitem{display:flex;justify-content:space-between;padding:5px 8px;border-radius:7px;cursor:pointer}
+.fitem:hover{background:var(--panel2)}
+.fitem.on{background:var(--sel);color:var(--primary);font-weight:700}
+.fitem .n{color:var(--muted);font-weight:400}
+.filters select,.filters input[type=date]{margin-bottom:6px;padding:4px 6px}
+.listpane{display:flex;flex-direction:column;min-width:0;min-height:0;border-right:1px solid var(--border);background:var(--bg)}
+.listhead{padding:8px;background:var(--panel);border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+.listhead .r1{display:flex;gap:6px;align-items:center}
+.batch{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12px}
+.batch select{width:auto;padding:2px 4px}
+.list{flex:1;min-height:0;overflow:auto;position:relative}
+#vwin{position:absolute;left:0;right:0;top:0}
+.row{display:flex;gap:8px;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--panel);cursor:pointer;overflow:hidden}
+.row:hover{background:var(--panel2)}
+.row.sel{background:var(--sel)}
+.row .rk{width:auto;margin-top:3px;flex:none}
+.pri{width:4px;border-radius:3px;flex:none;align-self:stretch}
+.pri-urgent{background:var(--danger)}.pri-normal{background:#f0b429}.pri-low{background:#c6ccd6}
+.rmain{min-width:0;flex:1}
+.rtop{display:flex;gap:6px;align-items:center;font-size:12px;white-space:nowrap;overflow:hidden}
+.rtop .st{margin-left:auto;color:var(--muted)}
+.rtext{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:2px 0}
+.rcats{height:20px;overflow:hidden}
+.st-replied .rtext,.st-skipped .rtext{color:var(--muted)}
+.detailpane{overflow:auto;padding:16px;background:var(--bg);min-width:0}
+.dcard{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+.dhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dhead h3{margin:0;font-size:16px}
+.content{white-space:pre-wrap;word-break:break-word;background:var(--panel2);border-radius:10px;padding:10px 12px;margin:10px 0;font-size:15px}
+.metarow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.metarow select{width:auto}
+.rec{display:flex;gap:8px;align-items:flex-start;padding:7px 9px;border:1px solid var(--border);border-radius:9px;margin-bottom:6px;cursor:pointer;background:var(--panel)}
+.rec:hover{border-color:var(--primary)}
+.rec.on{border-color:var(--primary);background:var(--sel)}
+.rec .k{flex:none}
+.rec .tt{font-weight:600}
+.rec .pv{color:var(--muted);font-size:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.edwrap{display:grid;grid-template-columns:1fr 190px;gap:10px}
+.sidebar{border:1px solid var(--border);border-radius:9px;padding:8px;max-height:300px;overflow:auto;font-size:12px}
+.sidebar h5{margin:6px 0 4px;font-size:11px;color:var(--muted)}
+.sidebar h5:first-child{margin-top:0}
+.sidebar button{display:block;width:100%;text-align:left;border:1px solid var(--border);background:var(--panel);border-radius:6px;padding:3px 6px;margin-bottom:3px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sidebar button:hover{border-color:var(--primary)}
+#editor{min-height:130px;font-size:14px}
+.preview{white-space:pre-wrap;word-break:break-word;border:1px dashed var(--border);border-radius:9px;padding:9px 11px;margin-top:8px;min-height:44px}
+.undef{color:var(--danger);text-decoration:underline wavy var(--danger)}
+mark.ban{background:var(--warnbg);color:var(--warn);border-radius:3px;padding:0 2px}
+.warn{background:var(--warnbg);color:var(--warn);padding:6px 10px;border-radius:8px;margin-top:6px;font-size:12px}
+.counter{font-size:12px;color:var(--muted)}
+.counter.over{color:var(--danger);font-weight:700}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center}
+.backbtn{display:none}
+.hint{font-size:12px;color:var(--muted)}
+/* modal / toast */
+.overlay{position:fixed;inset:0;background:rgba(10,15,30,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:var(--panel);border-radius:14px;box-shadow:var(--shadow);width:min(560px,100%);max-height:92vh;display:flex;flex-direction:column}
+.modal.wide{width:min(900px,100%)}
+.mhead{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border)}
+.mhead h3{margin:0;flex:1;font-size:16px}
+.mbody{padding:14px 16px;overflow:auto}
+.mfoot{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+#toasts{position:fixed;right:16px;bottom:16px;display:flex;flex-direction:column;gap:8px;z-index:99}
+.toast{background:#222a3a;color:#fff;padding:9px 14px;border-radius:10px;box-shadow:var(--shadow);max-width:360px}
+.toast.error{background:#b42318}.toast.warn{background:#b45309}.toast.ok{background:#147a4d}
+.pvtable{max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:8px}
+.pvtable input{padding:3px 6px}
+tr.dup td{background:var(--warnbg)}
+/* insights */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 14px}
+.kpi .v{font-size:26px;font-weight:800}
+.kpi .l{color:var(--muted);font-size:12px}
+.grid-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px}
+.legend{display:flex;flex-direction:column;gap:3px;font-size:12px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+.pieflex{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.vcard{display:flex;gap:12px;align-items:flex-start}
+.vcard .body{flex:1;min-width:0}
+.vcard .pv{color:var(--muted);white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:12px}
+@media (max-width:900px){
+ .topbar{flex-wrap:wrap;height:auto;padding:8px 10px;gap:8px}
+ .nav{order:3;flex-basis:100%}
+ .logo{flex:1}
+ .inbox{grid-template-columns:1fr}
+ .filters{display:none;border-right:0}
+ .inbox.fopen .filters{display:block}
+ .inbox.fopen .listpane,.inbox.fopen .detailpane{display:none}
+ .inbox.dopen .listpane,.inbox.dopen .filters{display:none}
+ .inbox:not(.dopen) .detailpane{display:none}
+ .backbtn{display:inline-block}
+ .edwrap{grid-template-columns:1fr}
+ .grid2{grid-template-columns:1fr}
+ .grid-charts{grid-template-columns:1fr}
+}
+@media (min-width:901px){.fbtn{display:none}}
+</style>
+</head>
+<body>
+<noscript>CommentFlow 需要啟用 JavaScript。</noscript>
+<header class="topbar">
+  <div class="logo">Comment<span>Flow</span></div>
+  <nav class="nav" id="nav">
+    <a href="#/inbox" data-view="inbox">📥 Inbox</a>
+    <a href="#/vault" data-view="vault">📝 回覆庫</a>
+    <a href="#/blocks" data-view="blocks">🧱 積木</a>
+    <a href="#/rules" data-view="rules">🏷️ 規則</a>
+    <a href="#/insights" data-view="insights">📊 統計</a>
+    <a href="#/settings" data-view="settings">⚙️ 設定</a>
+  </nav>
+  <button class="btn primary" data-act="openImport">＋貼上留言</button>
+  <button class="icon" data-act="toggleTheme" title="切換深色模式" id="themeBtn">🌙</button>
+  <button class="icon" data-act="help" title="快捷鍵 (?)">⌨️</button>
+</header>
+<div id="banner"></div>
+<main id="view" class="view"></main>
+<div id="toasts"></div>
+
+<script>
+'use strict';
+/* =====================================================================
+   CommentFlow v1.1 — 單檔 SPA（Vanilla JS + IndexedDB，無外部資源）
+   區塊：1 Utils/Core ｜ 2 DB ｜ 3 Store ｜ 4 Components ｜ 5 Views ｜ 6 Router/Keyboard ｜ 7 Bootstrap
+   ===================================================================== */
+
+/* ==== CORE:BEGIN（純函式，可在 Node 中單元測試）==== */
+const STATUS = {new:'待處理', in_progress:'處理中', replied:'已回覆', skipped:'略過', escalated:'升級'};
+const SENT = {positive:'😊 正面', neutral:'😐 中性', negative:'😠 負面'};
+const PRI = {urgent:'🔴 緊急', normal:'🟡 一般', low:'⚪ 低'};
+const SENT_RANK = {positive:0, neutral:1, negative:2};
+const PRI_RANK = {low:0, normal:1, urgent:2};
+const PRI_SORT = {urgent:0, normal:1, low:2};
+const DAY = 86400000;
+
+const U = {
+  esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); },
+  id(prefix){
+    const ENC = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
+    let t = Date.now(), s = '';
+    for (let i = 0; i < 10; i++){ s = ENC[t % 32] + s; t = Math.floor(t / 32); }
+    const a = new Uint8Array(8); crypto.getRandomValues(a);
+    let r = ''; for (const b of a) r += ENC[b % 32];
+    return prefix + '_' + s + r;
+  },
+  hash(str){ // cyrb53
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+    for (let i = 0; i < str.length; i++){ const ch = str.charCodeAt(i); h1 = Math.imul(h1 ^ ch, 2654435761); h2 = Math.imul(h2 ^ ch, 1597334677); }
+    h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+    h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+    return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(16);
+  },
+  normalize(s){ return String(s == null ? '' : s).normalize('NFKC').toLowerCase().replace(/\s+/g, ' ').trim(); },
+  len(s){ return [...String(s || '')].length; },
+  median(a){ if (!a.length) return 0; const b = [...a].sort((x, y) => x - y), m = b.length >> 1; return b.length % 2 ? b[m] : (b[m - 1] + b[m]) / 2; },
+  debounce(fn, ms){ let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; },
+  pad(n){ return String(n).padStart(2, '0'); },
+  dayKey(ts){ const d = new Date(ts); return d.getFullYear() + '-' + U.pad(d.getMonth() + 1) + '-' + U.pad(d.getDate()); },
+  startOfDay(ts){ const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); },
+  fmtDT(ts){ if (!ts) return '—'; const d = new Date(ts); return d.getFullYear() + '/' + U.pad(d.getMonth() + 1) + '/' + U.pad(d.getDate()) + ' ' + U.pad(d.getHours()) + ':' + U.pad(d.getMinutes()); },
+  ago(ts, now = Date.now()){
+    const m = Math.floor((now - ts) / 60000);
+    if (m < 1) return '剛剛'; if (m < 60) return m + '分前';
+    const h = Math.floor(m / 60); if (h < 24) return h + '小時前';
+    const d = new Date(ts); return U.pad(d.getMonth() + 1) + '/' + U.pad(d.getDate());
+  },
+  dur(ms){ if (!ms) return '—'; const m = ms / 60000; if (m < 1) return '<1 分鐘'; if (m < 60) return Math.round(m) + ' 分鐘'; const h = m / 60; if (h < 24) return h.toFixed(1) + ' 小時'; return (h / 24).toFixed(1) + ' 天'; },
+  safeColor(c){ return /^#[0-9a-f]{3,8}$/i.test(c || '') ? c : '#888888'; },
+  csvCell(v){ const s = String(v == null ? '' : v); return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+};
+
+const Core = {
+  parseCSV(text){
+    const rows = []; let row = [], cell = '', q = false;
+    const s = String(text || '').replace(/^\uFEFF/, '');
+    for (let i = 0; i < s.length; i++){
+      const c = s[i];
+      if (q){
+        if (c === '"'){ if (s[i + 1] === '"'){ cell += '"'; i++; } else q = false; } else cell += c;
+      } else if (c === '"') q = true;
+      else if (c === ','){ row.push(cell); cell = ''; }
+      else if (c === '\n' || c === '\r'){ if (c === '\r' && s[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += c;
+    }
+    if (cell !== '' || row.length){ row.push(cell); rows.push(row); }
+    return rows.filter(r => r.some(x => String(x).trim() !== ''));
+  },
+  /** mode: line | author | blank | csv；回傳 [{author, content, platform?, time?}] */
+  parseComments(text, mode){
+    const t = String(text || '');
+    const out = [];
+    if (mode === 'csv'){
+      const rows = Core.parseCSV(t); if (!rows.length) return out;
+      const head = rows[0].map(x => x.trim().toLowerCase());
+      const hasHead = head.includes('author') || head.includes('content');
+      const ix = hasHead ? {a: head.indexOf('author'), c: head.indexOf('content'), p: head.indexOf('platform'), t: head.indexOf('time')} : {a: 0, c: 1, p: 2, t: 3};
+      for (const r of (hasHead ? rows.slice(1) : rows)){
+        const content = (r[ix.c] || '').trim(); if (!content) continue;
+        const o = {author: ix.a >= 0 ? (r[ix.a] || '').trim() : '', content};
+        if (ix.p >= 0 && r[ix.p] && r[ix.p].trim()) o.platform = r[ix.p].trim();
+        if (ix.t >= 0 && r[ix.t] && r[ix.t].trim()){ const ts = Date.parse(r[ix.t].trim()); if (!isNaN(ts)) o.time = ts; }
+        out.push(o);
+      }
+      return out;
+    }
+    if (mode === 'blank'){
+      for (const b of t.split(/\r?\n\s*\r?\n/)){ const c = b.split(/\r?\n/).map(x => x.trim()).filter(Boolean).join('\n'); if (c) out.push({author: '', content: c}); }
+      return out;
+    }
+    for (const raw of t.split(/\r?\n/)){
+      const line = raw.trim(); if (!line) continue;
+      if (mode === 'author'){
+        let idx = line.indexOf('\t');
+        if (idx < 0){ const a = line.indexOf('：'), b = line.indexOf(':'); idx = [a, b].filter(x => x >= 0).sort((x, y) => x - y)[0]; if (idx === undefined) idx = -1; }
+        if (idx > 0 && line.substr(idx, 3) !== '://'){ /* FIX: 避免把 http:// 的冒號當成作者分隔 */
+          const author = line.slice(0, idx).trim(), content = line.slice(idx + 1).trim();
+          if (author && content && [...author].length <= 30){ out.push({author, content}); continue; }
+        }
+      }
+      out.push({author: '', content: line});
+    }
+    return out;
+  },
+  ruleRegexError(r){
+    if (r.matchType !== 'regex') return null;
+    for (const p of (r.keywords || [])){ try { new RegExp(p, 'i'); } catch (e){ return '「' + p + '」不是有效的正規式'; } }
+    return null;
+  },
+  ruleMatches(r, text){
+    const kws = (r.keywords || []).map(k => r.matchType === 'regex' ? k : U.normalize(k)).filter(k => k);
+    if (!kws.length) return false;
+    if (r.matchType === 'all') return kws.every(k => text.includes(k));
+    if (r.matchType === 'regex') return kws.some(p => { try { return new RegExp(p, 'i').test(text); } catch (e){ return false; } });
+    return kws.some(k => text.includes(k));
+  },
+  runRules(rules, c){
+    const text = U.normalize(c.content);
+    const cats = []; let sent = null, pri = null; const hits = [];
+    for (const r of [...rules].sort((a, b) => (a.order || 0) - (b.order || 0))){
+      if (!r.enabled) continue;
+      if (r.platform && r.platform !== c.platform) continue;
+      if (!Core.ruleMatches(r, text)) continue;
+      hits.push(r);
+      const a = r.actions || {};
+      (a.categories || []).forEach(id => { if (!cats.includes(id)) cats.push(id); });
+      if (a.sentiment && (sent === null || SENT_RANK[a.sentiment] > SENT_RANK[sent])) sent = a.sentiment;
+      if (a.priority && (pri === null || PRI_RANK[a.priority] > PRI_RANK[pri])) pri = a.priority;
+    }
+    return {categories: cats, sentiment: sent || 'neutral', priority: pri || 'normal', hits};
+  },
+  /** ctx: {vars:{name:value}, blocks: Map('類型/名稱' -> content)} */
+  expandTemplate(text, ctx){
+    const errors = [], undef = new Set();
+    const expandBlocks = (t, depth, stack) => t.replace(/\[\[block:([^\]]+)\]\]/g, (m, ref) => {
+      const key = ref.trim();
+      if (stack.includes(key)){ errors.push('循環引用：' + key); return ''; }
+      if (depth >= 3){ errors.push('積木巢狀超過 3 層：' + key); return ''; }
+      if (!ctx.blocks.has(key)){ errors.push('找不到積木：' + key); return m; }
+      return expandBlocks(ctx.blocks.get(key), depth + 1, stack.concat(key));
+    });
+    let out = expandBlocks(String(text || ''), 0, []);
+    out = out.replace(/\{\{\s*([^{}]+?)\s*\}\}/g, (m, name) => {
+      if (Object.prototype.hasOwnProperty.call(ctx.vars, name)) return ctx.vars[name];
+      undef.add(name); return m;
+    });
+    return {text: out, undefinedVars: [...undef], errors};
+  },
+  findBanned(text, banned){
+    const res = [], low = text.toLowerCase();
+    for (const b of banned || []){
+      const w = (b.word || '').toLowerCase(); if (!w) continue;
+      let i = 0; while ((i = low.indexOf(w, i)) >= 0){ res.push({word: b.word, suggest: b.suggest || '', start: i, end: i + w.length}); i += w.length; }
+    }
+    return res;
+  },
+  recommend(templates, c, catIds, now = Date.now()){
+    const out = [];
+    for (const t of templates){
+      const plats = t.platforms && t.platforms.length ? t.platforms : ['all'];
+      if (!(plats.includes('all') || plats.includes(c.platform))) continue;
+      const hits = (t.categories || []).filter(x => catIds.includes(x)).length;
+      const score = hits * 10 + 3 + Math.log((t.useCount || 0) + 1) * 2 + ((t.lastUsedAt && now - t.lastUsedAt < 7 * DAY) ? 1 : 0);
+      out.push({t, hits, score});
+    }
+    out.sort((a, b) => b.score - a.score || String(a.t.title).localeCompare(String(b.t.title)));
+    return out.slice(0, 9);
+  },
+  allCats(c){ return [...new Set([...(c.categories || []), ...(c.suggestedCategories || [])])]; },
+  stats(comments, replies, templates, from, to){
+    const inR = comments.filter(c => c.createdAt >= from && c.createdAt <= to);
+    const replied = inR.filter(c => c.status === 'replied');
+    const kpi = {
+      total: inR.length, replied: replied.length,
+      rate: inR.length ? replied.length / inR.length : 0,
+      pending: inR.filter(c => c.status === 'new' || c.status === 'in_progress').length,
+      negative: inR.filter(c => c.sentiment === 'negative').length
+    };
+    const cat = {}, plat = {};
+    for (const c of inR){ Core.allCats(c).forEach(id => cat[id] = (cat[id] || 0) + 1); plat[c.platform] = (plat[c.platform] || 0) + 1; }
+    const days = [];
+    for (const d = new Date(U.startOfDay(from)); d.getTime() <= to; d.setDate(d.getDate() + 1)) days.push(U.dayKey(d.getTime())); /* FIX: 不用 +86400000，避免夏令時間錯位 */
+    const dm = {}; days.forEach(k => dm[k] = {created: 0, replied: 0});
+    for (const c of inR){ const k = U.dayKey(c.createdAt); if (dm[k]) dm[k].created++; }
+    for (const c of comments){ if (c.repliedAt && c.repliedAt >= from && c.repliedAt <= to){ const k = U.dayKey(c.repliedAt); if (dm[k]) dm[k].replied++; } }
+    const tcount = {};
+    for (const r of replies){ if (r.templateId && r.createdAt >= from && r.createdAt <= to) tcount[r.templateId] = (tcount[r.templateId] || 0) + 1; }
+    const covered = new Set(); templates.forEach(t => (t.categories || []).forEach(id => covered.add(id)));
+    const uncovered = Object.keys(cat).filter(id => !covered.has(id)).sort((a, b) => cat[b] - cat[a]);
+    const med = U.median(replied.filter(c => c.repliedAt).map(c => c.repliedAt - c.createdAt));
+    return {kpi, cat, plat, days, dm, tcount, uncovered, median: med};
+  }
+};
+/* ==== CORE:END ==== */
+
+/* ========== 2. DB Layer ========== */
+const DB_NAME = 'CommentFlowDB', DB_VERSION = 1;
+const STORES = {
+  comments: {keyPath: 'id', indexes: [['status', 'status'], ['postId', 'postId'], ['platform', 'platform'], ['createdAt', 'createdAt'], ['hash', 'hash'], ['categories', 'categories', {multiEntry: true}], ['status_createdAt', ['status', 'createdAt']]]},
+  posts: {keyPath: 'id', indexes: [['platform', 'platform'], ['createdAt', 'createdAt']]},
+  templates: {keyPath: 'id', indexes: [['categories', 'categories', {multiEntry: true}], ['useCount', 'useCount'], ['lastUsedAt', 'lastUsedAt']]},
+  blocks: {keyPath: 'id', indexes: [['type', 'type'], ['type_key', ['type', 'key'], {unique: true}]]},
+  rules: {keyPath: 'id', indexes: [['order', 'order']]},
+  categories: {keyPath: 'id', indexes: []},
+  replies: {keyPath: 'id', indexes: [['commentId', 'commentId'], ['templateId', 'templateId'], ['createdAt', 'createdAt']]},
+  settings: {keyPath: 'key', indexes: []}
+};
+const DB = {
+  db: null, disabled: false,
+  open(){
+    return new Promise((res, rej) => {
+      if (!window.indexedDB) return rej(new Error('此瀏覽器不支援 IndexedDB'));
+      const rq = indexedDB.open(DB_NAME, DB_VERSION);
+      rq.onupgradeneeded = e => {
+        const db = rq.result, old = e.oldVersion;
+        if (old < 1){
+          for (const [name, def] of Object.entries(STORES)){
+            const os = db.createObjectStore(name, {keyPath: def.keyPath});
+            for (const ix of def.indexes) os.createIndex(ix[0], ix[1], ix[2] || {});
+          }
+        }
+        /* 未來版本：if (old < 2) { ... } */
+      };
+      rq.onsuccess = () => { this.db = rq.result; this.db.onversionchange = () => this.db.close(); res(); };
+      rq.onerror = () => rej(rq.error);
+      rq.onblocked = () => rej(new Error('資料庫被其他分頁佔用，請關閉其他 CommentFlow 分頁後重試'));
+    });
+  },
+  tx(stores, mode, fn){
+    if (this.disabled) return Promise.resolve();
+    return new Promise((res, rej) => {
+      const t = this.db.transaction(stores, mode);
+      t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error || new Error('交易中止'));
+      fn(t);
+    });
+  },
+  getAll(store){
+    if (this.disabled) return Promise.resolve([]);
+    return new Promise((res, rej) => { const r = this.db.transaction(store).objectStore(store).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+  },
+  put(store, obj){ return this.tx(store, 'readwrite', t => t.objectStore(store).put(obj)); },
+  putMany(store, arr){ return this.tx(store, 'readwrite', t => { const os = t.objectStore(store); for (const o of arr) os.put(o); }); },
+  del(store, key){ return this.tx(store, 'readwrite', t => t.objectStore(store).delete(key)); },
+  delMany(store, keys){ return this.tx(store, 'readwrite', t => { const os = t.objectStore(store); for (const k of keys) os.delete(k); }); },
+  clear(store){ return this.tx(store, 'readwrite', t => t.objectStore(store).clear()); }
+};
+
+/* ========== 3. Store（記憶體快取 + IndexedDB 持久化）========== */
+const S = {
+  comments: new Map(), posts: new Map(), templates: new Map(), blocks: new Map(), rules: new Map(), categories: new Map(), replies: new Map(), settings: new Map(),
+  keyOf(n){ return n === 'settings' ? 'key' : 'id'; },
+  async load(){ for (const n of Object.keys(STORES)){ const arr = await DB.getAll(n); this[n] = new Map(arr.map(o => [o[this.keyOf(n)], o])); } },
+  list(n){ return [...this[n].values()]; },
+  async save(n, obj){ this[n].set(obj[this.keyOf(n)], obj); await DB.put(n, obj); },
+  async saveMany(n, arr){ for (const o of arr) this[n].set(o[this.keyOf(n)], o); await DB.putMany(n, arr); },
+  async remove(n, key){ this[n].delete(key); await DB.del(n, key); },
+  async removeMany(n, keys){ keys.forEach(k => this[n].delete(k)); await DB.delMany(n, keys); },
+  async clearStore(n){ this[n].clear(); await DB.clear(n); },
+  get(key, def){ return this.settings.has(key) ? this.settings.get(key).value : def; },
+  async set(key, value){ await this.save('settings', {key, value}); }
+};
+
+/* ========== 預設資料 ========== */
+const DEFAULT_PLATFORMS = [
+  {id: 'facebook', name: 'Facebook', limit: 8000, hidden: false}, {id: 'instagram', name: 'Instagram', limit: 2200, hidden: false},
+  {id: 'threads', name: 'Threads', limit: 500, hidden: false}, {id: 'youtube', name: 'YouTube', limit: 10000, hidden: false},
+  {id: 'tiktok', name: 'TikTok', limit: 0, hidden: false}, {id: 'line', name: 'LINE VOOM', limit: 0, hidden: false}, {id: 'other', name: '其他', limit: 0, hidden: false}
+];
+const BLOCK_TYPES = ['稱呼', '同理', '回答', '補充資訊', 'CTA', '結尾'];
+function defaultData(){
+  const now = Date.now();
+  const cats = [['cat_price', '價格', '#F59E0B'], ['cat_event', '活動', '#8B5CF6'], ['cat_logistics', '物流', '#0EA5E9'], ['cat_store', '門市', '#10B981'], ['cat_negative', '負評', '#EF4444'], ['cat_positive', '正面互動', '#EC4899'], ['cat_spam', '垃圾訊息', '#6B7280']]
+    .map((c, i) => ({id: c[0], name: c[1], color: c[2], order: i + 1}));
+  const R = (i, name, kws, cat, sent, pri) => ({id: 'r_default_' + i, name, enabled: true, order: i, matchType: 'any', keywords: kws, platform: null, actions: {categories: [cat], sentiment: sent, priority: pri}});
+  const rules = [
+    R(1, '價格詢問', ['多少', '價格', '幾元', '貴', '便宜', '$'], 'cat_price', null, 'normal'),
+    R(2, '活動詢問', ['活動', '抽獎', '到幾號', '截止', '優惠'], 'cat_event', null, 'normal'),
+    R(3, '物流問題', ['還沒收到', '出貨', '寄送', '物流', '到貨'], 'cat_logistics', 'negative', 'urgent'),
+    R(4, '門市詢問', ['門市', '店面', '哪裡買', '實體'], 'cat_store', null, 'normal'),
+    R(5, '負面評價', ['爛', '失望', '退貨', '客訴', '騙'], 'cat_negative', 'negative', 'urgent'),
+    R(6, '正面互動', ['好看', '喜歡', '推', '讚', '愛了'], 'cat_positive', 'positive', 'low'),
+    R(7, '垃圾訊息', ['加賴', '私訊賺錢', 'http'], 'cat_spam', null, 'low')
+  ];
+  const B = (i, type, key, content) => ({id: 'b_default_' + i, type, key, content, createdAt: now, updatedAt: now});
+  const blocks = [
+    B(1, '稱呼', '一般', '{{name}} 您好～'), B(2, '稱呼', '親切', 'Hi {{name}}～'),
+    B(3, '同理', '物流延遲', '真的很抱歉讓您久等了 🙏'), B(4, '同理', '一般不便', '造成您的不便，我們深感抱歉。'),
+    B(5, '補充資訊', '置頂說明', '詳細辦法請見置頂貼文'), B(6, '補充資訊', '官網', '更多資訊可至官網查詢'),
+    B(7, 'CTA', '私訊訂單', '方便的話請私訊訂單編號，我們幫您確認！'), B(8, 'CTA', '私訊洽詢', '歡迎私訊我們，我們會協助您處理。'),
+    B(9, '結尾', '感謝', '謝謝您的支持 ❤️'), B(10, '結尾', '正式', '感謝您的來信，祝您有愉快的一天。')
+  ];
+  const T = (i, title, cats, tone, content) => ({id: 't_default_' + i, title, content, categories: cats, tone, platforms: ['all'], useCount: 0, lastUsedAt: null, createdAt: now, updatedAt: now});
+  const templates = [
+    T(1, '活動期限詢問（正式）', ['cat_event'], '正式', '[[block:稱呼/一般]]\n本次活動至 {{活動截止日}} 止，[[block:補充資訊/置頂說明]]。\n[[block:結尾/正式]]'),
+    T(2, '活動期限詢問（親切）', ['cat_event'], '親切', '[[block:稱呼/親切]]\n這次活動到 {{活動截止日}} 😊 記得把握時間！\n[[block:結尾/感謝]]'),
+    T(3, '價格詢問', ['cat_price'], '正式', '[[block:稱呼/一般]]\n商品價格與優惠內容，[[block:補充資訊/官網]]，若有任何問題也歡迎再詢問我們。\n[[block:結尾/感謝]]'),
+    T(4, '門市詢問', ['cat_store'], '親切', '[[block:稱呼/親切]]\n門市據點資訊請見官網，也可私訊告訴我們您所在的區域，我們幫您查詢最近的門市！\n[[block:結尾/感謝]]'),
+    T(5, '物流／客訴道歉', ['cat_logistics', 'cat_negative'], '道歉', '[[block:稱呼/一般]]\n[[block:同理/物流延遲]]\n[[block:CTA/私訊訂單]]\n[[block:結尾/感謝]]'),
+    T(6, '正面互動感謝', ['cat_positive'], '活潑', '[[block:稱呼/親切]]\n謝謝你的喜歡！我們會繼續努力 💪\n[[block:結尾/感謝]]')
+  ];
+  return {cats, rules, blocks, templates};
+}
+const DEMO = [
+  ['王小明', '請問活動到幾號？', 'facebook'], ['陳美美', '怎麼這麼貴…', 'instagram'], ['林先生', '我昨天買了還沒收到，請問什麼時候出貨？', 'facebook'],
+  ['Amy', '這系列超好看！愛了', 'instagram'], ['張小姐', '台中有門市嗎？', 'threads'], ['路人甲', '加賴領紅包 http://spam.example', 'facebook'],
+  ['黃大哥', '商品很爛，我要退貨', 'facebook'], ['小潔', '抽獎活動怎麼參加？', 'instagram'], ['Jason', '請問這個多少錢？', 'threads'],
+  ['阿凱', '物流怎麼這麼慢，已經一週了', 'facebook'], ['Emily', '好喜歡這個顏色！', 'instagram'], ['陳先生', '請問哪裡買得到？有實體店面嗎', 'youtube'],
+  ['小美', '優惠截止日期是什麼時候', 'facebook'], ['Kevin', '太失望了，客服都不回', 'threads'], ['阿嬤', '這個要怎麼使用？', 'facebook'],
+  ['Lisa', '推推推！', 'instagram'], ['吳小姐', '我的訂單還沒到貨，請幫我查詢', 'instagram'], ['Tom', '活動可以重複參加嗎？', 'threads'],
+  ['劉先生', '價格可以再便宜一點嗎', 'facebook'], ['Nina', '期待新品！', 'instagram']
+];
+
+/* ========== 4. 共用狀態與 Components ========== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = U.esc;
+const UI = {view: 'inbox', params: {}, selectedId: null, checked: new Set(), drafts: {}, items: [], recs: [], detailOpen: false, filtersOpen: false, bannerHidden: false, vault: {q: '', cat: '', tone: ''}, insights: {range: '7', from: '', to: ''}};
+
+function platforms(all){ const p = S.get('platforms', DEFAULT_PLATFORMS); return all ? p : p.filter(x => !x.hidden); }
+function platformName(id){ const p = platforms(true).find(x => x.id === id); return p ? p.name : (id || '其他'); }
+function platformLimit(id){ const p = platforms(true).find(x => x.id === id); return p ? (p.limit || 0) : 0; }
+function cats(){ return S.list('categories').sort((a, b) => a.order - b.order); }
+function catChip(id, sug, opts = {}){
+  const c = S.categories.get(id); if (!c) return '';
+  const x = opts.x ? `<b data-act="${sug ? 'dismissCat' : 'removeCat'}" data-id="${esc(id)}" title="移除">✕</b>` : '';
+  return `<span class="chip ${sug ? 'sug' : ''} ${opts.mini ? 'mini' : ''}" style="--c:${U.safeColor(c.color)}" ${sug && opts.x ? `data-act="confirmCat" data-id="${esc(id)}" title="點擊確認此分類"` : ''}>${esc(c.name)}${x}</span>`;
+}
+function ctxFor(c){
+  const brand = S.get('brand', {name: '', vars: {}});
+  const vars = Object.assign({}, brand.vars || {}, {name: (c && c.author) || '朋友', post: c && S.posts.get(c.postId) ? S.posts.get(c.postId).title : '', platform: c ? platformName(c.platform) : '', today: new Date().toLocaleDateString('zh-TW'), brand: brand.name || ''});
+  const blocks = new Map(); S.list('blocks').forEach(b => blocks.set(b.type + '/' + b.key, b.content));
+  return {vars, blocks};
+}
+function expandFor(text, c){ return Core.expandTemplate(text, ctxFor(c)); }
+function highlight(text, banned){
+  const ranges = [];
+  const re = /\{\{\s*[^{}]+?\s*\}\}/g; let m;
+  while ((m = re.exec(text))) ranges.push({s: m.index, e: m.index + m[0].length, t: 'u'});
+  Core.findBanned(text, banned).forEach(b => ranges.push({s: b.start, e: b.end, t: 'b'}));
+  ranges.sort((a, b) => a.s - b.s);
+  let out = '', pos = 0;
+  for (const r of ranges){
+    if (r.s < pos) continue;
+    out += esc(text.slice(pos, r.s));
+    const seg = esc(text.slice(r.s, r.e));
+    out += r.t === 'u' ? `<span class="undef">${seg}</span>` : `<mark class="ban">${seg}</mark>`;
+    pos = r.e;
+  }
+  return out + esc(text.slice(pos));
+}
+
+function toast(msg, type = ''){
+  const el = document.createElement('div'); el.className = 'toast ' + type; el.textContent = msg;
+  $('#toasts').appendChild(el); setTimeout(() => el.remove(), type === 'error' ? 6000 : 2800);
+}
+function openModal({title, body, buttons = [], wide = false, onMount, onClose}){
+  const ov = document.createElement('div'); ov.className = 'overlay';
+  ov.innerHTML = `<div class="modal ${wide ? 'wide' : ''}" role="dialog" aria-modal="true"><div class="mhead"><h3>${esc(title)}</h3><button class="icon" data-close aria-label="關閉">✕</button></div><div class="mbody">${body}</div><div class="mfoot"></div></div>`;
+  let closed = false;
+  const onKey = e => { if (e.key === 'Escape' && ov === [...document.querySelectorAll('.overlay')].pop()){ e.stopPropagation(); close(); } };
+  const close = () => { if (closed) return; closed = true; ov.remove(); document.removeEventListener('keydown', onKey, true); if (onClose) onClose(); };
+  document.addEventListener('keydown', onKey, true);
+  ov.querySelector('[data-close]').onclick = close;
+  const foot = ov.querySelector('.mfoot');
+  buttons.forEach(b => {
+    const el = document.createElement('button'); el.className = 'btn ' + (b.cls || ''); el.textContent = b.label; if (b.id) el.dataset.bid = b.id;
+    el.onclick = async () => {
+      try { if (b.onClick){ const r = await b.onClick(ov, close); if (r === false) return; } } catch (err){ console.error(err); toast(err.message || '發生錯誤', 'error'); return; }
+      close();
+    };
+    foot.appendChild(el);
+  });
+  document.body.appendChild(ov);
+  const first = ov.querySelector('input:not([type=checkbox]):not([type=file]),textarea,select'); if (first) first.focus();
+  if (onMount) onMount(ov, close);
+  return {el: ov, close};
+}
+function confirmBox(msg, {ok = '確定', danger = false, title = '請確認'} = {}){
+  return new Promise(res => {
+    let result = false;
+    openModal({title, body: `<div style="white-space:pre-wrap">${esc(msg)}</div>`, buttons: [{label: '取消'}, {label: ok, cls: danger ? 'danger' : 'primary', onClick: () => { result = true; }}], onClose: () => res(result)});
+  });
+}
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); return true; } catch (e){ /* fallback */ }
+  try {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
+  } catch (e){ return false; }
+}
+function download(name, text, mime){
+  const blob = new Blob([text], {type: mime}); const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+function stamp(){ const d = new Date(); return d.getFullYear() + U.pad(d.getMonth() + 1) + U.pad(d.getDate()) + '_' + U.pad(d.getHours()) + U.pad(d.getMinutes()); }
+function insertAtCursor(ta, text){
+  const s = ta.selectionStart == null ? ta.value.length : ta.selectionStart, e = ta.selectionEnd == null ? s : ta.selectionEnd;
+  ta.value = ta.value.slice(0, s) + text + ta.value.slice(e);
+  ta.selectionStart = ta.selectionEnd = s + text.length; ta.focus();
+  ta.dispatchEvent(new Event('input', {bubbles: true}));
+}
+function catCheckboxes(selected, name = 'cats'){
+  return cats().map(c => `<label class="chk"><input type="checkbox" name="${name}" value="${esc(c.id)}" ${selected.includes(c.id) ? 'checked' : ''}>${esc(c.name)}</label>`).join('') || '<span class="hint">尚無分類，請先至設定新增</span>';
+}
+function insertSelect(){
+  const blocks = S.list('blocks').sort((a, b) => (a.type + a.key).localeCompare(b.type + b.key));
+  const vars = ['name', 'post', 'platform', 'today', 'brand', ...Object.keys((S.get('brand', {vars: {}}).vars) || {})];
+  return `<select data-chg="modalInsert"><option value="">＋插入變數／積木…</option><optgroup label="變數">${vars.map(v => `<option value="{{${esc(v)}}}">{{${esc(v)}}}</option>`).join('')}</optgroup><optgroup label="積木">${blocks.map(b => `<option value="[[block:${esc(b.type)}/${esc(b.key)}]]">${esc(b.type)}／${esc(b.key)}</option>`).join('')}</optgroup></select>`;
+}
+
+/* ========== 5. Views ========== */
+const Views = {};
+
+/* ---------- Inbox ---------- */
+const Inbox = {
+  ROW: 80,
+  filters(){
+    const p = UI.params;
+    return {status: p.status || 'todo', cat: p.cat || '', platform: p.platform || '', post: p.post || '', sentiment: p.sentiment || '', priority: p.priority || '', from: p.from || '', to: p.to || '', star: p.star || '', q: p.q || '', sort: p.sort || 'default'};
+  },
+  statusOk(c, st){ if (st === 'all') return true; if (st === 'todo') return c.status === 'new' || c.status === 'in_progress'; return c.status === st; },
+  filtered(){
+    const f = this.filters(), q = U.normalize(f.q);
+    let rtext = null;
+    if (q){ rtext = new Map(); for (const r of S.list('replies')) rtext.set(r.commentId, (rtext.get(r.commentId) || '') + ' ' + U.normalize(r.finalText)); }
+    const from = f.from ? new Date(f.from + 'T00:00:00').getTime() : 0, to = f.to ? new Date(f.to + 'T23:59:59.999').getTime() : Infinity;
+    const arr = S.list('comments').filter(c => {
+      if (!this.statusOk(c, f.status) && c.id !== UI.selectedId) return false;
+      if (f.cat && !Core.allCats(c).includes(f.cat)) return false;
+      if (f.platform && c.platform !== f.platform) return false;
+      if (f.post && c.postId !== f.post) return false;
+      if (f.sentiment && c.sentiment !== f.sentiment) return false;
+      if (f.priority && c.priority !== f.priority) return false;
+      if (f.star && !c.starred) return false;
+      if (c.createdAt < from || c.createdAt > to) return false;
+      if (q && !(U.normalize(c.author) + ' ' + c.contentNorm + ' ' + U.normalize(c.note) + ' ' + (rtext.get(c.id) || '')).includes(q)) return false;
+      return true;
+    });
+    if (f.sort === 'newest') arr.sort((a, b) => b.createdAt - a.createdAt);
+    else if (f.sort === 'oldest') arr.sort((a, b) => a.createdAt - b.createdAt);
+    else arr.sort((a, b) => PRI_SORT[a.priority] - PRI_SORT[b.priority] || a.createdAt - b.createdAt);
+    return arr;
+  },
+  setFilter(k, v){
+    const p = Object.assign({}, UI.params);
+    if (v === '' || v == null) delete p[k]; else p[k] = v;
+    UI.params = p;
+    try { history.replaceState(null, '', buildHash('inbox', p)); } catch (e){ location.hash = buildHash('inbox', p); return; }
+    this.refresh({detail: false});
+  },
+  mount(root){
+    root.innerHTML = `<div class="inbox ${UI.detailOpen ? 'dopen' : ''}" id="inbox">
+      <aside class="filters" id="filters"></aside>
+      <section class="listpane">
+        <div class="listhead">
+          <div class="r1"><button class="btn sm fbtn" data-act="toggleFilters">☰ 篩選</button><input type="search" id="q" placeholder="搜尋作者、留言、備註、回覆（/）" value="${esc(this.filters().q)}"></div>
+          <div class="batch"><label class="chk"><input type="checkbox" data-chg="checkAll" id="checkAll"> 全選</label><span id="cnt" class="muted"></span>
+            <span id="batchBar" class="hidden"><select id="bStatus" data-chg="batchStatus"><option value="">批次改狀態…</option><option value="new">待處理</option><option value="in_progress">處理中</option><option value="replied">已回覆</option><option value="skipped">略過</option></select>
+            <select id="bCat" data-chg="batchCat"><option value="">批次加分類…</option>${cats().map(c => `<option value="${esc(c.id)}">${esc(c.name)}</option>`).join('')}</select>
+            <button class="btn sm danger" data-act="batchDel">刪除</button></span></div>
+        </div>
+        <div class="list" id="list"><div id="vspacer"><div id="vwin"></div></div></div>
+      </section>
+      <section class="detailpane" id="detail"></section></div>`;
+    const list = $('#list'); let raf = 0;
+    list.addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; this.paintWindow(); }); });
+    $('#q').addEventListener('input', U.debounce(e => this.setFilter('q', e.target.value.trim()), 300));
+    this.refresh({detail: true});
+  },
+  refresh({detail = false} = {}){
+    if (UI.view !== 'inbox' || !$('#inbox')) return;
+    UI.items = this.filtered();
+    { const vis = new Set(UI.items.map(c => c.id)); for (const id of [...UI.checked]) if (!vis.has(id)) UI.checked.delete(id); } /* FIX: 已被篩掉的勾選項不應被批次操作 */
+    this.paintFilters(); this.paintList(); this.paintBatch();
+    if (detail) this.paintDetail();
+  },
+  paintFilters(){
+    const f = this.filters(), all = S.list('comments'), cnt = {};
+    all.forEach(c => cnt[c.status] = (cnt[c.status] || 0) + 1);
+    const stItems = [['todo', '待辦（待處理＋處理中）', (cnt.new || 0) + (cnt.in_progress || 0)], ['new', '待處理', cnt.new || 0], ['in_progress', '處理中', cnt.in_progress || 0], ['replied', '已回覆', cnt.replied || 0], ['skipped', '略過', cnt.skipped || 0], ['escalated', '升級', cnt.escalated || 0], ['all', '全部', all.length]];
+    const cc = {}; all.filter(c => this.statusOk(c, f.status)).forEach(c => Core.allCats(c).forEach(id => cc[id] = (cc[id] || 0) + 1));
+    const opt = (v, t, cur) => `<option value="${esc(v)}" ${v === cur ? 'selected' : ''}>${esc(t)}</option>`;
+    const posts = S.list('posts').sort((a, b) => b.createdAt - a.createdAt);
+    $('#filters').innerHTML = `<h4>狀態</h4>${stItems.map(s => `<div class="fitem ${f.status === s[0] ? 'on' : ''}" data-act="setFilter" data-k="status" data-v="${s[0]}"><span>${s[1]}</span><span class="n">${s[2]}</span></div>`).join('')}
+      <h4>分類</h4>${cats().map(c => `<div class="fitem ${f.cat === c.id ? 'on' : ''}" data-act="setFilter" data-k="cat" data-v="${f.cat === c.id ? '' : esc(c.id)}"><span><span class="chip mini" style="--c:${U.safeColor(c.color)}">●</span> ${esc(c.name)}</span><span class="n">${cc[c.id] || 0}</span></div>`).join('')}
+      <h4>平台</h4><select data-chg="filter" data-k="platform"><option value="">全部平台</option>${platforms().map(p => opt(p.id, p.name, f.platform)).join('')}</select>
+      <h4>貼文</h4><select data-chg="filter" data-k="post"><option value="">全部貼文</option>${posts.map(p => opt(p.id, p.title, f.post)).join('')}</select>
+      <h4>情緒／優先度</h4>
+      <select data-chg="filter" data-k="sentiment"><option value="">全部情緒</option>${Object.entries(SENT).map(([k, v]) => opt(k, v, f.sentiment)).join('')}</select>
+      <select data-chg="filter" data-k="priority"><option value="">全部優先度</option>${Object.entries(PRI).map(([k, v]) => opt(k, v, f.priority)).join('')}</select>
+      <h4>日期區間</h4><input type="date" data-chg="filter" data-k="from" value="${esc(f.from)}"><input type="date" data-chg="filter" data-k="to" value="${esc(f.to)}">
+      <label class="chk"><input type="checkbox" data-chg="filter" data-k="star" ${f.star ? 'checked' : ''}>只看 ⭐ 收藏</label>
+      <h4>排序</h4><select data-chg="filter" data-k="sort">${opt('default', '優先度 → 建立時間', f.sort)}${opt('newest', '最新', f.sort)}${opt('oldest', '最舊', f.sort)}</select>
+      <div style="margin-top:10px"><button class="btn sm" data-act="clearFilters">清除篩選</button></div>`;
+  },
+  paintList(){
+    const n = UI.items.length, list = $('#list');
+    $('#cnt').textContent = n + ' 則';
+    if (!n){
+      const none = S.comments.size === 0;
+      $('#vspacer').style.height = '0'; $('#vwin').style.transform = 'none';
+      $('#vwin').innerHTML = `<div class="empty">${none ? '<h3>還沒有留言</h3>按「＋貼上留言」（或按 <kbd>N</kbd>）開始，<br>或先載入示範資料試用。<br><br><button class="btn primary" data-act="loadDemo">載入示範資料</button>' : '<h3>沒有符合條件的留言</h3>調整左側篩選條件看看。'}</div>`;
+      return;
+    }
+    $('#vspacer').style.height = (n * this.ROW) + 'px';
+    this.paintWindow();
+  },
+  paintWindow(){
+    const list = $('#list'); if (!list || !UI.items.length) return;
+    const n = UI.items.length, top = list.scrollTop, h = list.clientHeight || 600;
+    const start = Math.max(0, Math.floor(top / this.ROW) - 4), end = Math.min(n, Math.ceil((top + h) / this.ROW) + 4);
+    const win = $('#vwin'); win.style.transform = `translateY(${start * this.ROW}px)`;
+    win.innerHTML = UI.items.slice(start, end).map(c => this.rowHTML(c)).join('');
+  },
+  rowHTML(c){
+    const ids = Core.allCats(c).slice(0, 3);
+    const chips = ids.map(id => catChip(id, !(c.categories || []).includes(id), {mini: true})).join('');
+    return `<div class="row st-${c.status} ${c.id === UI.selectedId ? 'sel' : ''}" data-act="selectRow" data-id="${esc(c.id)}" style="height:${this.ROW}px">
+      <input type="checkbox" class="rk" data-chg="check" data-id="${esc(c.id)}" ${UI.checked.has(c.id) ? 'checked' : ''}><span class="pri pri-${c.priority}" title="${esc(PRI[c.priority])}"></span>
+      <div class="rmain"><div class="rtop"><b>${esc(c.author || '（匿名）')}</b><span class="badge">${esc(platformName(c.platform))}</span><span class="muted">${U.ago(c.createdAt)}</span>${c.starred ? '<span>⭐</span>' : ''}<span class="st">${STATUS[c.status]}</span></div>
+      <div class="rtext">${esc(c.content)}</div><div class="rcats">${chips}</div></div></div>`;
+  },
+  paintBatch(){
+    const n = UI.checked.size; $('#batchBar').classList.toggle('hidden', n === 0);
+    const ca = $('#checkAll'); if (ca) ca.checked = UI.items.length > 0 && UI.items.every(c => UI.checked.has(c.id));
+  },
+  cur(){ return UI.selectedId ? S.comments.get(UI.selectedId) : null; },
+  draft(id){ return UI.drafts[id] || (UI.drafts[id] = {text: '', tplId: null}); },
+  async select(id){
+    const c = S.comments.get(id); if (!c) return;
+    UI.selectedId = id; UI.detailOpen = true;
+    if (c.status === 'new'){ c.status = 'in_progress'; c.updatedAt = Date.now(); await S.save('comments', c); }
+    const ib = $('#inbox'); if (ib) ib.classList.add('dopen');
+    this.refresh({detail: true}); this.scrollToSel();
+  },
+  scrollToSel(){
+    const i = UI.items.findIndex(c => c.id === UI.selectedId), list = $('#list'); if (i < 0 || !list) return;
+    const top = i * this.ROW, h = list.clientHeight;
+    if (top < list.scrollTop) list.scrollTop = top; else if (top + this.ROW > list.scrollTop + h) list.scrollTop = top + this.ROW - h;
+    this.paintWindow();
+  },
+  move(d){
+    const i = UI.items.findIndex(c => c.id === UI.selectedId);
+    const j = i < 0 ? (d > 0 ? 0 : UI.items.length - 1) : Math.min(UI.items.length - 1, Math.max(0, i + d));
+    if (UI.items[j]) this.select(UI.items[j].id);
+  },
+  paintDetail(){
+    const el = $('#detail'); if (!el) return;
+    const c = this.cur();
+    if (!c){
+      UI.recs = [];
+      el.innerHTML = `<div class="empty"><h3>選一則留言開始處理</h3>流程：<b>選留言 → 按數字鍵套用範本 → <kbd>Ctrl</kbd>+<kbd>Enter</kbd> 複製並完成</b><br><br>快捷鍵：<kbd>J</kbd>/<kbd>K</kbd> 切換、<kbd>?</kbd> 查看全部</div>`; return;
+    }
+    const ids = Core.allCats(c), d = this.draft(c.id);
+    UI.recs = Core.recommend(S.list('templates'), c, ids);
+    const post = S.posts.get(c.postId);
+    const addable = cats().filter(x => !(c.categories || []).includes(x.id));
+    const blocks = S.list('blocks').sort((a, b) => (a.type + a.key).localeCompare(b.type + b.key));
+    const groups = {}; blocks.forEach(b => (groups[b.type] = groups[b.type] || []).push(b));
+    const varList = ['name', 'post', 'platform', 'today', 'brand', ...Object.keys((S.get('brand', {vars: {}}).vars) || {})];
+    el.innerHTML = `<div class="dcard"><div class="dhead"><button class="btn sm backbtn" data-act="back">← 返回</button><h3>${esc(c.author || '（匿名）')}</h3><span class="badge">${esc(platformName(c.platform))}</span>
+        ${post ? `<span class="badge">貼文：${esc(post.title)}</span>` : ''}<span class="muted small">${U.fmtDT(c.createdAt)}</span>
+        <span style="flex:1"></span><button class="icon" data-act="toggleStar" title="收藏">${c.starred ? '⭐' : '☆'}</button><button class="icon" data-act="delOne" title="刪除">🗑</button></div>
+      <div class="content">${esc(c.content)}</div>
+      <div class="metarow"><span class="small muted">分類</span><span>${(c.categories || []).map(id => catChip(id, false, {x: true})).join('')}${(c.suggestedCategories || []).filter(id => !(c.categories || []).includes(id)).map(id => catChip(id, true, {x: true})).join('')}</span>
+        ${(c.suggestedCategories || []).some(id => !(c.categories || []).includes(id)) ? '<button class="btn sm" data-act="confirmAllCats">全部確認</button>' : ''}
+        <select data-chg="addCat"><option value="">＋分類</option>${addable.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div>
+      <div class="metarow"><span class="small muted">情緒</span><select data-chg="setSent">${Object.entries(SENT).map(([k, v]) => `<option value="${k}" ${c.sentiment === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+        <span class="small muted">優先度</span><select data-chg="setPri">${Object.entries(PRI).map(([k, v]) => `<option value="${k}" ${c.priority === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+        <span class="small muted">狀態</span><select data-chg="setStatus">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${c.status === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+      ${c.status === 'escalated' ? `<div class="warn">升級原因：${esc((c.escalation || {}).reason || '—')}${(c.escalation || {}).followUpDate ? '　待追蹤：' + esc(c.escalation.followUpDate) : ''}</div>` : ''}
+      <label class="f" style="margin:8px 0 0"><span>內部備註（不會被複製）</span><textarea data-chg="note" rows="2">${esc(c.note || '')}</textarea></label></div>
+      <div class="dcard"><div class="small muted" style="margin-bottom:6px">推薦範本（按 <kbd>1</kbd>–<kbd>9</kbd> 套用）</div>
+        ${UI.recs.length ? UI.recs.map((r, i) => `<div class="rec ${d.tplId === r.t.id ? 'on' : ''}" data-act="applyRec" data-i="${i}"><kbd class="k">${i + 1}</kbd><div style="min-width:0"><div class="tt">${esc(r.t.title)} <span class="badge">${esc(r.t.tone || '')}</span>${r.hits ? '' : ' <span class="hint">（未對應分類）</span>'}</div><div class="pv">${esc(expandFor(r.t.content, c).text)}</div></div></div>`).join('') : '<div class="hint">還沒有適用的範本，可在下方寫好回覆後按「💾 存範本」。</div>'}</div>
+      <div class="dcard"><div class="edwrap"><div><textarea id="editor" placeholder="輸入回覆，或按數字鍵套用範本。可使用 {{name}} 變數與 [[block:類型/名稱]] 積木。">${esc(d.text)}</textarea>
+        <div class="counter" id="counter"></div><div id="warns"></div><div class="small muted" style="margin-top:8px">預覽（實際複製的內容）</div><div class="preview" id="preview"></div></div>
+        <div class="sidebar"><h5>變數</h5>${varList.map(v => `<button data-act="insert" data-ins="{{${esc(v)}}}">{{${esc(v)}}}</button>`).join('')}
+          ${Object.entries(groups).map(([t, arr]) => `<h5>${esc(t)}</h5>${arr.map(b => `<button title="${esc(b.content)}" data-act="insert" data-ins="[[block:${esc(b.type)}/${esc(b.key)}]]">${esc(b.key)}</button>`).join('')}`).join('')}</div></div>
+        <div class="actions"><button class="btn" data-act="copyOnly">📋 複製</button><button class="btn primary" data-act="complete">✅ 複製並完成 <span class="small">Ctrl+Enter</span></button><button class="btn" data-act="saveTpl">💾 存範本</button>
+        <span style="flex:1"></span><button class="btn" data-act="skip">略過 (S)</button><button class="btn" data-act="escalate">升級 (E)</button></div></div>`;
+    $('#editor').addEventListener('input', e => { this.draft(c.id).text = e.target.value; this.paintPreview(); });
+    this.paintPreview();
+  },
+  paintPreview(){
+    const c = this.cur(), ed = $('#editor'); if (!c || !ed) return;
+    const r = expandFor(ed.value, c), banned = S.get('bannedWords', []);
+    $('#preview').innerHTML = ed.value.trim() ? highlight(r.text, banned) : '<span class="hint">（尚未輸入）</span>';
+    const n = U.len(r.text), lim = platformLimit(c.platform), cn = $('#counter');
+    cn.textContent = `字數 ${n}${lim ? ' / ' + platformName(c.platform) + ' 上限 ' + lim : ''}`; cn.classList.toggle('over', !!lim && n > lim);
+    const w = [];
+    if (r.undefinedVars.length) w.push('⚠ 未定義變數：' + r.undefinedVars.map(v => '{{' + v + '}}').join('、'));
+    r.errors.forEach(x => w.push('⚠ ' + x));
+    Core.findBanned(r.text, banned).forEach(b => w.push(`⚠ 含禁用詞「${b.word}」${b.suggest ? '，建議改用「' + b.suggest + '」' : ''}`));
+    if (lim && n > lim) w.push(`⚠ 超過 ${platformName(c.platform)} 字數上限（${n}/${lim}）`);
+    $('#warns').innerHTML = w.map(x => `<div class="warn">${esc(x)}</div>`).join('');
+  },
+  applyRec(i){
+    const c = this.cur(), r = UI.recs[i]; if (!c || !r) return;
+    const d = this.draft(c.id); d.text = r.t.content; d.tplId = r.t.id;
+    $('#editor').value = d.text; this.paintPreview();
+    $$('.rec').forEach((el, j) => el.classList.toggle('on', j === i));
+  },
+  async patch(fields, repaintDetail = true){
+    const c = this.cur(); if (!c) return;
+    Object.assign(c, fields, {updatedAt: Date.now()}); await S.save('comments', c);
+    this.refresh({detail: repaintDetail});
+  },
+  nextAfter(id){ const i = UI.items.findIndex(c => c.id === id); return UI.items[i + 1] || UI.items[i - 1] || null; },
+  async finish(c, fields){
+    const next = this.nextAfter(c.id);
+    const nt = $('textarea[data-chg="note"]'); /* FIX: 備註輸入中直接 Ctrl+Enter 會遺失備註 */
+    if (nt && UI.selectedId === c.id && nt.value !== (c.note || '')) fields = Object.assign({}, fields, {note: nt.value});
+    Object.assign(c, fields, {updatedAt: Date.now()}); await S.save('comments', c);
+    delete UI.drafts[c.id];
+    UI.selectedId = null; this.refresh({detail: false});
+    if (next && S.comments.has(next.id) && UI.items.some(x => x.id === next.id)) await this.select(next.id); else { UI.detailOpen = false; const ib = $('#inbox'); if (ib) ib.classList.remove('dopen'); this.paintDetail(); }
+  },
+  async complete(){
+    const c = this.cur(); if (!c) return;
+    const d = this.draft(c.id);
+    if (!d.text.trim()){ toast('請先輸入或選擇回覆內容', 'warn'); return; }
+    const r = expandFor(d.text, c);
+    const issues = [...r.undefinedVars.map(v => '未定義變數 {{' + v + '}}'), ...r.errors];
+    if (issues.length && !(await confirmBox('回覆內容仍有問題：\n・' + issues.join('\n・') + '\n\n仍要複製並標記完成嗎？', {ok: '仍要完成'}))) return;
+    if (!(await copyText(r.text))){ toast('複製失敗，請手動複製後再標記完成', 'error'); return; }
+    const now = Date.now();
+    await S.save('replies', {id: U.id('r'), commentId: c.id, templateId: d.tplId || null, finalText: r.text, createdAt: now});
+    const t = d.tplId ? S.templates.get(d.tplId) : null;
+    if (t){ t.useCount = (t.useCount || 0) + 1; t.lastUsedAt = now; await S.save('templates', t); }
+    await this.finish(c, {status: 'replied', repliedAt: now, categories: Core.allCats(c)});
+    toast('已複製並標記完成', 'ok');
+  },
+  async skip(){ const c = this.cur(); if (c){ await this.finish(c, {status: 'skipped'}); toast('已略過'); } },
+  escalate(){
+    const c = this.cur(); if (!c) return;
+    openModal({title: '升級處理', body: `<label class="f"><span>升級原因（必填）</span><textarea name="reason" rows="3">${esc((c.escalation || {}).reason || '')}</textarea></label><label class="f"><span>待追蹤日期（選填）</span><input type="date" name="date" value="${esc((c.escalation || {}).followUpDate || '')}"></label>`,
+      buttons: [{label: '取消'}, {label: '確認升級', cls: 'primary', onClick: async ov => {
+        const reason = $('[name=reason]', ov).value.trim(); if (!reason){ toast('請填寫升級原因', 'warn'); return false; }
+        await this.finish(c, {status: 'escalated', escalation: {reason, followUpDate: $('[name=date]', ov).value || null}}); toast('已升級');
+      }}]});
+  },
+  saveTemplate(){
+    const c = this.cur(); if (!c) return; const d = this.draft(c.id);
+    if (!d.text.trim()){ toast('請先輸入回覆內容', 'warn'); return; }
+    Vault.editTemplate(null, {title: '', content: d.text, categories: Core.allCats(c), platforms: ['all'], tone: (S.get('tones', [])[0] || '')}, t => { d.tplId = t.id; this.paintDetail(); });
+  }
+};
+Views.inbox = {mount: (root) => Inbox.mount(root)};
+
+/* ---------- 匯入留言 ---------- */
+function openImport(){
+  const plats = platforms(), posts = S.list('posts').sort((a, b) => b.createdAt - a.createdAt);
+  let rows = [], parsed = false;
+  const m = openModal({title: '貼上留言', wide: true, body: `
+    <div class="grid2"><label class="f"><span>平台</span><select name="platform">${plats.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></label>
+    <label class="f"><span>所屬貼文</span><select name="post"><option value="">（不指定）</option><option value="__new">＋ 新增貼文…</option>${posts.map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('')}</select></label>
+    <label class="f hidden" id="npw"><span>新貼文標題</span><input type="text" name="newPost" placeholder="例如：雙11預告"></label>
+    <label class="f"><span>解析模式</span><select name="mode"><option value="line">一行一則</option><option value="author">作者＋內容（作者：內容 或 Tab 分隔）</option><option value="blank">空行分隔（適合多行留言）</option><option value="csv">CSV（author,content,platform,time）</option></select></label></div>
+    <label class="f"><span>留言內容</span><textarea name="raw" rows="7" placeholder="請問活動到幾號？\n怎麼這麼貴\n我昨天買了還沒收到"></textarea></label>
+    <div class="row-inline" style="margin-bottom:8px"><input type="file" name="file" accept=".csv,.txt,text/plain,text/csv" style="width:auto"><span class="hint">可直接載入 .csv / .txt 檔</span></div>
+    <div id="pv"></div>`,
+    buttons: [{label: '改為單筆新增', onClick: () => { setTimeout(openSingle, 0); }}, {label: '取消'}, {label: '解析預覽', id: 'parse', cls: '', onClick: ov => { parse(ov); return false; }}, {label: '匯入', id: 'imp', cls: 'primary disabled', onClick: ov => doImport(ov)}]});
+  const ov = m.el;
+  const q = n => $('[name=' + n + ']', ov);
+  const invalidate = () => { parsed = false; $('#pv', ov).innerHTML = ''; $('[data-bid=imp]', ov).classList.add('disabled'); };
+  ['platform', 'post', 'mode', 'raw'].forEach(n => q(n).addEventListener('input', () => { if (n === 'post') $('#npw', ov).classList.toggle('hidden', q('post').value !== '__new'); invalidate(); }));
+  q('file').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    const rd = new FileReader(); rd.onload = () => { q('raw').value = String(rd.result).replace(/^\uFEFF/, ''); if (/\.csv$/i.test(f.name)) q('mode').value = 'csv'; invalidate(); }; rd.readAsText(f, 'utf-8');
+  });
+  function postKey(){ const v = q('post').value; return v === '__new' ? '__new' : v; }
+  function dupFlags(){
+    const existing = new Set(S.list('comments').map(c => c.hash)), seen = new Set(), pk = postKey();
+    rows.forEach(r => { const h = U.hash(pk + '|' + r.author + '|' + U.normalize(r.content)); r.dup = existing.has(h) || seen.has(h); seen.add(h); });
+  }
+  function parse(ov){
+    const res = Core.parseComments(q('raw').value, q('mode').value);
+    if (!res.length){ toast('沒有解析到任何留言', 'warn'); invalidate(); return; }
+    rows = res.map(r => Object.assign({keep: true, dup: false}, r)); dupFlags(); rows.forEach(r => { r.keep = !r.dup; });
+    parsed = true; paintPv(); $('[data-bid=imp]', ov).classList.remove('disabled');
+  }
+  function refreshDup(){
+    $$('#pv tbody tr', ov).forEach((tr, i) => {
+      const r = rows[i]; if (!r) return; tr.classList.toggle('dup', r.dup);
+      const td = tr.children[2]; let h = td.querySelector('.duphint');
+      if (r.dup && !h){ h = document.createElement('span'); h.className = 'hint duphint'; h.style.color = 'var(--warn)'; h.textContent = '疑似重複'; td.appendChild(h); }
+      else if (!r.dup && h) h.remove();
+    });
+  }
+  function paintPv(){
+    const CAP = 300, kept = rows.filter(r => r.keep).length, dups = rows.filter(r => r.dup).length;
+    $('#pv', ov).innerHTML = `<div class="small muted" style="margin-bottom:4px">共解析 ${rows.length} 則，預設匯入 ${kept} 則${dups ? `，其中 <b style="color:var(--warn)">${dups} 則疑似重複</b>已預設不勾選` : ''}${rows.length > CAP ? `（僅顯示前 ${CAP} 則供檢視，其餘依預設一併處理）` : ''}</div>
+    <div class="pvtable"><table class="t"><thead><tr><th></th><th>作者</th><th>內容</th><th></th></tr></thead><tbody>${rows.slice(0, CAP).map((r, i) => `<tr class="${r.dup ? 'dup' : ''}"><td><input type="checkbox" data-i="${i}" data-f="keep" ${r.keep ? 'checked' : ''}></td><td style="width:140px"><input type="text" data-i="${i}" data-f="author" value="${esc(r.author)}" placeholder="（匿名）"></td><td><input type="text" data-i="${i}" data-f="content" value="${esc(r.content)}">${r.dup ? '<span class="hint duphint" style="color:var(--warn)">疑似重複</span>' : ''}</td><td><button class="icon" data-i="${i}" data-f="del" title="刪除">✕</button></td></tr>`).join('')}</tbody></table></div>`;
+  }
+  $('#pv', ov).addEventListener('input', e => { const t = e.target, i = +t.dataset.i; if (isNaN(i)) return; if (t.dataset.f === 'keep') rows[i].keep = t.checked; else if (t.dataset.f === 'author' || t.dataset.f === 'content') rows[i][t.dataset.f] = t.value; });
+  $('#pv', ov).addEventListener('change', e => { const t = e.target; if (t.dataset.f === 'author' || t.dataset.f === 'content'){ dupFlags(); refreshDup(); } }); /* FIX: 不重繪整表，避免 Tab 切換時失去焦點 */
+  $('#pv', ov).addEventListener('click', e => { const b = e.target.closest('[data-f=del]'); if (b){ rows.splice(+b.dataset.i, 1); dupFlags(); paintPv(); } });
+  async function doImport(ov){
+    if (!parsed) return false;
+    const keep = rows.filter(r => r.keep && r.content.trim());
+    if (!keep.length){ toast('沒有勾選任何留言', 'warn'); return false; }
+    let postId = q('post').value;
+    if (postId === '__new'){ const title = q('newPost').value.trim(); if (!title){ toast('請輸入新貼文標題', 'warn'); return false; } postId = U.id('p'); await S.save('posts', {id: postId, title, platform: q('platform').value, url: '', publishedAt: null, note: '', createdAt: Date.now()}); }
+    const n = await importComments(keep, q('platform').value, postId);
+    toast(`已匯入 ${n} 則留言`, 'ok'); afterImport();
+  }
+}
+function openSingle(){
+  const plats = platforms(), posts = S.list('posts').sort((a, b) => b.createdAt - a.createdAt);
+  openModal({title: '單筆新增留言', body: `<div class="grid2"><label class="f"><span>平台</span><select name="platform">${plats.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></label>
+    <label class="f"><span>所屬貼文</span><select name="post"><option value="">（不指定）</option>${posts.map(p => `<option value="${esc(p.id)}">${esc(p.title)}</option>`).join('')}</select></label>
+    <label class="f"><span>作者</span><input type="text" name="author"></label><label class="f"><span>留言時間（選填）</span><input type="text" name="time" placeholder="例如 2026-11-05 14:30"></label></div>
+    <label class="f"><span>留言內容</span><textarea name="content" rows="4"></textarea></label>`,
+    buttons: [{label: '取消'}, {label: '新增', cls: 'primary', onClick: async ov => {
+      const content = $('[name=content]', ov).value.trim(); if (!content){ toast('請輸入留言內容', 'warn'); return false; }
+      const ts = Date.parse($('[name=time]', ov).value.trim()); const row = {author: $('[name=author]', ov).value.trim(), content}; if (!isNaN(ts)) row.time = ts;
+      await importComments([row], $('[name=platform]', ov).value, $('[name=post]', ov).value); toast('已新增', 'ok'); afterImport();
+    }}]});
+}
+async function importComments(rows, platform, postId){
+  const now = Date.now(), rules = S.list('rules'), existing = new Set(S.list('comments').map(c => c.hash)), out = [];
+  const valid = new Set(platforms(true).map(p => p.id));
+  rows.forEach((r, i) => {
+    const norm = U.normalize(r.content), h = U.hash((postId || '') + '|' + (r.author || '') + '|' + norm);
+    let plat = platform;
+    if (r.platform){ const hit = platforms(true).find(p => p.id === r.platform.toLowerCase() || U.normalize(p.name) === U.normalize(r.platform)); plat = hit ? hit.id : platform; }
+    if (!valid.has(plat)) plat = 'other';
+    const res = Core.runRules(rules, {content: r.content, platform: plat});
+    out.push({id: U.id('c'), postId: postId || '', platform: plat, author: r.author || '', content: r.content, contentNorm: norm, hash: h, categories: [], suggestedCategories: res.categories, sentiment: res.sentiment, priority: res.priority, status: 'new', starred: false, note: '', escalation: {reason: '', followUpDate: null}, createdAt: r.time || (now + i), updatedAt: now, repliedAt: null});
+  });
+  await S.saveMany('comments', out); return out.length;
+}
+function afterImport(){
+  if (UI.view !== 'inbox') location.hash = '#/inbox'; else { Inbox.refresh({detail: false}); }
+}
+
+/* ---------- Vault ---------- */
+const Vault = {
+  mount(root){
+    root.innerHTML = `<div class="page"><div class="pagehead"><h2>📝 回覆庫</h2><span class="muted" id="vcount"></span><span class="sp"></span><button class="btn primary" data-act="tplNew">＋新增範本</button></div>
+      <div class="card"><div class="grid2" style="grid-template-columns:2fr 1fr 1fr;gap:10px"><input type="search" id="vq" placeholder="搜尋範本標題／內容" value="${esc(UI.vault.q)}">
+      <select id="vcat"><option value="">全部分類</option>${cats().map(c => `<option value="${esc(c.id)}" ${UI.vault.cat === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select>
+      <select id="vtone"><option value="">全部語氣</option>${S.get('tones', []).map(t => `<option ${UI.vault.tone === t ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div></div><div id="vlist"></div></div>`;
+    const upd = () => { UI.vault = {q: $('#vq').value, cat: $('#vcat').value, tone: $('#vtone').value}; this.paint(); };
+    $('#vq').addEventListener('input', U.debounce(upd, 200)); $('#vcat').addEventListener('change', upd); $('#vtone').addEventListener('change', upd);
+    this.paint();
+  },
+  paint(){
+    const v = UI.vault, q = U.normalize(v.q), c0 = {name: '範本'};
+    const arr = S.list('templates').filter(t => (!v.cat || (t.categories || []).includes(v.cat)) && (!v.tone || t.tone === v.tone) && (!q || U.normalize(t.title + ' ' + t.content).includes(q))).sort((a, b) => (b.useCount || 0) - (a.useCount || 0) || a.title.localeCompare(b.title));
+    $('#vcount').textContent = arr.length + ' 個範本';
+    const ctx = ctxFor(null);
+    $('#vlist').innerHTML = arr.length ? arr.map(t => `<div class="card vcard"><div class="body"><div><b>${esc(t.title)}</b> <span class="badge">${esc(t.tone || '—')}</span> ${(t.categories || []).map(id => catChip(id, false)).join('')}
+      <span class="hint">${(t.platforms || ['all']).includes('all') ? '全平台' : (t.platforms || []).map(platformName).map(esc).join('、')}</span></div>
+      <div class="pv">${esc(Core.expandTemplate(t.content, ctx).text)}</div><div class="hint" style="margin-top:4px">使用 ${t.useCount || 0} 次　最後使用：${t.lastUsedAt ? U.fmtDT(t.lastUsedAt) : '—'}</div></div>
+      <div class="row-inline"><button class="btn sm" data-act="tplEdit" data-id="${esc(t.id)}">編輯</button><button class="btn sm" data-act="tplDup" data-id="${esc(t.id)}">複製</button><button class="btn sm danger" data-act="tplDel" data-id="${esc(t.id)}">刪除</button></div></div>`).join('')
+      : '<div class="empty"><h3>沒有符合的範本</h3>按右上角「＋新增範本」建立第一個。</div>';
+  },
+  editTemplate(id, preset, onSaved){
+    const t = id ? S.templates.get(id) : Object.assign({title: '', content: '', categories: [], platforms: ['all'], tone: (S.get('tones', [])[0] || '')}, preset || {});
+    const tones = S.get('tones', []); const plats = platforms();
+    const isAll = (t.platforms || ['all']).includes('all');
+    openModal({title: id ? '編輯範本' : '新增範本', wide: true, body: `<div class="grid2"><label class="f"><span>標題</span><input type="text" name="title" value="${esc(t.title)}"></label>
+      <label class="f"><span>語氣</span><select name="tone">${[...new Set([...tones, t.tone].filter(Boolean))].map(x => `<option ${x === t.tone ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="">（無）</option></select></label></div>
+      <div class="f" style="margin-bottom:10px"><span>對應分類（用於推薦）</span><div>${catCheckboxes(t.categories || [])}</div></div>
+      <div class="f" style="margin-bottom:10px"><span>適用平台</span><div><label class="chk"><input type="checkbox" name="pall" ${isAll ? 'checked' : ''}>全部</label>${plats.map(p => `<label class="chk"><input type="checkbox" name="plats" value="${esc(p.id)}" ${(t.platforms || []).includes(p.id) ? 'checked' : ''}>${esc(p.name)}</label>`).join('')}</div></div>
+      <label class="f"><span>內容</span><textarea name="content" rows="6" data-inp="tplPreview">${esc(t.content)}</textarea></label>
+      <div class="row-inline" style="margin-bottom:6px">${insertSelect()}<span class="hint">積木寫法：[[block:類型/名稱]]　變數寫法：{{名稱}}</span></div>
+      <div class="small muted">預覽（以範例資料展開）</div><div class="preview" id="tplpv"></div><div id="tplwarn"></div>`,
+      onMount: ov => { UI.tplPreview = () => this.preview(ov); this.preview(ov); },
+      buttons: [{label: '取消'}, {label: '儲存', cls: 'primary', onClick: async ov => {
+        const title = $('[name=title]', ov).value.trim(), content = $('[name=content]', ov).value;
+        if (!title){ toast('請輸入標題', 'warn'); return false; } if (!content.trim()){ toast('請輸入內容', 'warn'); return false; }
+        const pall = $('[name=pall]', ov).checked, pl = $$('[name=plats]:checked', ov).map(x => x.value);
+        const now = Date.now();
+        const obj = id ? t : {id: U.id('t'), useCount: 0, lastUsedAt: null, createdAt: now};
+        Object.assign(obj, {title, content, tone: $('[name=tone]', ov).value, categories: $$('[name=cats]:checked', ov).map(x => x.value), platforms: (pall || !pl.length) ? ['all'] : pl, updatedAt: now});
+        await S.save('templates', obj); toast('範本已儲存', 'ok');
+        if (onSaved) onSaved(obj); if (UI.view === 'vault') this.paint();
+      }}]});
+  },
+  preview(ov){
+    const sample = ctxFor({author: '小明', platform: 'facebook', postId: ''}); sample.vars.post = '示範貼文';
+    const r = Core.expandTemplate($('[name=content]', ov).value, sample);
+    $('#tplpv', ov).innerHTML = highlight(r.text, S.get('bannedWords', []));
+    const w = [...r.undefinedVars.map(v => '未定義變數 {{' + v + '}}'), ...r.errors];
+    $('#tplwarn', ov).innerHTML = w.map(x => `<div class="warn">⚠ ${esc(x)}</div>`).join('');
+  }
+};
+Views.vault = {mount: r => Vault.mount(r)};
+
+/* ---------- Blocks ---------- */
+const BlocksView = {
+  mount(root){
+    const refs = this.refCounts();
+    const groups = {}; S.list('blocks').sort((a, b) => (a.type + a.key).localeCompare(b.type + b.key)).forEach(b => (groups[b.type] = groups[b.type] || []).push(b));
+    root.innerHTML = `<div class="page"><div class="pagehead"><h2>🧱 回覆積木</h2><span class="muted">在範本中以 <code>[[block:類型/名稱]]</code> 引用，修改積木後所有範本同步更新</span><span class="sp"></span><button class="btn primary" data-act="blockNew">＋新增積木</button></div>
+    ${Object.keys(groups).length ? Object.entries(groups).map(([t, arr]) => `<div class="card"><h3>${esc(t)}</h3><table class="t"><tbody>${arr.map(b => `<tr><td style="width:140px"><b>${esc(b.key)}</b><div class="hint">被引用 ${refs[b.type + '/' + b.key] || 0} 次</div></td><td style="white-space:pre-wrap">${esc(b.content)}</td><td style="width:130px;text-align:right"><button class="btn sm" data-act="blockEdit" data-id="${esc(b.id)}">編輯</button> <button class="btn sm danger" data-act="blockDel" data-id="${esc(b.id)}">刪除</button></td></tr>`).join('')}</tbody></table></div>`).join('') : '<div class="empty"><h3>還沒有積木</h3>按右上角新增。</div>'}</div>`;
+  },
+  refCounts(){
+    const m = {}, re = /\[\[block:([^\]]+)\]\]/g;
+    [...S.list('templates').map(t => t.content), ...S.list('blocks').map(b => b.content)].forEach(txt => { let x; re.lastIndex = 0; while ((x = re.exec(txt))){ const k = x[1].trim(); m[k] = (m[k] || 0) + 1; } });
+    return m;
+  },
+  edit(id){
+    const b = id ? S.blocks.get(id) : {type: '稱呼', key: '', content: ''};
+    const types = [...new Set([...BLOCK_TYPES, ...S.list('blocks').map(x => x.type)])];
+    openModal({title: id ? '編輯積木' : '新增積木', body: `<div class="grid2"><label class="f"><span>類型</span><input type="text" name="type" list="btypes" value="${esc(b.type)}"><datalist id="btypes">${types.map(t => `<option value="${esc(t)}">`).join('')}</datalist></label>
+      <label class="f"><span>名稱（不可含 / 或 ]）</span><input type="text" name="key" value="${esc(b.key)}"></label></div><label class="f"><span>內容</span><textarea name="content" rows="4">${esc(b.content)}</textarea></label>`,
+      buttons: [{label: '取消'}, {label: '儲存', cls: 'primary', onClick: async ov => {
+        const type = $('[name=type]', ov).value.trim(), key = $('[name=key]', ov).value.trim(), content = $('[name=content]', ov).value;
+        if (!type || !key){ toast('請填寫類型與名稱', 'warn'); return false; }
+        if (/[\/\]]/.test(type) || /[\/\]]/.test(key)){ toast('類型與名稱不可包含 / 或 ]', 'warn'); return false; }
+        if (S.list('blocks').some(x => x.type === type && x.key === key && x.id !== id)){ toast('已有相同類型與名稱的積木', 'warn'); return false; }
+        const now = Date.now(), obj = id ? b : {id: U.id('b'), createdAt: now};
+        const oldRef = id ? b.type + '/' + b.key : null, newRef = type + '/' + key;
+        Object.assign(obj, {type, key, content, updatedAt: now}); await S.save('blocks', obj);
+        if (oldRef && oldRef !== newRef){ // 同步更新所有引用
+          const re = new RegExp('\\[\\[block:\\s*' + oldRef.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s*\\]\\]', 'g');
+          const hit = s => { re.lastIndex = 0; return re.test(s); }; /* FIX: g 旗標 test() 會保留 lastIndex，導致漏改 */
+          const ts = S.list('templates').filter(t => hit(t.content));
+          ts.forEach(t => { t.content = t.content.replace(re, '[[block:' + newRef + ']]'); }); if (ts.length) await S.saveMany('templates', ts);
+          const bs = S.list('blocks').filter(x => hit(x.content));
+          bs.forEach(x => { x.content = x.content.replace(re, '[[block:' + newRef + ']]'); }); if (bs.length) await S.saveMany('blocks', bs);
+        }
+        toast('積木已儲存', 'ok'); if (UI.view === 'blocks') this.mount($('#view'));
+      }}]});
+  }
+};
+Views.blocks = {mount: r => BlocksView.mount(r)};
+
+/* ---------- Rules ---------- */
+const RulesView = {
+  mount(root){
+    root.innerHTML = `<div class="page"><div class="pagehead"><h2>🏷️ 分類規則</h2><span class="muted">規則只提供「建議」，由小編確認後才轉為正式分類</span><span class="sp"></span><button class="btn primary" data-act="ruleNew">＋新增規則</button></div>
+    <div class="card"><h3>測試區</h3><div class="grid2" style="grid-template-columns:3fr 1fr;gap:10px"><textarea id="rtest" rows="2" placeholder="輸入一段留言，即時查看命中哪些規則"></textarea><select id="rtp"><option value="">任意平台</option>${platforms().map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></div><div id="rout" class="hint" style="margin-top:8px">命中結果會顯示在這裡</div></div>
+    <div id="rlist"></div></div>`;
+    const t = () => this.test(); $('#rtest').addEventListener('input', t); $('#rtp').addEventListener('change', t);
+    this.paint();
+  },
+  test(){
+    const text = $('#rtest').value; if (!text.trim()){ $('#rout').innerHTML = '命中結果會顯示在這裡'; return; }
+    const r = Core.runRules(S.list('rules'), {content: text, platform: $('#rtp').value});
+    $('#rout').innerHTML = r.hits.length ? `命中規則：${r.hits.map(x => `<b>${esc(x.name)}</b>`).join('、')}<br>建議分類：${r.categories.map(id => catChip(id, true)).join('') || '—'}　情緒：${SENT[r.sentiment]}　優先度：${PRI[r.priority]}` : '沒有命中任何規則（情緒：中性、優先度：一般）';
+  },
+  paint(){
+    const rules = S.list('rules').sort((a, b) => a.order - b.order), MT = {any: '包含任一', all: '包含全部', regex: '正規式'};
+    $('#rlist').innerHTML = rules.length ? `<div class="card"><table class="t"><thead><tr><th>啟用</th><th>名稱</th><th>條件</th><th>建議動作</th><th></th></tr></thead><tbody>${rules.map((r, i) => { const err = Core.ruleRegexError(r); return `<tr><td><input type="checkbox" data-chg="ruleToggle" data-id="${esc(r.id)}" ${r.enabled ? 'checked' : ''}></td><td><b>${esc(r.name)}</b>${r.platform ? `<div class="hint">僅 ${esc(platformName(r.platform))}</div>` : ''}${err ? `<div class="warn">⚠ ${esc(err)}，此規則將被略過</div>` : ''}</td>
+      <td><span class="badge">${MT[r.matchType]}</span> ${esc((r.keywords || []).join('、'))}</td><td>${((r.actions || {}).categories || []).map(id => catChip(id, false)).join('')}${(r.actions || {}).sentiment ? '<br>' + SENT[r.actions.sentiment] : ''}${(r.actions || {}).priority ? '<br>' + PRI[r.actions.priority] : ''}</td>
+      <td style="white-space:nowrap;text-align:right"><button class="icon" data-act="ruleUp" data-id="${esc(r.id)}" ${i === 0 ? 'disabled' : ''}>↑</button><button class="icon" data-act="ruleDown" data-id="${esc(r.id)}" ${i === rules.length - 1 ? 'disabled' : ''}>↓</button><button class="btn sm" data-act="ruleEdit" data-id="${esc(r.id)}">編輯</button> <button class="btn sm danger" data-act="ruleDel" data-id="${esc(r.id)}">刪除</button></td></tr>`; }).join('')}</tbody></table></div>` : '<div class="empty"><h3>尚無規則</h3></div>';
+  },
+  edit(id){
+    const r = id ? S.rules.get(id) : {name: '', matchType: 'any', keywords: [], platform: null, actions: {categories: [], sentiment: null, priority: null}, enabled: true};
+    const a = r.actions || {};
+    openModal({title: id ? '編輯規則' : '新增規則', wide: true, body: `<div class="grid2"><label class="f"><span>規則名稱</span><input type="text" name="name" value="${esc(r.name)}"></label>
+      <label class="f"><span>比對方式</span><select name="mt"><option value="any" ${r.matchType === 'any' ? 'selected' : ''}>包含任一關鍵字</option><option value="all" ${r.matchType === 'all' ? 'selected' : ''}>包含全部關鍵字</option><option value="regex" ${r.matchType === 'regex' ? 'selected' : ''}>符合正規式</option></select></label></div>
+      <label class="f"><span>關鍵字（以換行、逗號或頓號分隔；正規式模式僅以換行分隔）</span><textarea name="kw" rows="3">${esc((r.keywords || []).join('\n'))}</textarea></label>
+      <div class="grid2"><label class="f"><span>限定平台（選填）</span><select name="pl"><option value="">不限</option>${platforms().map(p => `<option value="${esc(p.id)}" ${r.platform === p.id ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select></label><span></span>
+      <label class="f"><span>建議情緒（選填）</span><select name="se"><option value="">不指定</option>${Object.entries(SENT).map(([k, v]) => `<option value="${k}" ${a.sentiment === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label class="f"><span>建議優先度（選填）</span><select name="pr"><option value="">不指定</option>${Object.entries(PRI).map(([k, v]) => `<option value="${k}" ${a.priority === k ? 'selected' : ''}>${v}</option>`).join('')}</select></label></div>
+      <div class="f"><span>建議分類</span><div>${catCheckboxes(a.categories || [])}</div></div><div class="hint">比對前會先將全形轉半形、英文轉小寫、合併空白。</div>`,
+      buttons: [{label: '取消'}, {label: '儲存', cls: 'primary', onClick: async ov => {
+        const name = $('[name=name]', ov).value.trim(), mt = $('[name=mt]', ov).value;
+        const kws = $('[name=kw]', ov).value.split(mt === 'regex' ? /\n+/ : /[\n,，、]+/).map(x => x.trim()).filter(Boolean);
+        if (!name){ toast('請輸入規則名稱', 'warn'); return false; } if (!kws.length){ toast('請輸入至少一個關鍵字', 'warn'); return false; }
+        const obj = id ? r : {id: U.id('r'), enabled: true, order: Math.max(0, ...S.list('rules').map(x => x.order)) + 1};
+        Object.assign(obj, {name, matchType: mt, keywords: kws, platform: $('[name=pl]', ov).value || null, actions: {categories: $$('[name=cats]:checked', ov).map(x => x.value), sentiment: $('[name=se]', ov).value || null, priority: $('[name=pr]', ov).value || null}});
+        const err = Core.ruleRegexError(obj); if (err){ toast(err, 'error'); return false; }
+        await S.save('rules', obj); toast('規則已儲存', 'ok'); if (UI.view === 'rules'){ this.paint(); this.test(); }
+      }}]});
+  },
+  async move(id, d){
+    const rules = S.list('rules').sort((a, b) => a.order - b.order), i = rules.findIndex(r => r.id === id), j = i + d;
+    if (i < 0 || j < 0 || j >= rules.length) return;
+    [rules[i], rules[j]] = [rules[j], rules[i]]; rules.forEach((r, k) => r.order = k + 1);
+    await S.saveMany('rules', rules); this.paint();
+  }
+};
+Views.rules = {mount: r => RulesView.mount(r)};
+
+/* ---------- Insights ---------- */
+const PALETTE = ['#4f6ef7', '#f59e0b', '#10b981', '#ec4899', '#8b5cf6', '#0ea5e9', '#ef4444', '#6b7280'];
+const Charts = {
+  bars(items){
+    if (!items.length) return '<div class="hint">此區間沒有資料</div>';
+    const max = Math.max(...items.map(i => i.value)), H = 26, W = 420;
+    return `<svg viewBox="0 0 ${W} ${items.length * H}" width="100%" style="max-width:520px" role="img">${items.map((it, i) => { const w = Math.max(2, (it.value / max) * 250); return `<text x="0" y="${i * H + 17}" font-size="12" fill="currentColor">${esc(it.label)}</text><rect x="100" y="${i * H + 5}" width="${w}" height="16" rx="4" fill="${U.safeColor(it.color)}"/><text x="${106 + w}" y="${i * H + 17}" font-size="12" fill="currentColor">${it.value}</text>`; }).join('')}</svg>`;
+  },
+  pie(items){
+    const tot = items.reduce((s, i) => s + i.value, 0); if (!tot) return '<div class="hint">此區間沒有資料</div>';
+    const cx = 80, cy = 80, R = 70; let a = -Math.PI / 2;
+    const paths = items.map((it, i) => {
+      const col = PALETTE[i % PALETTE.length], f = it.value / tot;
+      if (f >= 0.9999) return `<circle cx="${cx}" cy="${cy}" r="${R}" fill="${col}"/>`;
+      const b = a + f * 2 * Math.PI, x1 = cx + R * Math.cos(a), y1 = cy + R * Math.sin(a), x2 = cx + R * Math.cos(b), y2 = cy + R * Math.sin(b);
+      const d = `M${cx} ${cy} L${x1.toFixed(2)} ${y1.toFixed(2)} A${R} ${R} 0 ${f > 0.5 ? 1 : 0} 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`; a = b; return `<path d="${d}" fill="${col}"/>`;
+    }).join('');
+    return `<div class="pieflex"><svg viewBox="0 0 160 160" width="160" height="160">${paths}</svg><div class="legend">${items.map((it, i) => `<div><i style="background:${PALETTE[i % PALETTE.length]}"></i>${esc(it.label)}　${it.value}（${Math.round(it.value / tot * 100)}%）</div>`).join('')}</div></div>`;
+  },
+  line(days, dm){
+    const W = 560, H = 200, P = 30, n = days.length, max = Math.max(1, ...days.map(k => Math.max(dm[k].created, dm[k].replied)));
+    const x = i => P + (n === 1 ? (W - 2 * P) / 2 : i * (W - 2 * P) / (n - 1)), y = v => H - P - v / max * (H - 2 * P);
+    const pts = key => days.map((k, i) => x(i).toFixed(1) + ',' + y(dm[k][key]).toFixed(1)).join(' ');
+    const step = Math.max(1, Math.ceil(n / 8));
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:720px"><line x1="${P}" y1="${H - P}" x2="${W - P}" y2="${H - P}" stroke="currentColor" opacity=".3"/><line x1="${P}" y1="${P}" x2="${P}" y2="${H - P}" stroke="currentColor" opacity=".3"/>
+      <text x="4" y="${P + 4}" font-size="11" fill="currentColor">${max}</text><text x="4" y="${H - P}" font-size="11" fill="currentColor">0</text>
+      <polyline points="${pts('created')}" fill="none" stroke="#4f6ef7" stroke-width="2"/><polyline points="${pts('replied')}" fill="none" stroke="#10b981" stroke-width="2"/>
+      ${days.map((k, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(dm[k].created).toFixed(1)}" r="3" fill="#4f6ef7"/><circle cx="${x(i).toFixed(1)}" cy="${y(dm[k].replied).toFixed(1)}" r="3" fill="#10b981"/>${i % step === 0 ? `<text x="${x(i).toFixed(1)}" y="${H - 10}" font-size="10" text-anchor="middle" fill="currentColor">${k.slice(5)}</text>` : ''}`).join('')}
+      <text x="${W - 150}" y="14" font-size="11" fill="#4f6ef7">● 新增留言</text><text x="${W - 80}" y="14" font-size="11" fill="#10b981">● 已回覆</text></svg>`;
+  }
+};
+const InsightsView = {
+  range(){
+    const r = UI.insights, now = Date.now();
+    if (r.range === 'custom' && r.from && r.to) return [new Date(r.from + 'T00:00:00').getTime(), new Date(r.to + 'T23:59:59.999').getTime()];
+    const days = r.range === 'today' ? 1 : r.range === '30' ? 30 : 7;
+    return [U.startOfDay(now) - (days - 1) * DAY, now];
+  },
+  compute(){ const [from, to] = this.range(); return Object.assign(Core.stats(S.list('comments'), S.list('replies'), S.list('templates'), from, Math.max(to, from)), {from, to}); },
+  mount(root){
+    const r = UI.insights;
+    root.innerHTML = `<div class="page"><div class="pagehead"><h2>📊 統計</h2><span class="sp"></span>
+      <select id="irange" style="width:auto"><option value="today" ${r.range === 'today' ? 'selected' : ''}>今天</option><option value="7" ${r.range === '7' ? 'selected' : ''}>近 7 天</option><option value="30" ${r.range === '30' ? 'selected' : ''}>近 30 天</option><option value="custom" ${r.range === 'custom' ? 'selected' : ''}>自訂</option></select>
+      <span id="icustom" class="${r.range === 'custom' ? '' : 'hidden'} row-inline"><input type="date" id="ifrom" value="${esc(r.from)}" style="width:auto"> ～ <input type="date" id="ito" value="${esc(r.to)}" style="width:auto"></span>
+      <button class="btn" data-act="statsCsv">匯出 CSV</button></div><div id="ibody"></div></div>`;
+    $('#irange').addEventListener('change', e => { UI.insights.range = e.target.value; $('#icustom').classList.toggle('hidden', e.target.value !== 'custom'); this.paint(); });
+    $('#ifrom').addEventListener('change', e => { UI.insights.from = e.target.value; this.paint(); }); $('#ito').addEventListener('change', e => { UI.insights.to = e.target.value; this.paint(); });
+    this.paint();
+  },
+  paint(){
+    const st = this.compute(), k = st.kpi, cname = id => (S.categories.get(id) || {name: id}).name;
+    const catItems = Object.entries(st.cat).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, v]) => ({label: cname(id), value: v, color: (S.categories.get(id) || {}).color}));
+    const platItems = Object.entries(st.plat).sort((a, b) => b[1] - a[1]).map(([id, v]) => ({label: platformName(id), value: v}));
+    const tplItems = Object.entries(st.tcount).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, v]) => ({label: (S.templates.get(id) || {title: '（已刪除）'}).title.slice(0, 8), value: v, color: '#4f6ef7'}));
+    $('#ibody').innerHTML = `<div class="kpis"><div class="kpi"><div class="v">${k.total}</div><div class="l">總留言數</div></div><div class="kpi"><div class="v">${Math.round(k.rate * 100)}%</div><div class="l">已回覆率（${k.replied}/${k.total}）</div></div><div class="kpi"><div class="v">${k.pending}</div><div class="l">待處理數</div></div><div class="kpi"><div class="v">${k.negative}</div><div class="l">負面留言數</div></div><div class="kpi"><div class="v" style="font-size:20px">${U.dur(st.median)}</div><div class="l">平均處理時間（中位數）</div></div></div>
+      <div class="grid-charts"><div class="card"><h3>分類分佈（熱門問題 Top 10）</h3>${Charts.bars(catItems)}</div><div class="card"><h3>平台分佈</h3>${Charts.pie(platItems)}</div>
+      <div class="card" style="grid-column:1/-1"><h3>每日趨勢</h3>${Charts.line(st.days, st.dm)}</div>
+      <div class="card"><h3>範本使用排行 Top 10</h3>${Charts.bars(tplItems)}</div>
+      <div class="card"><h3>未被範本覆蓋的分類</h3>${st.uncovered.length ? st.uncovered.map(id => `<div>${catChip(id, false)} 共 ${st.cat[id]} 則　<a href="#/vault">→ 該建立範本了</a></div>`).join('') : '<div class="hint">所有出現過的分類都有對應範本 👍</div>'}</div></div>`;
+  },
+  csv(){
+    const st = this.compute(), cname = id => (S.categories.get(id) || {name: id}).name, rows = [];
+    rows.push(['區間', U.fmtDT(st.from), U.fmtDT(st.to)], [], ['指標', '數值'], ['總留言數', st.kpi.total], ['已回覆', st.kpi.replied], ['已回覆率', Math.round(st.kpi.rate * 100) + '%'], ['待處理', st.kpi.pending], ['負面留言', st.kpi.negative], ['處理時間中位數', U.dur(st.median)], [], ['分類', '留言數']);
+    Object.entries(st.cat).sort((a, b) => b[1] - a[1]).forEach(([id, v]) => rows.push([cname(id), v]));
+    rows.push([], ['平台', '留言數']); Object.entries(st.plat).forEach(([id, v]) => rows.push([platformName(id), v]));
+    rows.push([], ['日期', '新增留言', '已回覆']); st.days.forEach(d => rows.push([d, st.dm[d].created, st.dm[d].replied]));
+    rows.push([], ['範本', '使用次數']); Object.entries(st.tcount).sort((a, b) => b[1] - a[1]).forEach(([id, v]) => rows.push([(S.templates.get(id) || {title: id}).title, v]));
+    rows.push([], ['未被範本覆蓋的分類', '留言數']); st.uncovered.forEach(id => rows.push([cname(id), st.cat[id]]));
+    download('CommentFlow_insights_' + stamp() + '.csv', '\uFEFF' + rows.map(r => r.map(U.csvCell).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
+  }
+};
+Views.insights = {mount: r => InsightsView.mount(r)};
+
+/* ---------- Settings & 備份 ---------- */
+const Backup = {
+  collect(scope){
+    const names = scope === 'library' ? ['templates', 'blocks', 'rules', 'categories'] : Object.keys(STORES);
+    const data = {}; names.forEach(n => data[n] = S.list(n));
+    if (scope === 'library') data.settings = S.list('settings').filter(s => ['brand', 'tones', 'bannedWords'].includes(s.key));
+    return {app: 'CommentFlow', schemaVersion: DB_VERSION, exportedAt: new Date().toISOString(), scope, data};
+  },
+  async export(scope){
+    const obj = this.collect(scope);
+    download('CommentFlow_' + (scope === 'library' ? 'library' : 'backup') + '_' + stamp() + '.json', JSON.stringify(obj, null, 2), 'application/json');
+    await S.set('lastExportAt', Date.now()); renderBanner(); toast('已匯出', 'ok');
+  },
+  migrate(o){ o.schemaVersion = o.schemaVersion || 1; return o; }, // 未來版本在此逐版轉換
+  validate(o){
+    if (!o || o.app !== 'CommentFlow' || typeof o.data !== 'object') throw new Error('這不是 CommentFlow 的備份檔');
+    this.migrate(o); if (o.schemaVersion > DB_VERSION) throw new Error('備份檔版本較新（v' + o.schemaVersion + '），請使用較新的 CommentFlow');
+    return o;
+  },
+  async apply(o, mode){
+    const SKIP = ['lastExportAt', 'installedAt', 'theme', 'onboarded', 'seeded'];
+    for (const n of Object.keys(STORES)){
+      const arr = o.data[n]; if (!Array.isArray(arr)) continue;
+      if (n === 'settings'){
+        const items = arr.filter(s => s && s.key && !SKIP.includes(s.key));
+        if (mode === 'overwrite' && o.scope === 'full'){ for (const s of S.list('settings')) if (!SKIP.includes(s.key)) S.settings.delete(s.key); await DB.clear('settings'); await S.saveMany('settings', S.list('settings').concat(items)); }
+        else await S.saveMany('settings', items);
+        continue;
+      }
+      const key = S.keyOf(n); const items = arr.filter(x => x && x[key]);
+      if (mode === 'overwrite') await S.clearStore(n);
+      if (n === 'blocks'){ // 避免 type+key 唯一索引衝突
+        const ids = new Set(items.map(b => b.id)), conflict = S.list('blocks').filter(b => !ids.has(b.id) && items.some(x => x.type === b.type && x.key === b.key)).map(b => b.id);
+        if (conflict.length) await S.removeMany('blocks', conflict);
+      }
+      await S.saveMany(n, items);
+    }
+    UI.checked.clear(); UI.selectedId = null;
+  }
+};
+const SettingsView = {
+  mount(root){
+    const brand = S.get('brand', {name: '', vars: {}}), plats = platforms(true), tones = S.get('tones', []), banned = S.get('bannedWords', []);
+    const demoCount = S.list('comments').filter(c => c.demo).length;
+    root.innerHTML = `<div class="page"><div class="pagehead"><h2>⚙️ 設定</h2></div>
+    <div class="card"><h3>品牌與自訂變數</h3><label class="f"><span>品牌名稱（變數 {{brand}}）</span><input type="text" data-chg="brandName" value="${esc(brand.name)}"></label>
+      <table class="t"><thead><tr><th>變數名稱</th><th>值</th><th></th></tr></thead><tbody>${Object.entries(brand.vars || {}).map(([k, v]) => `<tr><td>{{${esc(k)}}}</td><td><input type="text" data-chg="varVal" data-k="${esc(k)}" value="${esc(v)}"></td><td><button class="icon" data-act="varDel" data-k="${esc(k)}">✕</button></td></tr>`).join('')}</tbody></table>
+      <div class="row-inline" style="margin-top:8px"><input type="text" id="nvk" placeholder="新變數名稱，例如 活動截止日" style="width:200px"><input type="text" id="nvv" placeholder="值" style="width:200px"><button class="btn" data-act="varAdd">新增變數</button></div></div>
+    <div class="card"><h3>平台管理（字數上限 0 = 不限）</h3><table class="t"><thead><tr><th>名稱</th><th>字數上限</th><th>隱藏</th></tr></thead><tbody>${plats.map(p => `<tr><td><input type="text" data-chg="platName" data-id="${esc(p.id)}" value="${esc(p.name)}"></td><td style="width:140px"><input type="number" min="0" data-chg="platLimit" data-id="${esc(p.id)}" value="${p.limit || 0}"></td><td style="width:60px"><input type="checkbox" data-chg="platHide" data-id="${esc(p.id)}" ${p.hidden ? 'checked' : ''}></td></tr>`).join('')}</tbody></table>
+      <div class="row-inline" style="margin-top:8px"><input type="text" id="npn" placeholder="新平台名稱" style="width:200px"><button class="btn" data-act="platAdd">新增平台</button></div></div>
+    <div class="card"><h3>分類管理</h3><table class="t"><tbody>${cats().map((c, i, a) => `<tr><td style="width:50px"><input type="color" data-chg="catColor" data-id="${esc(c.id)}" value="${U.safeColor(c.color).slice(0, 7)}" style="width:36px;padding:0;height:26px"></td><td><input type="text" data-chg="catName" data-id="${esc(c.id)}" value="${esc(c.name)}"></td><td style="width:140px;text-align:right"><button class="icon" data-act="catUp" data-id="${esc(c.id)}" ${i === 0 ? 'disabled' : ''}>↑</button><button class="icon" data-act="catDown" data-id="${esc(c.id)}" ${i === a.length - 1 ? 'disabled' : ''}>↓</button><button class="icon" data-act="catDel" data-id="${esc(c.id)}">🗑</button></td></tr>`).join('')}</tbody></table>
+      <div class="row-inline" style="margin-top:8px"><input type="text" id="ncn" placeholder="新分類名稱" style="width:200px"><button class="btn" data-act="catAdd">新增分類</button></div></div>
+    <div class="card"><h3>語氣標籤</h3><input type="text" data-chg="tones" value="${esc(tones.join('、'))}"><div class="hint">以頓號或逗號分隔</div></div>
+    <div class="card"><h3>禁用詞（品牌用語檢查）</h3><table class="t"><thead><tr><th>禁用詞</th><th>建議替換詞</th><th></th></tr></thead><tbody>${banned.map((b, i) => `<tr><td>${esc(b.word)}</td><td>${esc(b.suggest)}</td><td style="width:50px"><button class="icon" data-act="banDel" data-i="${i}">✕</button></td></tr>`).join('')}</tbody></table>
+      <div class="row-inline" style="margin-top:8px"><input type="text" id="nbw" placeholder="禁用詞，例如 保證" style="width:180px"><input type="text" id="nbs" placeholder="建議替換詞（選填）" style="width:200px"><button class="btn" data-act="banAdd">新增</button></div></div>
+    <div class="card"><h3>資料管理</h3><div class="row-inline"><button class="btn primary" data-act="exportFull">匯出全部資料（JSON）</button><button class="btn" data-act="exportLib">只匯出回覆庫＋積木＋規則</button><label class="btn" style="cursor:pointer">匯入 JSON…<input type="file" id="impfile" accept=".json,application/json" class="hidden"></label></div>
+      <div class="hint" style="margin-top:6px">上次匯出：${S.get('lastExportAt') ? U.fmtDT(S.get('lastExportAt')) : '尚未匯出'}　資料只存在這台電腦的瀏覽器中，請定期備份。</div>
+      <div class="row-inline" style="margin-top:12px"><button class="btn" data-act="loadDemo">載入示範資料（20 則）</button><button class="btn" data-act="clearDemo" ${demoCount ? '' : 'disabled'}>清除示範資料（${demoCount}）</button><button class="btn" data-act="toggleTheme">切換深色／淺色</button><span class="sp"></span><button class="btn danger" data-act="clearAll">清除全部資料…</button></div></div></div>`;
+    $('#impfile').addEventListener('change', e => { const f = e.target.files[0]; if (f) this.importFile(f); e.target.value = ''; });
+  },
+  importFile(f){
+    const rd = new FileReader();
+    rd.onload = () => {
+      let o; try { o = Backup.validate(JSON.parse(String(rd.result))); } catch (e){ toast(e.message.includes('JSON') ? '無法解析 JSON 檔案' : e.message, 'error'); return; }
+      const NAMES = {comments: '留言', posts: '貼文', templates: '範本', blocks: '積木', rules: '規則', categories: '分類', replies: '回覆紀錄', settings: '設定'};
+      const sum = Object.keys(NAMES).filter(n => Array.isArray(o.data[n])).map(n => `${NAMES[n]}：${o.data[n].length}`).join('　');
+      openModal({title: '匯入備份', body: `<div>檔案範圍：<b>${o.scope === 'library' ? '回覆庫＋積木＋規則' : '全部資料'}</b>　匯出時間：${esc(o.exportedAt || '—')}</div><div style="margin:8px 0">${esc(sum)}</div>
+        <label class="chk"><input type="radio" name="mode" value="merge" checked>合併（相同 ID 以備份檔為準，其餘保留）</label><br><label class="chk"><input type="radio" name="mode" value="overwrite">覆蓋（先清空對應資料再匯入）</label>`,
+        buttons: [{label: '取消'}, {label: '開始匯入', cls: 'primary', onClick: async ov => {
+          const mode = $('[name=mode]:checked', ov).value;
+          if (mode === 'overwrite' && !(await confirmBox('覆蓋模式會先清空對應的現有資料，確定嗎？', {danger: true, ok: '確定覆蓋'}))) return false;
+          await Backup.apply(o, mode); toast('匯入完成', 'ok'); renderBanner(); this.mount($('#view'));
+        }}]});
+    };
+    rd.readAsText(f, 'utf-8');
+  }
+};
+Views.settings = {mount: r => SettingsView.mount(r)};
+
+/* ========== 資料操作：示範、清除、分類刪除 ========== */
+async function seedDefaults(){
+  const d = defaultData();
+  await S.saveMany('categories', d.cats); await S.saveMany('rules', d.rules); await S.saveMany('blocks', d.blocks); await S.saveMany('templates', d.templates);
+  await S.set('brand', {name: '我的品牌', vars: {'活動截止日': '11/30', '客服時間': '週一至週五 09:00–18:00'}});
+  await S.set('platforms', DEFAULT_PLATFORMS); await S.set('tones', ['正式', '親切', '活潑', '道歉']);
+  await S.set('bannedWords', [{word: '便宜', suggest: '優惠'}, {word: '保證', suggest: '預期'}]);
+  await S.set('installedAt', Date.now()); await S.set('seeded', true);
+}
+async function loadDemo(){
+  if (S.list('comments').some(c => c.demo)){ toast('示範資料已存在', 'warn'); return; }
+  const now = Date.now(), post = {id: U.id('p'), title: '雙11預告：全館優惠開跑（示範）', platform: 'facebook', url: '', publishedAt: now, note: '', createdAt: now, demo: true};
+  await S.save('posts', post);
+  const rows = DEMO.map((d, i) => ({author: d[0], content: d[1], time: now - (DEMO.length - i) * 7 * 60000, platform: d[2]}));
+  await importComments(rows, 'facebook', post.id);
+  const demos = S.list('comments').filter(c => c.postId === post.id); demos.forEach(c => c.demo = true); await S.saveMany('comments', demos);
+  toast('已載入 20 則示範留言', 'ok'); if (UI.view === 'inbox') Inbox.refresh({detail: false}); else if (UI.view === 'settings') SettingsView.mount($('#view'));
+}
+async function clearDemo(){
+  const ids = S.list('comments').filter(c => c.demo).map(c => c.id), set = new Set(ids);
+  await S.removeMany('comments', ids); await S.removeMany('replies', S.list('replies').filter(r => set.has(r.commentId)).map(r => r.id));
+  await S.removeMany('posts', S.list('posts').filter(p => p.demo).map(p => p.id));
+  if (set.has(UI.selectedId)) UI.selectedId = null; ids.forEach(id => UI.checked.delete(id));
+  toast('已清除示範資料', 'ok'); route();
+}
+async function clearAll(){
+  for (const n of Object.keys(STORES)) await S.clearStore(n);
+  UI.selectedId = null; UI.checked.clear(); UI.drafts = {};
+  await seedDefaults(); toast('已清除全部資料並還原預設', 'ok'); location.hash = '#/inbox'; route();
+}
+async function deleteCategory(id){
+  const cs = S.list('comments').filter(c => (c.categories || []).includes(id) || (c.suggestedCategories || []).includes(id));
+  cs.forEach(c => { c.categories = (c.categories || []).filter(x => x !== id); c.suggestedCategories = (c.suggestedCategories || []).filter(x => x !== id); });
+  const ts = S.list('templates').filter(t => (t.categories || []).includes(id)); ts.forEach(t => t.categories = t.categories.filter(x => x !== id));
+  const rs = S.list('rules').filter(r => ((r.actions || {}).categories || []).includes(id)); rs.forEach(r => r.actions.categories = r.actions.categories.filter(x => x !== id));
+  if (cs.length) await S.saveMany('comments', cs); if (ts.length) await S.saveMany('templates', ts); if (rs.length) await S.saveMany('rules', rs);
+  await S.remove('categories', id);
+}
+
+/* ========== 6. Router / Actions / Keyboard ========== */
+function parseHash(){
+  const h = location.hash.replace(/^#\/?/, ''), i = h.indexOf('?'), path = i < 0 ? h : h.slice(0, i), qs = i < 0 ? '' : h.slice(i + 1), params = {};
+  new URLSearchParams(qs).forEach((v, k) => params[k] = v);
+  return {view: path || 'inbox', params};
+}
+function buildHash(view, params){ const qs = new URLSearchParams(); for (const [k, v] of Object.entries(params || {})) if (v !== '' && v != null) qs.set(k, v); const s = qs.toString(); return '#/' + view + (s ? '?' + s : ''); }
+function route(){
+  const {view, params} = parseHash(), v = Object.prototype.hasOwnProperty.call(Views, view) ? view : 'inbox'; /* FIX: #/constructor 等會造成錯誤 */
+  UI.view = v; UI.params = params;
+  $$('#nav a').forEach(a => a.classList.toggle('active', a.dataset.view === v));
+  const root = $('#view'); root.className = 'view view-' + v; root.scrollTop = 0;
+  Views[v].mount(root, params); renderBanner();
+}
+function renderBanner(){
+  const el = $('#banner'); if (!el) return;
+  const last = Math.max(S.get('lastExportAt', 0), S.get('installedAt', 0));
+  const show = !UI.bannerHidden && S.comments.size > 0 && last && Date.now() - last > 7 * DAY;
+  el.innerHTML = show ? `<div class="banner">⚠ 已超過 7 天沒有備份資料，資料只存在這個瀏覽器中。<button class="btn sm primary" data-act="exportFull">立即匯出備份</button><button class="btn sm" data-act="hideBanner">稍後提醒</button></div>` : '';
+}
+function applyTheme(t){ document.documentElement.setAttribute('data-theme', t); const b = $('#themeBtn'); if (b) b.textContent = t === 'dark' ? '☀️' : '🌙'; }
+function showHelp(){
+  const rows = [['J / K', '下一則／上一則'], ['1 – 9', '套用第 N 個推薦範本'], ['Ctrl + Enter', '複製回覆並標記完成，跳到下一則'], ['S', '標記略過'], ['E', '標記升級'], ['/', '聚焦搜尋框'], ['N', '貼上留言'], ['Esc', '離開輸入框／關閉視窗'], ['?', '顯示此說明']];
+  openModal({title: '鍵盤快捷鍵', body: `<table class="t">${rows.map(r => `<tr><td style="width:140px"><kbd>${esc(r[0])}</kbd></td><td>${esc(r[1])}</td></tr>`).join('')}</table><div class="hint" style="margin-top:8px">游標在輸入框內時，單鍵快捷鍵不會觸發。</div>`, buttons: [{label: '關閉', cls: 'primary'}]});
+}
+function showOnboarding(){
+  openModal({title: '歡迎使用 CommentFlow 👋', onClose: () => { S.set('onboarded', true); }, body: `<p>離線、免串接 API 的留言處理工作台。三步驟開始：</p><ol><li><b>貼上留言</b>：按右上角「＋貼上留言」（或按 <kbd>N</kbd>），一行一則。</li><li><b>套用範本</b>：選一則留言，按 <kbd>1</kbd>–<kbd>9</kbd> 套用推薦範本，再微調。</li><li><b>完成</b>：按 <kbd>Ctrl</kbd>+<kbd>Enter</kbd>，自動複製、標記已回覆並跳到下一則。</li></ol><p class="hint">所有資料只存在你的瀏覽器（IndexedDB），不會上傳任何地方。建議定期到「設定」匯出備份。</p>`,
+    buttons: [{label: '載入示範資料', onClick: async () => { await loadDemo(); }}, {label: '開始使用', cls: 'primary'}]});
+}
+
+const ACT = {
+  openImport, openSingle, help: showHelp, loadDemo,
+  toggleTheme: async () => { const t = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'; applyTheme(t); await S.set('theme', t); },
+  hideBanner: () => { UI.bannerHidden = true; renderBanner(); },
+  exportFull: () => Backup.export('full'), exportLib: () => Backup.export('library'),
+  /* inbox */
+  selectRow: (el, ev) => { if (ev.target.closest('.rk')) return; return Inbox.select(el.dataset.id); },
+  back: () => { UI.detailOpen = false; $('#inbox').classList.remove('dopen'); },
+  toggleFilters: () => { $('#inbox').classList.toggle('fopen'); },
+  setFilter: el => { Inbox.setFilter(el.dataset.k, el.dataset.v); const ib = $('#inbox'); if (ib) ib.classList.remove('fopen'); },
+  clearFilters: () => { UI.params = {}; try { history.replaceState(null, '', '#/inbox'); } catch (e){ location.hash = '#/inbox'; return; } const q = $('#q'); if (q) q.value = ''; Inbox.refresh({detail: false}); },
+  toggleStar: () => { const c = Inbox.cur(); return c && Inbox.patch({starred: !c.starred}); },
+  delOne: async () => { const c = Inbox.cur(); if (!c) return; if (!(await confirmBox('確定刪除這則留言？（含其回覆紀錄）', {danger: true, ok: '刪除'}))) return; await S.removeMany('replies', S.list('replies').filter(r => r.commentId === c.id).map(r => r.id)); await S.remove('comments', c.id); UI.selectedId = null; UI.checked.delete(c.id); Inbox.refresh({detail: true}); },
+  confirmCat: el => { const c = Inbox.cur(); return c && Inbox.patch({categories: [...new Set([...(c.categories || []), el.dataset.id])]}); },
+  confirmAllCats: () => { const c = Inbox.cur(); return c && Inbox.patch({categories: Core.allCats(c)}); },
+  dismissCat: el => { const c = Inbox.cur(); return c && Inbox.patch({suggestedCategories: (c.suggestedCategories || []).filter(x => x !== el.dataset.id)}); },
+  removeCat: el => { const c = Inbox.cur(); return c && Inbox.patch({categories: (c.categories || []).filter(x => x !== el.dataset.id)}); },
+  applyRec: el => Inbox.applyRec(+el.dataset.i),
+  insert: el => { const ed = $('#editor'); if (ed) insertAtCursor(ed, el.dataset.ins); },
+  copyOnly: async () => { const c = Inbox.cur(); if (!c) return; const t = expandFor(Inbox.draft(c.id).text, c).text; if (!t.trim()){ toast('沒有可複製的內容', 'warn'); return; } const ok = await copyText(t); toast(ok ? '已複製' : '複製失敗，請手動複製', ok ? '' : 'error'); },
+  complete: () => Inbox.complete(), skip: () => Inbox.skip(), escalate: () => Inbox.escalate(), saveTpl: () => Inbox.saveTemplate(),
+  batchDel: async () => {
+    const ids = [...UI.checked]; if (!ids.length) return;
+    if (!(await confirmBox(`確定刪除選取的 ${ids.length} 則留言？此動作無法復原。`, {danger: true, ok: '刪除'}))) return;
+    const set = new Set(ids); await S.removeMany('replies', S.list('replies').filter(r => set.has(r.commentId)).map(r => r.id)); await S.removeMany('comments', ids);
+    if (set.has(UI.selectedId)) UI.selectedId = null; UI.checked.clear(); Inbox.refresh({detail: true}); toast('已刪除 ' + ids.length + ' 則');
+  },
+  /* vault / blocks / rules */
+  tplNew: () => Vault.editTemplate(null), tplEdit: el => Vault.editTemplate(el.dataset.id),
+  tplDup: async el => { const t = S.templates.get(el.dataset.id); if (!t) return; const now = Date.now(); await S.save('templates', Object.assign({}, t, {id: U.id('t'), title: t.title + '（複本）', useCount: 0, lastUsedAt: null, createdAt: now, updatedAt: now})); Vault.paint(); toast('已複製範本'); },
+  tplDel: async el => { const t = S.templates.get(el.dataset.id); if (t && await confirmBox(`刪除範本「${t.title}」？`, {danger: true, ok: '刪除'})){ await S.remove('templates', t.id); Vault.paint(); } },
+  blockNew: () => BlocksView.edit(null), blockEdit: el => BlocksView.edit(el.dataset.id),
+  blockDel: async el => {
+    const b = S.blocks.get(el.dataset.id); if (!b) return; const n = BlocksView.refCounts()[b.type + '/' + b.key] || 0;
+    if (await confirmBox(`刪除積木「${b.type}／${b.key}」？` + (n ? `\n目前有 ${n} 處引用，刪除後該處會顯示為找不到積木。` : ''), {danger: true, ok: '刪除'})){ await S.remove('blocks', b.id); BlocksView.mount($('#view')); }
+  },
+  ruleNew: () => RulesView.edit(null), ruleEdit: el => RulesView.edit(el.dataset.id), ruleUp: el => RulesView.move(el.dataset.id, -1), ruleDown: el => RulesView.move(el.dataset.id, 1),
+  ruleDel: async el => { const r = S.rules.get(el.dataset.id); if (r && await confirmBox(`刪除規則「${r.name}」？`, {danger: true, ok: '刪除'})){ await S.remove('rules', r.id); RulesView.paint(); } },
+  statsCsv: () => InsightsView.csv(),
+  /* settings */
+  varAdd: async () => { const k = $('#nvk').value.trim(), v = $('#nvv').value; if (!k){ toast('請輸入變數名稱', 'warn'); return; } if (/[{}]/.test(k)){ toast('名稱不可包含 { }', 'warn'); return; } if (['name', 'post', 'platform', 'today', 'brand'].includes(k)){ toast('此為系統內建變數名稱', 'warn'); return; } const b = S.get('brand', {name: '', vars: {}}); b.vars = Object.assign({}, b.vars, {[k]: v}); await S.set('brand', b); SettingsView.mount($('#view')); },
+  varDel: async el => { const b = S.get('brand', {name: '', vars: {}}); const vars = Object.assign({}, b.vars); delete vars[el.dataset.k]; await S.set('brand', Object.assign({}, b, {vars})); SettingsView.mount($('#view')); },
+  platAdd: async () => { const n = $('#npn').value.trim(); if (!n) return; await S.set('platforms', [...platforms(true), {id: U.id('plat').toLowerCase(), name: n, limit: 0, hidden: false}]); SettingsView.mount($('#view')); },
+  catAdd: async () => { const n = $('#ncn').value.trim(); if (!n) return; const all = cats(); await S.save('categories', {id: U.id('cat'), name: n, color: PALETTE[all.length % PALETTE.length], order: all.length + 1}); SettingsView.mount($('#view')); },
+  catUp: el => moveCat(el.dataset.id, -1), catDown: el => moveCat(el.dataset.id, 1),
+  catDel: async el => { const c = S.categories.get(el.dataset.id); if (c && await confirmBox(`刪除分類「${c.name}」？\n會同時從留言、範本與規則中移除此分類。`, {danger: true, ok: '刪除'})){ await deleteCategory(c.id); SettingsView.mount($('#view')); } },
+  banAdd: async () => { const w = $('#nbw').value.trim(); if (!w) return; await S.set('bannedWords', [...S.get('bannedWords', []), {word: w, suggest: $('#nbs').value.trim()}]); SettingsView.mount($('#view')); },
+  banDel: async el => { const arr = S.get('bannedWords', []).filter((_, i) => i !== +el.dataset.i); await S.set('bannedWords', arr); SettingsView.mount($('#view')); },
+  clearDemo: async () => { if (await confirmBox('清除所有示範留言與其回覆紀錄？', {danger: true, ok: '清除'})) await clearDemo(); },
+  clearAll: () => {
+    openModal({title: '清除全部資料', body: `<p>這會刪除所有留言、貼文、範本、積木、規則與設定，並還原成預設內容。<b>此動作無法復原</b>，建議先匯出備份。</p><label class="f"><span>請輸入 DELETE 以確認</span><input type="text" name="c" autocomplete="off"></label>`,
+      buttons: [{label: '取消'}, {label: '清除全部', cls: 'danger', onClick: async ov => { if ($('[name=c]', ov).value !== 'DELETE'){ toast('請正確輸入 DELETE', 'warn'); return false; } await clearAll(); }}]});
+  }
+};
+async function moveCat(id, d){
+  const a = cats(), i = a.findIndex(c => c.id === id), j = i + d; if (i < 0 || j < 0 || j >= a.length) return;
+  [a[i], a[j]] = [a[j], a[i]]; a.forEach((c, k) => c.order = k + 1); await S.saveMany('categories', a); SettingsView.mount($('#view'));
+}
+const CHG = {
+  filter: el => Inbox.setFilter(el.dataset.k, el.type === 'checkbox' ? (el.checked ? '1' : '') : el.value),
+  check: el => { el.checked ? UI.checked.add(el.dataset.id) : UI.checked.delete(el.dataset.id); Inbox.paintBatch(); },
+  checkAll: el => { UI.items.forEach(c => el.checked ? UI.checked.add(c.id) : UI.checked.delete(c.id)); Inbox.paintWindow(); Inbox.paintBatch(); },
+  addCat: el => { const c = Inbox.cur(); if (c && el.value) return Inbox.patch({categories: [...new Set([...(c.categories || []), el.value])]}); },
+  setSent: el => Inbox.patch({sentiment: el.value}, false), setPri: el => { const c = Inbox.cur(); if (c){ c.priority = el.value; c.updatedAt = Date.now(); S.save('comments', c); Inbox.refresh({detail: false}); } },
+  setStatus: el => {
+    const c = Inbox.cur(); if (!c) return;
+    if (el.value === 'escalated'){ Inbox.escalate(); el.value = c.status; return; }
+    const f = {status: el.value}; if (el.value === 'replied' && !c.repliedAt) f.repliedAt = Date.now(); if (el.value !== 'replied') f.repliedAt = null;
+    return Inbox.patch(f);
+  },
+  note: el => Inbox.patch({note: el.value}, false),
+  batchStatus: async el => { /* FIX: 批次改狀態原本沒有事件處理 */
+    const v = el.value; el.value = ''; if (!v) return;
+    const arr = [...UI.checked].map(id => S.comments.get(id)).filter(Boolean); if (!arr.length) return;
+    const now = Date.now();
+    arr.forEach(c => { c.status = v; c.updatedAt = now; if (v === 'replied'){ if (!c.repliedAt) c.repliedAt = now; } else c.repliedAt = null; });
+    await S.saveMany('comments', arr); toast('已將 ' + arr.length + ' 則改為「' + STATUS[v] + '」', 'ok'); Inbox.refresh({detail: true});
+  },
+  batchCat: async el => { /* FIX: 批次加分類原本沒有事件處理 */
+    const v = el.value; el.value = ''; if (!v) return;
+    const arr = [...UI.checked].map(id => S.comments.get(id)).filter(Boolean); if (!arr.length) return;
+    const now = Date.now();
+    arr.forEach(c => { c.categories = [...new Set([...(c.categories || []), v])]; c.updatedAt = now; });
+    await S.saveMany('comments', arr); toast('已為 ' + arr.length + ' 則加上分類', 'ok'); Inbox.refresh({detail: true});
+  },
+  modalInsert: el => { if (!el.value) return; const ta = el.closest('.modal').querySelector('textarea[name=content]'); if (ta) insertAtCursor(ta, el.value); el.value = ''; },
+  ruleToggle: async el => { const r = S.rules.get(el.dataset.id); if (r){ r.enabled = el.checked; await S.save('rules', r); RulesView.test(); } },
+  brandName: async el => { const b = S.get('brand', {name: '', vars: {}}); await S.set('brand', Object.assign({}, b, {name: el.value})); },
+  varVal: async el => { const b = S.get('brand', {name: '', vars: {}}); b.vars = Object.assign({}, b.vars, {[el.dataset.k]: el.value}); await S.set('brand', b); },
+  platName: async el => { await S.set('platforms', platforms(true).map(p => p.id === el.dataset.id ? Object.assign({}, p, {name: el.value.trim() || p.name}) : p)); },
+  platLimit: async el => { await S.set('platforms', platforms(true).map(p => p.id === el.dataset.id ? Object.assign({}, p, {limit: Math.max(0, parseInt(el.value, 10) || 0)}) : p)); },
+  platHide: async el => { await S.set('platforms', platforms(true).map(p => p.id === el.dataset.id ? Object.assign({}, p, {hidden: el.checked}) : p)); },
+  catColor: async el => { const c = S.categories.get(el.dataset.id); if (c){ c.color = el.value; await S.save('categories', c); } },
+  catName: async el => { const c = S.categories.get(el.dataset.id); if (c && el.value.trim()){ c.name = el.value.trim(); await S.save('categories', c); } },
+  tones: async el => { await S.set('tones', el.value.split(/[、,，\n]+/).map(x => x.trim()).filter(Boolean)); toast('語氣標籤已更新'); }
+};
+function bindEvents(){
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-act]'); if (!el) return;
+    const fn = ACT[el.dataset.act]; if (!fn) return;
+    Promise.resolve().then(() => fn(el, e)).catch(err => { console.error(err); toast(err.message || '發生錯誤', 'error'); });
+  });
+  document.addEventListener('change', e => {
+    const el = e.target.closest('[data-chg]'); if (!el) return;
+    const fn = CHG[el.dataset.chg]; if (!fn) return;
+    Promise.resolve().then(() => fn(el, e)).catch(err => { console.error(err); toast(err.message || '發生錯誤', 'error'); });
+  });
+  document.addEventListener('input', e => { const el = e.target.closest('[data-inp]'); if (el && el.dataset.inp === 'tplPreview' && UI.tplPreview) UI.tplPreview(); });
+  window.addEventListener('hashchange', route);
+  document.addEventListener('keydown', e => {
+    if (document.querySelector('.overlay')) return;
+    const t = e.target, typing = t && t.matches && t.matches('input,textarea,select,[contenteditable=true]');
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ if (UI.view === 'inbox' && UI.selectedId){ e.preventDefault(); Inbox.complete(); } return; }
+    if (e.key === 'Escape'){ if (typing) t.blur(); return; }
+    if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+    if (k === '?'){ e.preventDefault(); showHelp(); return; }
+    if (k === 'n' || k === 'N'){ e.preventDefault(); openImport(); return; }
+    if (UI.view !== 'inbox') return;
+    if (k === 'j' || k === 'J'){ Inbox.move(1); }
+    else if (k === 'k' || k === 'K'){ Inbox.move(-1); }
+    else if (k === 's' || k === 'S'){ Inbox.skip(); }
+    else if (k === 'e' || k === 'E'){ e.preventDefault(); Inbox.escalate(); }
+    else if (k === '/'){ e.preventDefault(); const q = $('#q'); if (q) q.focus(); }
+    else if (/^[1-9]$/.test(k)){ Inbox.applyRec(+k - 1); }
+  });
+}
+
+/* ========== 7. Bootstrap ========== */
+(async function boot(){
+  applyTheme(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  bindEvents();
+  try { await DB.open(); } catch (err){
+    console.error(err); DB.disabled = true;
+    toast('無法使用 IndexedDB（' + err.message + '），本次資料不會被保存，請改用一般模式的瀏覽器視窗', 'error');
+  }
+  try {
+    await S.load();
+    if (!S.settings.has('seeded')) await seedDefaults();
+    applyTheme(S.get('theme', document.documentElement.getAttribute('data-theme')));
+  } catch (err){ console.error(err); toast('資料載入失敗：' + err.message, 'error'); }
+  if (!location.hash) { try { history.replaceState(null, '', '#/inbox'); } catch (e){ location.hash = '#/inbox'; } }
+  route();
+  if (!S.get('onboarded', false) && S.comments.size === 0) showOnboarding();
+})();
+</script>
+<!-- 返回工具入口大廳（規範見 AGENTS.md） -->
+<a id="hf-home-entry" href="../../index.html" title="返回工具入口大廳" aria-label="返回工具入口大廳">← 回入口</a>
+<style>
+  #hf-home-entry{position:fixed;left:14px;bottom:14px;z-index:2147483000;display:inline-flex;align-items:center;gap:6px;
+    font:600 13px/1 "Segoe UI","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;color:#fff;
+    background:rgba(34,41,52,.86);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
+    padding:9px 13px;border-radius:999px;text-decoration:none;border:1px solid rgba(255,255,255,.2);
+    box-shadow:0 6px 18px rgba(0,0,0,.28);transition:transform .15s,background .15s}
+  #hf-home-entry:hover{background:rgba(34,41,52,1);transform:translateY(-2px)}
+  #hf-home-entry:active{transform:translateY(0)}
+  @media print{#hf-home-entry{display:none}}
+</style>
+</body>
+</html>
